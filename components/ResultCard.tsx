@@ -176,7 +176,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({ result, onReset, targetN
                                   SOURCE: {item.source || 'UNKNOWN'}
                                 </div>
                                 <div className="bg-black p-4 border border-zinc-800 text-green-500">
-                                  > {item.snippet || 'No raw data available.'}
+                                  {'>'} {item.snippet || 'No raw data available.'}
                                 </div>
                              </div>
                           </div>

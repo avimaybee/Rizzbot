@@ -1,9 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { generatePersona, simulateDraft, analyzeSimulation } from '../services/geminiService';
-import { SimResult, Persona, SimAnalysisResult } from '../types';
+import { saveFeedback, logSession } from '../services/feedbackService';
+import { SimResult, Persona, SimAnalysisResult, UserStyleProfile } from '../types';
 
 interface SimulatorProps {
-  onPivotToInvestigator: () => void;
+  // Optional callback - used when Investigator mode is enabled
+  onPivotToInvestigator?: () => void;
+  // User's style profile for personalized suggestions
+  userProfile?: UserStyleProfile | null;
 }
 
 type View = 'setup' | 'chat' | 'analysis';
@@ -25,8 +29,11 @@ const CornerNodes = ({ className }: { className?: string }) => (
   </div>
 );
 
-export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) => {
+export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, userProfile }) => {
   const [view, setView] = useState<View>('setup');
+  
+  // Copy to clipboard state
+  const [copiedText, setCopiedText] = useState<string | null>(null);
   
   // Loading States
   const [setupLoading, setSetupLoading] = useState(false);
@@ -36,6 +43,8 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
   // Setup State
   const [personaDescription, setPersonaDescription] = useState('');
   const [customName, setCustomName] = useState('');
+  const [relationshipContext, setRelationshipContext] = useState<'NEW_MATCH' | 'TALKING_STAGE' | 'DATING' | 'SITUATIONSHIP' | 'EX' | 'FRIEND'>('TALKING_STAGE');
+  const [harshnessLevel, setHarshnessLevel] = useState<1 | 2 | 3 | 4 | 5>(3);
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -47,6 +56,9 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
   
   // Analysis State
   const [analysisResult, setAnalysisResult] = useState<SimAnalysisResult | null>(null);
+  
+  // Feedback State
+  const [feedbackGiven, setFeedbackGiven] = useState<Record<string, 'helpful' | 'mid' | 'off'>>({});
   
   // Saved Personas (Local Storage Mock)
   const [savedPersonas, setSavedPersonas] = useState<Persona[]>(() => {
@@ -61,6 +73,25 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [simHistory, view, chatLoading]);
+
+  // Copy to clipboard with visual feedback
+  const copyToClipboard = useCallback((text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedText(text);
+    setTimeout(() => setCopiedText(null), 1500);
+  }, []);
+
+  // Handle feedback on rewrite suggestions
+  const handleFeedback = useCallback((suggestionType: 'safe' | 'bold' | 'spicy' | 'you', rating: 'helpful' | 'mid' | 'off', entryIndex: number) => {
+    const key = `${entryIndex}-${suggestionType}`;
+    saveFeedback({
+      source: 'practice',
+      suggestionType,
+      rating,
+      context: relationshipContext.toLowerCase(),
+    });
+    setFeedbackGiven(prev => ({ ...prev, [key]: rating }));
+  }, [relationshipContext]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -80,7 +111,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
   const buildPersona = async () => {
     if (!personaDescription && screenshots.length === 0) return;
     setSetupLoading(true);
-    const persona = await generatePersona(personaDescription, screenshots);
+    const persona = await generatePersona(personaDescription, screenshots, relationshipContext, harshnessLevel);
     if (customName.trim()) persona.name = customName.trim();
     setActivePersona(persona);
     setSetupLoading(false);
@@ -96,7 +127,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
     e.preventDefault();
     if (!draft.trim() || !activePersona) return;
     setChatLoading(true);
-    const result = await simulateDraft(draft, activePersona);
+    const result = await simulateDraft(draft, activePersona, userProfile);
     setSimHistory(prev => [...prev, { draft, result }]);
     setDraft('');
     setChatLoading(false);
@@ -105,8 +136,10 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
   const handleEndSim = async () => {
     if (!activePersona || simHistory.length === 0) return;
     setAnalyzing(true);
-    const result = await analyzeSimulation(simHistory, activePersona);
+    const result = await analyzeSimulation(simHistory, activePersona, userProfile);
     setAnalysisResult(result);
+    // Log session for wellbeing tracking
+    logSession('practice', activePersona.name, result.ghostRisk);
     setAnalyzing(false);
     setView('analysis');
   };
@@ -118,6 +151,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
   const resetSim = () => {
     setSimHistory([]);
     setAnalysisResult(null);
+    setFeedbackGiven({});
     setView('chat');
   };
 
@@ -142,20 +176,21 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
   // --- SETUP VIEW ---
   if (view === 'setup') {
     return (
-      <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col md:flex-row shadow-2xl relative">
+      <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col md:flex-row shadow-2xl relative overflow-y-auto">
         <CornerNodes />
         
-        {/* LEFT: SAVED PROFILES */}
-        <div className="w-full md:w-1/3 border-r border-zinc-800 bg-zinc-900 p-8 flex flex-col">
-          <div className="flex items-center justify-between mb-8">
+        {/* LEFT: SAVED PROFILES - Compact on mobile when empty */}
+        <div className={`w-full md:w-1/3 border-b md:border-b-0 md:border-r border-zinc-800 bg-zinc-900 p-4 md:p-8 flex flex-col ${savedPersonas.length === 0 ? 'max-h-24 md:max-h-none' : ''}`}>
+          <div className="flex items-center justify-between mb-2 md:mb-8">
             <h4 className="label-sm text-zinc-500">Archive</h4>
             <span className="font-mono text-xs text-zinc-400">{savedPersonas.length}</span>
           </div>
           
           <div className="space-y-2 overflow-y-auto flex-1 scrollbar-hide">
             {savedPersonas.length === 0 ? (
-               <div className="text-center py-20 opacity-30">
+               <div className="text-center py-2 md:py-20 opacity-30">
                   <p className="label-sm text-zinc-500">NO RECORDS FOUND</p>
+                  <p className="text-[10px] text-zinc-600 mt-1 hidden md:block">Past practice sessions will appear here</p>
                </div>
             ) : (
                 savedPersonas.map((p, idx) => (
@@ -173,46 +208,91 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
         </div>
 
         {/* RIGHT: BUILDER */}
-        <div className="w-full md:w-2/3 p-8 md:p-16 relative flex flex-col justify-center bg-matte-panel">
+        <div className="w-full md:w-2/3 p-4 sm:p-8 md:p-16 relative flex flex-col justify-center bg-matte-panel overflow-y-auto">
           <div className="max-w-xl mx-auto w-full">
-             <div className="mb-10">
-               <div className="label-sm text-hard-blue mb-2">SETUP WIZARD</div>
-               <h3 className="font-impact text-5xl text-white tracking-wide mb-4">TARGET CONFIG</h3>
-               <p className="text-zinc-500 font-editorial text-sm">Configure the behavioral model for accurate simulation.</p>
+             <div className="mb-6 sm:mb-10">
+               <div className="label-sm text-hard-blue mb-2">PRACTICE MODE</div>
+               <h3 className="font-impact text-3xl sm:text-5xl text-white tracking-wide mb-4">WHO'S GOT YOU IN YOUR HEAD?</h3>
+               <p className="text-zinc-500 font-editorial text-sm">Spill the tea so we can help you cook the right response.</p>
              </div>
 
              <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                    <div className="space-y-2">
-                     <label className="label-sm text-zinc-400">Name</label>
+                     <label className="label-sm text-zinc-400">Their Name <span className="text-hard-gold">*</span></label>
                      <input
                        type="text"
-                       className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white text-xs font-mono focus:border-white focus:outline-none uppercase"
+                       className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white text-xs font-mono focus:border-white focus:outline-none uppercase placeholder:text-zinc-500/60"
                        placeholder="ALEX"
                        value={customName}
                        onChange={(e) => setCustomName(e.target.value)}
                      />
                    </div>
                    <div className="space-y-2">
-                     <label className="label-sm text-zinc-400">Context</label>
-                     <div className="bg-zinc-900 border border-zinc-700 p-3 text-zinc-500 text-xs font-mono uppercase text-center cursor-not-allowed">
-                        TALKING_STAGE
-                     </div>
+                     <label className="label-sm text-zinc-400">The Situationship</label>
+                     <select
+                       className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white text-xs font-mono focus:border-white focus:outline-none uppercase cursor-pointer"
+                       value={relationshipContext}
+                       onChange={(e) => setRelationshipContext(e.target.value as any)}
+                     >
+                       <option value="NEW_MATCH">NEW MATCH</option>
+                       <option value="TALKING_STAGE">TALKING STAGE</option>
+                       <option value="DATING">DATING</option>
+                       <option value="SITUATIONSHIP">SITUATIONSHIP</option>
+                       <option value="EX">EX</option>
+                       <option value="FRIEND">FRIEND</option>
+                     </select>
                    </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="label-sm text-zinc-400">Behavioral Profile</label>
+                  <label className="label-sm text-zinc-400 flex items-center justify-between">
+                    <span>Feedback Style</span>
+                    <span className="text-xs font-mono text-zinc-500">
+                      {harshnessLevel === 1 && 'GENTLE'}
+                      {harshnessLevel === 2 && 'SUPPORTIVE'}
+                      {harshnessLevel === 3 && 'HONEST'}
+                      {harshnessLevel === 4 && 'DIRECT'}
+                      {harshnessLevel === 5 && 'BRUTAL'}
+                    </span>
+                  </label>
+                  <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-700 p-4">
+                    <span className="text-xs text-zinc-500 font-mono">1</span>
+                    <input
+                      type="range"
+                      min="1"
+                      max="5"
+                      step="1"
+                      value={harshnessLevel}
+                      onChange={(e) => setHarshnessLevel(parseInt(e.target.value) as 1 | 2 | 3 | 4 | 5)}
+                      className="flex-1 h-1 bg-zinc-700 appearance-none cursor-pointer"
+                      style={{
+                        background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((harshnessLevel - 1) / 4) * 100}%, #3f3f46 ${((harshnessLevel - 1) / 4) * 100}%, #3f3f46 100%)`
+                      }}
+                    />
+                    <span className="text-xs text-zinc-500 font-mono">5</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-600 font-mono mt-1">
+                    {harshnessLevel === 1 && '→ Gentle encouragement, positive framing'}
+                    {harshnessLevel === 2 && '→ Supportive feedback with soft corrections'}
+                    {harshnessLevel === 3 && '→ Honest reality checks, balanced approach'}
+                    {harshnessLevel === 4 && '→ Direct truth, no sugar coating'}
+                    {harshnessLevel === 5 && '→ Brutal honesty, maximum roast mode'}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="label-sm text-zinc-400">Their Red Flags</label>
                   <textarea
-                    className="w-full bg-zinc-900 border border-zinc-700 p-4 text-white text-sm focus:border-white focus:outline-none h-32 resize-none leading-relaxed"
-                    placeholder="Describe their vibe. Dry texter? Love bomber? Emojis? Detail matters."
+                    className="w-full bg-zinc-900 border border-zinc-700 p-4 text-white text-sm focus:border-white focus:outline-none h-32 resize-none leading-relaxed placeholder:text-zinc-500/60"
+                    placeholder="Describe their vibe. Dry texter? Love bomber? Emoji abuser? The devil's in the details."
                     value={personaDescription}
                     onChange={(e) => setPersonaDescription(e.target.value)}
                   />
                 </div>
 
                 <div className="space-y-2">
-                   <label className="label-sm text-zinc-400">Evidence (Optional)</label>
+                   <label className="label-sm text-zinc-400">Receipts (Optional)</label>
                    <div 
                      onClick={() => fileInputRef.current?.click()}
                      className="border border-dashed border-zinc-700 bg-zinc-900/50 p-4 flex items-center justify-between cursor-pointer hover:bg-zinc-800 transition-all group"
@@ -228,10 +308,10 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
 
                 <button
                    onClick={buildPersona}
-                   disabled={!personaDescription && screenshots.length === 0}
+                   disabled={!customName.trim() || (!personaDescription && screenshots.length === 0)}
                    className="w-full bg-white text-black font-impact text-xl py-4 hover:bg-zinc-200 transition-all disabled:opacity-50 mt-6 border border-white tracking-wide uppercase"
                  >
-                   Initialize System
+                   Lock & Load
                  </button>
              </div>
           </div>
@@ -245,25 +325,48 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
     return (
       <div className="w-full h-full max-w-5xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative">
          <CornerNodes />
-         <div className="bg-zinc-900 p-6 border-b border-zinc-800 flex justify-between items-center shrink-0">
+         <div className="bg-zinc-900 p-4 sm:p-6 border-b border-zinc-800 flex justify-between items-center shrink-0">
             <div>
-               <h2 className="font-impact text-2xl text-white tracking-wide uppercase">Post-Mortem</h2>
+               <h2 className="font-impact text-xl sm:text-2xl text-white tracking-wide uppercase">Post-Mortem</h2>
                <p className="label-sm text-zinc-500 mt-1">SESSION_ID: {Date.now().toString().slice(-6)}</p>
             </div>
             <button onClick={() => setView('chat')} className="text-xs font-mono text-zinc-400 hover:text-white underline">CLOSE</button>
          </div>
 
-         <div className="flex-1 overflow-y-auto p-12 bg-matte-base">
+         <div className="flex-1 overflow-y-auto p-6 sm:p-12 bg-matte-base">
             <div className="max-w-3xl mx-auto text-center">
-               <div className="mb-12">
-                  <h3 className="text-4xl md:text-6xl font-impact text-white mb-8 uppercase leading-tight">
+               <div className="mb-8 sm:mb-12">
+                  <h3 className="text-3xl sm:text-4xl md:text-6xl font-impact text-white mb-6 sm:mb-8 uppercase leading-tight">
                     {analysisResult.headline}
                   </h3>
                   
+                  {/* RECOMMENDED NEXT MOVE BANNER */}
+                  {analysisResult.recommendedNextMove && (
+                    <div className={`inline-block border-2 px-6 py-3 mb-6 ${
+                      analysisResult.recommendedNextMove === 'HARD_STOP' ? 'border-red-500 bg-red-900/20' :
+                      analysisResult.recommendedNextMove === 'PULL_BACK' ? 'border-yellow-500 bg-yellow-900/20' :
+                      analysisResult.recommendedNextMove === 'WAIT' ? 'border-orange-500 bg-orange-900/20' :
+                      analysisResult.recommendedNextMove === 'FULL_SEND' ? 'border-green-500 bg-green-900/20' :
+                      'border-blue-500 bg-blue-900/20'
+                    }`}>
+                      <span className="label-sm text-zinc-400 block mb-1">RECOMMENDED ACTION</span>
+                      <span className={`font-mono font-bold text-xl ${
+                        analysisResult.recommendedNextMove === 'HARD_STOP' ? 'text-red-400' :
+                        analysisResult.recommendedNextMove === 'PULL_BACK' ? 'text-yellow-400' :
+                        analysisResult.recommendedNextMove === 'WAIT' ? 'text-orange-400' :
+                        analysisResult.recommendedNextMove === 'FULL_SEND' ? 'text-green-400' :
+                        'text-blue-400'
+                      }`}>{analysisResult.recommendedNextMove.replace('_', ' ')}</span>
+                      {analysisResult.conversationFlow && (
+                        <span className="block label-sm text-zinc-500 mt-1">Flow: {analysisResult.conversationFlow}</span>
+                      )}
+                    </div>
+                  )}
+                  
                   {/* MAIN GAUGE */}
-                  <div className="inline-block bg-zinc-900 border border-zinc-800 p-8 min-w-[300px]">
-                    <span className="label-sm text-zinc-500 block mb-4">GHOST RISK PROBABILITY</span>
-                    <span className={`font-mono font-bold text-6xl ${analysisResult.ghostRisk > 60 ? 'text-red-500' : 'text-white'}`}>{analysisResult.ghostRisk}%</span>
+                  <div className="inline-block bg-zinc-900 border border-zinc-800 p-6 sm:p-8 min-w-[260px] sm:min-w-[300px]">
+                    <span className="label-sm text-zinc-500 block mb-3 sm:mb-4">GHOST RISK PROBABILITY</span>
+                    <span className={`font-mono font-bold text-5xl sm:text-6xl ${analysisResult.ghostRisk > 60 ? 'text-red-500' : 'text-white'}`}>{analysisResult.ghostRisk}%</span>
                     <div className="w-full h-2 bg-black mt-4">
                        <div 
                          className={`h-full ${analysisResult.ghostRisk > 60 ? 'bg-red-500' : 'bg-white'}`}
@@ -273,10 +376,10 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
                   </div>
                </div>
 
-               <div className="grid md:grid-cols-2 gap-8 mb-12 text-left">
-                  <div className="border-t border-zinc-800 pt-6">
-                     <h4 className="label-sm text-hard-blue mb-4">METRICS</h4>
-                     <div className="space-y-4">
+               <div className="grid md:grid-cols-2 gap-6 sm:gap-8 mb-8 sm:mb-12 text-left">
+                  <div className="border-t border-zinc-800 pt-4 sm:pt-6">
+                     <h4 className="label-sm text-hard-blue mb-3 sm:mb-4">METRICS</h4>
+                     <div className="space-y-3 sm:space-y-4">
                         <div className="flex justify-between items-center text-sm border-b border-zinc-900 pb-2">
                            <span className="text-zinc-400 font-bold uppercase tracking-wider">Vibe Match</span>
                            <span className="font-mono text-white">{analysisResult.vibeMatch}%</span>
@@ -288,9 +391,9 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
                      </div>
                   </div>
 
-                  <div className="border-t border-zinc-800 pt-6">
-                     <h4 className="label-sm text-hard-gold mb-4">INSIGHTS</h4>
-                     <ul className="space-y-3">
+                  <div className="border-t border-zinc-800 pt-4 sm:pt-6">
+                     <h4 className="label-sm text-hard-gold mb-3 sm:mb-4">INSIGHTS</h4>
+                     <ul className="space-y-2 sm:space-y-3">
                        {analysisResult.insights.map((insight, i) => (
                          <li key={i} className="text-sm text-zinc-300 leading-relaxed list-disc list-inside marker:text-zinc-600">
                             {insight}
@@ -300,15 +403,15 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
                   </div>
                </div>
 
-               <div className="bg-white text-black p-8 text-left">
-                  <h4 className="font-impact text-xl mb-2 uppercase">Strategic Advice</h4>
-                  <p className="font-editorial text-lg leading-relaxed">"{analysisResult.advice}"</p>
+               <div className="bg-white text-black p-6 sm:p-8 text-left">
+                  <h4 className="font-impact text-lg sm:text-xl mb-2 uppercase">Strategic Advice</h4>
+                  <p className="font-editorial text-base sm:text-lg leading-relaxed">"{analysisResult.advice}"</p>
                </div>
             </div>
          </div>
          
          <div className="p-4 border-t border-zinc-800 bg-zinc-900 flex justify-center shrink-0">
-           <button onClick={resetSim} className="text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Start New Simulation</button>
+           <button onClick={resetSim} className="text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Start New Practice</button>
          </div>
       </div>
     );
@@ -320,19 +423,19 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
       <CornerNodes />
       
       {/* CHAT HEADER */}
-      <div className="bg-zinc-900 p-4 border-b border-zinc-800 flex justify-between items-center z-20 shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-zinc-800 border border-zinc-700 flex items-center justify-center text-white font-bold text-lg font-mono">
+      <div className="bg-zinc-900 p-3 sm:p-4 border-b border-zinc-800 flex justify-between items-center z-20 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-zinc-800 border border-zinc-700 flex items-center justify-center text-white font-bold text-sm sm:text-lg font-mono">
              {activePersona?.name.charAt(0)}
           </div>
           <div>
-             <h2 className="font-bold text-white text-sm uppercase tracking-wider mb-0.5">{activePersona?.name}</h2>
-             <span className="label-sm text-zinc-500">
+             <h2 className="font-bold text-white text-xs sm:text-sm uppercase tracking-wider mb-0.5">{activePersona?.name}</h2>
+             <span className="label-sm text-zinc-500 hidden sm:inline">
                 {activePersona?.tone}
              </span>
           </div>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-2 sm:gap-4">
            {simHistory.length > 0 && (
              <button onClick={handleEndSim} className="label-sm text-red-500 hover:text-red-400 border border-red-900/30 px-3 py-1 bg-red-900/10">
                END SESSION
@@ -351,7 +454,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
         {simHistory.length === 0 && !chatLoading && (
           <div className="h-full flex flex-col items-center justify-center text-zinc-800 relative z-10">
             <div className="text-6xl mb-4 opacity-20">✉</div>
-            <p className="label-sm">READY TO SIMULATE</p>
+            <p className="label-sm">READY TO PRACTICE</p>
           </div>
         )}
 
@@ -359,13 +462,20 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
           <div key={idx} className="space-y-4 relative z-10">
              {/* USER MESSAGE */}
              <div className="flex justify-end">
-                <div className="max-w-[80%] bg-white text-black px-6 py-4 text-sm font-medium leading-relaxed border border-zinc-200 shadow-[4px_4px_0px_rgba(0,0,0,0.5)]">
+                <div className="max-w-[80%] bg-white text-black px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium leading-relaxed border border-zinc-200 shadow-[4px_4px_0px_rgba(0,0,0,0.5)] relative group">
                   {entry.draft}
+                  <button
+                    onClick={() => copyToClipboard(entry.draft)}
+                    className="absolute -left-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 flex items-center justify-center bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-700 text-xs"
+                    title="Copy to clipboard"
+                  >
+                    {copiedText === entry.draft ? '✓' : '📋'}
+                  </button>
                 </div>
              </div>
 
              {/* ANALYSIS WIDGET (Block Style) */}
-             <div className="mx-auto w-full max-w-lg bg-zinc-900 border border-zinc-800 p-4 relative group">
+             <div className="mx-auto w-full max-w-lg bg-zinc-900 border border-zinc-800 p-3 sm:p-4 relative group">
                 <div className="flex items-center justify-between mb-3 pb-3 border-b border-zinc-800">
                    <span className="label-sm text-zinc-500">ANALYSIS</span>
                    <span className={`label-sm ${entry.result.regretLevel > 50 ? 'text-red-500' : 'text-green-500'}`}>
@@ -373,32 +483,79 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
                    </span>
                 </div>
                 <p className="text-xs text-zinc-300 mb-4 font-mono leading-relaxed">
-                   "{entry.result.feedback[0]}"
+                   "{entry.result.verdict}"
                 </p>
                 
-                {/* SUGGESTIONS */}
-                <div className="grid grid-cols-3 gap-2">
-                   {Object.entries(entry.result.rewrites).map(([key, text]) => (
-                     <button 
-                       key={key} 
-                       onClick={() => copyToDraft(text as string)}
-                       className={`p-2 border text-[10px] text-left hover:bg-zinc-800 transition-colors h-full flex flex-col justify-between ${key === 'safe' ? 'border-zinc-800 text-zinc-400' : key === 'bold' ? 'border-zinc-700 text-zinc-300' : 'border-red-900/30 text-red-400'}`}
-                     >
-                        <span className="block font-bold uppercase mb-1">{key}</span>
-                        <div className="truncate opacity-70 italic font-serif">"{text as string}"</div>
-                     </button>
-                   ))}
+                {/* SUGGESTIONS - with copy to clipboard and feedback */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                   {Object.entries(entry.result.rewrites).filter(([_, text]) => text).map(([key, text]) => {
+                     const feedbackKey = `${idx}-${key}`;
+                     return (
+                       <div key={key} className="relative group flex flex-col">
+                         <button 
+                           onClick={() => copyToDraft(text as string)}
+                           className={`flex-1 p-2 sm:p-3 border text-[10px] text-left hover:bg-zinc-800 transition-colors flex flex-col justify-between min-h-[80px] sm:min-h-[70px] ${
+                             key === 'safe' ? 'border-zinc-800 text-zinc-400' : 
+                             key === 'bold' ? 'border-zinc-700 text-zinc-300' : 
+                             key === 'spicy' ? 'border-red-900/30 text-red-400' :
+                             'border-hard-gold/50 text-hard-gold'
+                           }`}
+                         >
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="font-bold uppercase">{key === 'you' ? '✨ YOU' : key}</span>
+                              <span className="text-[8px] text-zinc-600 hidden sm:inline">TAP</span>
+                            </div>
+                            <div className="text-[9px] sm:text-xs opacity-80 leading-relaxed line-clamp-3 sm:line-clamp-2">"{text as string}"</div>
+                         </button>
+                         <button
+                           onClick={(e) => { e.stopPropagation(); copyToClipboard(text as string); }}
+                           className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 flex items-center justify-center bg-zinc-700 text-[10px] hover:bg-zinc-600"
+                           title="Copy to clipboard"
+                         >
+                           {copiedText === text ? '✓' : '📋'}
+                         </button>
+                         {/* Feedback buttons */}
+                         <div className="flex gap-1 mt-2 justify-center">
+                           {(['helpful', 'mid', 'off'] as const).map((rating) => (
+                             <button
+                               key={rating}
+                               onClick={(e) => { e.stopPropagation(); handleFeedback(key as any, rating, idx); }}
+                               disabled={!!feedbackGiven[feedbackKey]}
+                               className={`px-3 py-2 text-sm border transition-all min-w-[44px] min-h-[44px] flex items-center justify-center ${
+                                 feedbackGiven[feedbackKey] === rating
+                                   ? rating === 'helpful' ? 'bg-emerald-900/50 border-emerald-600 text-emerald-400' :
+                                     rating === 'mid' ? 'bg-yellow-900/50 border-yellow-600 text-yellow-400' :
+                                     'bg-red-900/50 border-red-600 text-red-400'
+                                   : feedbackGiven[feedbackKey]
+                                   ? 'border-zinc-800 text-zinc-700 cursor-not-allowed'
+                                   : 'border-zinc-800 text-zinc-600 hover:border-zinc-600 hover:text-zinc-400'
+                               }`}
+                             >
+                               {rating === 'helpful' ? '👍' : rating === 'mid' ? '😐' : '👎'}
+                             </button>
+                           ))}
+                         </div>
+                       </div>
+                     );
+                   })}
                 </div>
              </div>
 
              {/* PREDICTED REPLY */}
              <div className="flex justify-start">
-                <div className="flex items-end gap-3 max-w-[85%]">
-                   <div className="w-8 h-8 bg-zinc-800 flex-shrink-0 flex items-center justify-center text-xs text-zinc-500 font-mono border border-zinc-700">
+                <div className="flex items-end gap-2 sm:gap-3 max-w-[85%] group">
+                   <div className="w-7 h-7 sm:w-8 sm:h-8 bg-zinc-800 flex-shrink-0 flex items-center justify-center text-xs text-zinc-500 font-mono border border-zinc-700">
                       {activePersona?.name.charAt(0)}
                    </div>
-                   <div className="bg-zinc-800 text-zinc-200 px-6 py-4 text-sm leading-relaxed border border-zinc-700">
+                   <div className="bg-zinc-800 text-zinc-200 px-4 sm:px-6 py-3 sm:py-4 text-sm leading-relaxed border border-zinc-700 relative">
                       {entry.result.predictedReply}
+                      <button
+                        onClick={() => copyToClipboard(entry.result.predictedReply || '')}
+                        className="absolute -right-9 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 flex items-center justify-center bg-zinc-900 border border-zinc-700 text-zinc-400 hover:text-white text-xs"
+                        title="Copy reply"
+                      >
+                        {copiedText === entry.result.predictedReply ? '✓' : '📋'}
+                      </button>
                    </div>
                 </div>
              </div>
@@ -416,20 +573,20 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator }) =
       </div>
 
       {/* INPUT AREA */}
-      <div className="p-4 bg-zinc-900 border-t border-zinc-800 relative z-20 shrink-0">
+      <div className="p-2 sm:p-4 bg-zinc-900 border-t border-zinc-800 relative z-20 shrink-0">
          <form onSubmit={runSimulation} className="flex gap-0 border border-zinc-700">
             <input
               type="text"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder="TYPE DRAFT..."
+              placeholder="TYPE YOUR MESSAGE..."
               disabled={chatLoading}
-              className="flex-1 bg-black px-6 py-4 text-white focus:outline-none placeholder-zinc-700 text-xs font-mono uppercase"
+              className="flex-1 bg-black px-3 sm:px-6 py-3 sm:py-4 text-white focus:outline-none placeholder:text-zinc-500/60 text-xs font-mono"
             />
             <button
                type="submit"
                disabled={!draft.trim() || chatLoading}
-               className="bg-white text-black font-bold px-8 hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest text-[10px]"
+               className="bg-white text-black font-bold px-4 sm:px-8 hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest text-[10px]"
             >
                SEND
             </button>
