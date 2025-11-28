@@ -211,7 +211,7 @@ const SideDock = ({ activeModule, setModule }: { activeModule: Module, setModule
 
       <div className="mt-auto flex flex-col items-center gap-4 text-[9px] font-mono text-zinc-600">
         <div className="writing-vertical-lr tracking-widest uppercase opacity-30 hover:opacity-100 transition-opacity cursor-default">
-            THE BLOCK V3.1
+            RIZZBOT V3.1
         </div>
       </div>
     </div>

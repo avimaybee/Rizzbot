@@ -29,8 +29,8 @@ export const ResultCard: React.FC<ResultCardProps> = ({ result, onReset, targetN
   const [copied, setCopied] = useState(false);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
-  const shareText = `#DeadOrGhosting ${result.cookedLevel}% for ${targetName} 😂`;
-  const shareUrl = "https://deadorghosting.lol";
+  const shareText = `#Rizzbot ${result.cookedLevel}% for ${targetName} 😂`;
+  const shareUrl = "https://rizzbot.app";
 
   const handleCopy = () => {
     navigator.clipboard.writeText(`${shareText} ${shareUrl}`).then(() => {

@@ -158,7 +158,7 @@ export const MemeGenerator: React.FC<MemeGeneratorProps> = ({ name, score, verdi
     const canvas = canvasRef.current;
     if (!canvas) return;
     const link = document.createElement('a');
-    link.download = `DeadOrGhosting_${template}.png`;
+    link.download = `Rizzbot_${template}.png`;
     link.href = canvas.toDataURL();
     link.click();
   };
