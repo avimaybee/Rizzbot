@@ -27,6 +27,4 @@ dist-ssr
 new-direction.txt
 docs
 d1_migrations
-firebaseService.ts
-services/firebaseService.ts
 .wrangler
