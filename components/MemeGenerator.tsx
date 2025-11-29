@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Minimize, Maximize, X, Download } from 'lucide-react';
 
 interface MemeGeneratorProps {
   name: string;
@@ -173,9 +174,9 @@ export const MemeGenerator: React.FC<MemeGeneratorProps> = ({ name, score, verdi
          <div className="bg-zinc-800 border-b border-zinc-700 p-1 flex justify-between items-center px-2 cursor-grab active:cursor-grabbing">
             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">MEME_MAKER_V2.EXE</span>
             <div className="flex gap-1">
-               <div className="w-3 h-3 bg-zinc-700 border border-zinc-600 flex items-center justify-center text-[8px] text-zinc-400">_</div>
-               <div className="w-3 h-3 bg-zinc-700 border border-zinc-600 flex items-center justify-center text-[8px] text-zinc-400">□</div>
-               <div className="w-3 h-3 bg-zinc-700 border border-zinc-600 flex items-center justify-center text-[8px] text-zinc-400">X</div>
+               <div className="w-3 h-3 bg-zinc-700 border border-zinc-600 flex items-center justify-center text-[8px] text-zinc-400"><Minimize className="w-2 h-2" /></div>
+               <div className="w-3 h-3 bg-zinc-700 border border-zinc-600 flex items-center justify-center text-[8px] text-zinc-400"><Maximize className="w-2 h-2" /></div>
+               <div className="w-3 h-3 bg-zinc-700 border border-zinc-600 flex items-center justify-center text-[8px] text-zinc-400"><X className="w-2 h-2" /></div>
             </div>
          </div>
 
@@ -214,7 +215,7 @@ export const MemeGenerator: React.FC<MemeGeneratorProps> = ({ name, score, verdi
                 onClick={downloadMeme}
                 className="w-full bg-hard-blue text-white font-impact text-lg py-2 hover:bg-blue-600 transition-colors border border-blue-900"
             >
-                SAVE TO DISK
+                <Download className="w-4 h-4 inline-block mr-2" /> SAVE TO DISK
             </button>
          </div>
       </div>

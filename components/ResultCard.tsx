@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Globe, Minimize, Maximize, X, Plus } from 'lucide-react';
 import { GhostResult } from '../types';
 import { MemeGenerator } from './MemeGenerator';
 
@@ -9,19 +10,8 @@ interface ResultCardProps {
 }
 
 // Visual Assets
-const WireframeGlobe = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="0.5" className={className}>
-    <circle cx="50" cy="50" r="48" />
-    <ellipse cx="50" cy="50" rx="48" ry="20" />
-    <ellipse cx="50" cy="50" rx="48" ry="35" transform="rotate(45 50 50)" />
-    <ellipse cx="50" cy="50" rx="48" ry="35" transform="rotate(-45 50 50)" />
-    <path d="M50 2v96" />
-    <path d="M2 50h96" />
-  </svg>
-);
-
 const PanelCorner = () => (
-    <div className="absolute top-1 right-1 text-zinc-700 text-[8px]">+</div>
+    <div className="absolute top-1 right-1 text-zinc-700"><Plus className="w-3 h-3" /></div>
 );
 
 export const ResultCard: React.FC<ResultCardProps> = ({ result, onReset, targetName }) => {
@@ -131,7 +121,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({ result, onReset, targetN
         {/* 4. EVIDENCE LIST (Wide) */}
         <div className="md:col-span-2 lg:col-span-3 bg-matte-panel relative min-h-[300px] flex flex-col">
            <PanelCorner />
-           <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900 sticky top-0 z-10">
+           <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900 sticky top-0 z-30">
               <div className="flex items-center gap-3">
                  <div className="w-2 h-2 bg-hard-gold rotate-45"></div>
                  <h3 className="label-sm text-hard-gold">FORENSIC LOG</h3>
@@ -166,9 +156,9 @@ export const ResultCard: React.FC<ResultCardProps> = ({ result, onReset, targetN
                              <div className="bg-zinc-800 border-b border-zinc-700 p-1 flex justify-between items-center px-2">
                                 <span className="text-[10px] font-bold text-zinc-400 uppercase">EVIDENCE_VIEWER.EXE</span>
                                 <div className="flex gap-1">
-                                   <div className="w-3 h-3 bg-zinc-700 border border-zinc-600 flex items-center justify-center text-[8px] text-zinc-400">_</div>
-                                   <div className="w-3 h-3 bg-zinc-700 border border-zinc-600 flex items-center justify-center text-[8px] text-zinc-400">□</div>
-                                   <div onClick={() => setExpandedIndex(null)} className="w-3 h-3 bg-red-900 border border-red-700 flex items-center justify-center text-[8px] text-white cursor-pointer hover:bg-red-700">X</div>
+                                   <Minimize className="w-2 h-2" />
+                                   <div className="w-3 h-3 bg-zinc-700 border border-zinc-600 flex items-center justify-center text-[8px] text-zinc-400"><Maximize className="w-2 h-2" /></div>
+                                   <div onClick={() => setExpandedIndex(null)} className="w-3 h-3 bg-red-900 border border-red-700 flex items-center justify-center text-[8px] text-white cursor-pointer hover:bg-red-700"><X className="w-2 h-2" /></div>
                                 </div>
                              </div>
                              <div className="p-6 font-mono text-xs text-zinc-300">
@@ -193,7 +183,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({ result, onReset, targetN
            <div className="md:col-span-3 lg:col-span-4 bg-matte-panel p-8 relative overflow-hidden group">
               <PanelCorner />
               <div className="absolute top-0 right-0 w-[300px] h-[300px] text-zinc-800 opacity-20 pointer-events-none -translate-y-1/2 translate-x-1/3 group-hover:text-zinc-700 transition-colors">
-                 <WireframeGlobe />
+                 <Globe className="w-full h-full stroke-[0.5]" />
               </div>
 
               <h3 className="label-sm text-hard-blue mb-6">DIGITAL FOOTPRINT // OSINT</h3>

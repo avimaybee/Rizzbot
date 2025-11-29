@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { ChevronDown, ChevronUp, Upload, MessageSquare, Copy, Check, Sparkles } from 'lucide-react';
 import { generatePersona, simulateDraft, analyzeSimulation } from '../services/geminiService';
 import { saveFeedback, logSession } from '../services/feedbackService';
 import { SimResult, Persona, SimAnalysisResult, UserStyleProfile } from '../types';
@@ -53,6 +54,10 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, use
   const [activePersona, setActivePersona] = useState<Persona | null>(null);
   const [draft, setDraft] = useState('');
   const [simHistory, setSimHistory] = useState<{draft: string, result: SimResult}[]>([]);
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  
+  // Custom dropdown state
+  const [showContextDropdown, setShowContextDropdown] = useState(false);
   
   // Analysis State
   const [analysisResult, setAnalysisResult] = useState<SimAnalysisResult | null>(null);
@@ -126,10 +131,13 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, use
   const runSimulation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!draft.trim() || !activePersona) return;
-    setChatLoading(true);
-    const result = await simulateDraft(draft, activePersona, userProfile);
-    setSimHistory(prev => [...prev, { draft, result }]);
+    const sentMessage = draft;
+    setPendingMessage(sentMessage);
     setDraft('');
+    setChatLoading(true);
+    const result = await simulateDraft(sentMessage, activePersona, userProfile);
+    setSimHistory(prev => [...prev, { draft: sentMessage, result }]);
+    setPendingMessage(null);
     setChatLoading(false);
   };
 
@@ -176,40 +184,43 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, use
   // --- SETUP VIEW ---
   if (view === 'setup') {
     return (
-      <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col md:flex-row shadow-2xl relative overflow-y-auto">
+      <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col shadow-2xl relative overflow-y-auto">
         <CornerNodes />
         
-        {/* LEFT: SAVED PROFILES - Compact on mobile when empty */}
-        <div className={`w-full md:w-1/3 border-b md:border-b-0 md:border-r border-zinc-800 bg-zinc-900 p-4 md:p-8 flex flex-col ${savedPersonas.length === 0 ? 'max-h-24 md:max-h-none' : ''}`}>
-          <div className="flex items-center justify-between mb-2 md:mb-8">
-            <h4 className="label-sm text-zinc-500">Archive</h4>
-            <span className="font-mono text-xs text-zinc-400">{savedPersonas.length}</span>
-          </div>
+        {/* MOBILE: Show header first, then archive inline */}
+        <div className="flex flex-col md:flex-row md:h-full">
           
-          <div className="space-y-2 overflow-y-auto flex-1 scrollbar-hide">
-            {savedPersonas.length === 0 ? (
-               <div className="text-center py-2 md:py-20 opacity-30">
-                  <p className="label-sm text-zinc-500">NO RECORDS FOUND</p>
-                  <p className="text-[10px] text-zinc-600 mt-1 hidden md:block">Past practice sessions will appear here</p>
-               </div>
-            ) : (
-                savedPersonas.map((p, idx) => (
-                    <button 
-                      key={idx}
-                      onClick={() => loadPersona(p)}
-                      className="w-full text-left p-4 border border-zinc-800 hover:border-white hover:bg-zinc-800 transition-all group"
-                    >
-                      <div className="font-bold text-sm text-zinc-300 group-hover:text-white uppercase tracking-wider mb-1">{p.name}</div>
-                      <div className="text-[10px] text-zinc-600 font-mono truncate">{p.tone}</div>
-                    </button>
-                ))
-            )}
+          {/* LEFT: SAVED PROFILES - Full width on mobile, shown after heading */}
+          <div className="order-2 md:order-1 w-full md:w-1/3 border-t md:border-t-0 md:border-r border-zinc-800 bg-zinc-900 p-4 md:p-8 flex flex-col">
+            <div className="flex items-center justify-between mb-2 md:mb-8">
+              <h4 className="label-sm text-zinc-500">Archive</h4>
+              <span className="font-mono text-xs text-zinc-400">{savedPersonas.length}</span>
+            </div>
+            
+            <div className={`space-y-2 overflow-y-auto flex-1 scrollbar-hide ${savedPersonas.length === 0 ? 'hidden md:block' : ''}`}>
+              {savedPersonas.length === 0 ? (
+                 <div className="text-center py-2 md:py-20 opacity-50">
+                    <p className="label-sm text-zinc-500">NO SAVED PERSONAS YET</p>
+                    <p className="text-[10px] text-zinc-600 mt-1 hidden md:block">create your first practice partner →</p>
+                 </div>
+              ) : (
+                  savedPersonas.map((p, idx) => (
+                      <button 
+                        key={idx}
+                        onClick={() => loadPersona(p)}
+                        className="w-full text-left p-4 border border-zinc-800 hover:border-white hover:bg-zinc-800 transition-all group"
+                      >
+                        <div className="font-bold text-sm text-zinc-300 group-hover:text-white uppercase tracking-wider mb-1">{p.name}</div>
+                        <div className="text-[10px] text-zinc-600 font-mono truncate">{p.tone}</div>
+                      </button>
+                  ))
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* RIGHT: BUILDER */}
-        <div className="w-full md:w-2/3 p-4 sm:p-8 md:p-16 relative flex flex-col justify-center bg-matte-panel overflow-y-auto">
-          <div className="max-w-xl mx-auto w-full">
+          {/* RIGHT: BUILDER - Shown first on mobile */}
+          <div className="order-1 md:order-2 w-full md:w-2/3 p-4 sm:p-8 md:p-16 relative flex flex-col justify-center bg-matte-panel">
+            <div className="max-w-xl mx-auto w-full">
              <div className="mb-6 sm:mb-10">
                <div className="label-sm text-hard-blue mb-2">PRACTICE MODE</div>
                <h3 className="font-impact text-3xl sm:text-5xl text-white tracking-wide mb-4">WHO'S GOT YOU IN YOUR HEAD?</h3>
@@ -228,20 +239,37 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, use
                        onChange={(e) => setCustomName(e.target.value)}
                      />
                    </div>
-                   <div className="space-y-2">
+                   <div className="space-y-2 relative">
                      <label className="label-sm text-zinc-400">The Situationship</label>
-                     <select
-                       className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white text-xs font-mono focus:border-white focus:outline-none uppercase cursor-pointer"
-                       value={relationshipContext}
-                       onChange={(e) => setRelationshipContext(e.target.value as any)}
+                     <button
+                       type="button"
+                       onClick={() => setShowContextDropdown(!showContextDropdown)}
+                       className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white text-xs font-mono focus:border-white focus:outline-none uppercase cursor-pointer text-left flex justify-between items-center"
                      >
-                       <option value="NEW_MATCH">NEW MATCH</option>
-                       <option value="TALKING_STAGE">TALKING STAGE</option>
-                       <option value="DATING">DATING</option>
-                       <option value="SITUATIONSHIP">SITUATIONSHIP</option>
-                       <option value="EX">EX</option>
-                       <option value="FRIEND">FRIEND</option>
-                     </select>
+                       <span>{relationshipContext.replace('_', ' ')}</span>
+                       <span className="text-zinc-500">{showContextDropdown ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}</span>
+                     </button>
+                     {showContextDropdown && (
+                       <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-zinc-900 border border-zinc-700 shadow-xl">
+                         {(['NEW_MATCH', 'TALKING_STAGE', 'DATING', 'SITUATIONSHIP', 'EX', 'FRIEND'] as const).map((option) => (
+                           <button
+                             key={option}
+                             type="button"
+                             onClick={() => {
+                               setRelationshipContext(option);
+                               setShowContextDropdown(false);
+                             }}
+                             className={`w-full p-3 text-left text-xs font-mono uppercase transition-colors ${
+                               relationshipContext === option
+                                 ? 'bg-white text-black'
+                                 : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
+                             }`}
+                           >
+                             {option.replace('_', ' ')}
+                           </button>
+                         ))}
+                       </div>
+                     )}
                    </div>
                 </div>
 
@@ -298,7 +326,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, use
                      className="border border-dashed border-zinc-700 bg-zinc-900/50 p-4 flex items-center justify-between cursor-pointer hover:bg-zinc-800 transition-all group"
                    >
                      <div className="flex items-center gap-4">
-                       <span className="text-zinc-500 text-lg group-hover:text-white">📎</span>
+                       <span className="text-zinc-500 text-lg group-hover:text-white"><Upload className="w-4 h-4" /></span>
                        <span className="text-xs font-bold text-zinc-400 group-hover:text-white uppercase tracking-wider">Upload Screenshots</span>
                      </div>
                      <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
@@ -315,6 +343,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, use
                  </button>
              </div>
           </div>
+        </div>
         </div>
       </div>
     );
@@ -452,9 +481,13 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, use
         <div className="absolute inset-0 bg-scan-lines opacity-5 pointer-events-none"></div>
 
         {simHistory.length === 0 && !chatLoading && (
-          <div className="h-full flex flex-col items-center justify-center text-zinc-800 relative z-10">
-            <div className="text-6xl mb-4 opacity-20">✉</div>
-            <p className="label-sm">READY TO PRACTICE</p>
+          <div className="h-full flex flex-col items-center justify-center text-center px-6 relative z-10">
+            <div className="w-16 h-16 border-2 border-zinc-700 flex items-center justify-center mb-4">
+              <span className="text-2xl text-zinc-600"><MessageSquare className="w-8 h-8" /></span>
+            </div>
+            <p className="label-sm text-hard-blue mb-2">PRACTICE CONVERSATION</p>
+            <p className="text-zinc-500 text-sm max-w-xs mb-4">test how <span className="text-white font-semibold">{activePersona?.name || 'they'}</span> might respond to your messages</p>
+            <p className="text-zinc-600 text-xs">↓ type below and hit send ↓</p>
           </div>
         )}
 
@@ -469,7 +502,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, use
                     className="absolute -left-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 flex items-center justify-center bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-700 text-xs"
                     title="Copy to clipboard"
                   >
-                    {copiedText === entry.draft ? '✓' : '📋'}
+                    {copiedText === entry.draft ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                   </button>
                 </div>
              </div>
@@ -502,7 +535,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, use
                            }`}
                          >
                             <div className="flex justify-between items-center mb-1">
-                              <span className="font-bold uppercase">{key === 'you' ? '✨ YOU' : key}</span>
+                              <span className="font-bold uppercase flex items-center gap-1">{key === 'you' ? <><Sparkles className="w-3 h-3" /> YOU</> : key}</span>
                               <span className="text-[8px] text-zinc-600 hidden sm:inline">TAP</span>
                             </div>
                             <div className="text-[9px] sm:text-xs opacity-80 leading-relaxed line-clamp-3 sm:line-clamp-2">"{text as string}"</div>
@@ -512,7 +545,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, use
                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 flex items-center justify-center bg-zinc-700 text-[10px] hover:bg-zinc-600"
                            title="Copy to clipboard"
                          >
-                           {copiedText === text ? '✓' : '📋'}
+                           {copiedText === text ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                          </button>
                          {/* Feedback buttons */}
                          <div className="flex gap-1 mt-2 justify-center">
@@ -531,7 +564,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, use
                                    : 'border-zinc-800 text-zinc-600 hover:border-zinc-600 hover:text-zinc-400'
                                }`}
                              >
-                               {rating === 'helpful' ? '👍' : rating === 'mid' ? '😐' : '👎'}
+                               {rating === 'helpful' ? '+' : rating === 'mid' ? '○' : '-'}
                              </button>
                            ))}
                          </div>
@@ -554,13 +587,24 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, use
                         className="absolute -right-9 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 flex items-center justify-center bg-zinc-900 border border-zinc-700 text-zinc-400 hover:text-white text-xs"
                         title="Copy reply"
                       >
-                        {copiedText === entry.result.predictedReply ? '✓' : '📋'}
+                        {copiedText === entry.result.predictedReply ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                       </button>
                    </div>
                 </div>
              </div>
           </div>
         ))}
+
+        {/* Show pending message immediately */}
+        {pendingMessage && (
+          <div className="space-y-4 relative z-10">
+            <div className="flex justify-end">
+              <div className="max-w-[80%] bg-white text-black px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium leading-relaxed border border-zinc-200 shadow-[4px_4px_0px_rgba(0,0,0,0.5)] opacity-70">
+                {pendingMessage}
+              </div>
+            </div>
+          </div>
+        )}
 
         {chatLoading && (
            <div className="flex justify-start relative z-10">

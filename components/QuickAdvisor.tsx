@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, FeedbackEntry } from '../types';
 import { getQuickAdvice } from '../services/geminiService';
 import { saveFeedback, logSession } from '../services/feedbackService';
+import { Sparkles } from 'lucide-react';
 
 interface QuickAdvisorProps {
   onBack: () => void;
@@ -26,25 +27,18 @@ const CornerNodes = ({ className }: { className?: string }) => (
       <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 text-zinc-600 text-[8px]">+</div>
     </div>
     <div className="absolute top-0 right-0">
-       <div className="w-2 h-2 border-t border-r border-zinc-500"></div>
-       <div className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 text-zinc-600 text-[8px]">+</div>
+      <div className="w-2 h-2 border-t border-r border-zinc-500"></div>
+      <div className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 text-zinc-600 text-[8px]">+</div>
     </div>
     <div className="absolute bottom-0 left-0">
-       <div className="w-2 h-2 border-b border-l border-zinc-500"></div>
-       <div className="absolute bottom-0 left-0 -translate-x-1/2 translate-y-1/2 text-zinc-600 text-[8px]">+</div>
+      <div className="w-2 h-2 border-b border-l border-zinc-500"></div>
+      <div className="absolute bottom-0 left-0 -translate-x-1/2 translate-y-1/2 text-zinc-600 text-[8px]">+</div>
     </div>
     <div className="absolute bottom-0 right-0">
-       <div className="w-2 h-2 border-b border-r border-zinc-500"></div>
-       <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 text-zinc-600 text-[8px]">+</div>
+      <div className="w-2 h-2 border-b border-r border-zinc-500"></div>
+      <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 text-zinc-600 text-[8px]">+</div>
     </div>
   </div>
-);
-
-// Starburst icon matching App.tsx
-const StarBurst = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
-  </svg>
 );
 
 export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile }) => {
@@ -59,7 +53,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile 
 
   const handleAnalyze = useCallback(async () => {
     if (!theirMessage.trim()) return;
-    
+
     setIsLoading(true);
     setResult(null);
     setFeedbackGiven({});
@@ -100,10 +94,10 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile 
       theirEnergy: result?.vibeCheck.theirEnergy,
       recommendedAction: result?.recommendedAction,
     });
-    
+
     // Update UI state
     setFeedbackGiven(prev => ({ ...prev, [suggestionType]: rating }));
-    
+
     // Show thanks message briefly
     setShowFeedbackThanks(true);
     setTimeout(() => setShowFeedbackThanks(false), 2000);
@@ -159,10 +153,10 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile 
       <div className="h-full w-full flex flex-col bg-matte-base relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
-        
+
         {/* Header Bar */}
         <div className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between relative z-10">
-          <button 
+          <button
             onClick={onBack}
             className="flex items-center gap-3 text-zinc-500 hover:text-white transition-colors group"
           >
@@ -221,11 +215,10 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile 
                     <button
                       key={opt.value}
                       onClick={() => setContext(opt.value)}
-                      className={`py-2 md:py-3 px-1 md:px-4 border text-[8px] md:text-[10px] font-mono tracking-wider transition-all ${
-                        context === opt.value
+                      className={`py-2 md:py-3 px-1 md:px-4 border text-[8px] md:text-[10px] font-mono tracking-wider transition-all ${context === opt.value
                           ? 'bg-white text-black border-white'
                           : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500 hover:text-zinc-300'
-                      }`}
+                        }`}
                     >
                       {opt.label}
                     </button>
@@ -240,15 +233,14 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile 
               <button
                 onClick={handleAnalyze}
                 disabled={!theirMessage.trim() || isLoading}
-                className={`w-full py-5 font-impact text-2xl uppercase tracking-wide border transition-all ${
-                  !theirMessage.trim() || isLoading
+                className={`w-full py-5 font-impact text-2xl uppercase tracking-wide border transition-all ${!theirMessage.trim() || isLoading
                     ? 'bg-zinc-900 text-zinc-600 border-zinc-800 cursor-not-allowed'
                     : 'bg-white text-black border-white hover:bg-zinc-200'
-                }`}
+                  }`}
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-3">
-                    <StarBurst className="w-5 h-5 animate-spin" />
+                    <Sparkles className="w-5 h-5 animate-spin" />
                     ANALYZING...
                   </span>
                 ) : (
@@ -270,8 +262,8 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile 
       <div className="absolute inset-0 bg-scan-lines opacity-10 pointer-events-none"></div>
 
       {/* Header */}
-      <div className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between relative z-10 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
-        <button 
+      <div className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
+        <button
           onClick={resetForm}
           className="flex items-center gap-3 text-zinc-500 hover:text-white transition-colors group"
         >
@@ -286,7 +278,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile 
       {/* Results Content */}
       <div className="flex-1 p-6 md:p-10 relative z-10">
         <div className="max-w-4xl mx-auto space-y-6">
-          
+
           {/* Vibe Check Card */}
           <div className="bg-zinc-900 border border-zinc-800 relative">
             <CornerNodes className="opacity-50" />
@@ -294,13 +286,18 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile 
               <div className="flex items-center justify-between mb-4">
                 <div className="label-sm text-zinc-500 flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-hard-gold"></div>
-                  VIBE CHECK
+                  THEIR MESSAGE
                 </div>
                 <div className={`text-3xl font-impact ${getEnergyStyle(result.vibeCheck.theirEnergy)}`}>
                   {result.vibeCheck.theirEnergy.toUpperCase()}
                 </div>
               </div>
-              
+
+              {/* Show their actual message */}
+              <div className="bg-black/50 border border-zinc-800 p-3 mb-4">
+                <p className="text-zinc-300 text-sm font-mono italic">"{theirMessage}"</p>
+              </div>
+
               {/* Interest Level Bar */}
               <div className="mb-4">
                 <div className="flex justify-between text-[10px] font-mono text-zinc-500 mb-2 uppercase tracking-wider">
@@ -308,11 +305,10 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile 
                   <span>{result.vibeCheck.interestLevel}%</span>
                 </div>
                 <div className="h-1 bg-zinc-800 relative">
-                  <div 
-                    className={`h-full transition-all ${
-                      result.vibeCheck.interestLevel >= 70 ? 'bg-white' :
-                      result.vibeCheck.interestLevel >= 40 ? 'bg-hard-gold' : 'bg-hard-blue'
-                    }`}
+                  <div
+                    className={`h-full transition-all ${result.vibeCheck.interestLevel >= 70 ? 'bg-white' :
+                        result.vibeCheck.interestLevel >= 40 ? 'bg-hard-gold' : 'bg-hard-blue'
+                      }`}
                     style={{ width: `${result.vibeCheck.interestLevel}%` }}
                   />
                 </div>
@@ -336,21 +332,30 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile 
 
           {/* Draft Analysis (if provided) */}
           {result.draftAnalysis && (
-            <div className="bg-zinc-900 border border-zinc-800 relative">
+            <div className={`bg-zinc-900 border relative ${result.draftAnalysis.confidenceScore < 40 ? 'border-red-900/50' : 'border-zinc-800'
+              }`}>
               <CornerNodes className="opacity-50" />
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="label-sm text-zinc-500 flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 bg-hard-blue"></div>
-                    YOUR DRAFT
+                    <div className={`w-1.5 h-1.5 ${result.draftAnalysis.confidenceScore < 40 ? 'bg-red-500' : 'bg-hard-blue'}`}></div>
+                    YOUR DRAFT {result.draftAnalysis.confidenceScore < 40 && <span className="text-red-500">// DON'T SEND THIS</span>}
                   </div>
-                  <div className={`text-3xl font-impact ${
-                    result.draftAnalysis.confidenceScore >= 70 ? 'text-white' :
-                    result.draftAnalysis.confidenceScore >= 40 ? 'text-hard-gold' : 'text-red-500'
-                  }`}>
+                  <div className={`text-3xl font-impact ${result.draftAnalysis.confidenceScore >= 70 ? 'text-white' :
+                      result.draftAnalysis.confidenceScore >= 40 ? 'text-hard-gold' : 'text-red-500'
+                    }`}>
                     {result.draftAnalysis.confidenceScore}%
                   </div>
                 </div>
+
+                {/* Show user's actual draft */}
+                <div className={`border p-3 mb-4 ${result.draftAnalysis.confidenceScore < 40
+                    ? 'bg-red-950/30 border-red-900/50'
+                    : 'bg-black/50 border-zinc-800'
+                  }`}>
+                  <p className="text-zinc-300 text-sm font-mono italic">"{yourDraft}"</p>
+                </div>
+
                 <p className="text-zinc-400 text-sm mb-4 font-mono uppercase">{result.draftAnalysis.verdict}</p>
                 <div className="flex flex-wrap gap-2">
                   {result.draftAnalysis.strengths.map((s, i) => (
@@ -372,8 +377,8 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile 
           <div>
             <div className="label-sm text-zinc-500 mb-4 flex items-center justify-between">
               <span className="flex items-center gap-2">
-                <StarBurst className="w-3 h-3 text-hard-gold" />
-                SUGGESTED REPLIES
+                <Sparkles className="w-3 h-3 text-hard-gold" />
+                SAY THIS INSTEAD
               </span>
               {showFeedbackThanks && (
                 <span className="text-[10px] text-emerald-400 animate-pulse">✓ feedback saved</span>
@@ -404,17 +409,16 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile 
                       key={rating}
                       onClick={() => handleFeedback('smooth', rating)}
                       disabled={!!feedbackGiven['smooth']}
-                      className={`px-3 py-2 text-sm font-mono uppercase tracking-wider border transition-all min-w-[44px] min-h-[44px] flex items-center justify-center ${
-                        feedbackGiven['smooth'] === rating
+                      className={`px-3 py-2 text-sm font-mono uppercase tracking-wider border transition-all min-w-[44px] min-h-[44px] flex items-center justify-center ${feedbackGiven['smooth'] === rating
                           ? rating === 'helpful' ? 'bg-emerald-900/50 border-emerald-500 text-emerald-400' :
                             rating === 'mid' ? 'bg-yellow-900/50 border-yellow-500 text-yellow-400' :
-                            'bg-red-900/50 border-red-500 text-red-400'
+                              'bg-red-900/50 border-red-500 text-red-400'
                           : feedbackGiven['smooth']
-                          ? 'border-zinc-800 text-zinc-700 cursor-not-allowed'
-                          : 'border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300'
-                      }`}
+                            ? 'border-zinc-800 text-zinc-700 cursor-not-allowed'
+                            : 'border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300'
+                        }`}
                     >
-                      {rating === 'helpful' ? '👍' : rating === 'mid' ? '😐' : '👎'}
+                      {rating === 'helpful' ? '+' : rating === 'mid' ? '○' : '-'}
                     </button>
                   ))}
                 </div>
@@ -444,17 +448,16 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile 
                       key={rating}
                       onClick={() => handleFeedback('bold', rating)}
                       disabled={!!feedbackGiven['bold']}
-                      className={`px-3 py-2 text-sm font-mono uppercase tracking-wider border transition-all min-w-[44px] min-h-[44px] flex items-center justify-center ${
-                        feedbackGiven['bold'] === rating
+                      className={`px-3 py-2 text-sm font-mono uppercase tracking-wider border transition-all min-w-[44px] min-h-[44px] flex items-center justify-center ${feedbackGiven['bold'] === rating
                           ? rating === 'helpful' ? 'bg-emerald-900/50 border-emerald-500 text-emerald-400' :
                             rating === 'mid' ? 'bg-yellow-900/50 border-yellow-500 text-yellow-400' :
-                            'bg-red-900/50 border-red-500 text-red-400'
+                              'bg-red-900/50 border-red-500 text-red-400'
                           : feedbackGiven['bold']
-                          ? 'border-zinc-800 text-zinc-700 cursor-not-allowed'
-                          : 'border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300'
-                      }`}
+                            ? 'border-zinc-800 text-zinc-700 cursor-not-allowed'
+                            : 'border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300'
+                        }`}
                     >
-                      {rating === 'helpful' ? '👍' : rating === 'mid' ? '😐' : '👎'}
+                      {rating === 'helpful' ? '+' : rating === 'mid' ? '○' : '-'}
                     </button>
                   ))}
                 </div>
@@ -484,17 +487,16 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile 
                       key={rating}
                       onClick={() => handleFeedback('authentic', rating)}
                       disabled={!!feedbackGiven['authentic']}
-                      className={`px-3 py-2 text-sm font-mono uppercase tracking-wider border transition-all min-w-[44px] min-h-[44px] flex items-center justify-center ${
-                        feedbackGiven['authentic'] === rating
+                      className={`px-3 py-2 text-sm font-mono uppercase tracking-wider border transition-all min-w-[44px] min-h-[44px] flex items-center justify-center ${feedbackGiven['authentic'] === rating
                           ? rating === 'helpful' ? 'bg-emerald-900/50 border-emerald-500 text-emerald-400' :
                             rating === 'mid' ? 'bg-yellow-900/50 border-yellow-500 text-yellow-400' :
-                            'bg-red-900/50 border-red-500 text-red-400'
+                              'bg-red-900/50 border-red-500 text-red-400'
                           : feedbackGiven['authentic']
-                          ? 'border-zinc-800 text-zinc-700 cursor-not-allowed'
-                          : 'border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300'
-                      }`}
+                            ? 'border-zinc-800 text-zinc-700 cursor-not-allowed'
+                            : 'border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300'
+                        }`}
                     >
-                      {rating === 'helpful' ? '👍' : rating === 'mid' ? '😐' : '👎'}
+                      {rating === 'helpful' ? '+' : rating === 'mid' ? '○' : '-'}
                     </button>
                   ))}
                 </div>
@@ -517,20 +519,23 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile 
             <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-hard-gold/50 via-hard-gold to-hard-gold/50"></div>
             <div className="p-6">
               <div className="flex items-center gap-3 mb-3">
-                <StarBurst className="w-4 h-4 text-hard-gold" />
+                <Sparkles className="w-4 h-4 text-hard-gold" />
                 <span className="text-[10px] font-mono tracking-widest text-hard-gold uppercase">PRO TIP</span>
               </div>
               <p className="text-zinc-300 text-sm leading-relaxed">{result.proTip}</p>
             </div>
           </div>
 
-          {/* Action Banner */}
+          {/* Action Banner - Clarify this is for the AI suggestions */}
           <div className={`${getActionStyle(result.recommendedAction)} p-6 text-center`}>
+            <div className="text-[9px] font-mono uppercase tracking-widest opacity-60 mb-2">
+              USE ONE OF THE SUGGESTIONS ABOVE
+            </div>
             <div className="font-impact text-3xl uppercase tracking-wide mb-1">
               {getActionLabel(result.recommendedAction)}
             </div>
             <div className="text-[10px] font-mono uppercase tracking-widest opacity-70">
-              {result.recommendedAction === 'SEND' && 'GOOD TO GO. HIT SEND.'}
+              {result.recommendedAction === 'SEND' && 'PICK A REPLY ABOVE. SEND THAT.'}
               {result.recommendedAction === 'WAIT' && 'CHILL FOR A BIT FIRST.'}
               {result.recommendedAction === 'PULL_BACK' && "UR DOING TOO MUCH."}
               {result.recommendedAction === 'ABORT' && 'WALK AWAY BESTIE.'}

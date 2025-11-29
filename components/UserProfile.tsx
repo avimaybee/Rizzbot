@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { ArrowLeft, Circle, Upload, Image, X, AlertTriangle, Sparkles, ArrowRight } from 'lucide-react';
 import { UserStyleProfile, StyleExtractionResponse, AIExtractedStyleProfile } from '../types';
 import { extractUserStyle } from '../services/geminiService';
 
@@ -210,7 +211,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
             onClick={onBack}
             className="flex items-center gap-3 text-zinc-500 hover:text-white transition-colors group"
           >
-            <span className="text-lg">←</span>
+            <ArrowLeft className="w-4 h-4" />
             <span className="text-[10px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">BACK</span>
           </button>
           <div className="flex items-center gap-3">
@@ -227,7 +228,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
               <div className="p-8 md:p-12">
                 <div className="text-center space-y-6">
                   <div className="w-16 h-16 mx-auto bg-hard-gold/10 border border-hard-gold flex items-center justify-center">
-                    <span className="text-3xl">👤</span>
+                    <Circle className="w-8 h-8" />
                   </div>
                   
                   <div>
@@ -275,12 +276,12 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
         <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
         
         {/* Header */}
-        <div className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between relative z-10 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
+        <div className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
           <button 
             onClick={() => setCurrentStep('intro')}
             className="flex items-center gap-3 text-zinc-500 hover:text-white transition-colors group"
           >
-            <span className="text-lg">←</span>
+            <ArrowLeft className="w-4 h-4" />
             <span className="text-[10px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">BACK</span>
           </button>
           <div className="label-sm text-zinc-500">STEP 1 OF 2</div>
@@ -305,7 +306,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                     : 'bg-transparent text-zinc-500 hover:text-white'
                 }`}
               >
-                <span>📸</span> SCREENSHOTS
+                <Image className="w-4 h-4" /> SCREENSHOTS
               </button>
               <button
                 onClick={() => setInputMode('text')}
@@ -315,7 +316,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                     : 'bg-transparent text-zinc-500 hover:text-white'
                 }`}
               >
-                <span>✏️</span> PASTE TEXT
+                <Upload className="w-4 h-4" /> PASTE TEXT
               </button>
             </div>
 
@@ -338,7 +339,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                   className="border-2 border-dashed border-zinc-700 hover:border-zinc-500 transition-colors p-8 cursor-pointer"
                 >
                   <div className="text-center space-y-3">
-                    <div className="text-4xl">📱</div>
+                    <Image className="w-8 h-8" />
                     <div className="text-white font-mono text-sm">TAP TO UPLOAD SCREENSHOTS</div>
                     <div className="text-zinc-500 text-xs">screenshots of your iMessage / WhatsApp / IG chats</div>
                     <div className="text-zinc-600 text-[10px] font-mono uppercase">MAX 5 IMAGES • PNG/JPG</div>
@@ -361,7 +362,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                             onClick={() => removeScreenshot(index)}
                             className="absolute top-1 right-1 w-6 h-6 bg-red-600 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                           >
-                            ×
+                            <X className="w-3 h-3" />
                           </button>
                           <div className="absolute bottom-0 left-0 right-0 bg-black/70 py-1 text-center text-[8px] font-mono text-zinc-400">
                             #{index + 1}
@@ -379,15 +380,15 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                     <div className="label-sm text-zinc-500">PRO TIPS:</div>
                     <div className="space-y-2 text-sm text-zinc-400">
                       <div className="flex items-start gap-2">
-                        <span className="text-hard-gold">→</span>
+                        <ArrowRight className="w-3 h-3 text-hard-gold" />
                         <span>upload screenshots of convos where YOU were texting a lot</span>
                       </div>
                       <div className="flex items-start gap-2">
-                        <span className="text-hard-gold">→</span>
+                        <ArrowRight className="w-3 h-3 text-hard-gold" />
                         <span>the ai reads your messages (usually the right/blue side)</span>
                       </div>
                       <div className="flex items-start gap-2">
-                        <span className="text-hard-gold">→</span>
+                        <ArrowRight className="w-3 h-3 text-hard-gold" />
                         <span>more screenshots = more accurate style profile</span>
                       </div>
                     </div>
@@ -440,10 +441,10 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
             >
               {isAnalyzing ? (
                 <span className="flex items-center justify-center gap-3">
-                  <span className="animate-spin">⚙️</span> AI ANALYZING...
+                  <span className="animate-spin">◦</span> AI ANALYZING...
                 </span>
               ) : (
-                <>🤖 ANALYZE WITH AI</>
+                <><Sparkles className="w-5 h-5" /> ANALYZE WITH AI</>
               )}
             </button>
 
@@ -469,19 +470,19 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
       <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
       
       {/* Header */}
-      <div className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between relative z-10 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
+      <div className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
         <button 
           onClick={() => setCurrentStep('samples')}
           className="flex items-center gap-3 text-zinc-500 hover:text-white transition-colors group"
         >
-          <span className="text-lg">←</span>
+          <ArrowLeft className="w-4 h-4" />
           <span className="text-[10px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">EDIT SAMPLES</span>
         </button>
         <div className="label-sm text-zinc-500">STEP 2 OF 2</div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 p-6 md:p-10 relative z-10">
+      <div className="flex-1 p-6 md:p-10 relative z-0">
         <div className="max-w-3xl mx-auto space-y-6">
           <div>
             <div className="label-sm text-hard-gold mb-2">YOUR PROFILE</div>
@@ -496,7 +497,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">{analysisResult.confidence === 0 ? '⚠️' : '🤖'}</span>
+                    {analysisResult.confidence === 0 ? <AlertTriangle className="w-6 h-6 text-red-400" /> : <Sparkles className="w-6 h-6 text-hard-gold" />}
                     <div className={`label-sm ${analysisResult.confidence === 0 ? 'text-red-400' : 'text-hard-gold'}`}>
                       {analysisResult.confidence === 0 ? 'AI UNAVAILABLE' : 'AI ANALYSIS'}
                     </div>
