@@ -265,6 +265,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                       id="displayName"
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
+                      autoComplete="name"
                       placeholder="ENTER DISPLAY NAME"
                       className="w-full bg-zinc-950 border border-zinc-800 focus:border-hard-blue px-4 py-3 text-white placeholder-zinc-700 focus:outline-none transition-all font-mono text-sm"
                     />
@@ -282,6 +283,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    autoComplete="email"
                     placeholder="USER@EXAMPLE.COM"
                     className="w-full bg-zinc-950 border border-zinc-800 focus:border-hard-gold px-4 py-3 text-white placeholder-zinc-700 focus:outline-none transition-all font-mono text-sm"
                   />
@@ -299,6 +301,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
                       placeholder="••••••••"
                       minLength={6}
                       className="w-full bg-zinc-950 border border-zinc-800 focus:border-hard-gold px-4 py-3 text-white placeholder-zinc-700 focus:outline-none transition-all font-mono text-sm"

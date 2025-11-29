@@ -10,6 +10,7 @@ import { Simulator } from './components/Simulator';
 import { QuickAdvisor } from './components/QuickAdvisor';
 import { UserProfile } from './components/UserProfile';
 import { AuthModal } from './components/AuthModal';
+import { ToastProvider } from './components/Toast';
 import { AppState, GhostResult, UserStyleProfile, WellbeingState } from './types';
 
 // Feature flag to enable/disable Investigator mode
@@ -339,14 +340,24 @@ const StandbyScreen = ({ onActivate, hasProfile, authUser }: {
   hasProfile: boolean,
   authUser?: AuthUser | null
 }) => (
-  <div className="h-full w-full flex flex-col relative overflow-hidden bg-matte-base">
+  <div className="h-full w-full flex flex-col relative overflow-y-auto md:overflow-hidden bg-matte-base pb-20 md:pb-0">
 
     {/* Background Decor */}
     <div className="absolute top-0 right-0 w-[50%] h-full border-l border-zinc-900/50 hidden md:block"></div>
     <AbstractGrid className="absolute bottom-[-10%] left-[-10%] w-[40vw] h-[40vw] text-zinc-800 opacity-20 pointer-events-none animate-spin-slow" />
 
+    {/* Mobile Scroll Indicator */}
+    <div className="md:hidden absolute bottom-24 left-1/2 -translate-x-1/2 z-20 animate-bounce pointer-events-none">
+      <div className="flex flex-col items-center gap-1 text-zinc-600">
+        <span className="text-[9px] font-mono uppercase tracking-wider">scroll</span>
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+        </svg>
+      </div>
+    </div>
+
     {/* CONTENT GRID */}
-    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 h-full">
+    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 md:h-full">
 
       {/* LEFT: HERO */}
       <div className="p-6 md:p-12 lg:p-16 flex flex-col justify-center relative z-10 border-b md:border-b-0 md:border-r border-zinc-800 overflow-hidden">
@@ -503,31 +514,39 @@ function App() {
         setUserId(user.id);
 
         // Fetch style profile from D1
-        const profile = await getStyleProfile(user.id);
-        if (profile) {
-          // Convert JSON strings back to objects if necessary
-          if (typeof profile.signature_patterns === 'string') {
-            profile.signature_patterns = JSON.parse(profile.signature_patterns);
+        try {
+          const profile = await getStyleProfile(user.id);
+          if (profile) {
+            // Convert JSON strings back to objects if necessary
+            if (typeof profile.signature_patterns === 'string') {
+              profile.signature_patterns = JSON.parse(profile.signature_patterns);
+            }
+            if (typeof profile.raw_samples === 'string') {
+              profile.raw_samples = JSON.parse(profile.raw_samples);
+            }
+            // Map DB columns to UserStyleProfile type
+            setUserProfile({
+              emojiUsage: (profile.emoji_usage || 'minimal') as any,
+              capitalization: (profile.capitalization || 'lowercase') as any,
+              punctuation: (profile.punctuation || 'minimal') as any,
+              averageLength: (profile.average_length || 'medium') as any,
+              slangLevel: (profile.slang_level || 'casual') as any,
+              signaturePatterns: profile.signature_patterns || [],
+              preferredTone: profile.preferred_tone || 'playful',
+            });
           }
-          if (typeof profile.raw_samples === 'string') {
-            profile.raw_samples = JSON.parse(profile.raw_samples);
-          }
-          // Map DB columns to UserStyleProfile type
-          setUserProfile({
-            emojiUsage: (profile.emoji_usage || 'minimal') as any,
-            capitalization: (profile.capitalization || 'lowercase') as any,
-            punctuation: (profile.punctuation || 'minimal') as any,
-            averageLength: (profile.average_length || 'medium') as any,
-            slangLevel: (profile.slang_level || 'casual') as any,
-            signaturePatterns: profile.signature_patterns || [],
-            preferredTone: profile.preferred_tone || 'playful',
-          });
+        } catch (profileError) {
+          // Profile fetch failed, but we can continue without it
+          console.warn('Failed to fetch style profile (continuing without it):', profileError);
         }
 
         // Log screen view
         logScreenView('main_app');
       } catch (error) {
+        // Database sync failed - continue without DB features
+        // The app can still work with just Firebase auth
         console.error('Failed to sync user with database:', error);
+        // Don't set userId, features requiring DB will show appropriate messages
       } finally {
         setIsLoadingUser(false);
       }
@@ -689,6 +708,7 @@ function App() {
   }
 
   return (
+    <ToastProvider>
     <div className="flex h-screen w-screen bg-matte-base text-zinc-100 overflow-hidden font-sans selection:bg-white selection:text-black">
 
       {/* Show loading state while syncing user with database */}
@@ -719,7 +739,7 @@ function App() {
       <SideDock activeModule={activeModule} setModule={setActiveModule} authUser={authUser} onSignOut={handleSignOut} />
 
       {/* MAIN CONTAINER */}
-      <div className="flex-1 relative h-full flex flex-col p-2 md:p-4 overflow-y-auto md:overflow-hidden pb-24 md:pb-4 scrollbar-hide">
+      <div className="flex-1 relative h-full flex flex-col p-2 md:p-4 overflow-y-auto md:overflow-hidden pb-20 md:pb-4 scrollbar-hide">
 
         {/* VIEWPORT FRAME */}
         <div className="relative w-full flex-1 min-h-0 border border-zinc-800 bg-black/20 overflow-hidden flex flex-col shadow-2xl">
@@ -924,6 +944,7 @@ function App() {
       {/* Mobile Bottom Navigation */}
       < BottomTabs activeModule={activeModule} setModule={setActiveModule} />
     </div >
+    </ToastProvider>
   );
 }
 

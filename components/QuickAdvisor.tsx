@@ -4,6 +4,7 @@ import { getQuickAdvice } from '../services/geminiService';
 import { saveFeedback, logSession } from '../services/feedbackService';
 import { createSession, submitFeedback } from '../services/dbService';
 import { Sparkles, Upload, X, Image } from 'lucide-react';
+import { useGlobalToast } from './Toast';
 
 interface QuickAdvisorProps {
   onBack: () => void;
@@ -55,6 +56,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
   const [showFeedbackThanks, setShowFeedbackThanks] = useState(false);
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { showToast } = useGlobalToast();
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -120,8 +122,9 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
   const copyToClipboard = useCallback((text: string, key: string) => {
     navigator.clipboard.writeText(text);
     setCopiedIndex(key);
+    showToast('Response copied to clipboard!', 'copied');
     setTimeout(() => setCopiedIndex(null), 1500);
-  }, []);
+  }, [showToast]);
 
   const handleFeedback = useCallback((suggestionType: 'smooth' | 'bold' | 'authentic', rating: 'helpful' | 'mid' | 'off') => {
     // Save feedback locally
@@ -155,10 +158,9 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
     // Update UI state
     setFeedbackGiven(prev => ({ ...prev, [suggestionType]: rating }));
 
-    // Show thanks message briefly
-    setShowFeedbackThanks(true);
-    setTimeout(() => setShowFeedbackThanks(false), 2000);
-  }, [context, result, userId]);
+    // Show toast notification
+    showToast('Thanks for the feedback!', 'success');
+  }, [context, result, userId, showToast]);
 
   const resetForm = useCallback(() => {
     setResult(null);
@@ -208,7 +210,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
   // Input View
   if (!result) {
     return (
-      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-hidden scrollbar-hide">
+      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-hidden scrollbar-hide pb-20 md:pb-0">
         {/* Background Pattern */}
         <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
 
@@ -228,16 +230,16 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-6 md:p-10 flex flex-col relative z-10 overflow-y-auto">
+        <div className="flex-1 p-4 sm:p-6 md:p-10 flex flex-col relative z-10 overflow-y-auto">
           {/* Title Section */}
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <div className="label-sm text-hard-gold mb-2">QUICK MODE</div>
-            <h2 className="text-4xl md:text-5xl font-impact text-white uppercase tracking-tight">WHAT DO I SAY?</h2>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-impact text-white uppercase tracking-tight">WHAT DO I SAY?</h2>
             <p className="text-zinc-500 text-sm mt-2 font-mono">Paste the texts. Get the texts.</p>
           </div>
 
           {/* Form Grid */}
-          <div className="grid md:grid-cols-2 gap-6 flex-1">
+          <div className="grid md:grid-cols-2 gap-4 sm:gap-6 flex-1">
             {/* Left Column - Inputs */}
             <div className="space-y-6">
               {/* Screenshot Upload (Primary) */}
@@ -372,7 +374,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
 
   // Results View
   return (
-    <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide">
+    <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-20 md:pb-0">
       {/* Background */}
       <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
       <div className="absolute inset-0 bg-scan-lines opacity-10 pointer-events-none"></div>
@@ -392,8 +394,8 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
       </div>
 
       {/* Results Content */}
-      <div className="flex-1 p-6 md:p-10 relative z-10">
-        <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex-1 p-4 sm:p-6 md:p-10 relative z-10">
+        <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
 
           {/* Vibe Check Card */}
           <div className="bg-zinc-900 border border-zinc-800 relative">
@@ -496,9 +498,6 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
                 <Sparkles className="w-3 h-3 text-hard-gold" />
                 SAY THIS INSTEAD
               </span>
-              {showFeedbackThanks && (
-                <span className="text-[10px] text-emerald-400 animate-pulse">✓ feedback saved</span>
-              )}
             </div>
             <div className="space-y-3">
               {/* Smooth Option */}

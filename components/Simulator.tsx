@@ -4,6 +4,7 @@ import { generatePersona, simulateDraft, analyzeSimulation } from '../services/g
 import { saveFeedback, logSession } from '../services/feedbackService';
 import { createPersona, createSession } from '../services/dbService';
 import { SimResult, Persona, SimAnalysisResult, UserStyleProfile } from '../types';
+import { useGlobalToast } from './Toast';
 
 interface SimulatorProps {
   // Optional callback - used when Investigator mode is enabled
@@ -37,6 +38,7 @@ const CornerNodes = ({ className }: { className?: string }) => (
 
 export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, userProfile, firebaseUid, userId }) => {
   const [view, setView] = useState<View>('setup');
+  const { showToast } = useGlobalToast();
 
   // Copy to clipboard state
   const [copiedText, setCopiedText] = useState<string | null>(null);
@@ -88,8 +90,9 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, use
   const copyToClipboard = useCallback((text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedText(text);
+    showToast('Copied to clipboard!', 'copied');
     setTimeout(() => setCopiedText(null), 1500);
-  }, []);
+  }, [showToast]);
 
   // Handle feedback on rewrite suggestions
   const handleFeedback = useCallback((suggestionType: 'safe' | 'bold' | 'spicy' | 'you', rating: 'helpful' | 'mid' | 'off', entryIndex: number) => {
@@ -234,7 +237,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, use
   // --- SETUP VIEW ---
   if (view === 'setup') {
     return (
-      <div className="w-full h-full max-w-full mx-auto bg-matte-panel border border-zinc-800 flex flex-col shadow-2xl relative overflow-hidden">
+      <div className="w-full h-full max-w-full mx-auto bg-matte-panel border border-zinc-800 flex flex-col shadow-2xl relative overflow-hidden pb-20 md:pb-0">
         <CornerNodes />
 
         {/* MOBILE: Show header first, then archive inline */}
@@ -401,7 +404,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, use
   // --- ANALYSIS VIEW ---
   if (view === 'analysis' && analysisResult) {
     return (
-      <div className="w-full h-full max-w-5xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative scrollbar-hide">
+      <div className="w-full h-full max-w-5xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative scrollbar-hide pb-20 md:pb-0">
         <CornerNodes />
         <div className="bg-zinc-900 p-4 sm:p-6 border-b border-zinc-800 flex justify-between items-center shrink-0">
           <div>
@@ -495,7 +498,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, use
 
   // --- CHAT VIEW ---
   return (
-    <div className="w-full h-full max-w-4xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative shadow-2xl scrollbar-hide">
+    <div className="w-full h-full max-w-4xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative shadow-2xl scrollbar-hide pb-20 md:pb-0">
       <CornerNodes />
 
       {/* CHAT HEADER */}

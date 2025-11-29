@@ -204,7 +204,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
   // Intro Screen
   if (currentStep === 'intro') {
     return (
-      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-hidden scrollbar-hide">
+      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-hidden scrollbar-hide pb-20 md:pb-0">
         <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
 
         {/* Header */}
@@ -274,7 +274,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
   // Samples Collection Screen
   if (currentStep === 'samples') {
     return (
-      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide">
+      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-20 md:pb-0">
         <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
 
         {/* Header */}
@@ -441,7 +441,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
 
   // Review & Edit Screen
   return (
-    <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide">
+    <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-20 md:pb-0">
       <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
 
       {/* Header */}
