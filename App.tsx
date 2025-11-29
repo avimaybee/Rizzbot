@@ -1,12 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Home, Zap, MessageSquare, User, Sparkles, ArrowRight } from 'lucide-react';
+import { Home, Zap, MessageSquare, User, Sparkles, ArrowRight, LogOut } from 'lucide-react';
 import { analyzeGhosting } from './services/geminiService';
 import { checkWellbeing, triggerWellbeingCheckIn, dismissWellbeingCheckIn, getWellbeingState, clearWellbeingTrigger } from './services/feedbackService';
+import { getOrCreateUser, getStyleProfile, saveStyleProfile } from './services/dbService';
+import { onAuthChange, signOutUser, AuthUser, logScreenView } from './services/firebaseService';
 import { LoadingScreen } from './components/LoadingScreen';
 import { ResultCard } from './components/ResultCard';
 import { Simulator } from './components/Simulator';
 import { QuickAdvisor } from './components/QuickAdvisor';
 import { UserProfile } from './components/UserProfile';
+import { AuthModal } from './components/AuthModal';
 import { AppState, GhostResult, UserStyleProfile, WellbeingState } from './types';
 
 // Feature flag to enable/disable Investigator mode
@@ -164,7 +167,12 @@ const WellbeingCheckIn = ({ reason, onDismiss, onDismissForDay }: {
 };
 
 // --- COMPONENT: SIDE DOCK (Desktop) ---
-const SideDock = ({ activeModule, setModule }: { activeModule: Module, setModule: (m: Module) => void }) => {
+const SideDock = ({ activeModule, setModule, authUser, onSignOut }: { 
+  activeModule: Module, 
+  setModule: (m: Module) => void,
+  authUser?: AuthUser | null,
+  onSignOut?: () => void
+}) => {
   return (
     <div className="hidden md:flex w-20 border-r border-zinc-800 bg-matte-base flex-col items-center py-6 z-50 h-full relative">
       <div className="mb-10">
@@ -207,8 +215,33 @@ const SideDock = ({ activeModule, setModule }: { activeModule: Module, setModule
         />
       </div>
 
-      <div className="mt-auto flex flex-col items-center gap-4 text-[9px] font-mono text-zinc-600">
-        <div className="writing-vertical-lr tracking-widest uppercase opacity-30 hover:opacity-100 transition-opacity cursor-default">
+      <div className="mt-auto flex flex-col items-center gap-4">
+        {/* User Avatar & Sign Out */}
+        {authUser && (
+          <div className="flex flex-col items-center gap-2 mb-4">
+            {authUser.photoURL ? (
+              <img 
+                src={authUser.photoURL} 
+                alt={authUser.displayName || 'User'} 
+                className="w-8 h-8 rounded-full border border-zinc-700"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+                {(authUser.displayName || authUser.email || 'U')[0].toUpperCase()}
+              </div>
+            )}
+            {onSignOut && (
+              <button
+                onClick={onSignOut}
+                className="text-zinc-600 hover:text-red-400 transition-colors"
+                title="Sign out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
+        <div className="text-[9px] font-mono text-zinc-600 writing-vertical-lr tracking-widest uppercase opacity-30 hover:opacity-100 transition-opacity cursor-default">
           RIZZBOT V3.1
         </div>
       </div>
@@ -301,7 +334,11 @@ const DockItem = ({ active, onClick, label, index, highlight }: { active: boolea
 );
 
 // --- COMPONENT: STANDBY SCREEN (EDITORIAL) ---
-const StandbyScreen = ({ onActivate, hasProfile }: { onActivate: (m: Module) => void, hasProfile: boolean }) => (
+const StandbyScreen = ({ onActivate, hasProfile, authUser }: { 
+  onActivate: (m: Module) => void, 
+  hasProfile: boolean,
+  authUser?: AuthUser | null
+}) => (
   <div className="h-full w-full flex flex-col relative overflow-hidden bg-matte-base">
 
     {/* Background Decor */}
@@ -314,6 +351,17 @@ const StandbyScreen = ({ onActivate, hasProfile }: { onActivate: (m: Module) => 
       {/* LEFT: HERO */}
       <div className="p-6 md:p-12 lg:p-16 flex flex-col justify-center relative z-10 border-b md:border-b-0 md:border-r border-zinc-800 overflow-hidden">
         <div>
+          {/* Welcome User */}
+          {authUser && (
+            <div className="mb-4 flex items-center gap-2">
+              {authUser.photoURL && (
+                <img src={authUser.photoURL} alt="" className="w-6 h-6 rounded-full" />
+              )}
+              <span className="text-sm text-zinc-400">
+                welcome back, <span className="text-white">{authUser.displayName || authUser.email?.split('@')[0] || 'friend'}</span>
+              </span>
+            </div>
+          )}
           <span className="label-sm text-hard-gold mb-2 block">YOUR AI WINGMAN</span>
           <h1 className="leading-[0.85] font-impact text-white mb-4">
             <span className="text-[2rem] md:text-[3rem] lg:text-[4rem] block text-zinc-500">THE</span>
@@ -407,23 +455,96 @@ function App() {
   const [activeModule, setActiveModule] = useState<Module>('standby');
   const [state, setState] = useState<AppState>('landing');
 
+  // Firebase Auth State
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // User Session State (from D1)
+  const [userId, setUserId] = useState<number | null>(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+
   // User Profile State
   const [userProfile, setUserProfile] = useState<UserStyleProfile | null>(null);
 
   // Wellbeing Check-in State
   const [wellbeingCheckIn, setWellbeingCheckIn] = useState<WellbeingState | null>(null);
 
-  // Load user profile from localStorage on mount
+  // Listen to Firebase auth state changes
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('userStyleProfile');
-      if (saved) {
-        setUserProfile(JSON.parse(saved));
+    const unsubscribe = onAuthChange((user) => {
+      setAuthUser(user);
+      setAuthLoading(false);
+
+      // If user signs out, clear app state
+      if (!user) {
+        setUserId(null);
+        setUserProfile(null);
+        setIsLoadingUser(false);
       }
-    } catch (error) {
-      console.error('Failed to load user profile:', error);
-    }
+    });
+
+    return () => unsubscribe();
   }, []);
+
+  // Once we have a Firebase user, sync with D1 database
+  useEffect(() => {
+    if (!authUser) return;
+
+    const syncUserWithDatabase = async () => {
+      setIsLoadingUser(true);
+      try {
+        // Use Firebase UID as the identifier
+        const user = await getOrCreateUser(authUser.uid, {
+          email: authUser.email,
+          display_name: authUser.displayName,
+          photo_url: authUser.photoURL,
+          provider: authUser.providerId,
+        });
+        setUserId(user.id);
+
+        // Fetch style profile from D1
+        const profile = await getStyleProfile(user.id);
+        if (profile) {
+          // Convert JSON strings back to objects if necessary
+          if (typeof profile.signature_patterns === 'string') {
+            profile.signature_patterns = JSON.parse(profile.signature_patterns);
+          }
+          if (typeof profile.raw_samples === 'string') {
+            profile.raw_samples = JSON.parse(profile.raw_samples);
+          }
+          // Map DB columns to UserStyleProfile type
+          setUserProfile({
+            emojiUsage: (profile.emoji_usage || 'minimal') as any,
+            capitalization: (profile.capitalization || 'lowercase') as any,
+            punctuation: (profile.punctuation || 'minimal') as any,
+            averageLength: (profile.average_length || 'medium') as any,
+            slangLevel: (profile.slang_level || 'casual') as any,
+            signaturePatterns: profile.signature_patterns || [],
+            preferredTone: profile.preferred_tone || 'playful',
+          });
+        }
+
+        // Log screen view
+        logScreenView('main_app');
+      } catch (error) {
+        console.error('Failed to sync user with database:', error);
+      } finally {
+        setIsLoadingUser(false);
+      }
+    };
+
+    syncUserWithDatabase();
+  }, [authUser]);
+
+  // Handle sign out
+  const handleSignOut = async () => {
+    try {
+      await signOutUser();
+      setActiveModule('standby');
+    } catch (error) {
+      console.error('Sign out failed:', error);
+    }
+  };
 
   // Check wellbeing on module changes and periodically
   useEffect(() => {
@@ -456,9 +577,27 @@ function App() {
     setWellbeingCheckIn(null);
   };
 
-  // Save user profile to localStorage
-  const handleSaveProfile = (profile: UserStyleProfile) => {
+  // Save user profile to D1 and localStorage
+  const handleSaveProfile = async (profile: UserStyleProfile) => {
     try {
+      if (!userId) {
+        console.error('No user ID available');
+        return;
+      }
+
+      // Save to D1
+      await saveStyleProfile({
+        user_id: userId,
+        emoji_usage: profile.emojiUsage,
+        capitalization: profile.capitalization,
+        punctuation: profile.punctuation,
+        average_length: profile.averageLength,
+        slang_level: profile.slangLevel,
+        signature_patterns: profile.signaturePatterns,
+        preferred_tone: profile.preferredTone,
+      });
+
+      // Also save to localStorage for offline access
       localStorage.setItem('userStyleProfile', JSON.stringify(profile));
       setUserProfile(profile);
       setActiveModule('standby');
@@ -527,8 +666,45 @@ function App() {
 
   const hasScreenshots = investigateMode === 'screenshot' && screenshots.length > 0;
 
+  // Show loading while checking auth state
+  if (authLoading) {
+    return (
+      <div className="flex h-screen w-screen bg-matte-base items-center justify-center">
+        <div className="text-center">
+          <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider mb-4">AUTHENTICATING...</div>
+          <div className="animate-spin">
+            <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="12" cy="12" r="9" strokeWidth="2" opacity="0.2" />
+              <path d="M12 3c4.97 0 9 4.03 9 9" strokeWidth="2" strokeDasharray="20" strokeDashoffset="0" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth modal if not signed in
+  if (!authUser) {
+    return <AuthModal onAuthSuccess={() => {}} />;
+  }
+
   return (
     <div className="flex h-screen w-screen bg-matte-base text-zinc-100 overflow-hidden font-sans selection:bg-white selection:text-black">
+
+      {/* Show loading state while syncing user with database */}
+      {isLoadingUser && (
+        <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider mb-4">SYNCING...</div>
+            <div className="animate-spin">
+              <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="9" strokeWidth="2" opacity="0.2" />
+                <path d="M12 3c4.97 0 9 4.03 9 9" strokeWidth="2" strokeDasharray="20" strokeDashoffset="0" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Wellbeing Check-in Modal */}
       {wellbeingCheckIn?.triggered && wellbeingCheckIn.reason && (
@@ -540,7 +716,7 @@ function App() {
       )}
 
 
-      <SideDock activeModule={activeModule} setModule={setActiveModule} />
+      <SideDock activeModule={activeModule} setModule={setActiveModule} authUser={authUser} onSignOut={handleSignOut} />
 
       {/* MAIN CONTAINER */}
       <div className="flex-1 relative h-full flex flex-col p-2 md:p-4 overflow-y-auto md:overflow-hidden pb-24 md:pb-4 scrollbar-hide">
@@ -553,20 +729,30 @@ function App() {
 
           {/* STANDBY MODULE */}
           {activeModule === 'standby' && (
-            <StandbyScreen onActivate={setActiveModule} hasProfile={!!userProfile} />
+            <StandbyScreen onActivate={setActiveModule} hasProfile={!!userProfile} authUser={authUser} />
           )}
 
           {/* PRACTICE MODE MODULE */}
           {activeModule === 'simulator' && (
             <div className="h-full w-full flex flex-col animate-fade-in bg-matte-base">
-              <Simulator onPivotToInvestigator={ENABLE_INVESTIGATOR ? () => setActiveModule('investigator') : undefined} userProfile={userProfile} />
+              <Simulator
+                onPivotToInvestigator={ENABLE_INVESTIGATOR ? () => setActiveModule('investigator') : undefined}
+                userProfile={userProfile}
+                firebaseUid={authUser.uid}
+                userId={userId}
+              />
             </div>
           )}
 
           {/* QUICK MODE MODULE */}
           {activeModule === 'quick' && (
             <div className="h-full w-full flex flex-col animate-fade-in">
-              <QuickAdvisor onBack={() => setActiveModule('standby')} userProfile={userProfile} />
+              <QuickAdvisor
+                onBack={() => setActiveModule('standby')}
+                userProfile={userProfile}
+                firebaseUid={authUser.uid}
+                userId={userId}
+              />
             </div>
           )}
 
@@ -577,6 +763,9 @@ function App() {
                 onBack={() => setActiveModule('standby')}
                 onSave={handleSaveProfile}
                 initialProfile={userProfile}
+                userId={userId}
+                authUser={authUser}
+                onSignOut={handleSignOut}
               />
             </div>
           )}

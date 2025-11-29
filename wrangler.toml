@@ -1,0 +1,23 @@
+name = "rizzbot"
+account_id = "275802114da3095a634457ef16168244"
+compatibility_date = "2025-01-01"
+
+# D1 Database Binding
+[[d1_databases]]
+binding = "RIZZBOT_DATA"
+database_id = "4211ee68-0f20-42d1-87b2-dd450ec4dd89"
+database_name = "rizzbot"
+
+# Development environment
+[env.development]
+[[env.development.d1_databases]]
+binding = "RIZZBOT_DATA"
+database_id = "4211ee68-0f20-42d1-87b2-dd450ec4dd89"
+database_name = "rizzbot"
+
+# Production environment
+[env.production]
+[[env.production.d1_databases]]
+binding = "RIZZBOT_DATA"
+database_id = "4211ee68-0f20-42d1-87b2-dd450ec4dd89"
+database_name = "rizzbot"

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronDown, ChevronUp, Upload, MessageSquare, Copy, Check, Sparkles } from 'lucide-react';
 import { generatePersona, simulateDraft, analyzeSimulation } from '../services/geminiService';
 import { saveFeedback, logSession } from '../services/feedbackService';
+import { createPersona, createSession } from '../services/dbService';
 import { SimResult, Persona, SimAnalysisResult, UserStyleProfile } from '../types';
 
 interface SimulatorProps {
@@ -9,6 +10,10 @@ interface SimulatorProps {
   onPivotToInvestigator?: () => void;
   // User's style profile for personalized suggestions
   userProfile?: UserStyleProfile | null;
+  // User's Firebase UID for storing sessions
+  firebaseUid?: string | null;
+  // User's numeric ID for storing personas
+  userId?: number | null;
 }
 
 type View = 'setup' | 'chat' | 'analysis';
@@ -30,7 +35,7 @@ const CornerNodes = ({ className }: { className?: string }) => (
   </div>
 );
 
-export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, userProfile }) => {
+export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, userProfile, firebaseUid, userId }) => {
   const [view, setView] = useState<View>('setup');
 
   // Copy to clipboard state
@@ -116,11 +121,36 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, use
   const buildPersona = async () => {
     if (!personaDescription && screenshots.length === 0) return;
     setSetupLoading(true);
-    const persona = await generatePersona(personaDescription, screenshots, relationshipContext, harshnessLevel);
-    if (customName.trim()) persona.name = customName.trim();
-    setActivePersona(persona);
-    setSetupLoading(false);
-    setView('chat');
+    try {
+      const persona = await generatePersona(personaDescription, screenshots, relationshipContext, harshnessLevel);
+      if (customName.trim()) persona.name = customName.trim();
+      setActivePersona(persona);
+
+      // Save persona to D1 if userId is available
+      if (userId) {
+        try {
+          await createPersona({
+            user_id: userId,
+            name: persona.name,
+            relationship_context: relationshipContext,
+            harshness_level: harshnessLevel,
+            communication_tips: persona.communicationTips || [],
+            conversation_starters: persona.conversationStarters || [],
+            things_to_avoid: persona.thingsToAvoid || [],
+          });
+        } catch (dbError) {
+          console.error('Failed to save persona to DB:', dbError);
+          // Continue anyway, feature still works locally
+        }
+      }
+
+      // Also save locally
+      setSavedPersonas(prev => [...prev, persona]);
+      localStorage.setItem('unsend_personas', JSON.stringify([...savedPersonas, persona]));
+    } finally {
+      setSetupLoading(false);
+      setView('chat');
+    }
   };
 
   const loadPersona = (p: Persona) => {
@@ -144,12 +174,32 @@ export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, use
   const handleEndSim = async () => {
     if (!activePersona || simHistory.length === 0) return;
     setAnalyzing(true);
-    const result = await analyzeSimulation(simHistory, activePersona, userProfile);
-    setAnalysisResult(result);
-    // Log session for wellbeing tracking
-    logSession('practice', activePersona.name, result.ghostRisk);
-    setAnalyzing(false);
-    setView('analysis');
+    try {
+      const result = await analyzeSimulation(simHistory, activePersona, userProfile);
+      setAnalysisResult(result);
+      
+      // Log session for wellbeing tracking
+      logSession('practice', activePersona.name, result.ghostRisk);
+
+      // Save session to D1
+      if (firebaseUid) {
+        try {
+          await createSession(firebaseUid, {
+            type: 'practice',
+            persona: activePersona.name,
+            analysis: result,
+            messageCount: simHistory.length,
+            timestamp: new Date().toISOString(),
+          });
+        } catch (dbError) {
+          console.error('Failed to save session to DB:', dbError);
+          // Continue anyway
+        }
+      }
+    } finally {
+      setAnalyzing(false);
+      setView('analysis');
+    }
   };
 
   const copyToDraft = (text: string) => {

@@ -2,11 +2,14 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, FeedbackEntry } from '../types';
 import { getQuickAdvice } from '../services/geminiService';
 import { saveFeedback, logSession } from '../services/feedbackService';
+import { createSession, submitFeedback } from '../services/dbService';
 import { Sparkles, Upload, X, Image } from 'lucide-react';
 
 interface QuickAdvisorProps {
   onBack: () => void;
   userProfile?: UserStyleProfile | null;
+  firebaseUid?: string | null;
+  userId?: number | null;
 }
 
 type ContextOption = 'new' | 'talking' | 'dating' | 'complicated' | 'ex';
@@ -41,7 +44,7 @@ const CornerNodes = ({ className }: { className?: string }) => (
   </div>
 );
 
-export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile }) => {
+export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile, firebaseUid, userId }) => {
   const [theirMessage, setTheirMessage] = useState('');
   const [yourDraft, setYourDraft] = useState('');
   const [context, setContext] = useState<ContextOption>('talking');
@@ -93,12 +96,26 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile 
       setResult(response);
       // Log session for wellbeing tracking
       logSession('quick', undefined, undefined);
+      
+      // Save session to D1
+      if (firebaseUid) {
+        try {
+          await createSession(firebaseUid, {
+            type: 'quick',
+            request,
+            response,
+            timestamp: new Date().toISOString(),
+          });
+        } catch (dbError) {
+          console.error('Failed to save quick session to DB:', dbError);
+        }
+      }
     } catch (error) {
       console.error('Quick advice failed:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [theirMessage, yourDraft, context, userProfile, screenshots]);
+  }, [theirMessage, yourDraft, context, userProfile, screenshots, firebaseUid]);
 
   const copyToClipboard = useCallback((text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -107,7 +124,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile 
   }, []);
 
   const handleFeedback = useCallback((suggestionType: 'smooth' | 'bold' | 'authentic', rating: 'helpful' | 'mid' | 'off') => {
-    // Save feedback
+    // Save feedback locally
     saveFeedback({
       source: 'quick',
       suggestionType,
@@ -117,13 +134,31 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile 
       recommendedAction: result?.recommendedAction,
     });
 
+    // Save feedback to D1 if userId available
+    if (userId) {
+      try {
+        submitFeedback({
+          user_id: userId,
+          source: 'quick',
+          suggestion_type: suggestionType,
+          rating: rating === 'helpful' ? 1 : rating === 'mid' ? 0 : -1,
+          metadata: {
+            context,
+            theirEnergy: result?.vibeCheck.theirEnergy,
+          }
+        });
+      } catch (dbError) {
+        console.error('Failed to submit feedback to DB:', dbError);
+      }
+    }
+
     // Update UI state
     setFeedbackGiven(prev => ({ ...prev, [suggestionType]: rating }));
 
     // Show thanks message briefly
     setShowFeedbackThanks(true);
     setTimeout(() => setShowFeedbackThanks(false), 2000);
-  }, [context, result]);
+  }, [context, result, userId]);
 
   const resetForm = useCallback(() => {
     setResult(null);

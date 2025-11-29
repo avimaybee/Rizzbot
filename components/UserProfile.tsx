@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { ArrowLeft, Circle, Upload, Image, X, AlertTriangle, Sparkles, ArrowRight, User } from 'lucide-react';
+import { ArrowLeft, Circle, Upload, Image, X, AlertTriangle, Sparkles, ArrowRight, User, LogOut } from 'lucide-react';
 import { UserStyleProfile, StyleExtractionResponse, AIExtractedStyleProfile } from '../types';
 import { extractUserStyle } from '../services/geminiService';
+import { AuthUser } from '../services/firebaseService';
 
 interface UserProfileProps {
   onBack: () => void;
   onSave: (profile: UserStyleProfile) => void;
   initialProfile?: UserStyleProfile | null;
+  userId?: number | null;
+  authUser?: AuthUser | null;
+  onSignOut?: () => void;
 }
 
 // Corner Nodes Component
@@ -31,7 +35,7 @@ const CornerNodes = ({ className }: { className?: string }) => (
   </div>
 );
 
-export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initialProfile }) => {
+export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initialProfile, userId, authUser, onSignOut }) => {
   // Profile state
   const [profile, setProfile] = useState<UserStyleProfile>({
     emojiUsage: 'moderate',
@@ -645,6 +649,51 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                         {pattern}
                       </span>
                     ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Account Section */}
+            {authUser && (
+              <div className="bg-zinc-900 border border-zinc-800 p-6 relative">
+                <CornerNodes className="opacity-30" />
+                <div>
+                  <div className="label-sm text-zinc-400 mb-4">ACCOUNT</div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      {authUser.photoURL ? (
+                        <img 
+                          src={authUser.photoURL} 
+                          alt="" 
+                          className="w-12 h-12 rounded-full border-2 border-zinc-700"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-white text-lg font-bold">
+                          {(authUser.displayName || authUser.email || 'U')[0].toUpperCase()}
+                        </div>
+                      )}
+                      <div>
+                        <div className="text-white font-medium">
+                          {authUser.displayName || 'User'}
+                        </div>
+                        <div className="text-zinc-500 text-sm">
+                          {authUser.email}
+                        </div>
+                        <div className="text-zinc-600 text-[10px] font-mono mt-1">
+                          via {authUser.providerId === 'google.com' ? 'Google' : 'Email'}
+                        </div>
+                      </div>
+                    </div>
+                    {onSignOut && (
+                      <button
+                        onClick={onSignOut}
+                        className="flex items-center gap-2 px-4 py-2 border border-zinc-700 text-zinc-400 hover:border-red-500 hover:text-red-400 transition-colors text-sm"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Sign Out
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

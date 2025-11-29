@@ -15,9 +15,9 @@
 import { FeedbackEntry, FeedbackStats, SessionLog, WellbeingState } from '../types';
 
 // Storage keys
-const FEEDBACK_KEY = 'theblock_feedback';
-const SESSIONS_KEY = 'theblock_sessions';
-const WELLBEING_KEY = 'theblock_wellbeing';
+const FEEDBACK_KEY = 'therizzbot_feedback';
+const SESSIONS_KEY = 'therizzbot_sessions';
+const WELLBEING_KEY = 'therizzbot_wellbeing';
 
 // ============================================
 // FEEDBACK FUNCTIONS
@@ -57,11 +57,11 @@ export const saveFeedback = (entry: Omit<FeedbackEntry, 'id' | 'timestamp'>): Fe
   try {
     const entries = getFeedbackEntries();
     entries.push(newEntry);
-    
+
     // Keep only last 100 entries to avoid storage bloat
     const trimmed = entries.slice(-100);
     localStorage.setItem(FEEDBACK_KEY, JSON.stringify(trimmed));
-    
+
     return newEntry;
   } catch (error) {
     console.error('Failed to save feedback:', error);
@@ -74,7 +74,7 @@ export const saveFeedback = (entry: Omit<FeedbackEntry, 'id' | 'timestamp'>): Fe
  */
 export const calculateFeedbackStats = (): FeedbackStats => {
   const entries = getFeedbackEntries();
-  
+
   const stats: FeedbackStats = {
     totalFeedback: entries.length,
     smoothRatings: { helpful: 0, mid: 0, off: 0 },
@@ -139,7 +139,7 @@ export const calculateFeedbackStats = (): FeedbackStats => {
  */
 export const getPromptBias = (): string => {
   const stats = calculateFeedbackStats();
-  
+
   // Need minimum feedback to generate bias
   if (stats.totalFeedback < 10) {
     return '';
@@ -215,11 +215,11 @@ export const logSession = (
   try {
     const sessions = getSessionLogs();
     sessions.push(session);
-    
+
     // Keep only last 50 sessions
     const trimmed = sessions.slice(-50);
     localStorage.setItem(SESSIONS_KEY, JSON.stringify(trimmed));
-    
+
     return session;
   } catch (error) {
     console.error('Failed to log session:', error);
@@ -262,7 +262,7 @@ export const checkWellbeing = (): WellbeingState['reason'] | null => {
   const sessions = getSessionLogs();
   const now = Date.now();
   const currentHour = new Date().getHours();
-  
+
   // Check if dismissed recently (within 24 hours)
   const state = getWellbeingState();
   if (state.dismissedUntil && state.dismissedUntil > now) {
@@ -276,7 +276,7 @@ export const checkWellbeing = (): WellbeingState['reason'] | null => {
 
   // Get sessions from last 2 hours
   const recentSessions = sessions.filter(s => (now - s.timestamp) < 2 * 60 * 60 * 1000);
-  
+
   // HEURISTIC 1: Late night usage (midnight to 4am) with high activity
   if (currentHour >= 0 && currentHour < 4) {
     const lateNightSessions = sessions.filter(s => {
