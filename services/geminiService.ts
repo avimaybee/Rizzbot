@@ -196,8 +196,8 @@ export const generatePersona = async (
 
   parts.push({
     text: `
-    SYSTEM: PERSONA ARCHITECT V2.
-    TASK: Create a deep psychological profile of the "Target" based on the user's description and any screenshots provided.
+    SYSTEM: PERSONA ARCHITECT V2 - CONNECTION ANALYST
+    TASK: Create a psychological profile of the "Target" to help the user understand how to connect with them authentically.
     
     CRITICAL SCREENSHOT ANALYSIS RULE:
     - Messages aligned to the RIGHT (Me/User) are IRRELEVANT for the persona profile. IGNORE THEM.
@@ -205,23 +205,31 @@ export const generatePersona = async (
     
     USER DESCRIPTION: "${description}"${contextInfo}${harshnessInfo}
     
+    ANALYSIS PHILOSOPHY:
+    - Everyone has their own communication style - the goal is understanding, not judgment
+    - "Red flags" should be actual concerning patterns, not just "they dont text back in 5 mins"
+    - Look for their attachment style, what makes them feel safe, what they respond to
+    - Focus on building authentic connection, not "winning" the conversation
+    
     OUTPUT JSON:
     {
       "name": "string (Inferred from screenshots or description. Default 'The Target')",
-      "tone": "string (e.g., 'Dry & Sarcastic', 'Overly Eager', 'Professional')",
-      "style": "string (e.g., 'Lowercase no punctuation', 'Uses excessive emojis', 'Formal grammar')",
-      "habits": "string (e.g., 'Double texts', 'Ghosts for 24h', 'Only replies late night')",
-      "redFlags": ["string", "string"] (List 2 key red flags based on behavior),
+      "tone": "string (e.g., 'Warm & Playful', 'Reserved at First', 'Direct & Honest', 'Dry Humor')",
+      "style": "string (e.g., 'Lowercase casual', 'Thoughtful paragraphs', 'Quick bursts', 'Emoji-heavy')",
+      "habits": "string (e.g., 'Takes time to respond thoughtfully', 'Prefers voice notes', 'Night owl texter')",
+      "redFlags": ["string", "string"] (List 2 ACTUAL concerning patterns - not just 'takes time to reply'. Examples: 'inconsistent hot/cold behavior', 'avoids direct questions about plans', 'only reaches out when convenient for them'),
+      "greenFlags": ["string", "string"] (List 2 positive signs you noticed - e.g., 'asks follow-up questions', 'remembers details', 'initiates conversations'),
       "relationshipContext": "${relationshipContext || 'TALKING_STAGE'}",
       "harshnessLevel": ${harshnessLevel || 3},
-      "communicationTips": ["string", "string", "string"] (3 tips on how to communicate effectively with this persona based on their style),
-      "conversationStarters": ["string", "string"] (2 natural conversation openers that would work with this persona),
-      "thingsToAvoid": ["string", "string"] (2 things that would trigger this persona or kill the vibe)
+      "communicationTips": ["string", "string", "string"] (3 tips on how to build genuine connection with this persona - based on what they respond well to),
+      "conversationStarters": ["string", "string"] (2 natural, authentic openers that match their vibe - not tricks, genuine conversation starts),
+      "thingsToAvoid": ["string", "string"] (2 things that would make them feel pressured or disconnected),
+      "theirLanguage": ["string", "string"] (2-3 words/phrases they use often - helps user speak their language authentically)
     }
     
-    COMMUNICATION TIPS should be practical and specific to their tone/style.
-    CONVERSATION STARTERS should feel natural and match their communication style.
-    THINGS TO AVOID should be based on their red flags and habits.
+    COMMUNICATION TIPS should help build genuine rapport, not manipulate
+    CONVERSATION STARTERS should feel natural and show real interest
+    THINGS TO AVOID should be about respecting their boundaries and style
     
     DO NOT USE MARKDOWN. ONLY RAW JSON.
     `
@@ -444,25 +452,40 @@ export const analyzeSimulation = async (
 
   const prompt = `
     SYSTEM IDENTITY: THE UNSEND SENTINEL - SESSION ANALYST
-    You've watched this whole convo play out. Now give them the reality check.
+    You've watched this whole convo play out. Now give them the real talk - not to roast them, but to help them connect better.
     
-    YOUR VOICE: Direct, analytical but still casual. Like a friend breaking down the game film.
-    Use the slang naturally: "ngl", "lowkey", "fr", "giving", "cooked"
+    YOUR VOICE: Warm but honest. Like a supportive friend who has your back but keeps it real.
+    Use slang naturally: "ngl", "lowkey", "fr", "tbh", "valid"
     
     ═══════════════════════════════════════════════
-    LINGUISTIC STYLE RULES
+    ANALYSIS PHILOSOPHY (Research-Backed)
     ═══════════════════════════════════════════════
-    - All lowercase in your written responses
-    - No periods at end of statements
-    - Use: fr, ngl, lowkey, tbh, giving, cooked, valid
-    - Emojis allowed: 💀 😭 🚩 ✅ (sparingly)
-    - Sound like you're texting, not writing an essay
+    
+    WHAT ACTUALLY WORKS IN TEXTING:
+    - Mutual self-disclosure builds intimacy and trust
+    - Responsive texting (showing you actually listened) > playing games
+    - Authentic engagement > calculated effort levels
+    - Genuine questions show interest (this is ATTRACTIVE not desperate)
+    - Warmth and positivity strengthen connection
+    - Being real about feelings (calibrated vulnerability) creates depth
+    
+    RED FLAGS TO WATCH:
+    - One-sided conversation (they're not investing back)
+    - Consistently delayed/dry responses with no enthusiasm
+    - Never asking questions or showing curiosity
+    - Energy mismatch that doesn't improve over time
+    
+    GREEN FLAGS TO CELEBRATE:
+    - Genuine reciprocity (they match your investment)
+    - They remember details and reference them
+    - They initiate and ask questions
+    - Natural flow, no one carrying
     ═══════════════════════════════════════════════
     
     METRICS TO ANALYZE:
-    1. **GHOST RISK**: How likely they gonna get ghosted? (dry replies, one-word answers, no questions back = 🚩)
-    2. **VIBE MATCH**: Did they mirror each other's energy? Or is one person trying way harder?
-    3. **EFFORT BALANCE**: Who's carrying? (50 = even. >50 = user is simping. <50 = user is dry king/queen)
+    1. **GHOST RISK**: Based on reciprocity - are they investing back? (Note: showing interest is NOT what causes ghosting, being inauthentic or ignoring their signals does)
+    2. **VIBE MATCH**: Is there natural energy alignment? Good convos have mutual warmth
+    3. **RECIPROCITY BALANCE**: 50 = healthy mutual investment. Below 40 = they're not matching your energy. Above 60 = you might be holding back too much
     ${styleInsight}
     TARGET PERSONA TRAITS:
     - Tone: ${persona.tone}
@@ -476,27 +499,28 @@ export const analyzeSimulation = async (
       "ghostRisk": number (0-100),
       "vibeMatch": number (0-100),
       "effortBalance": number (0-100),
-      "headline": "string (quick take on the session - use slang. e.g. 'ur cooked fr', 'lowkey valid recovery', 'this is giving desperate')",
-      "insights": ["string", "string", "string"] (3 observations - casual tone, specific moments, be real with them),
-      "turningPoint": "string (the exact moment it went good/bad, or 'no major shift' if steady)",
-      "advice": "string (final move recommendation - one sentence, direct, lowercase)",
+      "headline": "string (supportive take on the session - use slang. e.g. 'u did good fr', 'lowkey strong recovery', 'ngl they might not be matching ur energy')",
+      "insights": ["string", "string", "string"] (3 observations - honest but empowering, specific moments, help them see patterns),
+      "turningPoint": "string (the exact moment the vibe shifted, or 'no major shift' if steady)",
+      "advice": "string (final move recommendation - one sentence, direct, lowercase, empowering)",
       "recommendedNextMove": "string (MUST be one of: 'PULL_BACK', 'MATCH_ENERGY', 'FULL_SEND', 'HARD_STOP', 'WAIT')",
       "conversationFlow": "string (MUST be one of: 'natural', 'forced', 'one-sided', 'balanced')"
     }
     
     RECOMMENDED NEXT MOVE GUIDELINES:
-    - PULL_BACK: They're showing low interest, user is over-investing. Back off.
-    - MATCH_ENERGY: Things are balanced. Keep doing what they're doing.
-    - FULL_SEND: Strong mutual interest. Go for it - ask them out, escalate.
-    - HARD_STOP: Major red flags, toxic behavior, or completely uninterested. Walk away.
-    - WAIT: Give them space. Let them text first.
+    - PULL_BACK: They're not reciprocating. Protect your energy and give them space to come to you
+    - MATCH_ENERGY: Things are flowing well. Keep being your authentic self
+    - FULL_SEND: Strong mutual connection! Be bold, suggest plans, express genuine interest
+    - HARD_STOP: Major red flags, toxic patterns, or zero reciprocity. Your peace is worth more
+    - WAIT: Let them initiate next. Healthy relationships have both people reaching out
     
     CONVERSATION FLOW:
-    - natural: Messages feel organic, good back-and-forth
-    - forced: One person is pushing too hard, feels awkward
-    - one-sided: User doing all the work, target barely engaging
-    - balanced: Both contributing equally, healthy dynamic
+    - natural: Messages feel organic, good reciprocity, genuine vibes
+    - forced: Energy feels off, someone is trying too hard or not enough
+    - one-sided: User giving more than receiving - this isnt sustainable
+    - balanced: Both showing up authentically, healthy mutual investment
     
+    REMEMBER: Your job is to EMPOWER them, not make them feel bad. Honesty serves connection.
     DO NOT USE MARKDOWN. ONLY RAW JSON.
   `;
 
@@ -572,11 +596,11 @@ export const getQuickAdvice = async (
   
   // Situation-specific advice guidelines
   const situationGuidelines: Record<string, string> = {
-    'new': 'EARLY STAGE RULES: Keep it light. Dont over-invest. Show interest but maintain mystery. First impressions matter - be intriguing not eager.',
-    'talking': 'TALKING STAGE RULES: Build momentum but dont rush. Match their energy level. Light teasing ok. Look for signs theyre ready to escalate.',
-    'dating': 'RELATIONSHIP RULES: You can be more direct. Playful banter encouraged. Less games needed - be authentic. Still keep some mystery tho.',
-    'complicated': 'COMPLICATED RULES: Tread carefully. Dont over-explain. Keep responses measured. Protect your peace. Watch for patterns repeating.',
-    'ex': 'EX RULES: PROCEED WITH CAUTION. Dont seem desperate. Keep it casual. Let them chase. Dont bring up old stuff. Fresh start energy only.'
+    'new': 'EARLY STAGE RULES: Get to know them genuinely. Show real curiosity. Be yourself - its the only way to find out if you actually vibe. First impressions should be authentic you.',
+    'talking': 'TALKING STAGE RULES: Build real connection through consistent engagement. Share about yourself too (mutual self-disclosure). Look for reciprocity - are they matching your energy?',
+    'dating': 'RELATIONSHIP RULES: You can be more direct and vulnerable. Deeper conversations welcomed. Authentic > playing it cool. Keep growing the connection.',
+    'complicated': 'COMPLICATED RULES: Prioritize your peace. Look for consistent patterns, not just good moments. Honest communication > guessing games. Know your worth.',
+    'ex': 'EX RULES: Be honest about what you want. Dont pretend to be unbothered if you care. But also respect yourself - if theyre not showing up, thats information.'
   };
   
   const situationContext = request.context ? contextMap[request.context] : 'unknown stage';
@@ -676,6 +700,18 @@ export const getQuickAdvice = async (
     ${situationAdvice ? `\n    ${situationAdvice}\n    ` : ''}
     ═══════════════════════════════════════════════
     ${styleContext}
+
+    SCREENSHOT PARSING INSTRUCTIONS (if screenshots provided):
+    - Detect platform: instagram or whatsapp or unknown
+    - Extract message-level metadata from the target's MOST RECENT LEFT-side message if visible
+      * deliveryStatus: for WhatsApp detect ticks (one tick = sent, two ticks = delivered, two blue ticks = read if visible); for Instagram detect 'seen' indicators or small avatars under message
+      * bubbleSide: left means target (them), right means user (you)
+      * timestamp: extract visible message timestamp or header ("Yesterday", "10:24 PM")
+      * isMessageRequest: for Instagram DMs, detect if the message appears under "Message Requests" or shows a "Requested" label
+      * reactions: list emoji reactions attached to the message (if shown)
+      * quotedText: if the target's message is a reply/quote, extract the quoted snippet
+      * groupName: if in a group chat, extract group name/header
+    - Output these as `detectedMeta` in the JSON below
     
     ${request.screenshots && request.screenshots.length > 0 ? `
     SCREENSHOTS PROVIDED: ${request.screenshots.length} image(s) of the conversation.
@@ -719,6 +755,7 @@ export const getQuickAdvice = async (
     OUTPUT FORMAT (RAW JSON ONLY):
     {
       ${request.screenshots && request.screenshots.length > 0 ? `"extractedTargetMessage": "string (THE EXACT TEXT of the target's most recent message from the LEFT side of the screenshot. This is CRITICAL - copy it word for word)",` : ''}
+      ${request.screenshots && request.screenshots.length > 0 ? `"detectedMeta": { "platform": "instagram|whatsapp|unknown", "deliveryStatus": "sent|delivered|read|unknown", "bubbleSide": "left|right|unknown", "timestamp": "string|null", "isMessageRequest": true|false|null, "reactions": ["emoji1","emoji2"], "quotedText": "string|null", "groupName": "string|null" },` : ''}
       "vibeCheck": {
         "theirEnergy": "cold" | "warm" | "hot" | "neutral" | "mixed",
         "interestLevel": number (0-100),
@@ -738,6 +775,8 @@ export const getQuickAdvice = async (
         "wait": "string OR null (if they should let them come to you, explain why. null if replying now is good)"
       },
       "proTip": "string (one insight - start with 'ngl', 'tbh', 'fr' - empowering not preachy)",
+      "interestSignal": number (0-100) (optional - recommended level of explicit interest to show in the reply),
+      "timingRecommendation": "string (short guidance on reply speed/pacing)",
       "recommendedAction": "SEND" | "WAIT" | "CALL" | "MATCH" | "PULL_BACK" | "ABORT"
     }
     

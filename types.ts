@@ -15,7 +15,10 @@ export interface EvidenceItem {
 }
 
 export interface SocialFootprint {
-  platform: 'Spotify' | 'Strava' | 'Venmo' | 'Instagram' | 'LinkedIn' | 'General';
+  // Inferred responsiveness from messages (helps calibrate timing/interest suggestions)
+  responsiveness?: 'instant' | 'normal' | 'slow' | 'inconsistent';
+  // High-level reciprocity tendency
+  reciprocityTendency?: 'reciprocal' | 'one-sided' | 'inconsistent' | 'unknown';
   status: 'active' | 'silent' | 'unknown';
   lastSeen: string; // "2 hours ago", "Yesterday", "Unknown"
   detail: string; // "Updated 'Gym' playlist"
@@ -36,16 +39,18 @@ export interface Persona {
   id: string;
   name: string;
   description: string;
-  tone: string; // "Dry", "Flirty", "Formal"
-  style: string; // "Lowercase", "Emoji heavy"
-  habits: string; // "Ghosts for days", "Instant reply"
-  redFlags: string[];
+  tone: string; // "Warm & Playful", "Reserved at First", "Direct & Honest"
+  style: string; // "Lowercase casual", "Thoughtful paragraphs", "Quick bursts"
+  habits: string; // "Takes time to respond thoughtfully", "Prefers voice notes"
+  redFlags: string[]; // Actual concerning patterns, not minor things
+  greenFlags?: string[]; // Positive signs noticed in their communication
   // Phase 2 fields
   relationshipContext?: 'NEW_MATCH' | 'TALKING_STAGE' | 'DATING' | 'SITUATIONSHIP' | 'EX' | 'FRIEND';
   harshnessLevel?: 1 | 2 | 3 | 4 | 5; // 1 = Gentle, 5 = Brutal
-  communicationTips?: string[]; // How to vibe with them
-  conversationStarters?: string[]; // Natural openers for this persona
-  thingsToAvoid?: string[]; // What NOT to say to them
+  communicationTips?: string[]; // How to build genuine connection with them
+  conversationStarters?: string[]; // Natural, authentic openers
+  thingsToAvoid?: string[]; // What would make them feel pressured
+  theirLanguage?: string[]; // Words/phrases they use - helps speak their language
 }
 
 export interface SimResult {
@@ -173,6 +178,20 @@ export interface QuickAdviceResponse {
   };
   proTip: string; // One psychology-backed insight
   recommendedAction: 'SEND' | 'WAIT' | 'CALL' | 'MATCH' | 'PULL_BACK' | 'ABORT';
+  // New guidance fields (0-100 scale and short timing text)
+  interestSignal?: number; // 0-100 recommended explicit interest level to show
+  timingRecommendation?: string; // e.g., "reply within a few hours; prioritize thoughtful reply over speed"
+  // Detected metadata from screenshots (if provided)
+  detectedMeta?: {
+    platform?: 'instagram' | 'whatsapp' | 'unknown';
+    deliveryStatus?: 'sent' | 'delivered' | 'read' | 'unknown';
+    bubbleSide?: 'left' | 'right' | 'unknown';
+    timestamp?: string | null; // raw timestamp string if extracted
+    isMessageRequest?: boolean | null; // Instagram DM request or similar
+    reactions?: string[]; // emoji reactions attached to the target's message
+    quotedText?: string | null; // if a quoted/reply preview is present
+    groupName?: string | null; // group chat name if detected
+  };
 }
 
 // ============================================
