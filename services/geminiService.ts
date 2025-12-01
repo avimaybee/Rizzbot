@@ -711,7 +711,7 @@ export const getQuickAdvice = async (
       * reactions: list emoji reactions attached to the message (if shown)
       * quotedText: if the target's message is a reply/quote, extract the quoted snippet
       * groupName: if in a group chat, extract group name/header
-    - Output these as `detectedMeta` in the JSON below
+    - Output these as detectedMeta in the JSON below
     
     ${request.screenshots && request.screenshots.length > 0 ? `
     SCREENSHOTS PROVIDED: ${request.screenshots.length} image(s) of the conversation.
