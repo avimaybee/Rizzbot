@@ -156,6 +156,8 @@ export interface QuickAdviceResponse {
     redFlags: string[]; // e.g., "dry responses", "taking forever to reply"
     greenFlags: string[]; // e.g., "asking questions", "using your name"
   };
+  // Extracted from screenshot OCR - the target's last message we're replying to
+  extractedTargetMessage?: string;
   draftAnalysis?: {
     // Only if yourDraft provided
     confidenceScore: number; // 0-100 (positive framing)
@@ -164,9 +166,9 @@ export interface QuickAdviceResponse {
     strengths: string[];
   };
   suggestions: {
-    smooth: string; // Natural flow, effortless - cant go wrong
-    bold: string; // Confident, direct - shows intention
-    authentic: string; // True to convo vibe but improved
+    smooth: string | string[]; // Natural flow, effortless - can be single or array of 3
+    bold: string | string[]; // Confident, direct - can be single or array of 3
+    authentic: string | string[]; // True to convo vibe but improved - can be single or array of 3
     wait?: string | null; // Sometimes best move is no move - explains why
   };
   proTip: string; // One psychology-backed insight

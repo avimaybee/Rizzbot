@@ -192,7 +192,6 @@ const SideDock = ({ activeModule, setModule, authUser, onSignOut }: {
           onClick={() => setModule('quick')}
           label="QUICK"
           index="02"
-          highlight
         />
         {ENABLE_INVESTIGATOR && (
           <DockItem
@@ -219,25 +218,29 @@ const SideDock = ({ activeModule, setModule, authUser, onSignOut }: {
       <div className="mt-auto flex flex-col items-center gap-4">
         {/* User Avatar & Sign Out */}
         {authUser && (
-          <div className="flex flex-col items-center gap-2 mb-4">
-            {authUser.photoURL ? (
-              <img 
-                src={authUser.photoURL} 
-                alt={authUser.displayName || 'User'} 
-                className="w-8 h-8 rounded-full border border-zinc-700"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
-                {(authUser.displayName || authUser.email || 'U')[0].toUpperCase()}
-              </div>
-            )}
+          <div className="flex flex-col items-center gap-3 mb-4 group">
+            <div className="relative">
+              {authUser.photoURL ? (
+                <img 
+                  src={authUser.photoURL} 
+                  alt={authUser.displayName || 'User'} 
+                  className="w-10 h-10 rounded-full border-2 border-zinc-700 group-hover:border-zinc-500 transition-all shadow-lg"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-hard-gold/80 via-amber-500 to-orange-500 flex items-center justify-center text-white text-sm font-bold shadow-lg ring-2 ring-zinc-800 group-hover:ring-zinc-600 transition-all">
+                  {(authUser.displayName || authUser.email || 'U')[0].toUpperCase()}
+                </div>
+              )}
+              {/* Online indicator dot */}
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-matte-base"></div>
+            </div>
             {onSignOut && (
               <button
                 onClick={onSignOut}
-                className="text-zinc-600 hover:text-red-400 transition-colors"
+                className="flex items-center gap-1.5 px-2 py-1 text-zinc-600 hover:text-red-400 hover:bg-red-900/20 rounded transition-all text-[9px] font-mono uppercase tracking-wider"
                 title="Sign out"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3 h-3" />
               </button>
             )}
           </div>
@@ -266,7 +269,6 @@ const BottomTabs = ({ activeModule, setModule }: { activeModule: Module, setModu
           onClick={() => setModule('quick')}
           label="QUICK"
           Icon={Zap}
-          highlight
         />
         <MobileTabItemSvg
           active={activeModule === 'simulator'}
@@ -285,18 +287,17 @@ const BottomTabs = ({ activeModule, setModule }: { activeModule: Module, setModu
   );
 };
 
-const MobileTabItemSvg = ({ active, onClick, label, Icon, highlight }: {
+const MobileTabItemSvg = ({ active, onClick, label, Icon }: {
   active: boolean,
   onClick: () => void,
   label: string,
-  Icon: React.FC<{ className?: string }>,
-  highlight?: boolean
+  Icon: React.FC<{ className?: string }>
 }) => (
   <button
     onClick={onClick}
     className={`flex flex-col items-center justify-center gap-1 min-w-[60px] py-2 px-3 rounded-lg transition-all ${active
-      ? (highlight ? 'text-emerald-400 bg-emerald-900/30' : 'text-white bg-zinc-800')
-      : (highlight ? 'text-emerald-600' : 'text-zinc-500')
+      ? 'text-white bg-zinc-800'
+      : 'text-zinc-500 hover:text-zinc-300'
       }`}
   >
     <Icon className="w-5 h-5" />
@@ -306,12 +307,12 @@ const MobileTabItemSvg = ({ active, onClick, label, Icon, highlight }: {
   </button>
 );
 
-const MobileTabItem = ({ active, onClick, label, icon, highlight }: { active: boolean, onClick: () => void, label: string, icon: string, highlight?: boolean }) => (
+const MobileTabItem = ({ active, onClick, label, icon }: { active: boolean, onClick: () => void, label: string, icon: string }) => (
   <button
     onClick={onClick}
     className={`flex flex-col items-center justify-center gap-1 min-w-[60px] py-2 px-3 rounded-lg transition-all ${active
-      ? (highlight ? 'text-emerald-400 bg-emerald-900/30' : 'text-white bg-zinc-800')
-      : (highlight ? 'text-emerald-600' : 'text-zinc-500')
+      ? 'text-white bg-zinc-800'
+      : 'text-zinc-500 hover:text-zinc-300'
       }`}
   >
     <span className="text-lg">{icon}</span>
@@ -321,13 +322,13 @@ const MobileTabItem = ({ active, onClick, label, icon, highlight }: { active: bo
   </button>
 );
 
-const DockItem = ({ active, onClick, label, index, highlight }: { active: boolean, onClick: () => void, label: string, index: string, highlight?: boolean }) => (
+const DockItem = ({ active, onClick, label, index }: { active: boolean, onClick: () => void, label: string, index: string }) => (
   <button
     onClick={onClick}
     className="w-full flex flex-col items-center justify-center gap-1 group relative"
   >
-    <div className={`w-1 h-1 rounded-full mb-2 transition-all duration-300 ${active ? (highlight ? 'bg-emerald-400 w-1.5 h-1.5' : 'bg-hard-gold w-1.5 h-1.5') : (highlight ? 'bg-emerald-800 group-hover:bg-emerald-600' : 'bg-zinc-800 group-hover:bg-zinc-600')}`}></div>
-    <span className={`text-[10px] font-bold tracking-widest relative z-10 writing-vertical-lr py-2 transition-colors ${active ? (highlight ? 'text-emerald-400' : 'text-white') : (highlight ? 'text-emerald-600 group-hover:text-emerald-400' : 'text-zinc-600 group-hover:text-zinc-400')}`}>
+    <div className={`w-1 h-1 rounded-full mb-2 transition-all duration-300 ${active ? 'bg-hard-gold w-1.5 h-1.5' : 'bg-zinc-800 group-hover:bg-zinc-600'}`}></div>
+    <span className={`text-[10px] font-bold tracking-widest relative z-10 writing-vertical-lr py-2 transition-colors ${active ? 'text-white' : 'text-zinc-600 group-hover:text-zinc-400'}`}>
       {label}
     </span>
     <span className="absolute -right-2 top-0 text-[8px] text-zinc-800 font-mono opacity-0 group-hover:opacity-100 transition-opacity">{index}</span>
@@ -749,7 +750,7 @@ function App() {
 
           {/* STANDBY MODULE */}
           {activeModule === 'standby' && (
-            <StandbyScreen onActivate={setActiveModule} hasProfile={!!userProfile} authUser={authUser} />
+            <StandbyScreen onActivate={setActiveModule} hasProfile={!!(userProfile && userProfile.preferredTone)} authUser={authUser} />
           )}
 
           {/* PRACTICE MODE MODULE */}

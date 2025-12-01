@@ -3,7 +3,7 @@ import { QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, FeedbackEntr
 import { getQuickAdvice } from '../services/geminiService';
 import { saveFeedback, logSession } from '../services/feedbackService';
 import { createSession, submitFeedback } from '../services/dbService';
-import { Sparkles, Upload, X, Image } from 'lucide-react';
+import { Sparkles, Upload, X, Image, ThumbsUp, Minus, ThumbsDown } from 'lucide-react';
 import { useGlobalToast } from './Toast';
 
 interface QuickAdvisorProps {
@@ -44,6 +44,92 @@ const CornerNodes = ({ className }: { className?: string }) => (
     </div>
   </div>
 );
+
+// Suggestion Category Component - handles both single string and array of suggestions
+interface SuggestionCategoryProps {
+  title: string;
+  titleColor: string;
+  suggestions: string | string[];
+  copiedIndex: string | null;
+  onCopy: (text: string, key: string) => void;
+  categoryKey: string;
+  feedbackGiven?: 'helpful' | 'mid' | 'off';
+  onFeedback: (rating: 'helpful' | 'mid' | 'off') => void;
+}
+
+const SuggestionCategory: React.FC<SuggestionCategoryProps> = ({
+  title,
+  titleColor,
+  suggestions,
+  copiedIndex,
+  onCopy,
+  categoryKey,
+  feedbackGiven,
+  onFeedback,
+}) => {
+  const suggestionList = Array.isArray(suggestions) ? suggestions : [suggestions];
+  
+  return (
+    <div className="relative">
+      {/* Category Header */}
+      <div className="flex items-center gap-2 mb-2">
+        <span className={`text-[10px] font-mono tracking-widest ${titleColor} uppercase`}>{title}</span>
+        {suggestionList.length > 1 && (
+          <span className="text-[9px] font-mono text-zinc-600">({suggestionList.length} OPTIONS)</span>
+        )}
+      </div>
+      
+      {/* Suggestion Options */}
+      <div className={suggestionList.length > 1 ? "space-y-2" : ""}>
+        {suggestionList.map((suggestion, index) => {
+          const copyKey = suggestionList.length > 1 ? `${categoryKey}-${index}` : categoryKey;
+          return (
+            <button
+              key={index}
+              onClick={() => onCopy(suggestion, copyKey)}
+              className="w-full text-left bg-zinc-900 border border-zinc-800 hover:border-zinc-600 transition-all group relative"
+            >
+              <CornerNodes className="opacity-30 group-hover:opacity-60" />
+              <div className="p-4 sm:p-5">
+                <div className="flex justify-between items-center mb-1.5">
+                  {suggestionList.length > 1 && (
+                    <span className="text-[9px] font-mono text-zinc-500">OPTION {index + 1}</span>
+                  )}
+                  <span className="text-[9px] font-mono text-zinc-600 group-hover:text-white transition-colors uppercase ml-auto">
+                    {copiedIndex === copyKey ? '✓ COPIED' : 'TAP TO COPY'}
+                  </span>
+                </div>
+                <p className="text-white text-sm leading-relaxed">{suggestion}</p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      
+      {/* Feedback buttons */}
+      <div className="flex gap-2 mt-3 justify-end">
+        {(['helpful', 'mid', 'off'] as const).map((rating) => (
+          <button
+            key={rating}
+            onClick={() => onFeedback(rating)}
+            disabled={!!feedbackGiven}
+            className={`px-3 py-2 border transition-all min-w-[44px] min-h-[44px] flex items-center justify-center ${feedbackGiven === rating
+              ? rating === 'helpful' ? 'bg-emerald-900/50 border-emerald-500 text-emerald-400' :
+                rating === 'mid' ? 'bg-yellow-900/50 border-yellow-500 text-yellow-400' :
+                  'bg-red-900/50 border-red-500 text-red-400'
+              : feedbackGiven
+                ? 'border-zinc-800 text-zinc-700 cursor-not-allowed'
+                : 'border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300'
+              }`}
+            title={rating === 'helpful' ? 'Helpful' : rating === 'mid' ? 'Neutral' : 'Not helpful'}
+          >
+            {rating === 'helpful' ? <ThumbsUp className="w-4 h-4" /> : rating === 'mid' ? <Minus className="w-4 h-4" /> : <ThumbsDown className="w-4 h-4" />}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile, firebaseUid, userId }) => {
   const [theirMessage, setTheirMessage] = useState('');
@@ -300,13 +386,13 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
                 </div>
               </div>
 
-              {/* Text Input (Secondary) */}
+              {/* Additional Context (Secondary) */}
               <div>
-                <label className="label-sm text-zinc-500 mb-2 block">OR PASTE TEXT (FOR CONTEXT)</label>
+                <label className="label-sm text-zinc-500 mb-2 block">ADDITIONAL CONTEXT <span className="text-zinc-600">(OPTIONAL)</span></label>
                 <textarea
                   value={theirMessage}
                   onChange={(e) => setTheirMessage(e.target.value)}
-                  placeholder={screenshots.length > 0 ? "Add any extra context about the screenshots..." : "If you don't have screenshots, paste the text here..."}
+                  placeholder={screenshots.length > 0 ? "Any backstory? e.g., 'We haven't talked in 2 weeks' or 'They're my coworker'" : "No screenshot? Paste their message here. Or add context like 'met on hinge last week'"}
                   className="w-full bg-zinc-900 border border-zinc-700 p-4 text-white placeholder:text-zinc-500/60 resize-none focus:outline-none focus:border-white transition-colors h-24 font-mono text-sm"
                 />
               </div>
@@ -397,6 +483,12 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
       <div className="flex-1 p-4 sm:p-6 md:p-10 relative z-10">
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
 
+          {/* Page Title */}
+          <div className="mb-2">
+            <div className="label-sm text-hard-gold mb-1">ANALYSIS COMPLETE</div>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-impact text-white uppercase tracking-tight">YOUR VIBE CHECK</h2>
+          </div>
+
           {/* Vibe Check Card */}
           <div className="bg-zinc-900 border border-zinc-800 relative">
             <CornerNodes className="opacity-50" />
@@ -411,9 +503,18 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
                 </div>
               </div>
 
-              {/* Show their actual message */}
+              {/* Show extracted target message from OCR or user input */}
               <div className="bg-black/50 border border-zinc-800 p-3 mb-4">
-                <p className="text-zinc-300 text-sm font-mono italic">"{theirMessage}"</p>
+                {result.extractedTargetMessage ? (
+                  <div>
+                    <div className="text-[9px] font-mono text-hard-gold uppercase tracking-wider mb-1.5">
+                      📱 EXTRACTED FROM SCREENSHOT
+                    </div>
+                    <p className="text-zinc-300 text-sm font-mono italic">"{result.extractedTargetMessage}"</p>
+                  </div>
+                ) : (
+                  <p className="text-zinc-300 text-sm font-mono italic">"{theirMessage}"</p>
+                )}
               </div>
 
               {/* Interest Level Bar */}
@@ -500,122 +601,41 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
               </span>
             </div>
             <div className="space-y-3">
-              {/* Smooth Option */}
-              <div className="relative">
-                <button
-                  onClick={() => copyToClipboard(result.suggestions.smooth, 'smooth')}
-                  className="w-full text-left bg-zinc-900 border border-zinc-800 hover:border-zinc-600 transition-all group relative"
-                >
-                  <CornerNodes className="opacity-30 group-hover:opacity-60" />
-                  <div className="p-5">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-[10px] font-mono tracking-widest text-hard-gold uppercase">SMOOTH</span>
-                      <span className="text-[9px] font-mono text-zinc-600 group-hover:text-white transition-colors uppercase">
-                        {copiedIndex === 'smooth' ? '✓ COPIED' : 'TAP TO COPY'}
-                      </span>
-                    </div>
-                    <p className="text-white text-sm leading-relaxed">{result.suggestions.smooth}</p>
-                  </div>
-                </button>
-                {/* Feedback buttons */}
-                <div className="flex gap-2 mt-3 justify-end">
-                  {(['helpful', 'mid', 'off'] as const).map((rating) => (
-                    <button
-                      key={rating}
-                      onClick={() => handleFeedback('smooth', rating)}
-                      disabled={!!feedbackGiven['smooth']}
-                      className={`px-3 py-2 text-sm font-mono uppercase tracking-wider border transition-all min-w-[44px] min-h-[44px] flex items-center justify-center ${feedbackGiven['smooth'] === rating
-                        ? rating === 'helpful' ? 'bg-emerald-900/50 border-emerald-500 text-emerald-400' :
-                          rating === 'mid' ? 'bg-yellow-900/50 border-yellow-500 text-yellow-400' :
-                            'bg-red-900/50 border-red-500 text-red-400'
-                        : feedbackGiven['smooth']
-                          ? 'border-zinc-800 text-zinc-700 cursor-not-allowed'
-                          : 'border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300'
-                        }`}
-                    >
-                      {rating === 'helpful' ? '+' : rating === 'mid' ? '○' : '-'}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* Smooth Options */}
+              <SuggestionCategory
+                title="SMOOTH"
+                titleColor="text-hard-gold"
+                suggestions={result.suggestions.smooth}
+                copiedIndex={copiedIndex}
+                onCopy={copyToClipboard}
+                categoryKey="smooth"
+                feedbackGiven={feedbackGiven['smooth']}
+                onFeedback={(rating) => handleFeedback('smooth', rating)}
+              />
 
-              {/* Bold Option */}
-              <div className="relative">
-                <button
-                  onClick={() => copyToClipboard(result.suggestions.bold, 'bold')}
-                  className="w-full text-left bg-zinc-900 border border-zinc-800 hover:border-zinc-600 transition-all group relative"
-                >
-                  <CornerNodes className="opacity-30 group-hover:opacity-60" />
-                  <div className="p-5">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-[10px] font-mono tracking-widest text-hard-blue uppercase">BOLD</span>
-                      <span className="text-[9px] font-mono text-zinc-600 group-hover:text-white transition-colors uppercase">
-                        {copiedIndex === 'bold' ? '✓ COPIED' : 'TAP TO COPY'}
-                      </span>
-                    </div>
-                    <p className="text-white text-sm leading-relaxed">{result.suggestions.bold}</p>
-                  </div>
-                </button>
-                {/* Feedback buttons */}
-                <div className="flex gap-2 mt-3 justify-end">
-                  {(['helpful', 'mid', 'off'] as const).map((rating) => (
-                    <button
-                      key={rating}
-                      onClick={() => handleFeedback('bold', rating)}
-                      disabled={!!feedbackGiven['bold']}
-                      className={`px-3 py-2 text-sm font-mono uppercase tracking-wider border transition-all min-w-[44px] min-h-[44px] flex items-center justify-center ${feedbackGiven['bold'] === rating
-                        ? rating === 'helpful' ? 'bg-emerald-900/50 border-emerald-500 text-emerald-400' :
-                          rating === 'mid' ? 'bg-yellow-900/50 border-yellow-500 text-yellow-400' :
-                            'bg-red-900/50 border-red-500 text-red-400'
-                        : feedbackGiven['bold']
-                          ? 'border-zinc-800 text-zinc-700 cursor-not-allowed'
-                          : 'border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300'
-                        }`}
-                    >
-                      {rating === 'helpful' ? '+' : rating === 'mid' ? '○' : '-'}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* Bold Options */}
+              <SuggestionCategory
+                title="BOLD"
+                titleColor="text-hard-blue"
+                suggestions={result.suggestions.bold}
+                copiedIndex={copiedIndex}
+                onCopy={copyToClipboard}
+                categoryKey="bold"
+                feedbackGiven={feedbackGiven['bold']}
+                onFeedback={(rating) => handleFeedback('bold', rating)}
+              />
 
-              {/* Authentic Option */}
-              <div className="relative">
-                <button
-                  onClick={() => copyToClipboard(result.suggestions.authentic, 'authentic')}
-                  className="w-full text-left bg-zinc-900 border border-zinc-800 hover:border-zinc-600 transition-all group relative"
-                >
-                  <CornerNodes className="opacity-30 group-hover:opacity-60" />
-                  <div className="p-5">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-[10px] font-mono tracking-widest text-white uppercase">AUTHENTIC</span>
-                      <span className="text-[9px] font-mono text-zinc-600 group-hover:text-white transition-colors uppercase">
-                        {copiedIndex === 'authentic' ? '✓ COPIED' : 'TAP TO COPY'}
-                      </span>
-                    </div>
-                    <p className="text-white text-sm leading-relaxed">{result.suggestions.authentic}</p>
-                  </div>
-                </button>
-                {/* Feedback buttons */}
-                <div className="flex gap-2 mt-3 justify-end">
-                  {(['helpful', 'mid', 'off'] as const).map((rating) => (
-                    <button
-                      key={rating}
-                      onClick={() => handleFeedback('authentic', rating)}
-                      disabled={!!feedbackGiven['authentic']}
-                      className={`px-3 py-2 text-sm font-mono uppercase tracking-wider border transition-all min-w-[44px] min-h-[44px] flex items-center justify-center ${feedbackGiven['authentic'] === rating
-                        ? rating === 'helpful' ? 'bg-emerald-900/50 border-emerald-500 text-emerald-400' :
-                          rating === 'mid' ? 'bg-yellow-900/50 border-yellow-500 text-yellow-400' :
-                            'bg-red-900/50 border-red-500 text-red-400'
-                        : feedbackGiven['authentic']
-                          ? 'border-zinc-800 text-zinc-700 cursor-not-allowed'
-                          : 'border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300'
-                        }`}
-                    >
-                      {rating === 'helpful' ? '+' : rating === 'mid' ? '○' : '-'}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* Authentic Options */}
+              <SuggestionCategory
+                title="AUTHENTIC"
+                titleColor="text-white"
+                suggestions={result.suggestions.authentic}
+                copiedIndex={copiedIndex}
+                onCopy={copyToClipboard}
+                categoryKey="authentic"
+                feedbackGiven={feedbackGiven['authentic']}
+                onFeedback={(rating) => handleFeedback('authentic', rating)}
+              />
 
               {/* Wait Option (if applicable) */}
               {result.suggestions.wait && (
