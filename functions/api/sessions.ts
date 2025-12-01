@@ -1,7 +1,7 @@
 export async function onRequest(context: any) {
   const { env, request } = context;
   // Try several common binding names to be resilient to the exact name used in Pages settings
-  const db = env.RIZZBOT_DATA || env.RIZZBOT || env.RIZZBOT_DB || env.RIZZBOT_D1 || env.RIZZBOT_DATASET;
+  const db = env.RIZZBOT_DATA || env.RIZZBOT || env.RIZZBOT_DB || env.RIZZBOT_D1 || env.RIZZBOT_DATASET || env["rizzbot data"];
 
   // Add CORS headers
   const corsHeaders = {
@@ -18,9 +18,9 @@ export async function onRequest(context: any) {
 
   if (!db) {
     console.error('[sessions.ts] D1 binding not found. Available env keys:', Object.keys(env));
-    return new Response(JSON.stringify({ 
-      error: 'D1 binding not found. Check your Pages project bindings.', 
-      tried: ['RIZZBOT_DATA', 'RIZZBOT', 'RIZZBOT_DB', 'RIZZBOT_D1', 'RIZZBOT_DATASET'],
+    return new Response(JSON.stringify({
+      error: 'D1 binding not found. Check your Pages project bindings.',
+      tried: ['RIZZBOT_DATA', 'RIZZBOT', 'RIZZBOT_DB', 'RIZZBOT_D1', 'RIZZBOT_DATASET', 'rizzbot data'],
       availableBindings: Object.keys(env).filter(k => !k.startsWith('__')),
       hint: 'Go to Cloudflare Pages > Settings > Functions > D1 database bindings'
     }), {
@@ -74,13 +74,13 @@ export async function onRequest(context: any) {
       });
     }
 
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { 
-      status: 405, 
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
       headers: corsHeaders,
     });
   } catch (err: any) {
     console.error('[sessions.ts] Error:', err.message, err.stack);
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: err.message || String(err),
       stack: err.stack,
       hint: 'If this is a schema error, try calling /api/migrate first'

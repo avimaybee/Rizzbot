@@ -1,6 +1,6 @@
 export async function onRequest(context: any) {
   const { env, request } = context;
-  const db = env.RIZZBOT_DATA || env.RIZZBOT || env.RIZZBOT_DB || env.RIZZBOT_D1 || env.RIZZBOT_DATASET;
+  const db = env.RIZZBOT_DATA || env.RIZZBOT || env.RIZZBOT_DB || env.RIZZBOT_D1 || env.RIZZBOT_DATASET || env["rizzbot data"];
 
   // Add CORS headers
   const corsHeaders = {
@@ -17,7 +17,7 @@ export async function onRequest(context: any) {
 
   if (!db) {
     console.error('[personas.ts] D1 binding not found. Available env keys:', Object.keys(env));
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: 'D1 binding not found',
       availableBindings: Object.keys(env).filter(k => !k.startsWith('__')),
       hint: 'Check Cloudflare Pages > Settings > Functions > D1 database bindings'
@@ -150,7 +150,7 @@ export async function onRequest(context: any) {
     });
   } catch (err: any) {
     console.error('[personas.ts] Error:', err.message, err.stack);
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: err.message || String(err),
       hint: 'If this is a schema error, try calling /api/migrate first'
     }), {

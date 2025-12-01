@@ -1,6 +1,6 @@
 export async function onRequest(context: any) {
   const { env, request } = context;
-  const db = env.RIZZBOT_DATA || env.RIZZBOT || env.RIZZBOT_DB || env.RIZZBOT_D1 || env.RIZZBOT_DATASET;
+  const db = env.RIZZBOT_DATA || env.RIZZBOT || env.RIZZBOT_DB || env.RIZZBOT_D1 || env.RIZZBOT_DATASET || env["rizzbot data"];
 
   // Add CORS headers
   const corsHeaders = {
@@ -17,9 +17,9 @@ export async function onRequest(context: any) {
 
   if (!db) {
     console.error('[migrate.ts] D1 binding not found. Available env keys:', Object.keys(env));
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: 'D1 binding not found. Check your Pages project bindings.',
-      tried: ['RIZZBOT_DATA', 'RIZZBOT', 'RIZZBOT_DB', 'RIZZBOT_D1', 'RIZZBOT_DATASET'],
+      tried: ['RIZZBOT_DATA', 'RIZZBOT', 'RIZZBOT_DB', 'RIZZBOT_D1', 'RIZZBOT_DATASET', 'rizzbot data'],
       availableBindings: Object.keys(env).filter(k => !k.startsWith('__')),
       hint: 'Go to Cloudflare Pages > Settings > Functions > D1 database bindings'
     }), {
@@ -146,7 +146,7 @@ CREATE INDEX IF NOT EXISTS idx_feedback_user_id ON feedback(user_id);
     const appliedIds = new Set((applied.results || []).map((r: any) => r.id));
 
     const appliedNow: string[] = [];
-    const errors: Array<{id: string, error: string}> = [];
+    const errors: Array<{ id: string, error: string }> = [];
 
     for (const m of migrations) {
       if (appliedIds.has(m.id)) continue;
@@ -161,7 +161,7 @@ CREATE INDEX IF NOT EXISTS idx_feedback_user_id ON feedback(user_id);
         // Try to continue with other migrations
         const errorMsg = migrationError.message || String(migrationError);
         console.warn(`[migrate.ts] Migration ${m.id} failed:`, errorMsg);
-        
+
         // If it's a "column already exists" error, mark as applied anyway
         if (errorMsg.includes('duplicate column') || errorMsg.includes('already exists')) {
           try {
@@ -176,8 +176,8 @@ CREATE INDEX IF NOT EXISTS idx_feedback_user_id ON feedback(user_id);
       }
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
+    return new Response(JSON.stringify({
+      success: true,
       applied: appliedNow,
       errors: errors.length > 0 ? errors : undefined,
       totalMigrations: migrations.length,
@@ -185,11 +185,11 @@ CREATE INDEX IF NOT EXISTS idx_feedback_user_id ON feedback(user_id);
     }), { headers: corsHeaders });
   } catch (err: any) {
     console.error('[migrate.ts] Error:', err.message, err.stack);
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: err.message || String(err),
-      stack: err.stack 
-    }), { 
-      status: 500, 
+      stack: err.stack
+    }), {
+      status: 500,
       headers: corsHeaders,
     });
   }

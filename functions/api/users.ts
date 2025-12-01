@@ -1,6 +1,6 @@
 export async function onRequest(context: any) {
   const { env, request } = context;
-  const db = env.RIZZBOT_DATA || env.RIZZBOT || env.RIZZBOT_DB || env.RIZZBOT_D1 || env.RIZZBOT_DATASET;
+  const db = env.RIZZBOT_DATA || env.RIZZBOT || env.RIZZBOT_DB || env.RIZZBOT_D1 || env.RIZZBOT_DATASET || env["rizzbot data"];
 
   // Add CORS headers
   const corsHeaders = {
@@ -17,7 +17,7 @@ export async function onRequest(context: any) {
 
   if (!db) {
     console.error('[users.ts] D1 binding not found. Available env keys:', Object.keys(env));
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: 'D1 binding not found',
       availableBindings: Object.keys(env).filter(k => !k.startsWith('__')),
       hint: 'Check Cloudflare Pages > Settings > Functions > D1 database bindings'
@@ -113,15 +113,15 @@ export async function onRequest(context: any) {
           const created = await db.prepare(
             'INSERT INTO users (anon_id, email, display_name, photo_url, provider, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
           ).bind(firebaseUid, email, displayName, photoUrl, provider, now, now).run();
-          
-          user = { 
-            id: created?.meta?.last_row_id || created?.meta?.last_rowid, 
-            anon_id: firebaseUid, 
+
+          user = {
+            id: created?.meta?.last_row_id || created?.meta?.last_rowid,
+            anon_id: firebaseUid,
             email,
             display_name: displayName,
             photo_url: photoUrl,
             provider,
-            created_at: now 
+            created_at: now
           };
         } catch (extendedError: any) {
           // Fall back to basic insert
@@ -129,11 +129,11 @@ export async function onRequest(context: any) {
           const created = await db.prepare(
             'INSERT INTO users (anon_id, created_at) VALUES (?, ?)'
           ).bind(firebaseUid, now).run();
-          
-          user = { 
-            id: created?.meta?.last_row_id || created?.meta?.last_rowid, 
-            anon_id: firebaseUid, 
-            created_at: now 
+
+          user = {
+            id: created?.meta?.last_row_id || created?.meta?.last_rowid,
+            anon_id: firebaseUid,
+            created_at: now
           };
         }
       }
@@ -178,7 +178,7 @@ export async function onRequest(context: any) {
         updates.push('provider = ?');
         values.push(provider);
       }
-      
+
       // Always update last_login_at
       updates.push('last_login_at = ?');
       values.push(new Date().toISOString());
@@ -200,7 +200,7 @@ export async function onRequest(context: any) {
     });
   } catch (err: any) {
     console.error('[users.ts] Error:', err.message, err.stack);
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: err.message || String(err),
       stack: err.stack,
       hint: 'If this is a schema error, try calling /api/migrate first'
