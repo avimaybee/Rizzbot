@@ -196,6 +196,7 @@ export const simulateDraft = async (
     
     ✅ GEN-Z APPROVED VOCABULARY:
     - Verifiers: "fr", "no cap", "bet", "ong", "lowkey", "highkey", "icl", "bffr"
+    - Group terms: "gng" = gang/friends (NOT "going"), "the boys", "the girls", "bestie"
     - Status: "valid", "cooked", "ate", "slay", "based", "real"
     - Reactions: "unhinged", "delulu", "the ick", "rent free"
     - Softeners: "ngl", "tbh", "idk", "tho", "lol", "lmao"
@@ -517,6 +518,7 @@ export const getQuickAdvice = async (
     
     ✅ CURRENT GEN-Z VOCABULARY (use naturally, don't force):
     - Verifiers: "fr", "no cap", "bet", "ong", "lowkey", "icl", "bffr"
+    - Group terms: "gng" = gang/friends (NOT "going"), "the boys", "the girls", "bestie"
     - Status: "valid", "ate", "slay", "based", "real", "cooked"
     - Reactions: "unhinged", "delulu", "the ick", "rent free", "roman empire"
     - Softeners: "ngl", "tbh", "idk", "tho", "lol", "lmao"

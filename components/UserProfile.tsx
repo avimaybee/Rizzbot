@@ -60,6 +60,33 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
   useEffect(() => {
     if (initialProfile) {
       setProfile(initialProfile);
+      // Restore saved MCQ samples if available
+      if (initialProfile.rawSamples && initialProfile.rawSamples.length > 0) {
+        const restored = [...initialProfile.rawSamples];
+        while (restored.length < 6) restored.push('');
+        setSampleTexts(restored);
+      }
+      // Restore AI summary as analysis result
+      if (initialProfile.aiSummary) {
+        setAnalysisResult({
+          profile: {
+            capitalization: initialProfile.capitalization === 'lowercase' ? 'always_lowercase' : 
+              initialProfile.capitalization === 'normal' ? 'proper_grammar' : 'sometimes_caps',
+            punctuation: initialProfile.punctuation,
+            emojiFrequency: initialProfile.emojiUsage,
+            favoriteEmojis: initialProfile.favoriteEmojis || [],
+            commonPhrases: initialProfile.signaturePatterns.filter(p => !p.match(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]/gu)),
+            messageLengthTendency: initialProfile.averageLength,
+            energyLevel: initialProfile.preferredTone === 'playful' ? 'hype' : 
+              initialProfile.preferredTone === 'direct' ? 'dry' : 'chill',
+            openerStyle: 'casual',
+            closerStyle: 'natural'
+          },
+          confidence: 85,
+          extractedPatterns: initialProfile.signaturePatterns,
+          summary: initialProfile.aiSummary
+        });
+      }
       setCurrentStep('review');
     }
   }, [initialProfile]);
@@ -115,10 +142,12 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
         averageLength: aiProfile.messageLengthTendency,
         slangLevel: aiProfile.commonPhrases.length > 3 ? 'heavy-slang' :
           aiProfile.commonPhrases.length > 0 ? 'casual' : 'formal',
-        signaturePatterns: [...aiProfile.commonPhrases, ...aiProfile.favoriteEmojis].slice(0, 6),
+        signaturePatterns: aiProfile.commonPhrases.slice(0, 6),
         preferredTone: aiProfile.energyLevel === 'hype' ? 'playful' :
           aiProfile.energyLevel === 'dry' ? 'direct' : 'chill',
-        aiSummary: result.summary
+        aiSummary: result.summary,
+        favoriteEmojis: aiProfile.favoriteEmojis.slice(0, 8),
+        rawSamples: sampleTexts.filter(t => t.trim())
       });
 
       setCurrentStep('review');
@@ -286,7 +315,19 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
             <ArrowLeft className="w-4 h-4" />
             <span className="text-[10px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">BACK</span>
           </button>
-          <div className="label-sm text-zinc-500">STEP 1 OF 2</div>
+          <div className="flex items-center gap-4">
+            <div className="label-sm text-zinc-500">STEP 1 OF 2</div>
+            {/* NEXT only appears if profile already exists (returning user editing samples) */}
+            {initialProfile && (
+              <button
+                onClick={() => setCurrentStep('review')}
+                className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group"
+              >
+                <span className="text-[10px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">SKIP TO REVIEW</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Content */}
@@ -456,74 +497,172 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
         <div className="label-sm text-zinc-500">STEP 2 OF 2</div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 p-6 md:p-10 relative z-0">
-        <div className="max-w-3xl mx-auto space-y-6">
-          <div>
+      {/* Content - 2 Column Layout */}
+      <div className="flex-1 p-6 md:p-8 relative z-0">
+        <div className="max-w-7xl mx-auto">
+          {/* Title */}
+          <div className="mb-8">
             <div className="label-sm text-hard-gold mb-2">YOUR PROFILE</div>
             <h2 className="text-3xl md:text-4xl font-impact text-white uppercase tracking-tight">REVIEW & ADJUST</h2>
             <p className="text-zinc-500 text-sm mt-2">looks good? tweak anything before saving.</p>
           </div>
 
-          {/* AI Analysis Summary (if available) */}
-          {analysisResult && (
-            <div className={`bg-zinc-900 border ${analysisResult.confidence === 0 ? 'border-red-900/50' : 'border-hard-gold/30'} p-6 relative`}>
-              <CornerNodes className="opacity-30" />
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {analysisResult.confidence === 0 ? <AlertTriangle className="w-6 h-6 text-red-400" /> : <Sparkles className="w-6 h-6 text-hard-gold" />}
-                    <div className={`label-sm ${analysisResult.confidence === 0 ? 'text-red-400' : 'text-hard-gold'}`}>
-                      {analysisResult.confidence === 0 ? 'AI UNAVAILABLE' : 'AI ANALYSIS'}
+          {/* Two Column Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+            
+            {/* LEFT COLUMN - AI Analysis & Account */}
+            <div className="space-y-6">
+              {/* AI Analysis Summary (if available) */}
+              {analysisResult && (
+                <div className={`bg-zinc-900 border ${analysisResult.confidence === 0 ? 'border-red-900/50' : 'border-hard-gold/30'} p-6 relative`}>
+                  <CornerNodes className="opacity-30" />
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {analysisResult.confidence === 0 ? <AlertTriangle className="w-6 h-6 text-red-400" /> : <Sparkles className="w-6 h-6 text-hard-gold" />}
+                        <div className={`label-sm ${analysisResult.confidence === 0 ? 'text-red-400' : 'text-hard-gold'}`}>
+                          {analysisResult.confidence === 0 ? 'AI UNAVAILABLE' : 'AI ANALYSIS'}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-[10px] font-mono text-zinc-500">CONFIDENCE</div>
+                        <div className={`px-2 py-1 text-[10px] font-mono font-bold ${analysisResult.confidence >= 70 ? 'bg-green-900/50 text-green-400 border border-green-700' :
+                          analysisResult.confidence >= 40 ? 'bg-yellow-900/50 text-yellow-400 border border-yellow-700' :
+                            'bg-red-900/50 text-red-400 border border-red-700'
+                          }`}>
+                          {analysisResult.confidence}%
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-[10px] font-mono text-zinc-500">CONFIDENCE</div>
-                    <div className={`px-2 py-1 text-[10px] font-mono font-bold ${analysisResult.confidence >= 70 ? 'bg-green-900/50 text-green-400 border border-green-700' :
-                      analysisResult.confidence >= 40 ? 'bg-yellow-900/50 text-yellow-400 border border-yellow-700' :
-                        'bg-red-900/50 text-red-400 border border-red-700'
-                      }`}>
-                      {analysisResult.confidence}%
-                    </div>
+
+                    {/* Summary - different styling for error vs success */}
+                    <p className={`text-sm italic leading-relaxed ${analysisResult.confidence === 0 ? 'text-red-300' : 'text-white'}`}>
+                      "{analysisResult.summary}"
+                    </p>
+
+                    {/* Show retry hint when AI fails */}
+                    {analysisResult.confidence === 0 && (
+                      <div className="text-[10px] font-mono text-zinc-500 border-t border-zinc-800 pt-3 mt-3">
+                        ⚡ AI service temporarily unavailable. You can still manually configure your style below, or try again later.
+                      </div>
+                    )}
+
+                    {/* Detected Patterns */}
+                    {analysisResult.extractedPatterns.length > 0 && (
+                      <div>
+                        <div className="label-sm text-zinc-500 mb-2">DETECTED PATTERNS</div>
+                        <div className="flex flex-wrap gap-2">
+                          {analysisResult.extractedPatterns.map((pattern, i) => (
+                            <span key={i} className="px-3 py-1 bg-zinc-800 text-zinc-300 text-xs font-mono border border-zinc-700">
+                              {pattern}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
+              )}
 
-                {/* Summary - different styling for error vs success */}
-                <p className={`text-sm italic ${analysisResult.confidence === 0 ? 'text-red-300' : 'text-white'}`}>
-                  "{analysisResult.summary}"
-                </p>
-
-                {/* Show retry hint when AI fails */}
-                {analysisResult.confidence === 0 && (
-                  <div className="text-[10px] font-mono text-zinc-500 border-t border-zinc-800 pt-3 mt-3">
-                    ⚡ AI service temporarily unavailable. You can still manually configure your style below, or try again later.
-                  </div>
-                )}
-
-                {/* Detected Patterns */}
-                {analysisResult.extractedPatterns.length > 0 && (
+              {/* Signature Patterns */}
+              {profile.signaturePatterns.length > 0 && (
+                <div className="bg-zinc-900 border border-zinc-800 p-6 relative">
+                  <CornerNodes className="opacity-30" />
                   <div>
-                    <div className="label-sm text-zinc-500 mb-2">DETECTED PATTERNS</div>
+                    <div className="label-sm text-zinc-400 mb-3">YOUR SIGNATURE STYLE</div>
                     <div className="flex flex-wrap gap-2">
-                      {analysisResult.extractedPatterns.map((pattern, i) => (
-                        <span key={i} className="px-3 py-1 bg-zinc-800 text-zinc-300 text-xs font-mono border border-zinc-700">
+                      {profile.signaturePatterns.map((pattern, i) => (
+                        <span key={i} className="px-3 py-1.5 border border-hard-gold text-hard-gold text-sm font-mono">
                           {pattern}
                         </span>
                       ))}
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
-          )}
+                </div>
+              )}
 
-          {/* Profile Settings */}
-          <div className="space-y-6">
+              {/* Account Section */}
+              {authUser && (
+                <div className="bg-zinc-900 border border-zinc-800 p-6 relative">
+                  <CornerNodes className="opacity-30" />
+                  <div>
+                    <div className="label-sm text-zinc-400 mb-4">ACCOUNT</div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        {authUser.photoURL ? (
+                          <img 
+                            src={authUser.photoURL} 
+                            alt="" 
+                            className="w-12 h-12 rounded-full border-2 border-zinc-700"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-white text-lg font-bold">
+                            {(authUser.displayName || authUser.email || 'U')[0].toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <div className="text-white font-medium">
+                            {authUser.displayName || 'User'}
+                          </div>
+                          <div className="text-zinc-500 text-sm">
+                            {authUser.email}
+                          </div>
+                          <div className="text-zinc-600 text-[10px] font-mono mt-1">
+                            via {authUser.providerId === 'google.com' ? 'Google' : 'Email'}
+                          </div>
+                        </div>
+                      </div>
+                      {onSignOut && (
+                        <button
+                          onClick={onSignOut}
+                          className="flex items-center gap-2 px-4 py-2 border border-zinc-700 text-zinc-400 hover:border-red-500 hover:text-red-400 transition-colors text-sm"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Sign Out
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* RIGHT COLUMN - Style Settings */}
+            <div className="space-y-4">
             {/* Emoji Usage */}
             <div className="bg-zinc-900 border border-zinc-800 p-6 relative">
               <CornerNodes className="opacity-30" />
               <div>
                 <label className="label-sm text-zinc-400 mb-3 block">EMOJI USAGE</label>
+                {/* Display extracted emojis from user's samples */}
+                {profile.favoriteEmojis && profile.favoriteEmojis.length > 0 && (
+                  <div className="mb-4">
+                    <div className="text-[10px] font-mono text-zinc-500 uppercase mb-2">YOUR EMOJIS</div>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.favoriteEmojis.map((emoji, i) => (
+                        <span key={i} className="text-2xl bg-zinc-800 px-3 py-1.5 rounded-lg border border-zinc-700 hover:border-hard-gold transition-colors">
+                          {emoji}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Frequency selector */}
+                <div className="text-[10px] font-mono text-zinc-500 uppercase mb-2">FREQUENCY</div>
+                <div className="grid grid-cols-4 gap-2">
+                  {(['none', 'minimal', 'moderate', 'heavy'] as const).map((level) => (
+                    <button
+                      key={level}
+                      onClick={() => setProfile({ ...profile, emojiUsage: level })}
+                      className={`py-2 px-3 border text-[10px] font-mono uppercase tracking-wider transition-all ${profile.emojiUsage === level
+                        ? 'bg-white text-black border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]'
+                        : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500'
+                        }`}
+                    >
+                      {level === 'none' ? '😐 NONE' : level === 'minimal' ? '🙂 MIN' : level === 'moderate' ? '😊 MOD' : '🤩 HEAVY'}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -636,77 +775,18 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                 </div>
               </div>
             </div>
-
-            {/* Signature Patterns */}
-            {profile.signaturePatterns.length > 0 && (
-              <div className="bg-zinc-900 border border-zinc-800 p-6 relative">
-                <CornerNodes className="opacity-30" />
-                <div>
-                  <div className="label-sm text-zinc-400 mb-3">DETECTED PATTERNS</div>
-                  <div className="flex flex-wrap gap-2">
-                    {profile.signaturePatterns.map((pattern, i) => (
-                      <span key={i} className="px-3 py-1 border border-hard-gold text-hard-gold text-xs font-mono">
-                        {pattern}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Account Section */}
-            {authUser && (
-              <div className="bg-zinc-900 border border-zinc-800 p-6 relative">
-                <CornerNodes className="opacity-30" />
-                <div>
-                  <div className="label-sm text-zinc-400 mb-4">ACCOUNT</div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      {authUser.photoURL ? (
-                        <img 
-                          src={authUser.photoURL} 
-                          alt="" 
-                          className="w-12 h-12 rounded-full border-2 border-zinc-700"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-white text-lg font-bold">
-                          {(authUser.displayName || authUser.email || 'U')[0].toUpperCase()}
-                        </div>
-                      )}
-                      <div>
-                        <div className="text-white font-medium">
-                          {authUser.displayName || 'User'}
-                        </div>
-                        <div className="text-zinc-500 text-sm">
-                          {authUser.email}
-                        </div>
-                        <div className="text-zinc-600 text-[10px] font-mono mt-1">
-                          via {authUser.providerId === 'google.com' ? 'Google' : 'Email'}
-                        </div>
-                      </div>
-                    </div>
-                    {onSignOut && (
-                      <button
-                        onClick={onSignOut}
-                        className="flex items-center gap-2 px-4 py-2 border border-zinc-700 text-zinc-400 hover:border-red-500 hover:text-red-400 transition-colors text-sm"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        Sign Out
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
 
-          {/* Save Button */}
-          <button
-            onClick={handleSave}
-            className="w-full py-5 bg-white text-black font-impact text-2xl uppercase tracking-wide hover:bg-zinc-200 transition-colors"
-          >
-            SAVE PROFILE
-          </button>
+          {/* Save Button - Full Width */}
+          <div className="mt-8">
+            <button
+              onClick={handleSave}
+              className="w-full py-5 bg-white text-black font-impact text-2xl uppercase tracking-wide hover:bg-zinc-200 transition-colors"
+            >
+              SAVE PROFILE
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -68,6 +68,8 @@ export interface UserStyleProfile {
   flirtLevel?: 'none' | 'subtle' | 'moderate' | 'bold'; // Flirtatiousness
   humorStyle?: 'dry' | 'playful' | 'sarcastic' | 'wholesome'; // Humor type
   aiSummary?: string; // AI-generated personality summary
+  favoriteEmojis?: string[]; // User's frequently used emojis extracted from samples
+  rawSamples?: string[]; // User's MCQ text samples for persistence
 }
 
 /**

@@ -179,15 +179,21 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
       // Log session for wellbeing tracking
       logSession('practice', activePersona.name, result.ghostRisk);
 
-      // Save session to D1
+      // Save session to D1 with enhanced metadata
       if (firebaseUid) {
         try {
           await createSession(firebaseUid, {
             type: 'practice',
             persona: activePersona.name,
             analysis: result,
-            messageCount: simHistory.length,
+            history: simHistory,
             timestamp: new Date().toISOString(),
+          }, {
+            mode: 'simulator',
+            persona_name: activePersona.name,
+            headline: result.headline,
+            ghost_risk: result.ghostRisk,
+            message_count: simHistory.length,
           });
         } catch (dbError) {
           console.error('Failed to save session to DB:', dbError);
@@ -423,94 +429,188 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
   // --- ANALYSIS VIEW ---
   if (view === 'analysis' && analysisResult) {
+    const getRiskColor = (risk: number) => {
+      if (risk > 70) return { text: 'text-red-400', bg: 'bg-red-950/40', border: 'border-red-800/60', bar: 'bg-red-500' };
+      if (risk > 40) return { text: 'text-yellow-400', bg: 'bg-yellow-950/40', border: 'border-yellow-800/60', bar: 'bg-yellow-500' };
+      return { text: 'text-emerald-400', bg: 'bg-emerald-950/40', border: 'border-emerald-800/60', bar: 'bg-emerald-500' };
+    };
+    const riskColors = getRiskColor(analysisResult.ghostRisk);
+
+    const getActionStyle = (action: string) => {
+      switch (action) {
+        case 'HARD_STOP': return { icon: '🛑', text: 'text-red-400', bg: 'bg-red-950/50', border: 'border-red-700' };
+        case 'PULL_BACK': return { icon: '⚠️', text: 'text-yellow-400', bg: 'bg-yellow-950/50', border: 'border-yellow-700' };
+        case 'WAIT': return { icon: '⏸️', text: 'text-orange-400', bg: 'bg-orange-950/50', border: 'border-orange-700' };
+        case 'FULL_SEND': return { icon: '🚀', text: 'text-emerald-400', bg: 'bg-emerald-950/50', border: 'border-emerald-700' };
+        default: return { icon: '💬', text: 'text-blue-400', bg: 'bg-blue-950/50', border: 'border-blue-700' };
+      }
+    };
+
     return (
-      <div className="w-full h-full max-w-5xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative scrollbar-hide pb-20 md:pb-0">
+      <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative scrollbar-hide pb-20 md:pb-0">
         <CornerNodes />
+        
+        {/* Header */}
         <div className="bg-zinc-900 p-4 sm:p-6 border-b border-zinc-800 flex justify-between items-center shrink-0">
-          <div>
-            <h2 className="font-impact text-xl sm:text-2xl text-white tracking-wide uppercase">Post-Mortem</h2>
-            <p className="label-sm text-zinc-500 mt-1">SESSION_ID: {Date.now().toString().slice(-6)}</p>
-          </div>
-          <button onClick={() => setView('chat')} className="text-xs font-mono text-zinc-400 hover:text-white underline">CLOSE</button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-6 sm:p-12 bg-matte-base">
-          <div className="max-w-3xl mx-auto text-center">
-            <div className="mb-8 sm:mb-12">
-              <h3 className="text-3xl sm:text-4xl md:text-6xl font-impact text-white mb-6 sm:mb-8 uppercase leading-tight">
-                {analysisResult.headline}
-              </h3>
-
-              {/* RECOMMENDED NEXT MOVE BANNER */}
-              {analysisResult.recommendedNextMove && (
-                <div className={`inline-block border-2 px-6 py-3 mb-6 ${analysisResult.recommendedNextMove === 'HARD_STOP' ? 'border-red-500 bg-red-900/20' :
-                  analysisResult.recommendedNextMove === 'PULL_BACK' ? 'border-yellow-500 bg-yellow-900/20' :
-                    analysisResult.recommendedNextMove === 'WAIT' ? 'border-orange-500 bg-orange-900/20' :
-                      analysisResult.recommendedNextMove === 'FULL_SEND' ? 'border-green-500 bg-green-900/20' :
-                        'border-blue-500 bg-blue-900/20'
-                  }`}>
-                  <span className="label-sm text-zinc-400 block mb-1">RECOMMENDED ACTION</span>
-                  <span className={`font-mono font-bold text-xl ${analysisResult.recommendedNextMove === 'HARD_STOP' ? 'text-red-400' :
-                    analysisResult.recommendedNextMove === 'PULL_BACK' ? 'text-yellow-400' :
-                      analysisResult.recommendedNextMove === 'WAIT' ? 'text-orange-400' :
-                        analysisResult.recommendedNextMove === 'FULL_SEND' ? 'text-green-400' :
-                          'text-blue-400'
-                    }`}>{analysisResult.recommendedNextMove.replace('_', ' ')}</span>
-                  {analysisResult.conversationFlow && (
-                    <span className="block label-sm text-zinc-500 mt-1">Flow: {analysisResult.conversationFlow}</span>
-                  )}
-                </div>
-              )}
-
-              {/* MAIN GAUGE */}
-              <div className="inline-block bg-zinc-900 border border-zinc-800 p-6 sm:p-8 min-w-[260px] sm:min-w-[300px]">
-                <span className="label-sm text-zinc-500 block mb-3 sm:mb-4">GHOST RISK PROBABILITY</span>
-                <span className={`font-mono font-bold text-5xl sm:text-6xl ${analysisResult.ghostRisk > 60 ? 'text-red-500' : 'text-white'}`}>{analysisResult.ghostRisk}%</span>
-                <div className="w-full h-2 bg-black mt-4">
-                  <div
-                    className={`h-full ${analysisResult.ghostRisk > 60 ? 'bg-red-500' : 'bg-white'}`}
-                    style={{ width: `${analysisResult.ghostRisk}%` }}
-                  ></div>
-                </div>
-              </div>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 border-2 border-zinc-600 bg-zinc-800 flex items-center justify-center">
+              <span className="text-2xl">📊</span>
             </div>
-
-            <div className="grid md:grid-cols-2 gap-6 sm:gap-8 mb-8 sm:mb-12 text-left">
-              <div className="border-t border-zinc-800 pt-4 sm:pt-6">
-                <h4 className="label-sm text-hard-blue mb-3 sm:mb-4">METRICS</h4>
-                <div className="space-y-3 sm:space-y-4">
-                  <div className="flex justify-between items-center text-sm border-b border-zinc-900 pb-2">
-                    <span className="text-zinc-400 font-bold uppercase tracking-wider">Vibe Match</span>
-                    <span className="font-mono text-white">{analysisResult.vibeMatch}%</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm border-b border-zinc-900 pb-2">
-                    <span className="text-zinc-400 font-bold uppercase tracking-wider">Effort</span>
-                    <span className="font-mono text-white">{analysisResult.effortBalance}%</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-zinc-800 pt-4 sm:pt-6">
-                <h4 className="label-sm text-hard-gold mb-3 sm:mb-4">INSIGHTS</h4>
-                <ul className="space-y-2 sm:space-y-3">
-                  {analysisResult.insights.map((insight, i) => (
-                    <li key={i} className="text-sm text-zinc-300 leading-relaxed list-disc list-inside marker:text-zinc-600">
-                      {insight}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <div className="bg-white text-black p-6 sm:p-8 text-left">
-              <h4 className="font-impact text-lg sm:text-xl mb-2 uppercase">Strategic Advice</h4>
-              <p className="font-editorial text-base sm:text-lg leading-relaxed">"{analysisResult.advice}"</p>
+            <div>
+              <h2 className="font-impact text-xl sm:text-2xl text-white tracking-wide uppercase">Session Analysis</h2>
+              <p className="text-xs text-zinc-500 font-mono mt-1">
+                {simHistory.length} exchange{simHistory.length !== 1 ? 's' : ''} analyzed • ID: {Date.now().toString().slice(-6)}
+              </p>
             </div>
           </div>
+          <button onClick={() => setView('chat')} className="label-sm text-zinc-400 hover:text-white border border-zinc-700 px-4 py-2 hover:bg-zinc-800 transition-colors">
+            ← BACK TO CHAT
+          </button>
         </div>
 
-        <div className="p-4 border-t border-zinc-800 bg-zinc-900 flex justify-center shrink-0">
-          <button onClick={resetSim} className="text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Start New Practice</button>
+        <div className="flex-1 overflow-y-auto bg-matte-base">
+          <div className="p-6 sm:p-8 lg:p-12">
+            <div className="max-w-5xl mx-auto">
+              
+              {/* Hero Section - Headline + Action */}
+              <div className="text-center mb-10 sm:mb-14">
+                <h3 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-impact text-white mb-8 uppercase leading-tight tracking-wide">
+                  {analysisResult.headline}
+                </h3>
+
+                {/* Recommended Action - Prominent Card */}
+                {analysisResult.recommendedNextMove && (() => {
+                  const actionStyle = getActionStyle(analysisResult.recommendedNextMove);
+                  return (
+                    <div className={`inline-flex flex-col items-center ${actionStyle.bg} border-2 ${actionStyle.border} px-8 py-6 sm:px-12 sm:py-8`}>
+                      <span className="text-4xl mb-3">{actionStyle.icon}</span>
+                      <span className="label-sm text-zinc-400 mb-2">RECOMMENDED ACTION</span>
+                      <span className={`font-impact text-2xl sm:text-3xl ${actionStyle.text} tracking-wider`}>
+                        {analysisResult.recommendedNextMove.replace('_', ' ')}
+                      </span>
+                      {analysisResult.conversationFlow && (
+                        <span className="text-xs text-zinc-500 font-mono mt-3 border-t border-zinc-700 pt-3">
+                          Conversation Flow: <span className="text-zinc-300">{analysisResult.conversationFlow}</span>
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Stats Grid - 3 Column */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-10 sm:mb-14">
+                {/* Ghost Risk - Main Stat */}
+                <div className={`${riskColors.bg} border ${riskColors.border} p-6 sm:p-8 text-center`}>
+                  <span className="label-sm text-zinc-400 block mb-4">GHOST RISK</span>
+                  <div className="relative inline-block">
+                    <span className={`font-mono font-bold text-5xl sm:text-6xl ${riskColors.text}`}>
+                      {analysisResult.ghostRisk}
+                    </span>
+                    <span className={`text-2xl ${riskColors.text} ml-1`}>%</span>
+                  </div>
+                  <div className="w-full h-2 bg-black/50 mt-6 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${riskColors.bar} transition-all duration-500`}
+                      style={{ width: `${analysisResult.ghostRisk}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-3 font-mono">
+                    {analysisResult.ghostRisk > 70 ? '⚠ HIGH - Proceed with caution' :
+                     analysisResult.ghostRisk > 40 ? '◐ MODERATE - Could go either way' :
+                     '✓ LOW - Looking good'}
+                  </p>
+                </div>
+
+                {/* Vibe Match */}
+                <div className="bg-zinc-900/60 border border-zinc-800 p-6 sm:p-8 text-center">
+                  <span className="label-sm text-hard-blue block mb-4">VIBE MATCH</span>
+                  <div className="relative inline-block">
+                    <span className="font-mono font-bold text-5xl sm:text-6xl text-white">
+                      {analysisResult.vibeMatch}
+                    </span>
+                    <span className="text-2xl text-zinc-500 ml-1">%</span>
+                  </div>
+                  <div className="w-full h-2 bg-black/50 mt-6 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-hard-blue transition-all duration-500"
+                      style={{ width: `${analysisResult.vibeMatch}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-3 font-mono">
+                    How well your energy matches theirs
+                  </p>
+                </div>
+
+                {/* Effort Balance */}
+                <div className="bg-zinc-900/60 border border-zinc-800 p-6 sm:p-8 text-center">
+                  <span className="label-sm text-hard-gold block mb-4">EFFORT BALANCE</span>
+                  <div className="relative inline-block">
+                    <span className="font-mono font-bold text-5xl sm:text-6xl text-white">
+                      {analysisResult.effortBalance}
+                    </span>
+                    <span className="text-2xl text-zinc-500 ml-1">%</span>
+                  </div>
+                  <div className="w-full h-2 bg-black/50 mt-6 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-hard-gold transition-all duration-500"
+                      style={{ width: `${analysisResult.effortBalance}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-3 font-mono">
+                    Who's putting in more work
+                  </p>
+                </div>
+              </div>
+
+              {/* Insights + Advice - 2 Column */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+                {/* Insights */}
+                <div className="bg-zinc-900/40 border border-zinc-800 p-6 sm:p-8">
+                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-800">
+                    <span className="text-xl">💡</span>
+                    <h4 className="font-impact text-lg uppercase tracking-wide text-white">Key Insights</h4>
+                  </div>
+                  <ul className="space-y-4">
+                    {analysisResult.insights.map((insight, i) => (
+                      <li key={i} className="flex items-start gap-3">
+                        <span className="text-hard-gold mt-1">→</span>
+                        <p className="text-sm text-zinc-300 leading-relaxed">{insight}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Strategic Advice */}
+                <div className="bg-white text-black p-6 sm:p-8">
+                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-200">
+                    <span className="text-xl">🎯</span>
+                    <h4 className="font-impact text-lg uppercase tracking-wide">Strategic Advice</h4>
+                  </div>
+                  <p className="text-base sm:text-lg leading-relaxed">
+                    "{analysisResult.advice}"
+                  </p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="p-4 sm:p-6 border-t border-zinc-800 bg-zinc-900 flex justify-center gap-4 shrink-0">
+          <button 
+            onClick={() => setView('chat')} 
+            className="label-sm text-zinc-400 hover:text-white border border-zinc-700 px-6 py-3 hover:bg-zinc-800 transition-colors"
+          >
+            ← Continue Chat
+          </button>
+          <button 
+            onClick={resetSim} 
+            className="label-sm text-white bg-zinc-800 border border-zinc-600 px-6 py-3 hover:bg-zinc-700 transition-colors"
+          >
+            Start New Session
+          </button>
         </div>
       </div>
     );
@@ -518,188 +618,203 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
   // --- CHAT VIEW ---
   return (
-    <div className="w-full h-full max-w-4xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative shadow-2xl scrollbar-hide pb-20 md:pb-0">
+    <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative shadow-2xl scrollbar-hide pb-20 md:pb-0">
       <CornerNodes />
 
       {/* CHAT HEADER */}
       <div className="bg-zinc-900 p-3 sm:p-4 border-b border-zinc-800 flex justify-between items-center z-20 shrink-0">
-        <div className="flex items-center gap-2 sm:gap-4">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-zinc-800 border border-zinc-700 flex items-center justify-center text-white font-bold text-sm sm:text-lg font-mono">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-zinc-700 to-zinc-800 border border-zinc-600 flex items-center justify-center text-white font-bold text-base sm:text-xl font-impact">
             {activePersona?.name.charAt(0)}
           </div>
           <div>
-            <h2 className="font-bold text-white text-xs sm:text-sm uppercase tracking-wider mb-0.5">{activePersona?.name}</h2>
-            <span className="label-sm text-zinc-500 hidden sm:inline">
-              {activePersona?.tone}
+            <h2 className="font-impact text-white text-sm sm:text-base uppercase tracking-wider">{activePersona?.name}</h2>
+            <span className="text-xs text-zinc-500 font-mono">
+              {activePersona?.tone} • {simHistory.length} message{simHistory.length !== 1 ? 's' : ''}
             </span>
           </div>
         </div>
-        <div className="flex gap-2 sm:gap-4">
+        <div className="flex gap-3 sm:gap-4 items-center">
           {simHistory.length > 0 && (
-            <button onClick={handleEndSim} className="label-sm text-red-500 hover:text-red-400 border border-red-900/30 px-3 py-1 bg-red-900/10">
+            <button onClick={handleEndSim} className="label-sm text-red-400 hover:text-red-300 border border-red-800/50 px-4 py-2 bg-red-950/30 hover:bg-red-900/40 transition-colors">
               END SESSION
             </button>
           )}
-          <button onClick={() => setView('setup')} className="label-sm text-zinc-500 hover:text-white">
+          <button onClick={() => setView('setup')} className="label-sm text-zinc-500 hover:text-white transition-colors">
             EXIT
           </button>
         </div>
       </div>
 
-      {/* CHAT AREA */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-matte-base custom-scrollbar relative scrollbar-hide">
+      {/* CHAT AREA - 2 Column on Desktop */}
+      <div className="flex-1 overflow-y-auto bg-matte-base custom-scrollbar relative scrollbar-hide">
         <div className="absolute inset-0 bg-scan-lines opacity-5 pointer-events-none"></div>
-
-        {simHistory.length === 0 && !chatLoading && (
-          <div className="h-full flex flex-col items-center justify-center text-center px-6 relative z-10">
-            <div className="w-16 h-16 border-2 border-zinc-700 flex items-center justify-center mb-4">
-              <span className="text-2xl text-zinc-600"><MessageSquare className="w-8 h-8" /></span>
-            </div>
-            <p className="label-sm text-hard-blue mb-2">PRACTICE CONVERSATION</p>
-            <p className="text-zinc-500 text-sm max-w-xs mb-4">test how <span className="text-white font-semibold">{activePersona?.name || 'they'}</span> might respond to your messages</p>
-            <p className="text-zinc-600 text-xs">↓ type below and hit send ↓</p>
-          </div>
-        )}
-
-        {simHistory.map((entry, idx) => (
-          <div key={idx} className="space-y-4 relative z-10">
-            {/* USER MESSAGE */}
-            <div className="flex justify-end">
-              <div className="max-w-[80%] bg-white text-black px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium leading-relaxed border border-zinc-200 shadow-[4px_4px_0px_rgba(0,0,0,0.5)] relative group">
-                {entry.draft}
-                <button
-                  onClick={() => copyToClipboard(entry.draft)}
-                  className="absolute -left-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 flex items-center justify-center bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-700 text-xs"
-                  title="Copy to clipboard"
-                >
-                  {copiedText === entry.draft ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                </button>
+        
+        <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 relative z-10">
+          {simHistory.length === 0 && !chatLoading && (
+            <div className="h-[60vh] flex flex-col items-center justify-center text-center px-6">
+              <div className="w-20 h-20 border-2 border-zinc-700 flex items-center justify-center mb-6 bg-zinc-900/50">
+                <MessageSquare className="w-10 h-10 text-zinc-600" />
               </div>
-            </div>
-
-            {/* ANALYSIS WIDGET (Block Style) */}
-            <div className="mx-auto w-full max-w-lg bg-zinc-900 border border-zinc-800 p-3 sm:p-4 relative group">
-              <div className="flex items-center justify-between mb-3 pb-3 border-b border-zinc-800">
-                <span className="label-sm text-zinc-500">ANALYSIS</span>
-                <span className={`label-sm ${entry.result.regretLevel > 50 ? 'text-red-500' : 'text-green-500'}`}>
-                  RISK: {entry.result.regretLevel}%
-                </span>
-              </div>
-              <p className="text-xs text-zinc-300 mb-4 font-mono leading-relaxed">
-                "{entry.result.verdict}"
+              <p className="label-sm text-hard-blue mb-3">PRACTICE CONVERSATION</p>
+              <p className="text-zinc-400 text-sm max-w-sm mb-2">
+                Test how <span className="text-white font-semibold">{activePersona?.name || 'they'}</span> might respond to your messages
               </p>
+              <p className="text-zinc-600 text-xs font-mono">↓ type below and hit send ↓</p>
+            </div>
+          )}
 
-              {/* SUGGESTIONS - with copy to clipboard and feedback */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {Object.entries(entry.result.rewrites).filter(([_, text]) => text).map(([key, text]) => {
-                  const feedbackKey = `${idx}-${key}`;
-                  return (
-                    <div key={key} className="relative group flex flex-col">
+          {simHistory.map((entry, idx) => (
+            <div key={idx} className="space-y-4">
+              {/* Conversation Exchange - 2 Column Layout on Desktop */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                {/* LEFT: Messages */}
+                <div className="space-y-4">
+                  {/* USER MESSAGE */}
+                  <div className="flex justify-end lg:justify-start">
+                    <div className="max-w-[90%] lg:max-w-full bg-white text-black px-5 py-4 text-sm font-medium leading-relaxed border border-zinc-200 shadow-[4px_4px_0px_rgba(0,0,0,0.4)] relative group">
+                      <div className="label-sm text-zinc-500 mb-2">YOU SENT</div>
+                      <p className="text-black">{entry.draft}</p>
                       <button
-                        onClick={() => copyToDraft(text as string)}
-                        className={`flex-1 p-2 sm:p-3 border text-[10px] text-left hover:bg-zinc-800 transition-colors flex flex-col justify-between min-h-[80px] sm:min-h-[70px] ${key === 'safe' ? 'border-zinc-800 text-zinc-400' :
-                          key === 'bold' ? 'border-zinc-700 text-zinc-300' :
-                            key === 'spicy' ? 'border-red-900/30 text-red-400' :
-                              'border-hard-gold/50 text-hard-gold'
-                          }`}
-                      >
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="font-bold uppercase flex items-center gap-1">{key === 'you' ? <><Sparkles className="w-3 h-3" /> YOU</> : key}</span>
-                          <span className="text-[8px] text-zinc-600 hidden sm:inline">TAP</span>
-                        </div>
-                        <div className="text-[9px] sm:text-xs opacity-80 leading-relaxed line-clamp-3 sm:line-clamp-2">"{text as string}"</div>
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); copyToClipboard(text as string); }}
-                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 flex items-center justify-center bg-zinc-700 text-[10px] hover:bg-zinc-600"
+                        onClick={() => copyToClipboard(entry.draft)}
+                        className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-700 border border-zinc-300"
                         title="Copy to clipboard"
                       >
-                        {copiedText === text ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                        {copiedText === entry.draft ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                       </button>
-                      {/* Feedback buttons */}
-                      <div className="flex gap-1 mt-2 justify-center">
-                        {(['helpful', 'mid', 'off'] as const).map((rating) => (
-                          <button
-                            key={rating}
-                            onClick={(e) => { e.stopPropagation(); handleFeedback(key as any, rating, idx); }}
-                            disabled={!!feedbackGiven[feedbackKey]}
-                            className={`px-3 py-2 border transition-all min-w-[44px] min-h-[44px] flex items-center justify-center ${feedbackGiven[feedbackKey] === rating
-                              ? rating === 'helpful' ? 'bg-emerald-900/50 border-emerald-600 text-emerald-400' :
-                                rating === 'mid' ? 'bg-yellow-900/50 border-yellow-600 text-yellow-400' :
-                                  'bg-red-900/50 border-red-600 text-red-400'
-                              : feedbackGiven[feedbackKey]
-                                ? 'border-zinc-800 text-zinc-700 cursor-not-allowed'
-                                : 'border-zinc-800 text-zinc-600 hover:border-zinc-600 hover:text-zinc-400'
-                              }`}
-                            title={rating === 'helpful' ? 'Helpful' : rating === 'mid' ? 'Neutral' : 'Not helpful'}
-                          >
-                            {rating === 'helpful' ? <ThumbsUp className="w-4 h-4" /> : rating === 'mid' ? <Minus className="w-4 h-4" /> : <ThumbsDown className="w-4 h-4" />}
-                          </button>
-                        ))}
+                    </div>
+                  </div>
+
+                  {/* PREDICTED REPLY */}
+                  <div className="flex justify-start">
+                    <div className="flex items-start gap-3 max-w-[90%] lg:max-w-full group">
+                      <div className="w-9 h-9 bg-gradient-to-br from-zinc-700 to-zinc-800 flex-shrink-0 flex items-center justify-center text-sm text-white font-impact border border-zinc-600">
+                        {activePersona?.name.charAt(0)}
+                      </div>
+                      <div className="flex-1 bg-zinc-800/80 text-zinc-200 px-5 py-4 text-sm leading-relaxed border border-zinc-700 relative">
+                        <div className="label-sm text-zinc-500 mb-2">PREDICTED REPLY</div>
+                        <p>{entry.result.predictedReply}</p>
+                        <button
+                          onClick={() => copyToClipboard(entry.result.predictedReply || '')}
+                          className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 flex items-center justify-center bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 text-zinc-400 hover:text-white"
+                          title="Copy reply"
+                        >
+                          {copiedText === entry.result.predictedReply ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                        </button>
                       </div>
                     </div>
-                  );
-                })}
+                  </div>
+                </div>
+
+                {/* RIGHT: Analysis Panel */}
+                <div className="bg-zinc-900/80 border border-zinc-800 p-4 sm:p-5">
+                  {/* Analysis Header */}
+                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-zinc-800">
+                    <span className="label-sm text-zinc-400">MESSAGE ANALYSIS</span>
+                    <div className={`px-3 py-1 border text-xs font-bold uppercase tracking-wider ${
+                      entry.result.regretLevel > 70 ? 'bg-red-950/50 border-red-800/50 text-red-400' :
+                      entry.result.regretLevel > 40 ? 'bg-yellow-950/50 border-yellow-800/50 text-yellow-400' :
+                      'bg-emerald-950/50 border-emerald-800/50 text-emerald-400'
+                    }`}>
+                      {entry.result.regretLevel > 70 ? '⚠ HIGH RISK' : entry.result.regretLevel > 40 ? '◐ MODERATE' : '✓ LOW RISK'} • {entry.result.regretLevel}%
+                    </div>
+                  </div>
+
+                  {/* Verdict */}
+                  <p className="text-sm text-zinc-300 mb-5 leading-relaxed">
+                    {entry.result.verdict}
+                  </p>
+
+                  {/* Suggestions Grid - Clean 2x2 */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {Object.entries(entry.result.rewrites).filter(([_, text]) => text).map(([key, text]) => (
+                      <button
+                        key={key}
+                        onClick={() => copyToDraft(text as string)}
+                        className={`group relative p-3 border text-left transition-all hover:scale-[1.02] ${
+                          key === 'safe' ? 'border-zinc-700 hover:border-zinc-500 bg-zinc-800/30' :
+                          key === 'bold' ? 'border-blue-900/50 hover:border-blue-700/70 bg-blue-950/20' :
+                          key === 'spicy' ? 'border-red-900/50 hover:border-red-700/70 bg-red-950/20' :
+                          'border-hard-gold/40 hover:border-hard-gold/70 bg-amber-950/20'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
+                            key === 'safe' ? 'text-zinc-400' :
+                            key === 'bold' ? 'text-blue-400' :
+                            key === 'spicy' ? 'text-red-400' :
+                            'text-hard-gold'
+                          }`}>
+                            {key === 'you' ? <><Sparkles className="w-3 h-3" /> YOUR STYLE</> : key}
+                          </span>
+                          <span className="text-[8px] text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity">TAP TO USE</span>
+                        </div>
+                        <p className="text-xs text-zinc-300 leading-relaxed line-clamp-2">"{text as string}"</p>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); copyToClipboard(text as string); }}
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 flex items-center justify-center bg-zinc-700 hover:bg-zinc-600 text-[10px]"
+                          title="Copy"
+                        >
+                          {copiedText === text ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                        </button>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Divider between exchanges */}
+              {idx < simHistory.length - 1 && (
+                <div className="flex items-center gap-4 py-4">
+                  <div className="flex-1 h-px bg-zinc-800"></div>
+                  <span className="text-[10px] text-zinc-600 font-mono">EXCHANGE {idx + 2}</span>
+                  <div className="flex-1 h-px bg-zinc-800"></div>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Show pending message immediately */}
+          {pendingMessage && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+              <div className="flex justify-end lg:justify-start">
+                <div className="max-w-[90%] lg:max-w-full bg-white text-black px-5 py-4 text-sm font-medium leading-relaxed border border-zinc-200 shadow-[4px_4px_0px_rgba(0,0,0,0.4)] opacity-70">
+                  <div className="label-sm text-zinc-500 mb-2">SENDING...</div>
+                  <p>{pendingMessage}</p>
+                </div>
+              </div>
+              <div className="bg-zinc-900/50 border border-zinc-800 p-5 flex items-center justify-center">
+                <span className="label-sm text-zinc-600 animate-pulse">ANALYZING...</span>
               </div>
             </div>
+          )}
 
-            {/* PREDICTED REPLY */}
+          {chatLoading && !pendingMessage && (
             <div className="flex justify-start">
-              <div className="flex items-end gap-2 sm:gap-3 max-w-[85%] group">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 bg-zinc-800 flex-shrink-0 flex items-center justify-center text-xs text-zinc-500 font-mono border border-zinc-700">
-                  {activePersona?.name.charAt(0)}
-                </div>
-                <div className="bg-zinc-800 text-zinc-200 px-4 sm:px-6 py-3 sm:py-4 text-sm leading-relaxed border border-zinc-700 relative">
-                  {entry.result.predictedReply}
-                  <button
-                    onClick={() => copyToClipboard(entry.result.predictedReply || '')}
-                    className="absolute -right-9 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 flex items-center justify-center bg-zinc-900 border border-zinc-700 text-zinc-400 hover:text-white text-xs"
-                    title="Copy reply"
-                  >
-                    {copiedText === entry.result.predictedReply ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                  </button>
-                </div>
+              <div className="bg-zinc-900 px-5 py-4 border border-zinc-800">
+                <span className="label-sm text-hard-blue animate-pulse">AI IS THINKING...</span>
               </div>
             </div>
-          </div>
-        ))}
-
-        {/* Show pending message immediately */}
-        {pendingMessage && (
-          <div className="space-y-4 relative z-10">
-            <div className="flex justify-end">
-              <div className="max-w-[80%] bg-white text-black px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium leading-relaxed border border-zinc-200 shadow-[4px_4px_0px_rgba(0,0,0,0.5)] opacity-70">
-                {pendingMessage}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {chatLoading && (
-          <div className="flex justify-start relative z-10">
-            <div className="bg-zinc-900 px-4 py-3 border border-zinc-800">
-              <span className="label-sm text-zinc-500 animate-pulse">TYPING...</span>
-            </div>
-          </div>
-        )}
-        <div ref={chatEndRef} />
+          )}
+          <div ref={chatEndRef} />
+        </div>
       </div>
 
-      {/* INPUT AREA */}
-      <div className="p-2 sm:p-4 bg-zinc-900 border-t border-zinc-800 relative z-20 shrink-0">
-        <form onSubmit={runSimulation} className="flex gap-0 border border-zinc-700">
+      {/* INPUT AREA - More prominent */}
+      <div className="p-3 sm:p-4 bg-zinc-900 border-t border-zinc-700 relative z-20 shrink-0">
+        <form onSubmit={runSimulation} className="flex gap-0 border-2 border-zinc-600 focus-within:border-hard-blue transition-colors bg-black">
           <input
             type="text"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="TYPE YOUR MESSAGE..."
+            placeholder="Type your message..."
             disabled={chatLoading}
-            className="flex-1 bg-black px-3 sm:px-6 py-3 sm:py-4 text-white focus:outline-none placeholder:text-zinc-500/60 text-xs font-mono"
+            className="flex-1 bg-transparent px-4 sm:px-6 py-4 sm:py-5 text-white focus:outline-none placeholder:text-zinc-600 text-sm"
           />
           <button
             type="submit"
             disabled={!draft.trim() || chatLoading}
-            className="bg-white text-black font-bold px-4 sm:px-8 hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest text-[10px]"
+            className="bg-white text-black font-impact px-6 sm:px-10 hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider text-sm"
           >
             SEND
           </button>

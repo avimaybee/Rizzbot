@@ -61,6 +61,8 @@ export async function onRequest(context: any) {
         signature_patterns,
         preferred_tone,
         raw_samples,
+        ai_summary,
+        favorite_emojis,
       } = body;
 
       if (!user_id) {
@@ -73,8 +75,8 @@ export async function onRequest(context: any) {
       const result = await db
         .prepare(
           `INSERT INTO style_profiles 
-           (user_id, emoji_usage, capitalization, punctuation, average_length, slang_level, signature_patterns, preferred_tone, raw_samples)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+           (user_id, emoji_usage, capitalization, punctuation, average_length, slang_level, signature_patterns, preferred_tone, raw_samples, ai_summary, favorite_emojis)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .bind(
           user_id,
@@ -85,7 +87,9 @@ export async function onRequest(context: any) {
           slang_level || null,
           typeof signature_patterns === 'string' ? signature_patterns : JSON.stringify(signature_patterns || []),
           preferred_tone || null,
-          raw_samples ? JSON.stringify(raw_samples) : null
+          raw_samples ? JSON.stringify(raw_samples) : null,
+          ai_summary || null,
+          favorite_emojis ? JSON.stringify(favorite_emojis) : null
         )
         .run();
 
