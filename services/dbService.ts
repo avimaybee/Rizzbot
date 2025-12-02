@@ -44,6 +44,8 @@ export interface StyleProfile {
   signature_patterns?: string[] | string;
   preferred_tone?: string;
   raw_samples?: any;
+  ai_summary?: string;
+  favorite_emojis?: string[] | string;
   created_at?: string;
 }
 
@@ -63,7 +65,22 @@ export interface Session {
   firebase_uid?: string;
   anon_id?: string;
   result: string;
+  mode?: 'simulator' | 'quick';
+  persona_name?: string;
+  headline?: string;
+  ghost_risk?: number;
+  message_count?: number;
   created_at: string;
+}
+
+export interface SessionsResponse {
+  sessions: Session[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
 }
 
 // ===== Users API =====
@@ -229,11 +246,13 @@ export async function submitFeedback(feedback: FeedbackEntry): Promise<{ id: num
 // ===== Sessions API =====
 
 /**
- * Get user's sessions (or all if no user_id)
+ * Get user's sessions with pagination
  */
-export async function getSessions(userId?: number): Promise<Session[]> {
-  const url = userId ? `/api/sessions?user_id=${userId}` : `/api/sessions`;
-  const res = await fetch(url);
+export async function getSessions(firebaseUid?: string, limit = 20, offset = 0): Promise<SessionsResponse> {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  if (firebaseUid) params.set('anon_id', firebaseUid);
+  
+  const res = await fetch(`/api/sessions?${params}`);
   if (!res.ok) throw new Error(`Failed to get sessions: ${res.statusText}`);
   return res.json();
 }
@@ -242,12 +261,37 @@ export async function getSessions(userId?: number): Promise<Session[]> {
  * Create session (stores simulation result or quick advice)
  * Uses Firebase UID for user identification
  */
-export async function createSession(firebaseUid: string, result: any): Promise<{ lastInsertId: number }> {
+export async function createSession(
+  firebaseUid: string,
+  result: any,
+  options?: {
+    mode?: 'simulator' | 'quick';
+    persona_name?: string;
+    headline?: string;
+    ghost_risk?: number;
+    message_count?: number;
+  }
+): Promise<{ lastInsertId: number }> {
   const res = await fetch(`/api/sessions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_anon_id: firebaseUid, result }),
+    body: JSON.stringify({
+      user_anon_id: firebaseUid,
+      result,
+      ...options,
+    }),
   });
   if (!res.ok) throw new Error(`Failed to create session: ${res.statusText}`);
+  return res.json();
+}
+
+/**
+ * Delete a session by ID
+ */
+export async function deleteSession(sessionId: number): Promise<{ success: boolean }> {
+  const res = await fetch(`/api/sessions?id=${sessionId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error(`Failed to delete session: ${res.statusText}`);
   return res.json();
 }

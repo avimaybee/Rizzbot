@@ -30,13 +30,75 @@ export async function onRequest(context: any) {
   }
 
   try {
+    const url = new URL(request.url);
+
     if (request.method === 'GET') {
-      // join with users to return anon_id when available
-      const results = await db.prepare(`SELECT s.id, s.result, s.created_at, u.id AS user_id, u.anon_id
-        FROM sessions s
-        LEFT JOIN users u ON s.user_id = u.id
-        ORDER BY s.created_at DESC LIMIT 50`).all();
-      return new Response(JSON.stringify(results.results || []), {
+      // Check if requesting user-specific history
+      const userId = url.searchParams.get('user_id');
+      const anonId = url.searchParams.get('anon_id');
+      const limit = parseInt(url.searchParams.get('limit') || '20');
+      const offset = parseInt(url.searchParams.get('offset') || '0');
+
+      let query: string;
+      let bindings: any[] = [];
+
+      if (anonId) {
+        // Get sessions for a specific anonymous user
+        query = `
+          SELECT s.id, s.result, s.created_at, s.mode, s.persona_name, s.headline, s.ghost_risk, s.message_count,
+                 u.id AS user_id, u.anon_id
+          FROM sessions s
+          LEFT JOIN users u ON s.user_id = u.id
+          WHERE u.anon_id = ?
+          ORDER BY s.created_at DESC
+          LIMIT ? OFFSET ?
+        `;
+        bindings = [anonId, limit, offset];
+      } else if (userId) {
+        // Get sessions for a specific user by ID
+        query = `
+          SELECT s.id, s.result, s.created_at, s.mode, s.persona_name, s.headline, s.ghost_risk, s.message_count,
+                 u.id AS user_id, u.anon_id
+          FROM sessions s
+          LEFT JOIN users u ON s.user_id = u.id
+          WHERE s.user_id = ?
+          ORDER BY s.created_at DESC
+          LIMIT ? OFFSET ?
+        `;
+        bindings = [parseInt(userId), limit, offset];
+      } else {
+        // Default: get recent sessions (admin view)
+        query = `
+          SELECT s.id, s.result, s.created_at, s.mode, s.persona_name, s.headline, s.ghost_risk, s.message_count,
+                 u.id AS user_id, u.anon_id
+          FROM sessions s
+          LEFT JOIN users u ON s.user_id = u.id
+          ORDER BY s.created_at DESC
+          LIMIT ? OFFSET ?
+        `;
+        bindings = [limit, offset];
+      }
+
+      const results = await db.prepare(query).bind(...bindings).all();
+
+      // Also get total count for pagination
+      let countQuery = 'SELECT COUNT(*) as total FROM sessions s';
+      let countBindings: any[] = [];
+      if (anonId) {
+        countQuery = 'SELECT COUNT(*) as total FROM sessions s LEFT JOIN users u ON s.user_id = u.id WHERE u.anon_id = ?';
+        countBindings = [anonId];
+      } else if (userId) {
+        countQuery = 'SELECT COUNT(*) as total FROM sessions WHERE user_id = ?';
+        countBindings = [parseInt(userId)];
+      }
+
+      const countResult = await db.prepare(countQuery).bind(...countBindings).all();
+      const total = countResult.results?.[0]?.total || 0;
+
+      return new Response(JSON.stringify({
+        sessions: results.results || [],
+        pagination: { total, limit, offset, hasMore: offset + limit < total }
+      }), {
         headers: corsHeaders,
       });
     }
@@ -67,9 +129,33 @@ export async function onRequest(context: any) {
 
       const result = typeof body.result === 'string' ? body.result : JSON.stringify(body.result || {});
 
-      const run = await db.prepare('INSERT INTO sessions (user_id, result) VALUES (?, ?)').bind(userId, result).run();
+      // Extract metadata for quick display
+      const mode = body.mode || 'simulator';
+      const personaName = body.persona_name || null;
+      const headline = body.headline || null;
+      const ghostRisk = body.ghost_risk || null;
+      const messageCount = body.message_count || 0;
+
+      const run = await db.prepare(
+        'INSERT INTO sessions (user_id, result, mode, persona_name, headline, ghost_risk, message_count) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      ).bind(userId, result, mode, personaName, headline, ghostRisk, messageCount).run();
 
       return new Response(JSON.stringify({ success: run.success, lastInsertId: run.meta?.last_rowid }), {
+        headers: corsHeaders,
+      });
+    }
+
+    if (request.method === 'DELETE') {
+      const sessionId = url.searchParams.get('id');
+      if (!sessionId) {
+        return new Response(JSON.stringify({ error: 'Session ID required' }), {
+          status: 400,
+          headers: corsHeaders,
+        });
+      }
+
+      const run = await db.prepare('DELETE FROM sessions WHERE id = ?').bind(parseInt(sessionId)).run();
+      return new Response(JSON.stringify({ success: run.success }), {
         headers: corsHeaders,
       });
     }

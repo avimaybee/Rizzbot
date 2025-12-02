@@ -185,14 +185,24 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
       // Log session for wellbeing tracking
       logSession('quick', undefined, undefined);
       
-      // Save session to D1
+      // Save session to D1 with enhanced metadata
       if (firebaseUid) {
         try {
+          const headline = response.vibeCheck?.theirEnergy 
+            ? `${response.vibeCheck.theirEnergy.toUpperCase()} energy detected`
+            : 'Quick analysis';
+          const interestLevel = response.vibeCheck?.interestLevel;
+          
           await createSession(firebaseUid, {
             type: 'quick',
             request,
             response,
             timestamp: new Date().toISOString(),
+          }, {
+            mode: 'quick',
+            headline,
+            ghost_risk: interestLevel ? (100 - interestLevel) : undefined,
+            message_count: 1,
           });
         } catch (dbError) {
           console.error('Failed to save quick session to DB:', dbError);

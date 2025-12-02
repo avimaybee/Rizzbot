@@ -1,23 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Home, Zap, MessageSquare, User, Sparkles, ArrowRight, LogOut } from 'lucide-react';
-import { analyzeGhosting } from './services/geminiService';
-import { checkWellbeing, triggerWellbeingCheckIn, dismissWellbeingCheckIn, getWellbeingState, clearWellbeingTrigger } from './services/feedbackService';
+import React, { useState, useEffect } from 'react';
+import { Home, Zap, MessageSquare, User, ArrowRight, LogOut, Clock } from 'lucide-react';
+import { checkWellbeing, triggerWellbeingCheckIn, dismissWellbeingCheckIn, clearWellbeingTrigger } from './services/feedbackService';
 import { getOrCreateUser, getStyleProfile, saveStyleProfile } from './services/dbService';
 import { onAuthChange, signOutUser, AuthUser, logScreenView } from './services/firebaseService';
 import { LoadingScreen } from './components/LoadingScreen';
-import { ResultCard } from './components/ResultCard';
 import { Simulator } from './components/Simulator';
 import { QuickAdvisor } from './components/QuickAdvisor';
 import { UserProfile } from './components/UserProfile';
+import { History } from './components/History';
 import { AuthModal } from './components/AuthModal';
 import { ToastProvider } from './components/Toast';
-import { AppState, GhostResult, UserStyleProfile, WellbeingState } from './types';
+import { AppState, UserStyleProfile, WellbeingState } from './types';
 
-// Feature flag to enable/disable Investigator mode
-// Set to true to re-enable Investigator in dev builds
-const ENABLE_INVESTIGATOR = false;
-
-type Module = 'standby' | 'simulator' | 'investigator' | 'quick' | 'profile';
+type Module = 'standby' | 'simulator' | 'quick' | 'profile' | 'history';
 
 // --- VISUAL ASSETS ---
 // AbstractGrid and other custom decorative elements retained
@@ -193,25 +188,23 @@ const SideDock = ({ activeModule, setModule, authUser, onSignOut }: {
           label="QUICK"
           index="02"
         />
-        {ENABLE_INVESTIGATOR && (
-          <DockItem
-            active={activeModule === 'investigator'}
-            onClick={() => setModule('investigator')}
-            label="SCAN"
-            index="03"
-          />
-        )}
         <DockItem
           active={activeModule === 'simulator'}
           onClick={() => setModule('simulator')}
           label="PRACTICE"
-          index={ENABLE_INVESTIGATOR ? "04" : "03"}
+          index="03"
+        />
+        <DockItem
+          active={activeModule === 'history'}
+          onClick={() => setModule('history')}
+          label="HISTORY"
+          index="04"
         />
         <DockItem
           active={activeModule === 'profile'}
           onClick={() => setModule('profile')}
           label="PROFILE"
-          index="04"
+          index="05"
         />
       </div>
 
@@ -275,6 +268,12 @@ const BottomTabs = ({ activeModule, setModule }: { activeModule: Module, setModu
           onClick={() => setModule('simulator')}
           label="PRACTICE"
           Icon={MessageSquare}
+        />
+        <MobileTabItemSvg
+          active={activeModule === 'history'}
+          onClick={() => setModule('history')}
+          label="HISTORY"
+          Icon={Clock}
         />
         <MobileTabItemSvg
           active={activeModule === 'profile'}
@@ -423,33 +422,14 @@ const StandbyScreen = ({ onActivate, hasProfile, authUser }: {
                     // PASTE THEIR MESSAGE → GET INSTANT ADVICE
           </div>
         </button>
-
-        {ENABLE_INVESTIGATOR && (
-          <button
-            onClick={() => onActivate('investigator')}
-            className="flex-1 border-b border-zinc-800 p-8 md:p-12 text-left hover:bg-zinc-900/50 transition-all group relative overflow-hidden flex flex-col justify-center"
-          >
-            <div className="absolute right-8 top-8 opacity-0 group-hover:opacity-100 transition-all duration-500">
-              <ArrowRight className="w-12 h-12 text-hard-gold -rotate-45" />
-            </div>
-            <div className="label-sm text-zinc-500 group-hover:text-hard-gold transition-colors mb-2">MODULE 02</div>
-            <h2 className="text-5xl md:text-6xl font-impact text-zinc-300 group-hover:text-white transition-colors uppercase">
-              Investigator
-            </h2>
-            <div className="mt-4 opacity-50 group-hover:opacity-100 transition-opacity max-w-md text-xs font-mono text-zinc-400">
-                      // RUN DIAGNOSTICS. DETECT LIES.
-            </div>
-          </button>
-        )}
-
         <button
           onClick={() => onActivate('simulator')}
-          className={`flex-1 p-6 md:p-10 text-left hover:bg-zinc-900/50 transition-all group relative overflow-hidden flex flex-col justify-center ${ENABLE_INVESTIGATOR ? '' : ''}`}
+          className="flex-1 p-6 md:p-10 text-left hover:bg-zinc-900/50 transition-all group relative overflow-hidden flex flex-col justify-center"
         >
           <div className="absolute right-6 top-6 opacity-0 group-hover:opacity-100 transition-all duration-500">
             <ArrowRight className="w-10 h-10 text-hard-blue -rotate-45" />
           </div>
-          <div className="label-sm text-zinc-500 group-hover:text-hard-blue transition-colors mb-2">{ENABLE_INVESTIGATOR ? 'MODULE 03' : 'MODULE 02'}</div>
+          <div className="label-sm text-zinc-500 group-hover:text-hard-blue transition-colors mb-2">MODULE 02</div>
           <h2 className="text-4xl md:text-5xl font-impact text-zinc-300 group-hover:text-white transition-colors uppercase">
             Practice Mode
           </h2>
@@ -525,6 +505,9 @@ function App() {
             if (typeof profile.raw_samples === 'string') {
               profile.raw_samples = JSON.parse(profile.raw_samples);
             }
+            if (typeof profile.favorite_emojis === 'string') {
+              profile.favorite_emojis = JSON.parse(profile.favorite_emojis);
+            }
             // Map DB columns to UserStyleProfile type
             setUserProfile({
               emojiUsage: (profile.emoji_usage || 'minimal') as any,
@@ -534,6 +517,9 @@ function App() {
               slangLevel: (profile.slang_level || 'casual') as any,
               signaturePatterns: profile.signature_patterns || [],
               preferredTone: profile.preferred_tone || 'playful',
+              aiSummary: profile.ai_summary || undefined,
+              favoriteEmojis: profile.favorite_emojis || [],
+              rawSamples: profile.raw_samples || [],
             });
           }
         } catch (profileError) {
@@ -615,6 +601,9 @@ function App() {
         slang_level: profile.slangLevel,
         signature_patterns: profile.signaturePatterns,
         preferred_tone: profile.preferredTone,
+        raw_samples: profile.rawSamples,
+        ai_summary: profile.aiSummary,
+        favorite_emojis: profile.favoriteEmojis,
       });
 
       // Also save to localStorage for offline access
@@ -625,67 +614,6 @@ function App() {
       console.error('Failed to save user profile:', error);
     }
   };
-
-  // Investigator State
-  const [investigateMode, setInvestigateMode] = useState<'text' | 'screenshot'>('screenshot');
-  const [name, setName] = useState('');
-  const [city, setCity] = useState('');
-  const [lastMessage, setLastMessage] = useState('');
-  const [screenshots, setScreenshots] = useState<string[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-  const [result, setResult] = useState<GhostResult | null>(null);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const fileArray = Array.from(files);
-      fileArray.forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64String = reader.result as string;
-          const base64Data = base64String.split(',')[1];
-          setPreviewUrls(prev => [...prev, base64String]);
-          setScreenshots(prev => [...prev, base64Data]);
-        };
-        reader.readAsDataURL(file as Blob);
-      });
-    }
-  };
-
-  const handleSubmitInvestigation = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (investigateMode === 'text' && !name) return;
-    if (investigateMode === 'screenshot' && screenshots.length === 0) return;
-
-    setState('loading');
-
-    try {
-      const [_, data] = await Promise.all([
-        new Promise(resolve => setTimeout(resolve, 3000)),
-        analyzeGhosting(name, city, lastMessage, investigateMode === 'screenshot' ? screenshots : undefined)
-      ]);
-      setResult(data);
-      setState('results');
-    } catch (error) {
-      console.error(error);
-      setState('error');
-    }
-  };
-
-  const resetInvestigation = () => {
-    setState('landing');
-    setResult(null);
-    setScreenshots([]);
-    setPreviewUrls([]);
-    setLastMessage('');
-    setName('');
-    setCity('');
-  };
-
-  const hasScreenshots = investigateMode === 'screenshot' && screenshots.length > 0;
-
   // Show loading while checking auth state
   if (authLoading) {
     return (
@@ -757,7 +685,6 @@ function App() {
           {activeModule === 'simulator' && (
             <div className="h-full w-full flex flex-col animate-fade-in bg-matte-base">
               <Simulator
-                onPivotToInvestigator={ENABLE_INVESTIGATOR ? () => setActiveModule('investigator') : undefined}
                 userProfile={userProfile}
                 firebaseUid={authUser.uid}
                 userId={userId}
@@ -791,148 +718,10 @@ function App() {
             </div>
           )}
 
-          {/* INVESTIGATOR MODULE (hidden when ENABLE_INVESTIGATOR is false) */}
-          {ENABLE_INVESTIGATOR && activeModule === 'investigator' && (
+          {/* HISTORY MODULE */}
+          {activeModule === 'history' && (
             <div className="h-full w-full flex flex-col animate-fade-in bg-matte-base">
-
-              {state === 'landing' && (
-                <div className="h-full flex items-center justify-center p-6 relative">
-                  {/* Background Topo */}
-                  <div className="absolute inset-0 bg-topo-pattern opacity-10 pointer-events-none"></div>
-
-                  <div className="w-full max-w-5xl bg-zinc-900 border border-zinc-800 shadow-2xl relative overflow-hidden group">
-                    <CornerNodes className="opacity-50" />
-                    <div className="grid md:grid-cols-2 h-full min-h-[500px]">
-                      {/* Left Panel */}
-                      <div className="p-10 border-r border-zinc-800 flex flex-col justify-between bg-zinc-900 relative">
-                        <div className="absolute inset-0 bg-scan-lines opacity-10 pointer-events-none"></div>
-                        <div className="relative z-10">
-                          <div className="label-sm text-hard-gold mb-4 border border-zinc-700 w-fit px-2 py-1 flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 bg-hard-gold animate-pulse"></div>
-                            CASE FILE #001
-                          </div>
-                          <h2 className="text-5xl font-impact text-white mb-6 leading-none">RUN<br />THE SCAN</h2>
-                          <p className="text-zinc-400 text-sm font-editorial leading-relaxed max-w-sm">
-                            Drop the receipts or type out the tea. We'll tell you if you're cooked.
-                          </p>
-                        </div>
-                        <div className="space-y-4 mt-12 relative z-10">
-                          <button
-                            onClick={() => setInvestigateMode('screenshot')}
-                            className={`w-full p-4 border text-left transition-all relative group ${investigateMode === 'screenshot' ? 'bg-white text-black border-white' : 'border-zinc-700 text-zinc-500 hover:border-zinc-500'}`}
-                          >
-                            <div className="flex justify-between items-center mb-1">
-                              <div className="font-bold text-xs uppercase tracking-wider">Method A: Drop Receipts</div>
-                              {investigateMode === 'screenshot' && <Sparkles className="w-4 h-4" />}
-                            </div>
-                            <div className={`text-[10px] uppercase tracking-widest ${investigateMode === 'screenshot' ? 'opacity-100' : 'opacity-50'}`}>Upload Screenshots</div>
-                          </button>
-                          <button
-                            onClick={() => setInvestigateMode('text')}
-                            className={`w-full p-4 border text-left transition-all relative group ${investigateMode === 'text' ? 'bg-white text-black border-white' : 'border-zinc-700 text-zinc-500 hover:border-zinc-500'}`}
-                          >
-                            <div className="flex justify-between items-center mb-1">
-                              <div className="font-bold text-xs uppercase tracking-wider">Method B: Type It Out</div>
-                              {investigateMode === 'text' && <Sparkles className="w-4 h-4" />}
-                            </div>
-                            <div className={`text-[10px] uppercase tracking-widest ${investigateMode === 'text' ? 'opacity-100' : 'opacity-50'}`}>Manual Input</div>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Right Form */}
-                      <div className="p-10 flex flex-col justify-center bg-zinc-900/50">
-                        <form onSubmit={handleSubmitInvestigation} className="space-y-6">
-                          {investigateMode === 'screenshot' ? (
-                            <div
-                              onClick={() => fileInputRef.current?.click()}
-                              className="border border-dashed border-zinc-700 bg-zinc-900/50 h-48 flex flex-col items-center justify-center cursor-pointer hover:border-white transition-all group relative overflow-hidden"
-                            >
-                              {previewUrls.length > 0 ? (
-                                <div className="absolute inset-0 p-4 flex gap-2 overflow-x-auto items-center bg-black/80">
-                                  {previewUrls.map((url, i) => (
-                                    <img key={i} src={url} className="h-full border border-zinc-700" />
-                                  ))}
-                                  <div className="h-12 w-12 flex items-center justify-center bg-zinc-800 text-white font-bold">+</div>
-                                </div>
-                              ) : (
-                                <>
-                                  <div className="w-12 h-12 bg-zinc-800 flex items-center justify-center mb-3 group-hover:bg-white group-hover:text-black transition-colors">
-                                    <span className="text-xl">↓</span>
-                                  </div>
-                                  <span className="label-sm">DROP SCREENSHOTS</span>
-                                </>
-                              )}
-                              <input
-                                type="file"
-                                multiple
-                                accept="image/*"
-                                ref={fileInputRef}
-                                className="hidden"
-                                onChange={handleFileChange}
-                              />
-                            </div>
-                          ) : (
-                            <textarea
-                              required
-                              placeholder="PASTE THE LAST MESSAGE... (the one that made you spiral)"
-                              className="w-full bg-zinc-900 border border-zinc-700 p-4 text-white focus:border-white focus:outline-none h-48 resize-none font-mono text-xs uppercase placeholder:text-zinc-500/60"
-                              value={lastMessage}
-                              onChange={e => setLastMessage(e.target.value)}
-                            />
-                          )}
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <input
-                              type="text"
-                              required={!hasScreenshots}
-                              placeholder="THE SUSPECT"
-                              className="bg-zinc-900 border border-zinc-700 p-3 text-white focus:border-white focus:outline-none text-xs font-mono uppercase placeholder:text-zinc-500/60"
-                              value={name}
-                              onChange={e => setName(e.target.value)}
-                            />
-                            <input
-                              type="text"
-                              required={!hasScreenshots}
-                              placeholder="THEIR TURF"
-                              className="bg-zinc-900 border border-zinc-700 p-3 text-white focus:border-white focus:outline-none text-xs font-mono uppercase placeholder:text-zinc-500/60"
-                              value={city}
-                              onChange={e => setCity(e.target.value)}
-                            />
-                          </div>
-
-                          <button
-                            type="submit"
-                            className="w-full bg-white text-black font-impact text-2xl py-4 hover:bg-zinc-200 transition-all uppercase tracking-wide border border-white"
-                          >
-                            Run Diagnostic
-                          </button>
-                        </form>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {state === 'results' && result && (
-                <div className="h-full w-full overflow-hidden p-2 md:p-6 bg-matte-base">
-                  <ResultCard
-                    result={result}
-                    onReset={resetInvestigation}
-                    targetName={result.identifiedName || name || "UNKNOWN"}
-                  />
-                </div>
-              )}
-
-              {state === 'error' && (
-                <div className="flex h-full items-center justify-center">
-                  <div className="bg-zinc-900 border border-red-900 p-10 text-center max-w-lg">
-                    <h2 className="text-4xl font-impact text-red-600 mb-2">SYSTEM ERROR</h2>
-                    <p className="font-mono text-zinc-500 mb-6 text-sm">CONNECTION DROPPED.</p>
-                    <button onClick={resetInvestigation} className="bg-white text-black font-bold py-3 px-8 hover:bg-zinc-200 uppercase tracking-widest text-xs">Reboot</button>
-                  </div>
-                </div>
-              )}
+              <History firebaseUid={authUser?.uid} />
             </div>
           )}
         </div>

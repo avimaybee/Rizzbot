@@ -7,6 +7,7 @@ compatibility_date = "2025-01-01"
 binding = "RIZZBOT_DATA"
 database_id = "4211ee68-0f20-42d1-87b2-dd450ec4dd89"
 database_name = "rizzbot"
+migrations_dir = "d1_migrations"
 
 # Development environment
 [env.development]
