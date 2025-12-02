@@ -1,23 +1,17 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Home, Zap, MessageSquare, User, Sparkles, ArrowRight, LogOut } from 'lucide-react';
-import { analyzeGhosting } from './services/geminiService';
-import { checkWellbeing, triggerWellbeingCheckIn, dismissWellbeingCheckIn, getWellbeingState, clearWellbeingTrigger } from './services/feedbackService';
+import React, { useState, useEffect } from 'react';
+import { Home, Zap, MessageSquare, User, ArrowRight, LogOut } from 'lucide-react';
+import { checkWellbeing, triggerWellbeingCheckIn, dismissWellbeingCheckIn, clearWellbeingTrigger } from './services/feedbackService';
 import { getOrCreateUser, getStyleProfile, saveStyleProfile } from './services/dbService';
 import { onAuthChange, signOutUser, AuthUser, logScreenView } from './services/firebaseService';
 import { LoadingScreen } from './components/LoadingScreen';
-import { ResultCard } from './components/ResultCard';
 import { Simulator } from './components/Simulator';
 import { QuickAdvisor } from './components/QuickAdvisor';
 import { UserProfile } from './components/UserProfile';
 import { AuthModal } from './components/AuthModal';
 import { ToastProvider } from './components/Toast';
-import { AppState, GhostResult, UserStyleProfile, WellbeingState } from './types';
+import { AppState, UserStyleProfile, WellbeingState } from './types';
 
-// Feature flag to enable/disable Investigator mode
-// Set to true to re-enable Investigator in dev builds
-const ENABLE_INVESTIGATOR = false;
-
-type Module = 'standby' | 'simulator' | 'investigator' | 'quick' | 'profile';
+type Module = 'standby' | 'simulator' | 'quick' | 'profile';
 
 // --- VISUAL ASSETS ---
 // AbstractGrid and other custom decorative elements retained
@@ -193,19 +187,11 @@ const SideDock = ({ activeModule, setModule, authUser, onSignOut }: {
           label="QUICK"
           index="02"
         />
-        {ENABLE_INVESTIGATOR && (
-          <DockItem
-            active={activeModule === 'investigator'}
-            onClick={() => setModule('investigator')}
-            label="SCAN"
-            index="03"
-          />
-        )}
         <DockItem
           active={activeModule === 'simulator'}
           onClick={() => setModule('simulator')}
           label="PRACTICE"
-          index={ENABLE_INVESTIGATOR ? "04" : "03"}
+          index="03"
         />
         <DockItem
           active={activeModule === 'profile'}
@@ -423,25 +409,6 @@ const StandbyScreen = ({ onActivate, hasProfile, authUser }: {
                     // PASTE THEIR MESSAGE → GET INSTANT ADVICE
           </div>
         </button>
-
-        {ENABLE_INVESTIGATOR && (
-          <button
-            onClick={() => onActivate('investigator')}
-            className="flex-1 border-b border-zinc-800 p-8 md:p-12 text-left hover:bg-zinc-900/50 transition-all group relative overflow-hidden flex flex-col justify-center"
-          >
-            <div className="absolute right-8 top-8 opacity-0 group-hover:opacity-100 transition-all duration-500">
-              <ArrowRight className="w-12 h-12 text-hard-gold -rotate-45" />
-            </div>
-            <div className="label-sm text-zinc-500 group-hover:text-hard-gold transition-colors mb-2">MODULE 02</div>
-            <h2 className="text-5xl md:text-6xl font-impact text-zinc-300 group-hover:text-white transition-colors uppercase">
-              Investigator
-            </h2>
-            <div className="mt-4 opacity-50 group-hover:opacity-100 transition-opacity max-w-md text-xs font-mono text-zinc-400">
-                      // RUN DIAGNOSTICS. DETECT LIES.
-            </div>
-          </button>
-        )}
-
         <button
           onClick={() => onActivate('simulator')}
           className={`flex-1 p-6 md:p-10 text-left hover:bg-zinc-900/50 transition-all group relative overflow-hidden flex flex-col justify-center ${ENABLE_INVESTIGATOR ? '' : ''}`}
@@ -449,7 +416,7 @@ const StandbyScreen = ({ onActivate, hasProfile, authUser }: {
           <div className="absolute right-6 top-6 opacity-0 group-hover:opacity-100 transition-all duration-500">
             <ArrowRight className="w-10 h-10 text-hard-blue -rotate-45" />
           </div>
-          <div className="label-sm text-zinc-500 group-hover:text-hard-blue transition-colors mb-2">{ENABLE_INVESTIGATOR ? 'MODULE 03' : 'MODULE 02'}</div>
+          <div className="label-sm text-zinc-500 group-hover:text-hard-blue transition-colors mb-2">MODULE 02</div>
           <h2 className="text-4xl md:text-5xl font-impact text-zinc-300 group-hover:text-white transition-colors uppercase">
             Practice Mode
           </h2>
@@ -625,67 +592,6 @@ function App() {
       console.error('Failed to save user profile:', error);
     }
   };
-
-  // Investigator State
-  const [investigateMode, setInvestigateMode] = useState<'text' | 'screenshot'>('screenshot');
-  const [name, setName] = useState('');
-  const [city, setCity] = useState('');
-  const [lastMessage, setLastMessage] = useState('');
-  const [screenshots, setScreenshots] = useState<string[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-  const [result, setResult] = useState<GhostResult | null>(null);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const fileArray = Array.from(files);
-      fileArray.forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64String = reader.result as string;
-          const base64Data = base64String.split(',')[1];
-          setPreviewUrls(prev => [...prev, base64String]);
-          setScreenshots(prev => [...prev, base64Data]);
-        };
-        reader.readAsDataURL(file as Blob);
-      });
-    }
-  };
-
-  const handleSubmitInvestigation = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (investigateMode === 'text' && !name) return;
-    if (investigateMode === 'screenshot' && screenshots.length === 0) return;
-
-    setState('loading');
-
-    try {
-      const [_, data] = await Promise.all([
-        new Promise(resolve => setTimeout(resolve, 3000)),
-        analyzeGhosting(name, city, lastMessage, investigateMode === 'screenshot' ? screenshots : undefined)
-      ]);
-      setResult(data);
-      setState('results');
-    } catch (error) {
-      console.error(error);
-      setState('error');
-    }
-  };
-
-  const resetInvestigation = () => {
-    setState('landing');
-    setResult(null);
-    setScreenshots([]);
-    setPreviewUrls([]);
-    setLastMessage('');
-    setName('');
-    setCity('');
-  };
-
-  const hasScreenshots = investigateMode === 'screenshot' && screenshots.length > 0;
-
   // Show loading while checking auth state
   if (authLoading) {
     return (
@@ -757,7 +663,6 @@ function App() {
           {activeModule === 'simulator' && (
             <div className="h-full w-full flex flex-col animate-fade-in bg-matte-base">
               <Simulator
-                onPivotToInvestigator={ENABLE_INVESTIGATOR ? () => setActiveModule('investigator') : undefined}
                 userProfile={userProfile}
                 firebaseUid={authUser.uid}
                 userId={userId}

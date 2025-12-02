@@ -1,39 +1,4 @@
 
-export interface GhostRequest {
-  name: string;
-  city: string;
-  lastMessage?: string; // Optional if using screenshot
-  screenshots?: string[]; // Array of Base64 strings
-}
-
-export interface EvidenceItem {
-  label: string;
-  status: 'clean' | 'suspicious' | 'dead' | 'jailed' | 'cooked';
-  detail: string;
-  source?: string; // Source Name or URL
-  snippet?: string; // Raw context/text found
-}
-
-export interface SocialFootprint {
-  // Inferred responsiveness from messages (helps calibrate timing/interest suggestions)
-  responsiveness?: 'instant' | 'normal' | 'slow' | 'inconsistent';
-  // High-level reciprocity tendency
-  reciprocityTendency?: 'reciprocal' | 'one-sided' | 'inconsistent' | 'unknown';
-  status: 'active' | 'silent' | 'unknown';
-  lastSeen: string; // "2 hours ago", "Yesterday", "Unknown"
-  detail: string; // "Updated 'Gym' playlist"
-}
-
-export interface GhostResult {
-  cookedLevel: number; // 0-100 (Replaced ghostScore)
-  verdict: string;
-  evidence: EvidenceItem[];
-  socialScan: SocialFootprint[]; // New OSINT data
-  isDead: boolean;
-  memeUrl?: string; // Optional generated image concept
-  identifiedName?: string; // OCR extracted name
-  identifiedCity?: string; // OCR extracted/inferred city
-}
 
 export interface Persona {
   id: string;

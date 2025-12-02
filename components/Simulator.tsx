@@ -6,10 +6,7 @@ import { createPersona, createSession } from '../services/dbService';
 import { SimResult, Persona, SimAnalysisResult, UserStyleProfile } from '../types';
 import { useGlobalToast } from './Toast';
 
-interface SimulatorProps {
-  // Optional callback - used when Investigator mode is enabled
-  onPivotToInvestigator?: () => void;
-  // User's style profile for personalized suggestions
+interface SimulatorProps {  // User's style profile for personalized suggestions
   userProfile?: UserStyleProfile | null;
   // User's Firebase UID for storing sessions
   firebaseUid?: string | null;
@@ -36,7 +33,7 @@ const CornerNodes = ({ className }: { className?: string }) => (
   </div>
 );
 
-export const Simulator: React.FC<SimulatorProps> = ({ onPivotToInvestigator, userProfile, firebaseUid, userId }) => {
+export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, userId }) => {
   const [view, setView] = useState<View>('setup');
   const { showToast } = useGlobalToast();
 
