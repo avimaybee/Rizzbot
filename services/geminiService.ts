@@ -108,8 +108,19 @@ export const generatePersona = async (
 export const simulateDraft = async (
   draft: string,
   persona: Persona,
-  userStyle?: UserStyleProfile | null
+  userStyle?: UserStyleProfile | null,
+  conversationHistory?: { draft: string, result: SimResult }[]
 ): Promise<SimResult> => {
+
+  // Build conversation context from history
+  let conversationContext = '';
+  if (conversationHistory && conversationHistory.length > 0) {
+    const transcript = conversationHistory.map((turn, idx) => {
+      return `Turn ${idx + 1}:\n  User: "${turn.draft}"\n  ${persona.name}: "${turn.result.predictedReply}"`;
+    }).join('\n\n');
+
+    conversationContext = `\n\n═══════════════════════════════════════════════\nCONVERSATION HISTORY (for context):\n═══════════════════════════════════════════════\n${transcript}\n\n`;
+  }
 
   // Build user style context if available
   let userStyleContext = '';
@@ -204,6 +215,7 @@ export const simulateDraft = async (
     - Style: ${persona.style}
     - Habits: ${persona.habits}
     - Red Flags: ${persona.redFlags.join(', ')}
+    ${conversationContext}
     ${userStyleContext}
     
     TASK: 
@@ -436,7 +448,7 @@ export const getQuickAdvice = async (
     'complicated': 'it\'s complicated / on-off situation',
     'ex': 'ex situation / trying to reconnect'
   };
-  
+
   // Situation-specific advice guidelines
   const situationGuidelines: Record<string, string> = {
     'new': 'EARLY STAGE RULES: Get to know them genuinely. Show real curiosity. Be yourself - its the only way to find out if you actually vibe. First impressions should be authentic you.',
@@ -445,7 +457,7 @@ export const getQuickAdvice = async (
     'complicated': 'COMPLICATED RULES: Prioritize your peace. Look for consistent patterns, not just good moments. Honest communication > guessing games. Know your worth.',
     'ex': 'EX RULES: Be honest about what you want. Dont pretend to be unbothered if you care. But also respect yourself - if theyre not showing up, thats information.'
   };
-  
+
   const situationContext = request.context ? contextMap[request.context] : 'unknown stage';
   const situationAdvice = request.context ? situationGuidelines[request.context] : '';
 

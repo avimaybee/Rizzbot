@@ -58,12 +58,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
   const [activePersona, setActivePersona] = useState<Persona | null>(null);
   const [draft, setDraft] = useState('');
   const [simHistory, setSimHistory] = useState<{ draft: string, result: SimResult }[]>([]);
-  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
-  
-  // Multi-message queue - allows sending multiple messages before getting a response
-  const [messageQueue, setMessageQueue] = useState<string[]>([]);
-
-  // Custom dropdown state
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);  // Custom dropdown state
   const [showContextDropdown, setShowContextDropdown] = useState(false);
 
   // Analysis State
@@ -164,24 +159,12 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
   const runSimulation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!draft.trim() || !activePersona) return;
-    
-    // Add message to queue
-    setMessageQueue(prev => [...prev, draft.trim()]);
+    const sentMessage = draft;
+    setPendingMessage(sentMessage);
     setDraft('');
-  };
-
-  // Process all queued messages and get AI response
-  const processQueue = async () => {
-    if (messageQueue.length === 0 || !activePersona) return;
-    
-    // Combine all queued messages for analysis
-    const combinedMessage = messageQueue.join('\n');
-    setPendingMessage(combinedMessage);
     setChatLoading(true);
-    
-    const result = await simulateDraft(combinedMessage, activePersona, userProfile);
-    setSimHistory(prev => [...prev, { draft: combinedMessage, result }]);
-    setMessageQueue([]); // Clear the queue
+    const result = await simulateDraft(sentMessage, activePersona, userProfile);
+    setSimHistory(prev => [...prev, { draft: sentMessage, result }]);
     setPendingMessage(null);
     setChatLoading(false);
   };
@@ -192,7 +175,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
     try {
       const result = await analyzeSimulation(simHistory, activePersona, userProfile);
       setAnalysisResult(result);
-      
+
       // Log session for wellbeing tracking
       logSession('practice', activePersona.name, result.ghostRisk);
 
@@ -225,7 +208,6 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
     setSimHistory([]);
     setAnalysisResult(null);
     setFeedbackGiven({});
-    setMessageQueue([]);
     setView('chat');
   };
 
@@ -568,38 +550,31 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
       <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-matte-base custom-scrollbar relative scrollbar-hide">
         <div className="absolute inset-0 bg-scan-lines opacity-5 pointer-events-none"></div>
 
-        {simHistory.length === 0 && messageQueue.length === 0 && !chatLoading && (
+        {simHistory.length === 0 && !chatLoading && (
           <div className="h-full flex flex-col items-center justify-center text-center px-6 relative z-10">
             <div className="w-16 h-16 border-2 border-zinc-700 flex items-center justify-center mb-4">
               <span className="text-2xl text-zinc-600"><MessageSquare className="w-8 h-8" /></span>
             </div>
             <p className="label-sm text-hard-blue mb-2">PRACTICE CONVERSATION</p>
             <p className="text-zinc-500 text-sm max-w-xs mb-4">test how <span className="text-white font-semibold">{activePersona?.name || 'they'}</span> might respond to your messages</p>
-            <div className="text-zinc-600 text-xs space-y-1">
-              <p>↓ type below and hit send ↓</p>
-              <p className="text-zinc-700">send multiple messages, then tap "get response"</p>
-            </div>
+            <p className="text-zinc-600 text-xs">↓ type below and hit send ↓</p>
           </div>
         )}
 
         {simHistory.map((entry, idx) => (
           <div key={idx} className="space-y-4 relative z-10">
-            {/* USER MESSAGE(S) - support multi-message turns */}
-            <div className="space-y-2">
-              {entry.draft.split('\n').map((msg, msgIdx) => (
-                <div key={msgIdx} className="flex justify-end">
-                  <div className="max-w-[80%] bg-white text-black px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium leading-relaxed border border-zinc-200 shadow-[4px_4px_0px_rgba(0,0,0,0.5)] relative group">
-                    {msg}
-                    <button
-                      onClick={() => copyToClipboard(msg)}
-                      className="absolute -left-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 flex items-center justify-center bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-700 text-xs"
-                      title="Copy to clipboard"
-                    >
-                      {copiedText === msg ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                    </button>
-                  </div>
-                </div>
-              ))}
+            {/* USER MESSAGE */}
+            <div className="flex justify-end">
+              <div className="max-w-[80%] bg-white text-black px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium leading-relaxed border border-zinc-200 shadow-[4px_4px_0px_rgba(0,0,0,0.5)] relative group">
+                {entry.draft}
+                <button
+                  onClick={() => copyToClipboard(entry.draft)}
+                  className="absolute -left-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 flex items-center justify-center bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-700 text-xs"
+                  title="Copy to clipboard"
+                >
+                  {copiedText === entry.draft ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                </button>
+              </div>
             </div>
 
             {/* ANALYSIS WIDGET (Block Style) */}
@@ -694,32 +669,8 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
           <div className="space-y-4 relative z-10">
             <div className="flex justify-end">
               <div className="max-w-[80%] bg-white text-black px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium leading-relaxed border border-zinc-200 shadow-[4px_4px_0px_rgba(0,0,0,0.5)] opacity-70">
-                {pendingMessage.split('\n').map((msg, i) => (
-                  <div key={i} className={i > 0 ? 'mt-2 pt-2 border-t border-zinc-300' : ''}>{msg}</div>
-                ))}
+                {pendingMessage}
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Show queued messages waiting to be analyzed */}
-        {messageQueue.length > 0 && !chatLoading && (
-          <div className="space-y-3 relative z-10">
-            {messageQueue.map((msg, i) => (
-              <div key={i} className="flex justify-end">
-                <div className="max-w-[80%] bg-white/90 text-black px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium leading-relaxed border border-zinc-300 shadow-[4px_4px_0px_rgba(0,0,0,0.3)]">
-                  {msg}
-                </div>
-              </div>
-            ))}
-            <div className="flex justify-center">
-              <button
-                onClick={processQueue}
-                className="flex items-center gap-2 px-4 py-2 bg-hard-blue text-white text-xs font-bold uppercase tracking-wider hover:bg-hard-blue/80 transition-colors border border-hard-blue/50"
-              >
-                <Sparkles className="w-3 h-3" />
-                GET THEIR RESPONSE ({messageQueue.length} message{messageQueue.length > 1 ? 's' : ''})
-              </button>
             </div>
           </div>
         )}
