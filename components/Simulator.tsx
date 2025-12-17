@@ -60,6 +60,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
   const [simHistory, setSimHistory] = useState<{ draft: string, result: SimResult }[]>([]);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);  // Custom dropdown state
   const [showContextDropdown, setShowContextDropdown] = useState(false);
+  const [showPracticePartners, setShowPracticePartners] = useState(false); // Mobile collapsible
 
   // Analysis State
   const [analysisResult, setAnalysisResult] = useState<SimAnalysisResult | null>(null);
@@ -264,81 +265,119 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
   // --- SETUP VIEW ---
   if (view === 'setup') {
     return (
-      <div className="w-full h-full max-w-full mx-auto bg-matte-panel border border-zinc-800 flex flex-col shadow-2xl relative overflow-hidden pb-20 md:pb-0">
+      <div className="w-full h-full max-w-full mx-auto bg-matte-panel border border-zinc-800 flex flex-col shadow-2xl relative overflow-hidden pb-16 md:pb-0">
         <CornerNodes />
 
         {/* MOBILE: Show header first, then archive inline */}
         <div className="flex flex-col md:flex-row h-full">
 
-          {/* LEFT: SAVED PROFILES - Full width on mobile, shown after heading */}
-          <div className="order-2 md:order-1 w-full md:w-1/3 border-t md:border-t-0 md:border-r border-zinc-800 bg-zinc-900/50 p-4 md:p-6 flex flex-col h-full overflow-hidden">
-            {/* Header with improved styling */}
-            <div className="flex items-center justify-between mb-4 md:mb-6 shrink-0">
+          {/* LEFT: SAVED PROFILES - Collapsible on mobile, sidebar on desktop */}
+          <div className={`order-2 md:order-1 w-full md:w-1/3 border-t md:border-t-0 md:border-r border-zinc-800 bg-zinc-900/50 flex flex-col md:h-full ${savedPersonas.length === 0 ? 'hidden md:flex' : ''}`}>
+            {/* Mobile: Collapsible dropdown header - More compact */}
+            <button
+              className="md:hidden w-full p-3 flex items-center justify-between"
+              onClick={() => setShowPracticePartners(!showPracticePartners)}
+            >
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-hard-blue rounded-sm"></div>
                 <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Practice Partners</h4>
+                {savedPersonas.length > 0 && (
+                  <span className="text-[10px] font-mono text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">{savedPersonas.length}</span>
+                )}
               </div>
-              {savedPersonas.length > 0 && (
-                <span className="text-[10px] font-mono text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">{savedPersonas.length}</span>
-              )}
-            </div>
+              <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${showPracticePartners ? 'rotate-180' : ''}`} />
+            </button>
 
-            <div className={`space-y-2 overflow-y-auto flex-1 scrollbar-hide ${savedPersonas.length === 0 ? 'hidden md:flex md:items-center md:justify-center' : ''}`}>
-              {savedPersonas.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-zinc-800 flex items-center justify-center">
-                    <MessageSquare className="w-5 h-5 text-zinc-600" />
-                  </div>
-                  <p className="text-sm font-medium text-zinc-400 mb-1">No saved personas yet</p>
-                  <p className="text-[11px] text-zinc-600">create your first practice partner →</p>
-                </div>
-              ) : (
-                savedPersonas.map((p, idx) => (
+            {/* Mobile: Collapsible content */}
+            <div className={`md:hidden overflow-hidden transition-all duration-200 ${showPracticePartners ? 'max-h-64' : 'max-h-0'}`}>
+              <div className="px-4 pb-4 space-y-2 overflow-y-auto max-h-56 scrollbar-hide">
+                {savedPersonas.map((p, idx) => (
                   <button
                     key={idx}
                     onClick={() => loadPersona(p)}
-                    className="w-full text-left p-4 bg-zinc-900/80 border border-zinc-800 hover:border-hard-blue hover:bg-zinc-800/80 transition-all group rounded-sm"
+                    className="w-full text-left p-3 bg-zinc-900/80 border border-zinc-800 hover:border-hard-blue hover:bg-zinc-800/80 transition-all group rounded-sm"
                   >
-                    <div className="flex items-start gap-3">
-                      {/* Avatar */}
-                      <div className="w-9 h-9 shrink-0 bg-gradient-to-br from-hard-blue/20 to-hard-blue/5 border border-hard-blue/30 rounded-sm flex items-center justify-center text-hard-blue text-sm font-bold group-hover:from-hard-blue/30 group-hover:to-hard-blue/10 transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 shrink-0 bg-gradient-to-br from-hard-blue/20 to-hard-blue/5 border border-hard-blue/30 rounded-sm flex items-center justify-center text-hard-blue text-sm font-bold">
                         {p.name.charAt(0).toUpperCase()}
                       </div>
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <div className="font-bold text-sm text-zinc-200 group-hover:text-white truncate">{p.name}</div>
-                          {p.relationshipContext && (
-                            <span className="text-[8px] font-mono text-zinc-500 bg-zinc-800 px-1.5 py-0.5 uppercase shrink-0">
-                              {p.relationshipContext.replace('_', ' ')}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-zinc-500 truncate">{p.tone}</div>
+                        <div className="font-bold text-sm text-zinc-200 truncate">{p.name}</div>
+                        <div className="text-[10px] text-zinc-500 truncate">{p.relationshipContext?.replace('_', ' ')}</div>
                       </div>
                     </div>
                   </button>
-                ))
-              )}
+                ))}
+              </div>
+            </div>
+
+            {/* Desktop: Full sidebar */}
+            <div className="hidden md:flex md:flex-col md:h-full md:p-6">
+              <div className="flex items-center justify-between mb-6 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-hard-blue rounded-sm"></div>
+                  <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Practice Partners</h4>
+                </div>
+                {savedPersonas.length > 0 && (
+                  <span className="text-[10px] font-mono text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">{savedPersonas.length}</span>
+                )}
+              </div>
+
+              <div className={`space-y-2 overflow-y-auto flex-1 scrollbar-hide ${savedPersonas.length === 0 ? 'flex items-center justify-center' : ''}`}>
+                {savedPersonas.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-zinc-800 flex items-center justify-center">
+                      <MessageSquare className="w-5 h-5 text-zinc-600" />
+                    </div>
+                    <p className="text-sm font-medium text-zinc-400 mb-1">No saved personas yet</p>
+                    <p className="text-[11px] text-zinc-600">create your first practice partner →</p>
+                  </div>
+                ) : (
+                  savedPersonas.map((p, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => loadPersona(p)}
+                      className="w-full text-left p-4 bg-zinc-900/80 border border-zinc-800 hover:border-hard-blue hover:bg-zinc-800/80 transition-all group rounded-sm"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 shrink-0 bg-gradient-to-br from-hard-blue/20 to-hard-blue/5 border border-hard-blue/30 rounded-sm flex items-center justify-center text-hard-blue text-sm font-bold group-hover:from-hard-blue/30 group-hover:to-hard-blue/10 transition-all">
+                          {p.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <div className="font-bold text-sm text-zinc-200 group-hover:text-white truncate">{p.name}</div>
+                            {p.relationshipContext && (
+                              <span className="text-[8px] font-mono text-zinc-500 bg-zinc-800 px-1.5 py-0.5 uppercase shrink-0">
+                                {p.relationshipContext.replace('_', ' ')}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-zinc-500 truncate">{p.tone}</div>
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
           </div>
 
           {/* RIGHT: BUILDER - Shown first on mobile */}
-          <div className="order-1 md:order-2 w-full md:w-2/3 p-4 sm:p-8 md:p-16 relative flex flex-col bg-matte-panel overflow-y-auto scrollbar-hide h-full">
+          <div className="order-1 md:order-2 w-full md:w-2/3 p-3 sm:p-6 md:p-10 relative flex flex-col bg-matte-panel overflow-y-auto scrollbar-hide h-full">
             <div className="max-w-2xl mx-auto w-full">
-              <div className="mb-6 sm:mb-10">
-                <div className="label-sm text-hard-blue mb-2">PRACTICE MODE</div>
-                <h3 className="font-impact text-3xl sm:text-5xl text-white tracking-wide mb-4">WHO'S GOT YOU IN YOUR HEAD?</h3>
-                <p className="text-zinc-500 font-editorial text-sm">Spill the tea so we can help you cook the right response.</p>
+              <div className="mb-4 sm:mb-6">
+                <div className="label-sm text-hard-blue mb-1">PRACTICE MODE</div>
+                <h3 className="font-impact text-2xl sm:text-4xl text-white tracking-wide mb-2">WHO'S GOT YOU IN YOUR HEAD?</h3>
+                <p className="text-zinc-500 font-editorial text-xs sm:text-sm">Spill the tea so we can help you cook the right response.</p>
               </div>
 
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
                     <label className="label-sm text-zinc-400">Their Name <span className="text-hard-gold">*</span></label>
                     <input
                       type="text"
-                      className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white text-xs font-mono focus:border-white focus:outline-none uppercase placeholder:text-zinc-500/60"
+                      className="w-full bg-zinc-900 border border-zinc-700 p-2.5 text-white text-xs font-mono focus:border-white focus:outline-none uppercase placeholder:text-zinc-500/60"
                       placeholder="ALEX"
                       value={customName}
                       onChange={(e) => setCustomName(e.target.value)}
@@ -436,7 +475,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                     <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
                     {previewUrls.length > 0 && <span className="text-[10px] font-bold text-hard-blue border border-hard-blue/30 px-2 py-0.5 rounded-sm">{previewUrls.length} FILES</span>}
                   </div>
-                  
+
                   {/* Screenshot Previews with Remove */}
                   {previewUrls.length > 0 && (
                     <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mt-3">
@@ -499,37 +538,35 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
     };
 
     return (
-      <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative scrollbar-hide pb-20 md:pb-0">
+      <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative scrollbar-hide pb-16 md:pb-0">
         <CornerNodes />
-        
-        {/* Header */}
-        <div className="bg-zinc-900 p-4 sm:p-6 border-b border-zinc-800 flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 border-2 border-zinc-600 bg-zinc-800 flex items-center justify-center">
-              <span className="text-2xl">📊</span>
+
+        {/* Header - More compact */}
+        <div className="bg-zinc-900 px-3 sm:px-5 py-3 sm:py-4 border-b border-zinc-800 flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 border border-zinc-600 bg-zinc-800 flex items-center justify-center">
+              <span className="text-lg sm:text-xl">📊</span>
             </div>
             <div>
-              <h2 className="font-impact text-xl sm:text-2xl text-white tracking-wide uppercase">Session Analysis</h2>
-              <p className="text-xs text-zinc-500 font-mono mt-1">
-                {simHistory.length} exchange{simHistory.length !== 1 ? 's' : ''} analyzed • ID: {Date.now().toString().slice(-6)}
+              <h2 className="font-impact text-base sm:text-lg text-white tracking-wide uppercase">Analysis</h2>
+              <p className="text-[10px] text-zinc-500 font-mono">
+                {simHistory.length} exchange{simHistory.length !== 1 ? 's' : ''}
               </p>
             </div>
           </div>
-          <button onClick={() => setView('chat')} className="label-sm text-zinc-400 hover:text-white border border-zinc-700 px-4 py-2 hover:bg-zinc-800 transition-colors">
-            ← BACK TO CHAT
+          <button onClick={() => setView('chat')} className="label-sm text-zinc-400 hover:text-white border border-zinc-700 px-2.5 py-1.5 hover:bg-zinc-800 transition-colors">
+            ← BACK
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto bg-matte-base">
-          <div className="p-6 sm:p-8 lg:p-12">
+          <div className="p-3 sm:p-5 lg:p-8">
             <div className="max-w-5xl mx-auto">
-              
               {/* Hero Section - Headline + Action */}
-              <div className="text-center mb-10 sm:mb-14">
-                <h3 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-impact text-white mb-8 uppercase leading-tight tracking-wide">
+              <div className="text-center mb-6 sm:mb-10">
+                <h3 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-impact text-white mb-5 sm:mb-6 uppercase leading-tight tracking-wide">
                   {analysisResult.headline}
                 </h3>
-
                 {/* Recommended Action - Prominent Card */}
                 {analysisResult.recommendedNextMove && (() => {
                   const actionStyle = getActionStyle(analysisResult.recommendedNextMove);
@@ -569,8 +606,8 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                   </div>
                   <p className="text-xs text-zinc-500 mt-3 font-mono">
                     {analysisResult.ghostRisk > 70 ? '⚠ HIGH - Proceed with caution' :
-                     analysisResult.ghostRisk > 40 ? '◐ MODERATE - Could go either way' :
-                     '✓ LOW - Looking good'}
+                      analysisResult.ghostRisk > 40 ? '◐ MODERATE - Could go either way' :
+                        '✓ LOW - Looking good'}
                   </p>
                 </div>
 
@@ -651,14 +688,14 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
         {/* Footer Actions */}
         <div className="p-4 sm:p-6 border-t border-zinc-800 bg-zinc-900 flex justify-center gap-4 shrink-0">
-          <button 
-            onClick={() => setView('chat')} 
+          <button
+            onClick={() => setView('chat')}
             className="label-sm text-zinc-400 hover:text-white border border-zinc-700 px-6 py-3 hover:bg-zinc-800 transition-colors"
           >
             ← Continue Chat
           </button>
-          <button 
-            onClick={resetSim} 
+          <button
+            onClick={resetSim}
             className="label-sm text-white bg-zinc-800 border border-zinc-600 px-6 py-3 hover:bg-zinc-700 transition-colors"
           >
             Start New Session
@@ -670,29 +707,29 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
   // --- CHAT VIEW ---
   return (
-    <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative shadow-2xl scrollbar-hide pb-20 md:pb-0">
+    <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative shadow-2xl scrollbar-hide pb-16 md:pb-0">
       <CornerNodes />
 
-      {/* CHAT HEADER */}
-      <div className="bg-zinc-900 p-3 sm:p-4 border-b border-zinc-800 flex justify-between items-center z-20 shrink-0">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-zinc-700 to-zinc-800 border border-zinc-600 flex items-center justify-center text-white font-bold text-base sm:text-xl font-impact">
+      {/* CHAT HEADER - More compact */}
+      <div className="bg-zinc-900 px-3 py-2.5 sm:p-3 border-b border-zinc-800 flex justify-between items-center z-20 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-zinc-700 to-zinc-800 border border-zinc-600 flex items-center justify-center text-white font-bold text-sm sm:text-base font-impact">
             {activePersona?.name.charAt(0)}
           </div>
           <div>
-            <h2 className="font-impact text-white text-sm sm:text-base uppercase tracking-wider">{activePersona?.name}</h2>
-            <span className="text-xs text-zinc-500 font-mono">
-              {activePersona?.tone} • {simHistory.length} message{simHistory.length !== 1 ? 's' : ''}
+            <h2 className="font-impact text-white text-xs sm:text-sm uppercase tracking-wider">{activePersona?.name}</h2>
+            <span className="text-[10px] text-zinc-500 font-mono">
+              {simHistory.length} msg{simHistory.length !== 1 ? 's' : ''}
             </span>
           </div>
         </div>
-        <div className="flex gap-3 sm:gap-4 items-center">
+        <div className="flex gap-2 sm:gap-3 items-center">
           {simHistory.length > 0 && (
-            <button onClick={handleEndSim} className="label-sm text-red-400 hover:text-red-300 border border-red-800/50 px-4 py-2 bg-red-950/30 hover:bg-red-900/40 transition-colors">
-              END SESSION
+            <button onClick={handleEndSim} className="label-sm text-red-400 hover:text-red-300 border border-red-800/50 px-2 sm:px-3 py-1.5 bg-red-950/30 hover:bg-red-900/40 transition-colors">
+              END
             </button>
           )}
-          <button onClick={() => setView('setup')} className="label-sm text-zinc-500 hover:text-white transition-colors">
+          <button onClick={() => setView('setup')} className="label-sm text-zinc-500 hover:text-white transition-colors px-2 py-1.5">
             EXIT
           </button>
         </div>
@@ -701,15 +738,15 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
       {/* CHAT AREA - 2 Column on Desktop */}
       <div className="flex-1 overflow-y-auto bg-matte-base custom-scrollbar relative scrollbar-hide">
         <div className="absolute inset-0 bg-scan-lines opacity-5 pointer-events-none"></div>
-        
-        <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 relative z-10">
+
+        <div className="p-3 sm:p-5 lg:p-6 space-y-4 lg:space-y-6 relative z-10">
           {simHistory.length === 0 && !chatLoading && (
-            <div className="h-[60vh] flex flex-col items-center justify-center text-center px-6">
-              <div className="w-20 h-20 border-2 border-zinc-700 flex items-center justify-center mb-6 bg-zinc-900/50">
-                <MessageSquare className="w-10 h-10 text-zinc-600" />
+            <div className="h-[50vh] flex flex-col items-center justify-center text-center px-4">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-zinc-700 flex items-center justify-center mb-4 bg-zinc-900/50">
+                <MessageSquare className="w-7 h-7 sm:w-8 sm:h-8 text-zinc-600" />
               </div>
-              <p className="label-sm text-hard-blue mb-3">PRACTICE CONVERSATION</p>
-              <p className="text-zinc-400 text-sm max-w-sm mb-2">
+              <p className="label-sm text-hard-blue mb-2">PRACTICE CONVERSATION</p>
+              <p className="text-zinc-400 text-xs sm:text-sm max-w-xs mb-1.5">
                 Test how <span className="text-white font-semibold">{activePersona?.name || 'they'}</span> might respond to your messages
               </p>
               <p className="text-zinc-600 text-xs font-mono">↓ type below and hit send ↓</p>
@@ -763,11 +800,10 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                   {/* Analysis Header */}
                   <div className="flex items-center justify-between mb-4 pb-3 border-b border-zinc-800">
                     <span className="label-sm text-zinc-400">MESSAGE ANALYSIS</span>
-                    <div className={`px-3 py-1 border text-xs font-bold uppercase tracking-wider ${
-                      entry.result.regretLevel > 70 ? 'bg-red-950/50 border-red-800/50 text-red-400' :
+                    <div className={`px-3 py-1 border text-xs font-bold uppercase tracking-wider ${entry.result.regretLevel > 70 ? 'bg-red-950/50 border-red-800/50 text-red-400' :
                       entry.result.regretLevel > 40 ? 'bg-yellow-950/50 border-yellow-800/50 text-yellow-400' :
-                      'bg-emerald-950/50 border-emerald-800/50 text-emerald-400'
-                    }`}>
+                        'bg-emerald-950/50 border-emerald-800/50 text-emerald-400'
+                      }`}>
                       {entry.result.regretLevel > 70 ? '⚠ HIGH RISK' : entry.result.regretLevel > 40 ? '◐ MODERATE' : '✓ LOW RISK'} • {entry.result.regretLevel}%
                     </div>
                   </div>
@@ -783,20 +819,18 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                       <button
                         key={key}
                         onClick={() => copyToDraft(text as string)}
-                        className={`group relative p-3 border text-left transition-all hover:scale-[1.02] ${
-                          key === 'safe' ? 'border-zinc-700 hover:border-zinc-500 bg-zinc-800/30' :
+                        className={`group relative p-3 border text-left transition-all hover:scale-[1.02] ${key === 'safe' ? 'border-zinc-700 hover:border-zinc-500 bg-zinc-800/30' :
                           key === 'bold' ? 'border-blue-900/50 hover:border-blue-700/70 bg-blue-950/20' :
-                          key === 'spicy' ? 'border-red-900/50 hover:border-red-700/70 bg-red-950/20' :
-                          'border-hard-gold/40 hover:border-hard-gold/70 bg-amber-950/20'
-                        }`}
+                            key === 'spicy' ? 'border-red-900/50 hover:border-red-700/70 bg-red-950/20' :
+                              'border-hard-gold/40 hover:border-hard-gold/70 bg-amber-950/20'
+                          }`}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
-                            key === 'safe' ? 'text-zinc-400' :
+                          <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${key === 'safe' ? 'text-zinc-400' :
                             key === 'bold' ? 'text-blue-400' :
-                            key === 'spicy' ? 'text-red-400' :
-                            'text-hard-gold'
-                          }`}>
+                              key === 'spicy' ? 'text-red-400' :
+                                'text-hard-gold'
+                            }`}>
                             {key === 'you' ? <><Sparkles className="w-3 h-3" /> YOUR STYLE</> : key}
                           </span>
                           <span className="text-[8px] text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity">TAP TO USE</span>
@@ -816,38 +850,44 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
               </div>
 
               {/* Divider between exchanges */}
-              {idx < simHistory.length - 1 && (
-                <div className="flex items-center gap-4 py-4">
-                  <div className="flex-1 h-px bg-zinc-800"></div>
-                  <span className="text-[10px] text-zinc-600 font-mono">EXCHANGE {idx + 2}</span>
-                  <div className="flex-1 h-px bg-zinc-800"></div>
-                </div>
-              )}
+              {
+                idx < simHistory.length - 1 && (
+                  <div className="flex items-center gap-4 py-4">
+                    <div className="flex-1 h-px bg-zinc-800"></div>
+                    <span className="text-[10px] text-zinc-600 font-mono">EXCHANGE {idx + 2}</span>
+                    <div className="flex-1 h-px bg-zinc-800"></div>
+                  </div>
+                )
+              }
             </div>
           ))}
 
           {/* Show pending message immediately */}
-          {pendingMessage && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-              <div className="flex justify-end lg:justify-start">
-                <div className="max-w-[90%] lg:max-w-full bg-white text-black px-5 py-4 text-sm font-medium leading-relaxed border border-zinc-200 shadow-[4px_4px_0px_rgba(0,0,0,0.4)] opacity-70">
-                  <div className="label-sm text-zinc-500 mb-2">SENDING...</div>
-                  <p>{pendingMessage}</p>
+          {
+            pendingMessage && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                <div className="flex justify-end lg:justify-start">
+                  <div className="max-w-[90%] lg:max-w-full bg-white text-black px-5 py-4 text-sm font-medium leading-relaxed border border-zinc-200 shadow-[4px_4px_0px_rgba(0,0,0,0.4)] opacity-70">
+                    <div className="label-sm text-zinc-500 mb-2">SENDING...</div>
+                    <p>{pendingMessage}</p>
+                  </div>
+                </div>
+                <div className="bg-zinc-900/50 border border-zinc-800 p-5 flex items-center justify-center">
+                  <span className="label-sm text-zinc-600 animate-pulse">ANALYZING...</span>
                 </div>
               </div>
-              <div className="bg-zinc-900/50 border border-zinc-800 p-5 flex items-center justify-center">
-                <span className="label-sm text-zinc-600 animate-pulse">ANALYZING...</span>
-              </div>
-            </div>
-          )}
+            )
+          }
 
-          {chatLoading && !pendingMessage && (
-            <div className="flex justify-start">
-              <div className="bg-zinc-900 px-5 py-4 border border-zinc-800">
-                <span className="label-sm text-hard-blue animate-pulse">AI IS THINKING...</span>
+          {
+            chatLoading && !pendingMessage && (
+              <div className="flex justify-start">
+                <div className="bg-zinc-900 px-5 py-4 border border-zinc-800">
+                  <span className="label-sm text-hard-blue animate-pulse">AI IS THINKING...</span>
+                </div>
               </div>
-            </div>
-          )}
+            )
+          }
           <div ref={chatEndRef} />
         </div>
       </div>

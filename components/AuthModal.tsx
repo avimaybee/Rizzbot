@@ -150,13 +150,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
 
         {/* Right Column: Auth Form */}
         <div className="w-full max-w-md mx-auto">
-          {/* Mobile Header (Visible only on mobile) */}
-          <div className="md:hidden text-center mb-8">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <div className="w-2 h-2 bg-hard-gold animate-pulse"></div>
-              <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">SYSTEM ACCESS</span>
+          {/* Mobile Header (Visible only on mobile) - More compact */}
+          <div className="md:hidden text-center mb-5">
+            <div className="flex items-center justify-center gap-2 mb-1.5">
+              <div className="w-1.5 h-1.5 bg-hard-gold animate-pulse"></div>
+              <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-500">SYSTEM ACCESS</span>
             </div>
-            <h1 className="text-5xl font-impact text-white uppercase tracking-tight mb-2">
+            <h1 className="text-3xl sm:text-4xl font-impact text-white uppercase tracking-tight">
               THE RIZZBOT
             </h1>
           </div>
@@ -164,15 +164,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
           <div className="bg-zinc-900/80 backdrop-blur-md border border-zinc-800 relative shadow-2xl">
             <CornerNodes className="opacity-50" />
 
-            <div className="p-8">
-              {/* Mode Tabs */}
+            <div className="p-5 sm:p-6 md:p-8">
+              {/* Mode Tabs - More compact */}
               {mode !== 'reset' && (
-                <div className="flex mb-8 border-b border-zinc-800">
+                <div className="flex mb-5 sm:mb-6 border-b border-zinc-800">
                   <button
                     onClick={() => switchMode('signin')}
-                    className={`flex-1 pb-3 text-[10px] font-mono uppercase tracking-widest transition-all relative ${mode === 'signin'
-                        ? 'text-white'
-                        : 'text-zinc-600 hover:text-zinc-400'
+                    className={`flex-1 pb-2.5 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all relative ${mode === 'signin'
+                      ? 'text-white'
+                      : 'text-zinc-600 hover:text-zinc-400'
                       }`}
                   >
                     Sign In
@@ -182,9 +182,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                   </button>
                   <button
                     onClick={() => switchMode('signup')}
-                    className={`flex-1 pb-3 text-[10px] font-mono uppercase tracking-widest transition-all relative ${mode === 'signup'
-                        ? 'text-white'
-                        : 'text-zinc-600 hover:text-zinc-400'
+                    className={`flex-1 pb-2.5 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all relative ${mode === 'signup'
+                      ? 'text-white'
+                      : 'text-zinc-600 hover:text-zinc-400'
                       }`}
                   >
                     Initialize
@@ -211,15 +211,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                 </div>
               )}
 
-              {/* Google Sign In Button */}
+              {/* Google Sign In Button - More compact */}
               {mode !== 'reset' && (
                 <>
                   <button
                     onClick={handleGoogleAuth}
                     disabled={loading}
-                    className="w-full flex items-center justify-center gap-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 text-white font-mono text-sm py-3 px-4 transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+                    className="w-full flex items-center justify-center gap-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 text-white font-mono text-xs py-2.5 px-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
                   >
-                    <svg className="w-5 h-5 grayscale group-hover:grayscale-0 transition-all" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 grayscale group-hover:grayscale-0 transition-all" viewBox="0 0 24 24">
                       <path
                         fill="#4285F4"
                         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -237,26 +237,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                       />
                     </svg>
-                    <span className="uppercase tracking-wider text-xs">Continue with Google</span>
+                    <span className="uppercase tracking-wider text-[10px]">Continue with Google</span>
                   </button>
 
-                  {/* Divider */}
-                  <div className="relative my-6">
+                  {/* Divider - More compact */}
+                  <div className="relative my-4 sm:my-5">
                     <div className="absolute inset-0 flex items-center">
                       <div className="w-full border-t border-zinc-800"></div>
                     </div>
-                    <div className="relative flex justify-center text-xs font-mono uppercase">
+                    <div className="relative flex justify-center text-[10px] font-mono uppercase">
                       <span className="px-2 bg-zinc-900 text-zinc-600">or use email</span>
                     </div>
                   </div>
                 </>
               )}
 
-              {/* Email Form */}
-              <form onSubmit={handleEmailAuth} className="space-y-5">
+              {/* Email Form - More compact */}
+              <form onSubmit={handleEmailAuth} className="space-y-3 sm:space-y-4">
                 {mode === 'signup' && (
                   <div>
-                    <label htmlFor="displayName" className="label-sm text-zinc-500 mb-2 block flex items-center gap-2">
+                    <label htmlFor="displayName" className="label-sm text-zinc-500 mb-1.5 block flex items-center gap-1.5">
                       <User className="w-3 h-3" />
                       CODENAME
                     </label>
@@ -267,13 +267,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                       onChange={(e) => setDisplayName(e.target.value)}
                       autoComplete="name"
                       placeholder="ENTER DISPLAY NAME"
-                      className="w-full bg-zinc-950 border border-zinc-800 focus:border-hard-blue px-4 py-3 text-white placeholder-zinc-700 focus:outline-none transition-all font-mono text-sm"
+                      className="w-full bg-zinc-950 border border-zinc-800 focus:border-hard-blue px-3 py-2.5 text-white placeholder-zinc-700 focus:outline-none transition-all font-mono text-sm"
                     />
                   </div>
                 )}
 
                 <div>
-                  <label htmlFor="email" className="label-sm text-zinc-500 mb-2 block flex items-center gap-2">
+                  <label htmlFor="email" className="label-sm text-zinc-500 mb-1.5 block flex items-center gap-1.5">
                     <Mail className="w-3 h-3" />
                     EMAIL ADDRESS
                   </label>
@@ -285,13 +285,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                     required
                     autoComplete="email"
                     placeholder="USER@EXAMPLE.COM"
-                    className="w-full bg-zinc-950 border border-zinc-800 focus:border-hard-gold px-4 py-3 text-white placeholder-zinc-700 focus:outline-none transition-all font-mono text-sm"
+                    className="w-full bg-zinc-950 border border-zinc-800 focus:border-hard-gold px-3 py-2.5 text-white placeholder-zinc-700 focus:outline-none transition-all font-mono text-sm"
                   />
                 </div>
 
                 {mode !== 'reset' && (
                   <div>
-                    <label htmlFor="password" className="label-sm text-zinc-500 mb-2 block flex items-center gap-2">
+                    <label htmlFor="password" className="label-sm text-zinc-500 mb-1.5 block flex items-center gap-1.5">
                       <Lock className="w-3 h-3" />
                       PASSWORD
                     </label>
@@ -304,7 +304,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                       autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
                       placeholder="••••••••"
                       minLength={6}
-                      className="w-full bg-zinc-950 border border-zinc-800 focus:border-hard-gold px-4 py-3 text-white placeholder-zinc-700 focus:outline-none transition-all font-mono text-sm"
+                      className="w-full bg-zinc-950 border border-zinc-800 focus:border-hard-gold px-3 py-2.5 text-white placeholder-zinc-700 focus:outline-none transition-all font-mono text-sm"
                     />
                   </div>
                 )}
@@ -323,15 +323,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                   </div>
                 )}
 
-                {/* Submit Button */}
+                {/* Submit Button - More compact */}
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`w-full py-4 font-impact text-xl uppercase tracking-wide border transition-all flex items-center justify-center gap-2 ${loading
-                      ? 'bg-zinc-800 text-zinc-500 border-zinc-700 cursor-not-allowed'
-                      : mode === 'signup'
-                        ? 'bg-white text-black border-white hover:bg-zinc-200'
-                        : 'bg-hard-gold text-black border-hard-gold hover:bg-yellow-400'
+                  className={`w-full py-3 sm:py-3.5 font-impact text-lg sm:text-xl uppercase tracking-wide border transition-all flex items-center justify-center gap-2 ${loading
+                    ? 'bg-zinc-800 text-zinc-500 border-zinc-700 cursor-not-allowed'
+                    : mode === 'signup'
+                      ? 'bg-white text-black border-white hover:bg-zinc-200'
+                      : 'bg-hard-gold text-black border-hard-gold hover:bg-yellow-400'
                     }`}
                 >
                   {loading ? (
@@ -359,9 +359,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="mt-8 text-center">
-            <p className="text-zinc-600 text-[10px] font-mono uppercase tracking-widest">
+          {/* Footer - More compact */}
+          <div className="mt-5 sm:mt-6 text-center">
+            <p className="text-zinc-600 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest">
               By accessing, you agree to protocols & privacy standards.
             </p>
           </div>

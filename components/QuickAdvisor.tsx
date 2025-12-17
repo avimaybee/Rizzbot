@@ -68,7 +68,7 @@ const SuggestionCategory: React.FC<SuggestionCategoryProps> = ({
   onFeedback,
 }) => {
   const suggestionList = Array.isArray(suggestions) ? suggestions : [suggestions];
-  
+
   return (
     <div className="relative">
       {/* Category Header */}
@@ -78,7 +78,7 @@ const SuggestionCategory: React.FC<SuggestionCategoryProps> = ({
           <span className="text-[9px] font-mono text-zinc-600">({suggestionList.length} OPTIONS)</span>
         )}
       </div>
-      
+
       {/* Suggestion Options */}
       <div className={suggestionList.length > 1 ? "space-y-2" : ""}>
         {suggestionList.map((suggestion, index) => {
@@ -105,7 +105,7 @@ const SuggestionCategory: React.FC<SuggestionCategoryProps> = ({
           );
         })}
       </div>
-      
+
       {/* Feedback buttons */}
       <div className="flex gap-2 mt-3 justify-end">
         {(['helpful', 'mid', 'off'] as const).map((rating) => (
@@ -184,15 +184,15 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
       setResult(response);
       // Log session for wellbeing tracking
       logSession('quick', undefined, undefined);
-      
+
       // Save session to D1 with enhanced metadata
       if (firebaseUid) {
         try {
-          const headline = response.vibeCheck?.theirEnergy 
+          const headline = response.vibeCheck?.theirEnergy
             ? `${response.vibeCheck.theirEnergy.toUpperCase()} energy detected`
             : 'Quick analysis';
           const interestLevel = response.vibeCheck?.interestLevel;
-          
+
           await createSession(firebaseUid, {
             type: 'quick',
             request,
@@ -306,7 +306,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
   // Input View
   if (!result) {
     return (
-      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-hidden scrollbar-hide pb-20 md:pb-0">
+      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-20 md:pb-0">
         {/* Background Pattern */}
         <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
 
@@ -327,20 +327,20 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
 
         {/* Main Content */}
         <div className="flex-1 p-4 sm:p-6 md:p-10 flex flex-col relative z-10 overflow-y-auto">
-          {/* Title Section */}
-          <div className="mb-6 sm:mb-8">
-            <div className="label-sm text-hard-gold mb-2">QUICK MODE</div>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-impact text-white uppercase tracking-tight">WHAT DO I SAY?</h2>
-            <p className="text-zinc-500 text-sm mt-2 font-mono">Paste the texts. Get the texts.</p>
+          {/* Title Section - More compact */}
+          <div className="mb-4 sm:mb-6">
+            <div className="label-sm text-hard-gold mb-1">QUICK MODE</div>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-impact text-white uppercase tracking-tight">WHAT DO I SAY?</h2>
+            <p className="text-zinc-500 text-xs sm:text-sm mt-1.5 font-mono">Paste the texts. Get the texts.</p>
           </div>
 
-          {/* Form Grid */}
-          <div className="grid md:grid-cols-2 gap-4 sm:gap-6 flex-1">
+          {/* Form Grid - More compact spacing */}
+          <div className="grid md:grid-cols-2 gap-3 sm:gap-5 flex-1">
             {/* Left Column - Inputs */}
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Screenshot Upload (Primary) */}
               <div>
-                <label className="label-sm text-hard-gold mb-2 block flex items-center gap-2">
+                <label className="label-sm text-hard-gold mb-1.5 block flex items-center gap-1.5">
                   <Image className="w-3 h-3" />
                   EVIDENCE (SCREENSHOTS)
                 </label>
@@ -396,40 +396,40 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
                 </div>
               </div>
 
-              {/* Additional Context (Secondary) */}
+              {/* Additional Context (Secondary) - More compact */}
               <div>
-                <label className="label-sm text-zinc-500 mb-2 block">ADDITIONAL CONTEXT <span className="text-zinc-600">(OPTIONAL)</span></label>
+                <label className="label-sm text-zinc-500 mb-1.5 block">ADDITIONAL CONTEXT <span className="text-zinc-600">(OPTIONAL)</span></label>
                 <textarea
                   value={theirMessage}
                   onChange={(e) => setTheirMessage(e.target.value)}
-                  placeholder={screenshots.length > 0 ? "Any backstory? e.g., 'We haven't talked in 2 weeks' or 'They're my coworker'" : "No screenshot? Paste their message here. Or add context like 'met on hinge last week'"}
-                  className="w-full bg-zinc-900 border border-zinc-700 p-4 text-white placeholder:text-zinc-500/60 resize-none focus:outline-none focus:border-white transition-colors h-24 font-mono text-sm"
+                  placeholder={screenshots.length > 0 ? "Any backstory? e.g., 'We haven't talked in 2 weeks'" : "No screenshot? Paste their message here."}
+                  className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white placeholder:text-zinc-500/60 resize-none focus:outline-none focus:border-white transition-colors h-20 font-mono text-sm"
                 />
               </div>
 
-              {/* Your Draft */}
+              {/* Your Draft - More compact */}
               <div>
-                <label className="label-sm text-zinc-400 mb-2 block">YOUR POTENTIAL REPLY <span className="text-zinc-600">(BE HONEST)</span></label>
+                <label className="label-sm text-zinc-400 mb-1.5 block">YOUR POTENTIAL REPLY <span className="text-zinc-600">(OPTIONAL)</span></label>
                 <textarea
                   value={yourDraft}
                   onChange={(e) => setYourDraft(e.target.value)}
-                  placeholder="WHAT ARE YOU THINKING OF SAYING... (don't hold back)"
-                  className="w-full bg-zinc-900 border border-zinc-700 p-4 text-white placeholder:text-zinc-500/60 resize-none focus:outline-none focus:border-white transition-colors h-24 font-mono text-sm"
+                  placeholder="What are you thinking of saying?"
+                  className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white placeholder:text-zinc-500/60 resize-none focus:outline-none focus:border-white transition-colors h-20 font-mono text-sm"
                 />
               </div>
             </div>
 
             {/* Right Column - Context & Action */}
             <div className="flex flex-col">
-              {/* Context Selector */}
-              <div className="mb-6">
-                <label className="label-sm text-zinc-400 mb-3 block">SITUATION</label>
-                <div className="grid grid-cols-5 gap-1 md:gap-2">
+              {/* Context Selector - More compact */}
+              <div className="mb-4">
+                <label className="label-sm text-zinc-400 mb-2 block">SITUATION</label>
+                <div className="grid grid-cols-5 gap-1">
                   {contextOptions.map((opt) => (
                     <button
                       key={opt.value}
                       onClick={() => setContext(opt.value)}
-                      className={`py-2 md:py-3 px-1 md:px-4 border text-[8px] md:text-[10px] font-mono tracking-wider transition-all ${context === opt.value
+                      className={`py-2 px-1 border text-[8px] sm:text-[9px] font-mono tracking-wider transition-all ${context === opt.value
                         ? 'bg-white text-black border-white'
                         : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500 hover:text-zinc-300'
                         }`}
@@ -441,20 +441,20 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
               </div>
 
               {/* Spacer */}
-              <div className="flex-1"></div>
+              <div className="flex-1 min-h-[20px]"></div>
 
-              {/* Submit Button */}
+              {/* Submit Button - More compact on mobile */}
               <button
                 onClick={handleAnalyze}
                 disabled={(!theirMessage.trim() && screenshots.length === 0) || isLoading}
-                className={`w-full py-5 font-impact text-2xl uppercase tracking-wide border transition-all ${(!theirMessage.trim() && screenshots.length === 0) || isLoading
+                className={`w-full py-3.5 sm:py-4 font-impact text-lg sm:text-xl uppercase tracking-wide border transition-all ${(!theirMessage.trim() && screenshots.length === 0) || isLoading
                   ? 'bg-zinc-900 text-zinc-600 border-zinc-800 cursor-not-allowed'
-                  : 'bg-white text-black border-white hover:bg-zinc-200'
+                  : 'bg-white text-black border-white hover:bg-zinc-200 active:bg-zinc-300'
                   }`}
               >
                 {isLoading ? (
-                  <span className="flex items-center justify-center gap-3">
-                    <Sparkles className="w-5 h-5 animate-spin" />
+                  <span className="flex items-center justify-center gap-2">
+                    <Sparkles className="w-4 h-4 animate-spin" />
                     ANALYZING...
                   </span>
                 ) : (
@@ -470,45 +470,45 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
 
   // Results View
   return (
-    <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-20 md:pb-0">
+    <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-16 md:pb-0">
       {/* Background */}
       <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
       <div className="absolute inset-0 bg-scan-lines opacity-10 pointer-events-none"></div>
 
-      {/* Header */}
-      <div className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
+      {/* Header - More compact */}
+      <div className="border-b border-zinc-800 px-4 sm:px-6 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
         <button
           onClick={resetForm}
-          className="flex items-center gap-3 text-zinc-500 hover:text-white transition-colors group"
+          className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group"
         >
-          <span className="text-lg">←</span>
-          <span className="text-[10px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">NEW SCAN</span>
+          <span className="text-base">←</span>
+          <span className="text-[9px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">NEW</span>
         </button>
-        <div className={`px-4 py-2 text-[10px] font-bold tracking-widest ${getActionStyle(result.recommendedAction)}`}>
+        <div className={`px-3 py-1.5 text-[9px] font-bold tracking-widest ${getActionStyle(result.recommendedAction)}`}>
           {getActionLabel(result.recommendedAction)}
         </div>
       </div>
 
-      {/* Results Content */}
-      <div className="flex-1 p-4 sm:p-6 md:p-10 relative z-10">
-        <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+      {/* Results Content - More compact */}
+      <div className="flex-1 p-3 sm:p-5 md:p-8 relative z-10">
+        <div className="max-w-4xl mx-auto space-y-3 sm:space-y-5">
 
-          {/* Page Title */}
-          <div className="mb-2">
-            <div className="label-sm text-hard-gold mb-1">ANALYSIS COMPLETE</div>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-impact text-white uppercase tracking-tight">YOUR VIBE CHECK</h2>
+          {/* Page Title - Compact */}
+          <div className="mb-1">
+            <div className="label-sm text-hard-gold mb-0.5">ANALYSIS COMPLETE</div>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-impact text-white uppercase tracking-tight">YOUR VIBE CHECK</h2>
           </div>
 
-          {/* Vibe Check Card */}
+          {/* Vibe Check Card - More compact */}
           <div className="bg-zinc-900 border border-zinc-800 relative">
             <CornerNodes className="opacity-50" />
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="label-sm text-zinc-500 flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-hard-gold"></div>
+            <div className="p-4 sm:p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="label-sm text-zinc-500 flex items-center gap-1.5">
+                  <div className="w-1 h-1 bg-hard-gold"></div>
                   THEIR MESSAGE
                 </div>
-                <div className={`text-3xl font-impact ${getEnergyStyle(result.vibeCheck.theirEnergy)}`}>
+                <div className={`text-xl sm:text-2xl font-impact ${getEnergyStyle(result.vibeCheck.theirEnergy)}`}>
                   {result.vibeCheck.theirEnergy.toUpperCase()}
                 </div>
               </div>

@@ -2,7 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom styles from index.html */
+/* ========================================
+   RIZZBOT MOBILE-FIRST RESPONSIVE DESIGN
+   ======================================== */
+
+/* Base body styles */
 body {
   background-color: #050505;
   color: #f4f4f5;
@@ -11,29 +15,26 @@ body {
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
   cursor: crosshair;
-  /* Prevent pull-to-refresh on mobile */
   overscroll-behavior: none;
+  /* Fluid base font size for better mobile scaling */
+  font-size: clamp(14px, 3.5vw, 16px);
 }
 
-/* Prevent text selection on touch devices for UI elements */
-button, [role="button"] {
+/* Touch device optimizations */
+button,
+[role="button"] {
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Prevent double-tap zoom on iOS */
 * {
   touch-action: manipulation;
 }
 
-/* Minimum touch target size for accessibility */
-@media (pointer: coarse) {
-  button, [role="button"], a {
-    min-height: 44px;
-    min-width: 44px;
-  }
-}
+/* ========================================
+   TYPOGRAPHY - Fluid & Responsive
+   ======================================== */
 
 .font-impact {
   font-family: 'Anton', sans-serif;
@@ -47,15 +48,85 @@ button, [role="button"] {
   font-weight: 600;
 }
 
+/* Refined label sizing for mobile */
 .label-sm {
-  font-size: 9px;
+  font-size: clamp(8px, 2vw, 10px);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.12em;
   color: #71717a;
 }
 
-/* Matte Grain */
+/* Fluid headings that scale beautifully */
+.text-fluid-hero {
+  font-size: clamp(2.5rem, 12vw, 6rem);
+  line-height: 0.9;
+}
+
+.text-fluid-title {
+  font-size: clamp(1.75rem, 6vw, 3.5rem);
+  line-height: 1;
+}
+
+.text-fluid-subtitle {
+  font-size: clamp(1.25rem, 4vw, 2rem);
+  line-height: 1.1;
+}
+
+/* ========================================
+   TOUCH TARGETS & ACCESSIBILITY
+   ======================================== */
+
+@media (pointer: coarse) {
+
+  button:not(.icon-btn),
+  [role="button"]:not(.icon-btn),
+  a:not(.text-link) {
+    min-height: 44px;
+  }
+
+  /* Slightly larger tap targets on very small screens */
+  @media (max-width: 360px) {
+
+    button:not(.icon-btn),
+    [role="button"]:not(.icon-btn) {
+      min-height: 48px;
+    }
+  }
+}
+
+/* Icon buttons get smaller touch targets */
+.icon-btn {
+  min-height: 36px;
+  min-width: 36px;
+}
+
+/* ========================================
+   MOBILE SPACING UTILITIES
+   ======================================== */
+
+/* Compact padding for mobile */
+.mobile-compact {
+  @apply p-3 sm:p-4 md:p-6;
+}
+
+.mobile-compact-x {
+  @apply px-3 sm:px-4 md:px-6;
+}
+
+.mobile-compact-y {
+  @apply py-3 sm:py-4 md:py-6;
+}
+
+/* Tighter gaps on mobile */
+.gap-mobile {
+  @apply gap-2 sm:gap-3 md:gap-4;
+}
+
+/* ========================================
+   VISUAL ELEMENTS
+   ======================================== */
+
 .bg-matte-grain {
   position: fixed;
   top: 0;
@@ -69,6 +140,10 @@ button, [role="button"] {
   mix-blend-mode: overlay;
 }
 
+/* ========================================
+   SCROLLBAR HIDING
+   ======================================== */
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
@@ -78,9 +153,116 @@ button, [role="button"] {
   scrollbar-width: none;
 }
 
-/* Safe area insets for notched devices */
+/* ========================================
+   SAFE AREAS FOR NOTCHED DEVICES
+   ======================================== */
+
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .pb-safe {
     padding-bottom: max(env(safe-area-inset-bottom), 1rem);
   }
+
+  .pt-safe {
+    padding-top: max(env(safe-area-inset-top), 0.5rem);
+  }
+}
+
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* ========================================
+   MOBILE BOTTOM NAV SPACING
+   ======================================== */
+
+/* Add bottom padding to account for fixed bottom nav on mobile */
+.mobile-nav-padding {
+  padding-bottom: 4.5rem;
+  /* 72px for bottom nav */
+}
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-nav-padding {
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0));
+  }
+}
+
+/* ========================================
+   ANIMATION OPTIMIZATIONS FOR MOBILE
+   ======================================== */
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ========================================
+   FORM INPUT MOBILE OPTIMIZATIONS
+   ======================================== */
+
+input,
+textarea,
+select {
+  font-size: 16px;
+  /* Prevents iOS zoom on focus */
+}
+
+@media (max-width: 640px) {
+
+  input,
+  textarea {
+    @apply text-base;
+  }
+}
+
+/* ========================================
+   MOBILE-SPECIFIC COMPONENT OVERRIDES
+   ======================================== */
+
+/* Tighter cards on mobile */
+@media (max-width: 640px) {
+  .card-compact {
+    @apply p-3;
+  }
+
+  .card-compact .card-title {
+    @apply text-lg;
+  }
+}
+
+/* Better bottom nav styling */
+.bottom-nav-item {
+  @apply flex flex-col items-center justify-center gap-0.5 min-w-[56px] py-1.5 px-2 rounded-lg transition-all;
+}
+
+.bottom-nav-item.active {
+  @apply text-white bg-zinc-800/80;
+}
+
+.bottom-nav-item:not(.active) {
+  @apply text-zinc-500;
+}
+
+/* ========================================
+   MOBILE INPUT GROUPS
+   ======================================== */
+
+.input-group {
+  @apply space-y-1.5 sm:space-y-2;
+}
+
+.input-group label {
+  @apply block;
+}
+
+.input-group input,
+.input-group textarea {
+  @apply w-full bg-zinc-900 border border-zinc-700 px-3 py-2.5 sm:px-4 sm:py-3 text-white text-sm focus:outline-none focus:border-white transition-colors;
 }
