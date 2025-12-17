@@ -68,7 +68,7 @@ const SuggestionCategory: React.FC<SuggestionCategoryProps> = ({
   onFeedback,
 }) => {
   const suggestionList = Array.isArray(suggestions) ? suggestions : [suggestions];
-  
+
   return (
     <div className="relative">
       {/* Category Header */}
@@ -78,7 +78,7 @@ const SuggestionCategory: React.FC<SuggestionCategoryProps> = ({
           <span className="text-[9px] font-mono text-zinc-600">({suggestionList.length} OPTIONS)</span>
         )}
       </div>
-      
+
       {/* Suggestion Options */}
       <div className={suggestionList.length > 1 ? "space-y-2" : ""}>
         {suggestionList.map((suggestion, index) => {
@@ -105,7 +105,7 @@ const SuggestionCategory: React.FC<SuggestionCategoryProps> = ({
           );
         })}
       </div>
-      
+
       {/* Feedback buttons */}
       <div className="flex gap-2 mt-3 justify-end">
         {(['helpful', 'mid', 'off'] as const).map((rating) => (
@@ -184,15 +184,15 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
       setResult(response);
       // Log session for wellbeing tracking
       logSession('quick', undefined, undefined);
-      
+
       // Save session to D1 with enhanced metadata
       if (firebaseUid) {
         try {
-          const headline = response.vibeCheck?.theirEnergy 
+          const headline = response.vibeCheck?.theirEnergy
             ? `${response.vibeCheck.theirEnergy.toUpperCase()} energy detected`
             : 'Quick analysis';
           const interestLevel = response.vibeCheck?.interestLevel;
-          
+
           await createSession(firebaseUid, {
             type: 'quick',
             request,
@@ -306,7 +306,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
   // Input View
   if (!result) {
     return (
-      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-hidden scrollbar-hide pb-20 md:pb-0">
+      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-hidden scrollbar-hide">
         {/* Background Pattern */}
         <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
 
@@ -470,7 +470,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
 
   // Results View
   return (
-    <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-20 md:pb-0">
+    <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide">
       {/* Background */}
       <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
       <div className="absolute inset-0 bg-scan-lines opacity-10 pointer-events-none"></div>

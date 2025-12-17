@@ -22,7 +22,7 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
   let parsedResult: any = null;
   try {
     parsedResult = typeof session.result === 'string' ? JSON.parse(session.result) : session.result;
-  } catch {}
+  } catch { }
 
   const screenshots = parsedResult?.request?.screenshots || parsedResult?.screenshots || [];
   const vibeCheck = parsedResult?.vibeCheck || parsedResult?.response?.vibeCheck;
@@ -42,9 +42,8 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
           <ArrowLeft className="w-5 h-5 text-zinc-400" />
         </button>
         <div className="flex-1">
-          <div className={`text-[10px] uppercase tracking-wider font-bold mb-1 ${
-            session.mode === 'quick' ? 'text-hard-blue' : 'text-hard-gold'
-          }`}>
+          <div className={`text-[10px] uppercase tracking-wider font-bold mb-1 ${session.mode === 'quick' ? 'text-hard-blue' : 'text-hard-gold'
+            }`}>
             {session.mode === 'quick' ? 'QUICK MODE' : 'PRACTICE MODE'} SESSION
           </div>
           <h2 className="font-impact text-xl text-white tracking-wide uppercase">
@@ -220,7 +219,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession }
 
   const fetchSessions = async (offset = 0) => {
     if (!firebaseUid) return;
-    
+
     setLoading(true);
     setError(null);
     try {
@@ -250,7 +249,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession }
   const handleDelete = async (sessionId: number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!confirm('Delete this session?')) return;
-    
+
     setDeletingId(sessionId);
     try {
       await deleteSession(sessionId);
@@ -292,7 +291,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession }
 
   if (!firebaseUid) {
     return (
-      <div className="w-full h-full max-w-4xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative">
+      <div className="w-full h-full max-w-4xl mx-auto bg-matte-panel md:border md:border-zinc-800 flex flex-col relative">
         <CornerNodes />
         <div className="flex-1 flex items-center justify-center p-8 text-center">
           <div>
@@ -308,7 +307,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession }
   // Show session detail view if a session is selected
   if (selectedSession) {
     return (
-      <div className="w-full h-full max-w-5xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative pb-20 md:pb-0">
+      <div className="w-full h-full max-w-5xl mx-auto bg-matte-panel md:border md:border-zinc-800 flex flex-col relative">
         <CornerNodes />
         <SessionDetail session={selectedSession} onBack={() => setSelectedSession(null)} />
       </div>
@@ -316,7 +315,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession }
   }
 
   return (
-    <div className="w-full h-full max-w-5xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative pb-20 md:pb-0">
+    <div className="w-full h-full max-w-5xl mx-auto bg-matte-panel md:border md:border-zinc-800 flex flex-col relative">
       <CornerNodes />
 
       {/* Header */}
@@ -374,7 +373,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession }
               let parsedResult: any = null;
               try {
                 parsedResult = typeof session.result === 'string' ? JSON.parse(session.result) : session.result;
-              } catch {}
+              } catch { }
 
               const headline = session.headline || parsedResult?.headline || parsedResult?.vibeCheck?.theirEnergy || 'Session';
               const ghostRisk = session.ghost_risk || parsedResult?.ghostRisk || parsedResult?.vibeCheck?.interestLevel;
@@ -391,11 +390,10 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession }
                 >
                   <div className="p-4 sm:p-5 flex items-center gap-4">
                     {/* Mode Icon */}
-                    <div className={`w-10 h-10 border flex items-center justify-center flex-shrink-0 ${
-                      session.mode === 'quick' 
-                        ? 'border-hard-blue/50 bg-hard-blue/10' 
+                    <div className={`w-10 h-10 border flex items-center justify-center flex-shrink-0 ${session.mode === 'quick'
+                        ? 'border-hard-blue/50 bg-hard-blue/10'
                         : 'border-hard-gold/50 bg-hard-gold/10'
-                    }`}>
+                      }`}>
                       {session.mode === 'quick' ? (
                         <Zap className="w-5 h-5 text-hard-blue" />
                       ) : (
@@ -406,9 +404,8 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession }
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-[10px] uppercase tracking-wider font-bold ${
-                          session.mode === 'quick' ? 'text-hard-blue' : 'text-hard-gold'
-                        }`}>
+                        <span className={`text-[10px] uppercase tracking-wider font-bold ${session.mode === 'quick' ? 'text-hard-blue' : 'text-hard-gold'
+                          }`}>
                           {session.mode === 'quick' ? 'QUICK MODE' : 'PRACTICE'}
                         </span>
                         {session.persona_name && (

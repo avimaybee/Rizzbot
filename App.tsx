@@ -340,7 +340,7 @@ const StandbyScreen = ({ onActivate, hasProfile, authUser }: {
   hasProfile: boolean,
   authUser?: AuthUser | null
 }) => (
-  <div className="h-full w-full flex flex-col relative overflow-y-auto md:overflow-hidden bg-matte-base pb-20 md:pb-0">
+  <div className="h-full w-full flex flex-col relative overflow-hidden bg-matte-base">
 
     {/* Background Decor */}
     <div className="absolute top-0 right-0 w-[50%] h-full border-l border-zinc-900/50 hidden md:block"></div>
@@ -650,11 +650,13 @@ function App() {
         <SideDock activeModule={activeModule} setModule={setActiveModule} authUser={authUser} onSignOut={handleSignOut} />
 
         {/* MAIN CONTAINER */}
-        <div className="flex-1 relative h-full flex flex-col p-2 md:p-4 overflow-y-auto md:overflow-hidden pb-20 md:pb-4 scrollbar-hide">
+        <div className="flex-1 relative h-full flex flex-col md:p-4 overflow-hidden pb-16 md:pb-4 scrollbar-hide">
 
           {/* VIEWPORT FRAME */}
-          <div className="relative w-full flex-1 min-h-0 border border-zinc-800 bg-black/20 overflow-hidden flex flex-col shadow-2xl">
-            <CornerNodes />
+          <div className="relative w-full flex-1 min-h-0 md:border md:border-zinc-800 bg-black/20 overflow-hidden flex flex-col md:shadow-2xl">
+            <div className="hidden md:block">
+              <CornerNodes />
+            </div>
 
             {state === 'loading' && <LoadingScreen />}
 
@@ -708,8 +710,10 @@ function App() {
             )}
           </div>
 
-          {/* SYSTEM TICKER */}
-          <SystemTicker />
+          {/* SYSTEM TICKER - Desktop only */}
+          <div className="hidden md:block">
+            <SystemTicker />
+          </div>
         </div>
 
         {/* Mobile Bottom Navigation */}
