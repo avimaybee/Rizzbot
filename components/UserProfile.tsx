@@ -707,187 +707,105 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                 </div>
               </div>
 
-              {/* Account Section */}
-              {authUser && (
-                <div className="bg-zinc-900 border border-zinc-800 p-6 relative">
-                  <CornerNodes className="opacity-30" />
-                  <div>
-                    <div className="label-sm text-zinc-400 mb-4">ACCOUNT</div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        {authUser.photoURL ? (
-                          <img
-                            src={authUser.photoURL}
-                            alt=""
-                            className="w-12 h-12 rounded-full border-2 border-zinc-700"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-white text-lg font-bold">
-                            {(authUser.displayName || authUser.email || 'U')[0].toUpperCase()}
-                          </div>
-                        )}
-                        <div>
-                          <div className="text-white font-medium">
-                            {authUser.displayName || 'User'}
-                          </div>
-                          <div className="text-zinc-500 text-sm">
-                            {authUser.email}
-                          </div>
-                          <div className="text-zinc-600 text-[10px] font-mono mt-1">
-                            via {authUser.providerId === 'google.com' ? 'Google' : 'Email'}
-                          </div>
-                        </div>
-                      </div>
-                      {onSignOut && (
-                        <button
-                          onClick={onSignOut}
-                          className="flex items-center gap-2 px-4 py-2 border border-zinc-700 text-zinc-400 hover:border-red-500 hover:text-red-400 transition-colors text-sm"
-                        >
-                          <LogOut className="w-4 h-4" />
-                          Sign Out
-                        </button>
-                      )}
-                    </div>
+              {/* Punctuation */}
+              <div className="bg-zinc-900 border border-zinc-800 p-6 relative">
+                <CornerNodes className="opacity-30" />
+                <div>
+                  <label className="label-sm text-zinc-400 mb-3 block">PUNCTUATION</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['none', 'minimal', 'full'] as const).map((level) => (
+                      <button
+                        key={level}
+                        onClick={() => setProfile({ ...profile, punctuation: level })}
+                        className={`py-2 px-3 border text-[10px] font-mono uppercase tracking-wider transition-all ${profile.punctuation === level
+                          ? 'bg-white text-black border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]'
+                          : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500'
+                          }`}
+                      >
+                        {level}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
 
-            <div className="grid grid-cols-4 gap-2">
-              {(['none', 'minimal', 'moderate', 'heavy'] as const).map((level) => (
-                <button
-                  key={level}
-                  onClick={() => setProfile({ ...profile, emojiUsage: level })}
-                  className={`py-2 px-3 border text-[10px] font-mono uppercase tracking-wider transition-all ${profile.emojiUsage === level
-                    ? 'bg-white text-black border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]'
-                    : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500'
-                    }`}
-                >
-                  {level === 'none' ? '😐 NONE' : level === 'minimal' ? '🙂 MIN' : level === 'moderate' ? '😊 MOD' : '🤩 HEAVY'}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+              {/* Message Length */}
+              <div className="bg-zinc-900 border border-zinc-800 p-6 relative">
+                <CornerNodes className="opacity-30" />
+                <div>
+                  <label className="label-sm text-zinc-400 mb-3 block">MESSAGE LENGTH</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['short', 'medium', 'long'] as const).map((level) => (
+                      <button
+                        key={level}
+                        onClick={() => setProfile({ ...profile, averageLength: level })}
+                        className={`py-2 px-3 border text-[10px] font-mono uppercase tracking-wider transition-all ${profile.averageLength === level
+                          ? 'bg-white text-black border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]'
+                          : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500'
+                          }`}
+                      >
+                        {level}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
-        {/* Capitalization */}
-        <div className="bg-zinc-900 border border-zinc-800 p-6 relative">
-          <CornerNodes className="opacity-30" />
-          <div>
-            <label className="label-sm text-zinc-400 mb-3 block">CAPITALIZATION</label>
-            <div className="grid grid-cols-3 gap-2">
-              {(['lowercase', 'mixed', 'normal'] as const).map((level) => (
-                <button
-                  key={level}
-                  onClick={() => setProfile({ ...profile, capitalization: level })}
-                  className={`py-2 px-3 border text-[10px] font-mono uppercase tracking-wider transition-all ${profile.capitalization === level
-                    ? 'bg-white text-black border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]'
-                    : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500'
-                    }`}
-                >
-                  {level}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+              {/* Slang Level */}
+              <div className="bg-zinc-900 border border-zinc-800 p-6 relative">
+                <CornerNodes className="opacity-30" />
+                <div>
+                  <label className="label-sm text-zinc-400 mb-3 block">SLANG LEVEL</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['formal', 'casual', 'heavy-slang'] as const).map((level) => (
+                      <button
+                        key={level}
+                        onClick={() => setProfile({ ...profile, slangLevel: level })}
+                        className={`py-2 px-3 border text-[10px] font-mono uppercase tracking-wider transition-all ${profile.slangLevel === level
+                          ? 'bg-white text-black border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]'
+                          : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500'
+                          }`}
+                      >
+                        {level === 'heavy-slang' ? 'HEAVY' : level}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
-        {/* Punctuation */}
-        <div className="bg-zinc-900 border border-zinc-800 p-6 relative">
-          <CornerNodes className="opacity-30" />
-          <div>
-            <label className="label-sm text-zinc-400 mb-3 block">PUNCTUATION</label>
-            <div className="grid grid-cols-3 gap-2">
-              {(['none', 'minimal', 'full'] as const).map((level) => (
-                <button
-                  key={level}
-                  onClick={() => setProfile({ ...profile, punctuation: level })}
-                  className={`py-2 px-3 border text-[10px] font-mono uppercase tracking-wider transition-all ${profile.punctuation === level
-                    ? 'bg-white text-black border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]'
-                    : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500'
-                    }`}
-                >
-                  {level}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Message Length */}
-        <div className="bg-zinc-900 border border-zinc-800 p-6 relative">
-          <CornerNodes className="opacity-30" />
-          <div>
-            <label className="label-sm text-zinc-400 mb-3 block">MESSAGE LENGTH</label>
-            <div className="grid grid-cols-3 gap-2">
-              {(['short', 'medium', 'long'] as const).map((level) => (
-                <button
-                  key={level}
-                  onClick={() => setProfile({ ...profile, averageLength: level })}
-                  className={`py-2 px-3 border text-[10px] font-mono uppercase tracking-wider transition-all ${profile.averageLength === level
-                    ? 'bg-white text-black border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]'
-                    : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500'
-                    }`}
-                >
-                  {level}
-                </button>
-              ))}
+              {/* Preferred Tone */}
+              <div className="bg-zinc-900 border border-zinc-800 p-6 relative">
+                <CornerNodes className="opacity-30" />
+                <div>
+                  <label className="label-sm text-zinc-400 mb-3 block">PREFERRED TONE</label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {(['playful', 'chill', 'direct', 'sweet'] as const).map((tone) => (
+                      <button
+                        key={tone}
+                        onClick={() => setProfile({ ...profile, preferredTone: tone })}
+                        className={`py-2 px-3 border text-[10px] font-mono uppercase tracking-wider transition-all ${profile.preferredTone === tone
+                          ? 'bg-white text-black border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]'
+                          : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500'
+                          }`}
+                      >
+                        {tone}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Slang Level */}
-        <div className="bg-zinc-900 border border-zinc-800 p-6 relative">
-          <CornerNodes className="opacity-30" />
-          <div>
-            <label className="label-sm text-zinc-400 mb-3 block">SLANG LEVEL</label>
-            <div className="grid grid-cols-3 gap-2">
-              {(['formal', 'casual', 'heavy-slang'] as const).map((level) => (
-                <button
-                  key={level}
-                  onClick={() => setProfile({ ...profile, slangLevel: level })}
-                  className={`py-2 px-3 border text-[10px] font-mono uppercase tracking-wider transition-all ${profile.slangLevel === level
-                    ? 'bg-white text-black border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]'
-                    : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500'
-                    }`}
-                >
-                  {level === 'heavy-slang' ? 'HEAVY' : level}
-                </button>
-              ))}
-            </div>
+          {/* Save Button - Full Width */}
+          <div className="mt-8">
+            <button
+              onClick={handleSave}
+              className="w-full py-5 bg-white text-black font-impact text-2xl uppercase tracking-wide hover:bg-zinc-200 transition-colors"
+            >
+              SAVE PROFILE
+            </button>
           </div>
-        </div>
-
-        {/* Preferred Tone */}
-        <div className="bg-zinc-900 border border-zinc-800 p-6 relative">
-          <CornerNodes className="opacity-30" />
-          <div>
-            <label className="label-sm text-zinc-400 mb-3 block">PREFERRED TONE</label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {(['playful', 'chill', 'direct', 'sweet'] as const).map((tone) => (
-                <button
-                  key={tone}
-                  onClick={() => setProfile({ ...profile, preferredTone: tone })}
-                  className={`py-2 px-3 border text-[10px] font-mono uppercase tracking-wider transition-all ${profile.preferredTone === tone
-                    ? 'bg-white text-black border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]'
-                    : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500'
-                    }`}
-                >
-                  {tone}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Save Button - Full Width */}
-        <div className="mt-8">
-          <button
-            onClick={handleSave}
-            className="w-full py-5 bg-white text-black font-impact text-2xl uppercase tracking-wide hover:bg-zinc-200 transition-colors"
-          >
-            SAVE PROFILE
-          </button>
         </div>
       </div>
     </div>

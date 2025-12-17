@@ -620,7 +620,7 @@ function App() {
 
   // Show auth modal if not signed in
   if (!authUser) {
-    return <AuthModal onAuthSuccess={() => { }} />;
+    return <AuthModal onAuthSuccess={() => setActiveModule('standby')} />;
   }
 
   return (
@@ -713,8 +713,8 @@ function App() {
         </div>
 
         {/* Mobile Bottom Navigation */}
-        < BottomTabs activeModule={activeModule} setModule={setActiveModule} />
-      </div >
+        <BottomTabs activeModule={activeModule} setModule={setActiveModule} />
+      </div>
     </ToastProvider>
   );
 }
