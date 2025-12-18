@@ -119,7 +119,7 @@ export const generatePersona = async (
   try {
     const response = await retryWithBackoff(
       () => ai.models.generateContent({
-        model: "gemini-flash-latest",
+        model: "gemini-3-flash-preview",
         contents: { parts: parts },
         config: { safetySettings: safetySettings }
       }),
@@ -301,7 +301,7 @@ export const simulateDraft = async (
   try {
     const response = await retryWithBackoff(
       () => ai.models.generateContent({
-        model: "gemini-flash-latest",
+        model: "gemini-3-flash-preview",
         contents: prompt,
         config: { safetySettings: safetySettings }
       }),
@@ -433,7 +433,7 @@ export const analyzeSimulation = async (
   try {
     const response = await retryWithBackoff(
       () => ai.models.generateContent({
-        model: "gemini-flash-latest",
+        model: "gemini-3-flash-preview",
         contents: prompt,
         config: { safetySettings: safetySettings }
       }),
@@ -720,7 +720,7 @@ export const getQuickAdvice = async (
   try {
     const response = await retryWithBackoff(
       () => ai.models.generateContent({
-        model: "gemini-flash-latest",
+        model: "gemini-3-flash-preview",
         contents: parts,
         config: { safetySettings: safetySettings }
       }),
@@ -865,7 +865,7 @@ IMPORTANT:
     const model = ai.models;
     const response = await retryWithBackoff(
       () => model.generateContent({
-        model: "gemini-flash-latest",
+        model: "gemini-3-flash-preview",
         contents: [{ role: "user", parts }],
         config: {
           safetySettings,
