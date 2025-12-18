@@ -34,20 +34,21 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="bg-zinc-900 p-4 sm:p-6 border-b border-zinc-800 flex items-center gap-4 shrink-0">
+      {/* TACTICAL HUD HEADER - DETAIL */}
+      <div className="border-b border-zinc-800 px-4 py-3 flex items-center gap-4 shrink-0 sticky top-0 bg-matte-base/95 backdrop-blur-sm z-30">
         <button
           onClick={onBack}
-          className="w-10 h-10 border border-zinc-700 bg-zinc-800 flex items-center justify-center hover:bg-zinc-700 transition-colors"
+          className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2"
         >
-          <ArrowLeft className="w-5 h-5 text-zinc-400" />
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-[10px] sm:text-[9px] font-mono uppercase tracking-widest group-hover:text-white transition-colors">BACK</span>
         </button>
-        <div className="flex-1">
-          <div className={`text-[10px] uppercase tracking-wider font-bold mb-1 ${session.mode === 'quick' ? 'text-hard-blue' : 'text-hard-gold'
+        <div className="flex-1 min-w-0">
+          <div className={`text-[9px] font-mono uppercase tracking-widest mb-0.5 ${session.mode === 'quick' ? 'text-hard-blue' : 'text-hard-gold'
             }`}>
-            {session.mode === 'quick' ? 'QUICK MODE' : 'PRACTICE MODE'} SESSION
+            {session.mode === 'quick' ? 'QUICK_MODE' : 'PRACTICE_MODE'}
           </div>
-          <h2 className="font-impact text-xl text-white tracking-wide uppercase">
+          <h2 className="font-impact text-lg text-white tracking-wide uppercase truncate">
             {session.headline || session.persona_name || 'Session Details'}
           </h2>
         </div>
@@ -319,26 +320,24 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
     <div className="w-full h-full max-w-5xl mx-auto bg-matte-panel md:border md:border-zinc-800 flex flex-col relative pb-16 md:pb-0">
       <CornerNodes />
 
-      {/* Header - More compact */}
-      <div className="bg-zinc-900 px-3 sm:px-5 py-3 sm:py-4 border-b border-zinc-800 flex justify-between items-center shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 border border-zinc-700 bg-zinc-800 flex items-center justify-center">
-            <Clock className="w-4 h-4 text-zinc-400" />
+      {/* TACTICAL HUD HEADER - LIST */}
+      <div className="border-b border-zinc-800 px-4 py-3 flex justify-between items-center shrink-0 sticky top-0 bg-matte-base/95 backdrop-blur-sm z-30">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className={`w-1.5 h-1.5 animate-pulse ${loading ? 'bg-zinc-500' : 'bg-zinc-400'}`}></div>
+            <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-400">HISTORY_LOG</span>
           </div>
-          <div>
-            <h2 className="font-impact text-base sm:text-lg text-white tracking-wide uppercase">History</h2>
-            <p className="text-[10px] text-zinc-500 font-mono">
-              {pagination.total} session{pagination.total !== 1 ? 's' : ''}
-            </p>
-          </div>
+          <p className="text-[9px] text-zinc-600 font-mono border-l border-zinc-800 pl-3">
+            {pagination.total} SESSION{pagination.total !== 1 ? 'S' : ''}
+          </p>
         </div>
         <button
           onClick={() => fetchSessions(0)}
           disabled={loading}
-          className="label-sm text-zinc-400 hover:text-white border border-zinc-700 px-2.5 sm:px-3 py-1.5 hover:bg-zinc-800 transition-colors flex items-center gap-1.5"
+          className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group"
         >
+          <span className="text-[9px] font-mono uppercase tracking-widest hidden sm:inline group-hover:text-zinc-300 transition-colors">REFRESH</span>
           <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">REFRESH</span>
         </button>
       </div>
 

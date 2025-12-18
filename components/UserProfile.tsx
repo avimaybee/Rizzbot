@@ -233,21 +233,22 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
   // Intro Screen
   if (currentStep === 'intro') {
     return (
-      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-hidden scrollbar-hide pb-16 md:pb-0">
+      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-hidden scrollbar-hide pb-32 md:pb-0">
         <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
 
         {/* Header - More compact */}
-        <div className="border-b border-zinc-800 px-4 sm:px-6 py-3 flex items-center justify-between relative z-10">
+        {/* TACTICAL HUD HEADER */}
+        <div className="border-b border-zinc-800 px-4 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group"
+            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-[9px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">BACK</span>
+            <ArrowLeft className="w-5 h-5" />
+            <span className="text-[10px] sm:text-[9px] font-mono uppercase tracking-widest group-hover:text-emerald-400 transition-colors">BACK</span>
           </button>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-hard-gold animate-pulse"></div>
+              <div className="w-1.5 h-1.5 bg-emerald-400 animate-pulse"></div>
               <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-500">PROFILE</span>
             </div>
             {onSignOut && (
@@ -310,17 +311,18 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
   // Samples Collection Screen
   if (currentStep === 'samples') {
     return (
-      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-16 md:pb-0">
+      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-32 md:pb-0">
         <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
 
         {/* Header - More compact */}
-        <div className="border-b border-zinc-800 px-4 sm:px-6 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
+        {/* TACTICAL HUD HEADER */}
+        <div className="border-b border-zinc-800 px-4 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
           <button
             onClick={() => setCurrentStep('intro')}
-            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group"
+            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-[9px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">BACK</span>
+            <ArrowLeft className="w-5 h-5" />
+            <span className="text-[10px] sm:text-[9px] font-mono uppercase tracking-widest group-hover:text-emerald-400 transition-colors">BACK</span>
           </button>
           <div className="flex items-center gap-3">
             <div className="label-sm text-zinc-500">1/2</div>
@@ -329,7 +331,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                 onClick={() => setCurrentStep('review')}
                 className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors group"
               >
-                <span className="text-[9px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">SKIP</span>
+                <span className="text-[9px] font-mono uppercase tracking-widest group-hover:text-emerald-400 transition-colors">SKIP</span>
                 <ArrowRight className="w-3 h-3" />
               </button>
             )}
@@ -492,17 +494,18 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
 
   // Review & Edit Screen
   return (
-    <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-16 md:pb-0">
+    <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-32 md:pb-0">
       <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
 
       {/* Header - More compact */}
-      <div className="border-b border-zinc-800 px-4 sm:px-6 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
+      {/* TACTICAL HUD HEADER */}
+      <div className="border-b border-zinc-800 px-4 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
         <button
           onClick={() => setCurrentStep('samples')}
-          className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group"
+          className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-[9px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">EDIT</span>
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-[10px] sm:text-[9px] font-mono uppercase tracking-widest group-hover:text-emerald-400 transition-colors">EDIT</span>
         </button>
         <div className="flex items-center gap-3">
           <div className="label-sm text-zinc-500">2/2</div>

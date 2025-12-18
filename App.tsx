@@ -10,6 +10,7 @@ import { UserProfile } from './components/UserProfile';
 import { History } from './components/History';
 import { AuthModal } from './components/AuthModal';
 import { ToastProvider } from './components/Toast';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppState, UserStyleProfile, WellbeingState } from './types';
 
 type Module = 'standby' | 'simulator' | 'quick' | 'profile' | 'history';
@@ -335,10 +336,11 @@ const DockItem = ({ active, onClick, label, index }: { active: boolean, onClick:
 );
 
 // --- COMPONENT: STANDBY SCREEN (EDITORIAL) - Mobile-Optimized ---
-const StandbyScreen = ({ onActivate, hasProfile, authUser }: {
+const StandbyScreen = ({ onActivate, hasProfile, authUser, userProfile }: {
   onActivate: (m: Module) => void,
   hasProfile: boolean,
-  authUser?: AuthUser | null
+  authUser?: AuthUser | null,
+  userProfile?: UserStyleProfile | null
 }) => (
   <div className="h-full w-full flex flex-col relative overflow-hidden bg-matte-base pb-16 md:pb-0">
 
@@ -347,12 +349,12 @@ const StandbyScreen = ({ onActivate, hasProfile, authUser }: {
     <AbstractGrid className="absolute bottom-[-10%] left-[-10%] w-[40vw] h-[40vw] text-zinc-800 opacity-20 pointer-events-none animate-spin-slow" />
 
     {/* CONTENT GRID */}
-    <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 md:h-full overflow-y-auto md:overflow-hidden">
-
-      {/* LEFT: HERO - Compact on mobile */}
-      <div className="p-4 sm:p-6 md:p-10 lg:p-14 flex flex-col justify-center relative z-10 border-b md:border-b-0 md:border-r border-zinc-800 overflow-hidden">
+    {/* DESKTOP LAYOUT - PRESERVED */}
+    <div className="hidden md:grid flex-1 min-h-0 grid-cols-2 h-full overflow-hidden">
+      {/* LEFT: HERO - Desktop */}
+      <div className="p-10 lg:p-14 flex flex-col justify-center relative z-10 border-r border-zinc-800">
         <div>
-          {/* Welcome User - More compact */}
+          {/* Welcome User */}
           {authUser && (
             <div className="mb-3 flex items-center gap-2">
               {authUser.photoURL && (
@@ -365,26 +367,26 @@ const StandbyScreen = ({ onActivate, hasProfile, authUser }: {
           )}
           <span className="label-sm text-hard-gold mb-1.5 block">YOUR AI WINGMAN</span>
           <h1 className="leading-[0.85] font-impact text-white mb-3">
-            <span className="text-[1.25rem] sm:text-[1.5rem] md:text-[2.5rem] lg:text-[3.5rem] block text-zinc-500">THE</span>
-            <span className="text-[2rem] sm:text-[3rem] md:text-[5rem] lg:text-[7rem] block">RIZZBOT</span>
+            <span className="text-[2.5rem] lg:text-[3.5rem] block text-zinc-500">THE</span>
+            <span className="text-[5rem] lg:text-[7rem] block">RIZZBOT</span>
           </h1>
-          <p className="text-zinc-500 max-w-xs text-xs sm:text-sm leading-relaxed font-editorial">
+          <p className="text-zinc-500 max-w-xs text-sm leading-relaxed font-editorial">
             AI-powered texting coach. Get advice, practice responses, never get ghosted.
           </p>
         </div>
 
-        {/* Profile Setup CTA (if no profile) - Compact */}
+        {/* Profile Setup CTA (if no profile) */}
         {!hasProfile && (
-          <div className="mt-4 sm:mt-5 bg-zinc-900/50 border border-zinc-800 p-2.5 sm:p-3 relative">
+          <div className="mt-5 bg-zinc-900/50 border border-zinc-800 p-3 relative">
             <CornerNodes className="opacity-20" />
             <div className="flex items-start gap-2.5">
-              <span className="text-base sm:text-lg">○</span>
+              <span className="text-lg">○</span>
               <div className="flex-1">
                 <div className="label-sm text-zinc-400 mb-0.5">RECOMMENDED</div>
-                <p className="text-[11px] sm:text-xs text-zinc-300 mb-1.5">set up your style profile for personalized suggestions</p>
+                <p className="text-xs text-zinc-300 mb-1.5">set up your style profile for personalized suggestions</p>
                 <button
                   onClick={() => onActivate('profile')}
-                  className="px-2.5 py-1 bg-white text-black text-[8px] sm:text-[9px] font-mono uppercase tracking-wider hover:bg-zinc-200 transition-colors"
+                  className="px-2.5 py-1 bg-white text-black text-[9px] font-mono uppercase tracking-wider hover:bg-zinc-200 transition-colors"
                 >
                   TEACH YOUR VOICE
                 </button>
@@ -394,37 +396,159 @@ const StandbyScreen = ({ onActivate, hasProfile, authUser }: {
         )}
       </div>
 
-      {/* RIGHT: MODULE SELECTOR - Compact buttons on mobile */}
-      <div className="flex flex-col overflow-hidden">
-        {/* QUICK MODE - Primary CTA */}
+      {/* RIGHT: MODULE SELECTOR - Desktop */}
+      <div className="flex flex-col">
+        {/* QUICK MODE */}
         <button
           onClick={() => onActivate('quick')}
-          className="flex-1 border-b border-zinc-800 p-3 sm:p-5 md:p-8 text-left hover:bg-emerald-900/20 active:bg-emerald-900/30 transition-all group relative overflow-hidden flex flex-col justify-center min-h-[100px] sm:min-h-[120px]"
+          className="flex-1 border-b border-zinc-800 p-8 text-left hover:bg-emerald-900/20 active:bg-emerald-900/30 transition-all group relative overflow-hidden flex flex-col justify-center"
         >
-          <div className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-all duration-500 hidden sm:block">
+          <div className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-all duration-500">
             <ArrowRight className="w-8 h-8 text-emerald-400 -rotate-45" />
           </div>
           <div className="label-sm text-zinc-500 group-hover:text-emerald-400 transition-colors mb-1">FAST LANE</div>
-          <h2 className="text-xl sm:text-3xl md:text-4xl font-impact text-zinc-300 group-hover:text-white transition-colors uppercase">
+          <h2 className="text-4xl font-impact text-zinc-300 group-hover:text-white transition-colors uppercase">
             Quick Mode
           </h2>
-          <div className="mt-1.5 sm:mt-2 opacity-60 group-hover:opacity-100 transition-opacity max-w-md text-[9px] sm:text-[11px] font-mono text-zinc-400">
+          <div className="mt-2 opacity-60 group-hover:opacity-100 transition-opacity max-w-md text-[11px] font-mono text-zinc-400">
             // PASTE MESSAGE → GET ADVICE
           </div>
         </button>
+        {/* PRACTICE MODE */}
         <button
           onClick={() => onActivate('simulator')}
-          className="flex-1 p-3 sm:p-5 md:p-8 text-left hover:bg-zinc-900/50 active:bg-zinc-800/50 transition-all group relative overflow-hidden flex flex-col justify-center min-h-[100px] sm:min-h-[120px]"
+          className="flex-1 p-8 text-left hover:bg-zinc-900/50 active:bg-zinc-800/50 transition-all group relative overflow-hidden flex flex-col justify-center"
         >
-          <div className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-all duration-500 hidden sm:block">
+          <div className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-all duration-500">
             <ArrowRight className="w-8 h-8 text-hard-blue -rotate-45" />
           </div>
           <div className="label-sm text-zinc-500 group-hover:text-hard-blue transition-colors mb-1">MODULE 02</div>
-          <h2 className="text-xl sm:text-3xl md:text-4xl font-impact text-zinc-300 group-hover:text-white transition-colors uppercase">
+          <h2 className="text-4xl font-impact text-zinc-300 group-hover:text-white transition-colors uppercase">
             Practice Mode
           </h2>
-          <div className="mt-1.5 sm:mt-2 opacity-60 group-hover:opacity-100 transition-opacity max-w-md text-[9px] sm:text-[11px] font-mono text-zinc-400">
+          <div className="mt-2 opacity-60 group-hover:opacity-100 transition-opacity max-w-md text-[11px] font-mono text-zinc-400">
             // REHEARSE TEXTS, SEND WITH CONFIDENCE
+          </div>
+        </button>
+      </div>
+    </div>
+
+    {/* MOBILE LAYOUT - TACTICAL COMMAND CENTER */}
+    <div className="md:hidden flex-1 min-h-0 flex flex-col overflow-y-auto bg-black relative">
+      <div className="absolute inset-0 bg-topo-pattern opacity-10 pointer-events-none fixed"></div>
+
+      {/* 1. HERO - Compact */}
+      <div className="pt-8 pb-4 px-5 relative z-10">
+        <div className="flex items-center justify-between mb-2">
+          <span className="label-sm text-hard-gold">COMMAND CENTER</span>
+          {authUser && (
+            <div className="flex items-center gap-2 bg-zinc-900/80 px-2 py-1 rounded-full border border-zinc-800">
+              {authUser.photoURL ? (
+                <img src={authUser.photoURL} alt="" className="w-3 h-3 rounded-full" />
+              ) : (
+                <div className="w-3 h-3 rounded-full bg-zinc-700"></div>
+              )}
+              <span className="text-[9px] font-mono text-zinc-300 uppercase">{authUser.displayName?.split(' ')[0] || 'User'}</span>
+            </div>
+          )}
+        </div>
+        <h1 className="leading-[0.85] font-impact text-white mb-2">
+          <span className="text-[1.5rem] block text-zinc-600">THE</span>
+          <span className="text-[3.5rem] block">RIZZBOT</span>
+        </h1>
+      </div>
+
+      {/* 2. STATUS WIDGET - Tactical Style */}
+      <div className="px-4 mb-4 relative z-10">
+        <div className="border border-zinc-800 bg-zinc-900/60 p-3 relative overflow-hidden group">
+          <CornerNodes className="opacity-40" />
+          <div className="flex items-center gap-3">
+            {/* Status Indicator */}
+            <div className={`w-10 h-10 flex items-center justify-center border ${hasProfile ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-zinc-700 bg-zinc-800'}`}>
+              {hasProfile ? (
+                <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.5)]"></div>
+              ) : (
+                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+              )}
+            </div>
+
+            {/* Text Content */}
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-0.5">
+                <span className={`text-[9px] font-mono uppercase tracking-widest ${hasProfile ? 'text-emerald-400' : 'text-yellow-500'}`}>
+                  {hasProfile ? 'SYSTEM CALIBRATED' : 'SYSTEM UNTRAINED'}
+                </span>
+                {hasProfile && <span className="text-[8px] font-mono text-zinc-500">V.1.0</span>}
+              </div>
+
+              {hasProfile ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-white font-bold uppercase">{userProfile?.preferredTone || 'Balanced'} Voice</span>
+                  <button onClick={() => onActivate('profile')} className="text-[8px] underline text-zinc-500 uppercase hover:text-white">Adjust</button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-zinc-400">Personalize AI responses</span>
+                  <button
+                    onClick={() => onActivate('profile')}
+                    className="bg-white text-black text-[9px] font-bold px-2 py-0.5 uppercase tracking-wide hover:bg-zinc-200"
+                  >
+                    INITIATE
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. ACTION MODULES - Tactical Cards */}
+      <div className="flex-1 px-4 space-y-3 pb-8 relative z-10">
+        {/* QUICK MODE - Gold */}
+        <button
+          onClick={() => onActivate('quick')}
+          className="w-full h-32 relative border border-zinc-800 bg-zinc-900/40 hover:bg-zinc-900/60 transition-all group overflow-hidden flex flex-col justify-between p-4"
+        >
+          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-hard-gold/50 to-transparent opacity-50"></div>
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-1.5 h-1.5 bg-hard-gold"></span>
+                <span className="text-[9px] font-mono text-hard-gold tracking-widest">PRIORITY_ACCESS</span>
+              </div>
+              <h2 className="text-3xl font-impact text-white uppercase tracking-wide">QUICK MODE</h2>
+            </div>
+            <ArrowRight className="text-zinc-600 group-hover:text-hard-gold transition-colors -rotate-45" />
+          </div>
+          <div className="flex items-end justify-between">
+            <span className="text-[10px] font-mono text-zinc-500 max-w-[150px] text-left">// UPLOAD SCREENSHOTS, GET INSTANT REPLIES</span>
+            <div className="px-2 py-1 border border-zinc-700 text-[9px] text-zinc-400 font-mono uppercase group-hover:bg-hard-gold group-hover:text-black group-hover:border-hard-gold transition-colors">
+              DEPLOY
+            </div>
+          </div>
+        </button>
+
+        {/* PRACTICE MODE - Blue */}
+        <button
+          onClick={() => onActivate('simulator')}
+          className="w-full h-32 relative border border-zinc-800 bg-zinc-900/40 hover:bg-zinc-900/60 transition-all group overflow-hidden flex flex-col justify-between p-4"
+        >
+          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-hard-blue/50 to-transparent opacity-50"></div>
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-1.5 h-1.5 bg-hard-blue"></span>
+                <span className="text-[9px] font-mono text-hard-blue tracking-widest">SIMULATION_02</span>
+              </div>
+              <h2 className="text-3xl font-impact text-white uppercase tracking-wide">PRACTICE</h2>
+            </div>
+            <ArrowRight className="text-zinc-600 group-hover:text-hard-blue transition-colors -rotate-45" />
+          </div>
+          <div className="flex items-end justify-between">
+            <span className="text-[10px] font-mono text-zinc-500 max-w-[150px] text-left">// REHEARSE CONVERSATIONS IN A SAFE ENVIRONMENT</span>
+            <div className="px-2 py-1 border border-zinc-700 text-[9px] text-zinc-400 font-mono uppercase group-hover:bg-hard-blue group-hover:text-black group-hover:border-hard-blue transition-colors">
+              ENTER
+            </div>
           </div>
         </button>
       </div>
@@ -660,50 +784,59 @@ function App() {
 
             {/* STANDBY MODULE */}
             {activeModule === 'standby' && (
-              <StandbyScreen onActivate={setActiveModule} hasProfile={!!(userProfile && userProfile.preferredTone)} authUser={authUser} />
+              <StandbyScreen onActivate={setActiveModule} hasProfile={!!(userProfile && userProfile.preferredTone)} authUser={authUser} userProfile={userProfile} />
             )}
 
             {/* PRACTICE MODE MODULE */}
             {activeModule === 'simulator' && (
               <div className="h-full w-full flex flex-col animate-fade-in bg-matte-base">
-                <Simulator
-                  userProfile={userProfile}
-                  firebaseUid={authUser.uid}
-                  userId={userId}
-                />
+                <ErrorBoundary>
+                  <Simulator
+                    userProfile={userProfile}
+                    firebaseUid={authUser.uid}
+                    userId={userId}
+                    onBack={() => setActiveModule('standby')}
+                  />
+                </ErrorBoundary>
               </div>
             )}
 
             {/* QUICK MODE MODULE */}
             {activeModule === 'quick' && (
               <div className="h-full w-full flex flex-col animate-fade-in">
-                <QuickAdvisor
-                  onBack={() => setActiveModule('standby')}
-                  userProfile={userProfile}
-                  firebaseUid={authUser.uid}
-                  userId={userId}
-                />
+                <ErrorBoundary>
+                  <QuickAdvisor
+                    onBack={() => setActiveModule('standby')}
+                    userProfile={userProfile}
+                    firebaseUid={authUser.uid}
+                    userId={userId}
+                  />
+                </ErrorBoundary>
               </div>
             )}
 
             {/* USER PROFILE MODULE */}
             {activeModule === 'profile' && (
               <div className="h-full w-full flex flex-col animate-fade-in">
-                <UserProfile
-                  onBack={() => setActiveModule('standby')}
-                  onSave={handleSaveProfile}
-                  initialProfile={userProfile}
-                  userId={userId}
-                  authUser={authUser}
-                  onSignOut={handleSignOut}
-                />
+                <ErrorBoundary>
+                  <UserProfile
+                    onBack={() => setActiveModule('standby')}
+                    onSave={handleSaveProfile}
+                    initialProfile={userProfile}
+                    userId={userId}
+                    authUser={authUser}
+                    onSignOut={handleSignOut}
+                  />
+                </ErrorBoundary>
               </div>
             )}
 
             {/* HISTORY MODULE */}
             {activeModule === 'history' && (
               <div className="h-full w-full flex flex-col animate-fade-in bg-matte-base">
-                <History firebaseUid={authUser?.uid} onBack={() => setActiveModule('standby')} />
+                <ErrorBoundary>
+                  <History firebaseUid={authUser?.uid} onBack={() => setActiveModule('standby')} />
+                </ErrorBoundary>
               </div>
             )}
           </div>

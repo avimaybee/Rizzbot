@@ -3,7 +3,7 @@ import { QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, FeedbackEntr
 import { getQuickAdvice } from '../services/geminiService';
 import { saveFeedback, logSession } from '../services/feedbackService';
 import { createSession, submitFeedback } from '../services/dbService';
-import { Sparkles, Upload, X, Image, ThumbsUp, Minus, ThumbsDown } from 'lucide-react';
+import { Sparkles, Upload, X, Image, ThumbsUp, Minus, ThumbsDown, ArrowLeft, Info } from 'lucide-react';
 import { useGlobalToast } from './Toast';
 
 interface QuickAdvisorProps {
@@ -306,24 +306,24 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
   // Input View
   if (!result) {
     return (
-      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-20 md:pb-0">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
+      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-32 md:pb-0">
 
-        {/* Header Bar */}
-        <div className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between relative z-10">
+        {/* TACTICAL HUD HEADER */}
+        <div className="border-b border-zinc-800 px-4 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
           <button
             onClick={onBack}
-            className="flex items-center gap-3 text-zinc-500 hover:text-white transition-colors group"
+            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2"
           >
-            <span className="text-lg">←</span>
-            <span className="text-[10px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">BACK</span>
+            <ArrowLeft className="w-5 h-5" />
+            <span className="text-[10px] sm:text-[9px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">BACK</span>
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 bg-hard-gold animate-pulse"></div>
-            <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">QUICK_MODE</span>
+            <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-500">QUICK_MODE</span>
           </div>
         </div>
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
 
         {/* Main Content */}
         <div className="flex-1 p-4 sm:p-6 md:p-10 flex flex-col relative z-10 overflow-y-auto">
@@ -429,7 +429,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
                     <button
                       key={opt.value}
                       onClick={() => setContext(opt.value)}
-                      className={`py-2 px-1 border text-[8px] sm:text-[9px] font-mono tracking-wider transition-all ${context === opt.value
+                      className={`py-3 px-1 border text-[10px] sm:text-[9px] font-mono tracking-wider transition-all ${context === opt.value
                         ? 'bg-white text-black border-white'
                         : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500 hover:text-zinc-300'
                         }`}
@@ -479,10 +479,10 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
       <div className="border-b border-zinc-800 px-4 sm:px-6 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
         <button
           onClick={resetForm}
-          className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group"
+          className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2"
         >
-          <span className="text-base">←</span>
-          <span className="text-[9px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">NEW</span>
+          <span className="text-lg">←</span>
+          <span className="text-[10px] sm:text-[9px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">NEW</span>
         </button>
         <div className={`px-3 py-1.5 text-[9px] font-bold tracking-widest ${getActionStyle(result.recommendedAction)}`}>
           {getActionLabel(result.recommendedAction)}

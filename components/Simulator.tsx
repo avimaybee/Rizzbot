@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Upload, MessageSquare, Copy, Check, Sparkles, ThumbsUp, Minus, ThumbsDown } from 'lucide-react';
+import { ChevronDown, ChevronUp, Upload, MessageSquare, Copy, Check, Sparkles, ThumbsUp, Minus, ThumbsDown, ArrowLeft } from 'lucide-react';
 import { generatePersona, simulateDraft, analyzeSimulation } from '../services/geminiService';
 import { saveFeedback, logSession } from '../services/feedbackService';
 import { createPersona, createSession } from '../services/dbService';
@@ -12,6 +12,7 @@ interface SimulatorProps {  // User's style profile for personalized suggestions
   firebaseUid?: string | null;
   // User's numeric ID for storing personas
   userId?: number | null;
+  onBack: () => void;
 }
 
 type View = 'setup' | 'chat' | 'analysis';
@@ -33,7 +34,7 @@ const CornerNodes = ({ className }: { className?: string }) => (
   </div>
 );
 
-export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, userId }) => {
+export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, userId, onBack }) => {
   const [view, setView] = useState<View>('setup');
   const { showToast } = useGlobalToast();
 
@@ -265,11 +266,26 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
   // --- SETUP VIEW ---
   if (view === 'setup') {
     return (
-      <div className="w-full h-full max-w-full mx-auto bg-matte-panel border border-zinc-800 flex flex-col shadow-2xl relative overflow-hidden pb-16 md:pb-0">
+      <div className="w-full h-full max-w-full mx-auto bg-matte-panel border border-zinc-800 flex flex-col shadow-2xl relative overflow-hidden pb-32 md:pb-0">
         <CornerNodes />
 
+        {/* TACTICAL HUD HEADER */}
+        <div className="border-b border-zinc-800 px-4 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="text-[10px] sm:text-[9px] font-mono uppercase tracking-widest group-hover:text-hard-blue transition-colors">BACK</span>
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 bg-hard-blue animate-pulse"></div>
+            <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-500">PRACTICE_MODE</span>
+          </div>
+        </div>
+
         {/* MOBILE: Show header first, then archive inline */}
-        <div className="flex flex-col md:flex-row h-full">
+        <div className="flex flex-col md:flex-row h-full overflow-hidden">
 
           {/* LEFT: SAVED PROFILES - Collapsible on mobile, sidebar on desktop */}
           <div className={`order-2 md:order-1 w-full md:w-1/3 border-t md:border-t-0 md:border-r border-zinc-800 bg-zinc-900/50 flex flex-col md:h-full ${savedPersonas.length === 0 ? 'hidden md:flex' : ''}`}>
@@ -295,7 +311,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                   <button
                     key={idx}
                     onClick={() => loadPersona(p)}
-                    className="w-full text-left p-3 bg-zinc-900/80 border border-zinc-800 hover:border-hard-blue hover:bg-zinc-800/80 transition-all group rounded-sm"
+                    className="w-full text-left p-4 bg-zinc-900/80 border border-zinc-800 hover:border-hard-blue hover:bg-zinc-800/80 transition-all group rounded-sm"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 shrink-0 bg-gradient-to-br from-hard-blue/20 to-hard-blue/5 border border-hard-blue/30 rounded-sm flex items-center justify-center text-hard-blue text-sm font-bold">
@@ -554,7 +570,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
               </p>
             </div>
           </div>
-          <button onClick={() => setView('chat')} className="label-sm text-zinc-400 hover:text-white border border-zinc-700 px-2.5 py-1.5 hover:bg-zinc-800 transition-colors">
+          <button onClick={() => setView('chat')} className="label-sm text-zinc-400 hover:text-white border border-zinc-700 px-4 py-2 hover:bg-zinc-800 transition-colors">
             ← BACK
           </button>
         </div>
