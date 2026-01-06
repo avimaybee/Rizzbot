@@ -114,7 +114,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-matte-base flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-[100dvh] bg-matte-base flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background Effects */}
       <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
       <div className="absolute inset-0 bg-scan-lines opacity-10 pointer-events-none"></div>

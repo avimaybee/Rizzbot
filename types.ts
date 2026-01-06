@@ -119,6 +119,22 @@ export interface QuickAdviceRequest {
 }
 
 /**
+ * Individual reply to a specific target message.
+ */
+export interface MessageReply {
+  originalMessage: string; // The target's message this replies to
+  reply: string;           // The suggested reply
+}
+
+/**
+ * A complete suggestion option with replies to all unreplied messages + hook.
+ */
+export interface SuggestionOption {
+  replies: MessageReply[];      // Replies to each unreplied message (in order)
+  conversationHook: string;     // Text to keep the conversation flowing
+}
+
+/**
  * Quick advice response with vibe check and suggestions.
  */
 export interface QuickAdviceResponse {
@@ -128,8 +144,12 @@ export interface QuickAdviceResponse {
     redFlags: string[]; // e.g., "dry responses", "taking forever to reply"
     greenFlags: string[]; // e.g., "asking questions", "using your name"
   };
-  // Extracted from screenshot OCR - the target's last message we're replying to
+  // All unreplied messages from target (in chronological order)
+  extractedUnrepliedMessages?: string[];
+  // Legacy: single extracted message (kept for backwards compat)
   extractedTargetMessage?: string;
+  // Brief context summary of the conversation
+  conversationContext?: string;
   draftAnalysis?: {
     // Only if yourDraft provided
     confidenceScore: number; // 0-100 (positive framing)
@@ -138,10 +158,11 @@ export interface QuickAdviceResponse {
     strengths: string[];
   };
   suggestions: {
-    smooth: string | string[]; // Natural flow, effortless - can be single or array of 3
-    bold: string | string[]; // Confident, direct - can be single or array of 3
-    authentic: string | string[]; // True to convo vibe but improved - can be single or array of 3
-    wait?: string | null; // Sometimes best move is no move - explains why
+    smooth: SuggestionOption[];    // 3 options - natural, effortless
+    bold: SuggestionOption[];      // 3 options - confident, direct
+    witty: SuggestionOption[];     // 3 options - subtle wordplay, clever (not cringe)
+    authentic: SuggestionOption[]; // 3 options - user's vibe, elevated (not forced copy)
+    wait?: string | null;          // Sometimes best move is no move - explains why
   };
   proTip: string; // One psychology-backed insight
   recommendedAction: 'SEND' | 'WAIT' | 'CALL' | 'MATCH' | 'PULL_BACK' | 'ABORT';

@@ -3,7 +3,7 @@ import { QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, FeedbackEntr
 import { getQuickAdvice } from '../services/geminiService';
 import { saveFeedback, logSession } from '../services/feedbackService';
 import { createSession, submitFeedback } from '../services/dbService';
-import { Sparkles, Upload, X, Image, ThumbsUp, Minus, ThumbsDown, ArrowLeft, Info } from 'lucide-react';
+import { Sparkles, Upload, X, Image, ThumbsUp, Minus, ThumbsDown, ArrowLeft, Info, CornerDownRight, Link2, Copy, Check } from 'lucide-react';
 import { useGlobalToast } from './Toast';
 
 interface QuickAdvisorProps {
@@ -45,11 +45,11 @@ const CornerNodes = ({ className }: { className?: string }) => (
   </div>
 );
 
-// Suggestion Category Component - handles both single string and array of suggestions
+// Suggestion Category Component - handles new multi-bubble SuggestionOption[] structure
 interface SuggestionCategoryProps {
   title: string;
   titleColor: string;
-  suggestions: string | string[];
+  options: import('../types').SuggestionOption[];
   copiedIndex: string | null;
   onCopy: (text: string, key: string) => void;
   categoryKey: string;
@@ -60,50 +60,88 @@ interface SuggestionCategoryProps {
 const SuggestionCategory: React.FC<SuggestionCategoryProps> = ({
   title,
   titleColor,
-  suggestions,
+  options,
   copiedIndex,
   onCopy,
   categoryKey,
   feedbackGiven,
   onFeedback,
 }) => {
-  const suggestionList = Array.isArray(suggestions) ? suggestions : [suggestions];
-
   return (
     <div className="relative">
       {/* Category Header */}
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-2 mb-3">
         <span className={`text-[10px] font-mono tracking-widest ${titleColor} uppercase`}>{title}</span>
-        {suggestionList.length > 1 && (
-          <span className="text-[9px] font-mono text-zinc-600">({suggestionList.length} OPTIONS)</span>
-        )}
+        <span className="text-[9px] font-mono text-zinc-600">({options.length} OPTIONS)</span>
       </div>
 
-      {/* Suggestion Options */}
-      <div className={suggestionList.length > 1 ? "space-y-2" : ""}>
-        {suggestionList.map((suggestion, index) => {
-          const copyKey = suggestionList.length > 1 ? `${categoryKey}-${index}` : categoryKey;
-          return (
-            <button
-              key={index}
-              onClick={() => onCopy(suggestion, copyKey)}
-              className="w-full text-left bg-zinc-900 border border-zinc-800 hover:border-zinc-600 transition-all group relative"
-            >
-              <CornerNodes className="opacity-30 group-hover:opacity-60" />
-              <div className="p-4 sm:p-5">
-                <div className="flex justify-between items-center mb-1.5">
-                  {suggestionList.length > 1 && (
-                    <span className="text-[9px] font-mono text-zinc-500">OPTION {index + 1}</span>
-                  )}
-                  <span className="text-[9px] font-mono text-zinc-600 group-hover:text-white transition-colors uppercase ml-auto">
-                    {copiedIndex === copyKey ? '✓ COPIED' : 'TAP TO COPY'}
-                  </span>
-                </div>
-                <p className="text-white text-sm leading-relaxed">{suggestion}</p>
+      {/* Options */}
+      <div className="space-y-4">
+        {options.map((option, optIndex) => (
+          <div
+            key={optIndex}
+            className="bg-zinc-900 border border-zinc-800 relative group/option"
+          >
+            <CornerNodes className="opacity-30 transition-opacity group-hover/option:opacity-60" />
+            <div className="p-4">
+              {/* Option Header */}
+              <div className="text-[9px] font-mono text-zinc-500 mb-3 uppercase tracking-widest">
+                OPTION {optIndex + 1}
               </div>
-            </button>
-          );
-        })}
+
+              {/* Individual Replies */}
+              <div className="space-y-2 mb-3">
+                {option.replies.map((replyItem, replyIndex) => {
+                  const replyKey = `${categoryKey}-${optIndex}-reply-${replyIndex}`;
+                  const isCopied = copiedIndex === replyKey;
+                  return (
+                    <button
+                      key={replyIndex}
+                      onClick={() => onCopy(replyItem.reply, replyKey)}
+                      className="w-full text-left bg-black/20 border border-zinc-800/50 hover:bg-black/40 hover:border-zinc-600 p-3 transition-all group active:scale-[0.99] relative overflow-hidden"
+                    >
+                      <div className="flex justify-between items-start gap-4 mb-1.5 opacity-60">
+                        <span className="text-[9px] font-mono text-zinc-500 flex items-center gap-1.5 truncate max-w-[80%]">
+                          <CornerDownRight className="w-3 h-3" />
+                          <span className="truncate">"{replyItem.originalMessage}"</span>
+                        </span>
+                        <div className={`flex items-center gap-1.5 text-[8px] font-mono uppercase tracking-wider transition-colors ${isCopied ? 'text-emerald-500' : 'text-zinc-700 group-hover:text-zinc-400'
+                          }`}>
+                          {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                          <span className="hidden sm:inline">{isCopied ? 'COPIED' : 'COPY'}</span>
+                        </div>
+                      </div>
+                      <p className="text-zinc-100 text-sm leading-relaxed pl-4 border-l-2 border-zinc-800 group-hover:border-zinc-600 transition-colors font-sans">
+                        {replyItem.reply}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Conversation Hook */}
+              {option.conversationHook && (
+                <button
+                  onClick={() => onCopy(option.conversationHook, `${categoryKey}-${optIndex}-hook`)}
+                  className="w-full text-left bg-zinc-800/20 border border-zinc-800 hover:border-hard-gold/50 hover:bg-zinc-800/40 p-3 transition-all group active:scale-[0.99]"
+                >
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className="text-[9px] font-mono text-hard-gold/60 flex items-center gap-1.5 uppercase tracking-wider">
+                      <Link2 className="w-3 h-3" />
+                      Conversation Hook
+                    </span>
+                    <div className={`flex items-center gap-1.5 text-[8px] font-mono uppercase tracking-wider transition-colors ${copiedIndex === `${categoryKey}-${optIndex}-hook` ? 'text-hard-gold' : 'text-zinc-700 group-hover:text-hard-gold/70'
+                      }`}>
+                      {copiedIndex === `${categoryKey}-${optIndex}-hook` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                      <span className="hidden sm:inline">{copiedIndex === `${categoryKey}-${optIndex}-hook` ? 'COPIED' : 'COPY'}</span>
+                    </div>
+                  </div>
+                  <p className="text-zinc-300 text-sm leading-relaxed font-sans">{option.conversationHook}</p>
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Feedback buttons */}
@@ -113,13 +151,13 @@ const SuggestionCategory: React.FC<SuggestionCategoryProps> = ({
             key={rating}
             onClick={() => onFeedback(rating)}
             disabled={!!feedbackGiven}
-            className={`px-3 py-2 border transition-all min-w-[44px] min-h-[44px] flex items-center justify-center ${feedbackGiven === rating
-              ? rating === 'helpful' ? 'bg-emerald-900/50 border-emerald-500 text-emerald-400' :
-                rating === 'mid' ? 'bg-yellow-900/50 border-yellow-500 text-yellow-400' :
-                  'bg-red-900/50 border-red-500 text-red-400'
+            className={`px-3 py-2 border transition-all min-w-[44px] min-h-[44px] flex items-center justify-center active:scale-95 ${feedbackGiven === rating
+              ? rating === 'helpful' ? 'bg-emerald-900/20 border-emerald-500/50 text-emerald-400' :
+                rating === 'mid' ? 'bg-yellow-900/20 border-yellow-500/50 text-yellow-400' :
+                  'bg-red-900/20 border-red-500/50 text-red-400'
               : feedbackGiven
-                ? 'border-zinc-800 text-zinc-700 cursor-not-allowed'
-                : 'border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300'
+                ? 'border-zinc-800 text-zinc-700 cursor-not-allowed opacity-50'
+                : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300'
               }`}
             title={rating === 'helpful' ? 'Helpful' : rating === 'mid' ? 'Neutral' : 'Not helpful'}
           >
@@ -218,11 +256,11 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
   const copyToClipboard = useCallback((text: string, key: string) => {
     navigator.clipboard.writeText(text);
     setCopiedIndex(key);
-    showToast('Response copied to clipboard!', 'copied');
+    showToast('Copied to clipboard', 'copied');
     setTimeout(() => setCopiedIndex(null), 1500);
   }, [showToast]);
 
-  const handleFeedback = useCallback((suggestionType: 'smooth' | 'bold' | 'authentic', rating: 'helpful' | 'mid' | 'off') => {
+  const handleFeedback = useCallback((suggestionType: 'smooth' | 'bold' | 'witty' | 'authentic', rating: 'helpful' | 'mid' | 'off') => {
     // Save feedback locally
     saveFeedback({
       source: 'quick',
@@ -615,7 +653,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
               <SuggestionCategory
                 title="SMOOTH"
                 titleColor="text-hard-gold"
-                suggestions={result.suggestions.smooth}
+                options={result.suggestions.smooth}
                 copiedIndex={copiedIndex}
                 onCopy={copyToClipboard}
                 categoryKey="smooth"
@@ -627,7 +665,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
               <SuggestionCategory
                 title="BOLD"
                 titleColor="text-hard-blue"
-                suggestions={result.suggestions.bold}
+                options={result.suggestions.bold}
                 copiedIndex={copiedIndex}
                 onCopy={copyToClipboard}
                 categoryKey="bold"
@@ -635,11 +673,23 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
                 onFeedback={(rating) => handleFeedback('bold', rating)}
               />
 
+              {/* Witty Options */}
+              <SuggestionCategory
+                title="WITTY"
+                titleColor="text-hard-purple"
+                options={result.suggestions.witty}
+                copiedIndex={copiedIndex}
+                onCopy={copyToClipboard}
+                categoryKey="witty"
+                feedbackGiven={feedbackGiven['witty']}
+                onFeedback={(rating) => handleFeedback('witty', rating)}
+              />
+
               {/* Authentic Options */}
               <SuggestionCategory
                 title="AUTHENTIC"
                 titleColor="text-white"
-                suggestions={result.suggestions.authentic}
+                options={result.suggestions.authentic}
                 copiedIndex={copiedIndex}
                 onCopy={copyToClipboard}
                 categoryKey="authentic"

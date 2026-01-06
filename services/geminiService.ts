@@ -613,7 +613,7 @@ export const getQuickAdvice = async (
 
     SCREENSHOT PARSING INSTRUCTIONS (if screenshots provided):
     - Detect platform: instagram or whatsapp or unknown
-    - Extract message-level metadata from the target's MOST RECENT LEFT-side message if visible
+    - Extract message-level metadata from the target's messages
       * deliveryStatus: for WhatsApp detect ticks (one tick = sent, two ticks = delivered, two blue ticks = read if visible); for Instagram detect 'seen' indicators or small avatars under message
       * bubbleSide: left means target (them), right means user (you)
       * timestamp: extract visible message timestamp or header ("Yesterday", "10:24 PM")
@@ -634,19 +634,23 @@ export const getQuickAdvice = async (
     - Messages on the RIGHT side (colored bubbles, typically blue/green) = USER (Me). These are OUR messages.
     - Messages on the LEFT side (gray/neutral bubbles) = TARGET (Them). This is who we're replying to.
     
-    YOUR PRIMARY TASK:
-    1. OCR and READ all messages in the screenshot(s)
-    2. IDENTIFY the TARGET's messages (LEFT SIDE ONLY)
-    3. EXTRACT their MOST RECENT/LAST message - this is what we need to reply to
-    4. Put this exact message text in the "extractedTargetMessage" field
+    YOUR PRIMARY TASK - MULTI-BUBBLE EXTRACTION:
+    1. OCR and READ ALL messages in the screenshot(s)
+    2. Study the ENTIRE visible conversation for CONTEXT (understand the flow, topics, energy)
+    3. Identify the USER's LAST message on the RIGHT side
+    4. Extract ALL TARGET messages (LEFT SIDE) that came AFTER the user's last message
+       - These are the "UNREPLIED" messages the user needs to respond to
+       - If user has not sent any visible message, treat ALL target messages as unreplied
+    5. List each unreplied message in CHRONOLOGICAL ORDER in "extractedUnrepliedMessages"
+    6. Also keep "extractedTargetMessage" as the MOST RECENT one for backwards compatibility
     
     ANALYSIS CHECKLIST:
     - Who is texting more? (Double texting? Long paragraphs?)
     - Time gaps (Who waits longer?)
     - Tone shifts (Did it get dry? Did they suddenly pull back?)
-    - The specific content of the LAST message from the TARGET
+    - Count how many messages the target sent that are unreplied
     
-    ${request.theirMessage ? `SITUATIONAL CONTEXT FROM USER: "${request.theirMessage}" (Use this backstory/context to inform your advice, but the actual message to reply to should be extracted from the screenshots)` : ''}
+    ${request.theirMessage ? `SITUATIONAL CONTEXT FROM USER: "${request.theirMessage}" (Use this backstory/context to inform your advice, but the actual messages to reply to should be extracted from the screenshots)` : ''}
     ` : `
     ${request.theirMessage ? `THEIR MESSAGE (what they sent, or situational context if ambiguous):
     "${request.theirMessage}"` : 'NO MESSAGE PROVIDED - user needs general advice'}
@@ -658,14 +662,36 @@ export const getQuickAdvice = async (
     TASK:
     1. Assess the vibe - what's the energy between them?
     2. ${request.yourDraft ? 'Analyze the draft - does it match their energy authentically?' : 'Think about responses that feel genuine and match the vibe'}
-    3. Give them options at different confidence levels
-    4. Drop one psychology-backed insight (casual, empowering)
-    5. Recommend an action that respects their authentic voice
+    3. For EACH unreplied message, generate a reply in 4 DIFFERENT STYLES
+    4. Include a CONVERSATION HOOK with each option to keep things flowing
+    5. Drop one psychology-backed insight (casual, empowering)
+    6. Recommend an action that respects their authentic voice
+    
+    ═══════════════════════════════════════════════
+    SUGGESTION CATEGORY DEFINITIONS
+    ═══════════════════════════════════════════════
+    
+    SMOOTH: Natural, effortless flow. Safe but not boring. Matches energy perfectly.
+    
+    BOLD: Confident, shows genuine interest. Takes initiative. Not aggressive, just assured.
+    
+    WITTY: Subtle wordplay, clever observations, light puns. 
+           CRITICAL: Must be SMOOTH and CHARMING - NOT nerdy, NOT dad jokes, NOT cringe.
+           Think "smirk in text form" - high IQ but chill. A hint, not a hammer.
+    
+    AUTHENTIC: Matches the USER's natural texting vibe (based on their style profile).
+               CRITICAL: Use their profile as a GUIDE for voice (length, caps, emoji), 
+               but write NATURAL high-quality replies. DO NOT force their exact words/phrases.
+               Write like their BEST SELF - same vibe, just polished. Don't caricature them.
+    
+    ═══════════════════════════════════════════════
     
     OUTPUT FORMAT (RAW JSON ONLY):
     {
-      ${request.screenshots && request.screenshots.length > 0 ? `"extractedTargetMessage": "string (THE EXACT TEXT of the target's most recent message from the LEFT side of the screenshot. This is CRITICAL - copy it word for word)",` : ''}
-      ${request.screenshots && request.screenshots.length > 0 ? `"detectedMeta": { "platform": "instagram|whatsapp|unknown", "deliveryStatus": "sent|delivered|read|unknown", "bubbleSide": "left|right|unknown", "timestamp": "string|null", "isMessageRequest": true|false|null, "reactions": ["emoji1","emoji2"], "quotedText": "string|null", "groupName": "string|null" },` : ''}
+      ${request.screenshots && request.screenshots.length > 0 ? `"extractedUnrepliedMessages": ["msg1", "msg2", ...] (ALL unreplied target messages in chronological order),
+      "extractedTargetMessage": "string (the MOST RECENT unreplied message - for backwards compat)",
+      "conversationContext": "string (brief 1-sentence summary of the convo so far)",
+      "detectedMeta": { "platform": "instagram|whatsapp|unknown", "deliveryStatus": "sent|delivered|read|unknown", "bubbleSide": "left|right|unknown", "timestamp": "string|null", "isMessageRequest": true|false|null, "reactions": ["emoji1","emoji2"], "quotedText": "string|null", "groupName": "string|null" },` : ''}
       "vibeCheck": {
         "theirEnergy": "cold" | "warm" | "hot" | "neutral" | "mixed",
         "interestLevel": number (0-100),
@@ -679,9 +705,20 @@ export const getQuickAdvice = async (
         "strengths": ["string"] (what's working)
       },` : ''}
       "suggestions": {
-        "smooth": ["string1", "string2", "string3"] (3 DISTINCT natural, authentic options - different approaches. Should feel like something they'd actually say),
-        "bold": ["string1", "string2", "string3"] (3 DISTINCT confident options - shows genuine interest, varying intensity),
-        "authentic": ["string1", "string2", "string3"] (3 DISTINCT true-to-their-vibe options - if user style known, match it. Otherwise warm and real),
+        "smooth": [
+          {
+            "replies": [
+              { "originalMessage": "exact target msg 1", "reply": "your reply to msg 1" },
+              { "originalMessage": "exact target msg 2", "reply": "your reply to msg 2" }
+            ],
+            "conversationHook": "text to keep convo flowing after replies"
+          },
+          { /* option 2 - same structure, DIFFERENT approach */ },
+          { /* option 3 - same structure, DIFFERENT approach */ }
+        ],
+        "bold": [ /* 3 options, same structure as smooth */ ],
+        "witty": [ /* 3 options, same structure - SUBTLE cleverness, NOT cringe */ ],
+        "authentic": [ /* 3 options, same structure - user's elevated vibe */ ],
         "wait": "string OR null (if they should let them come to you, explain why. null if replying now is good)"
       },
       "proTip": "string (one insight - start with 'ngl', 'tbh', 'fr' - empowering not preachy)",
@@ -689,6 +726,12 @@ export const getQuickAdvice = async (
       "timingRecommendation": "string (short guidance on reply speed/pacing)",
       "recommendedAction": "SEND" | "WAIT" | "CALL" | "MATCH" | "PULL_BACK" | "ABORT"
     }
+    
+    IMPORTANT FOR MULTI-BUBBLE REPLIES:
+    - Each OPTION in each category must have replies for ALL unreplied messages
+    - Replies should be in the same chronological order as extractedUnrepliedMessages
+    - The conversationHook comes AFTER all replies - it's the "keep it going" text
+    - If only 1 unreplied message, still use the array format with 1 reply object
     
     RECOMMENDATIONS:
     - SEND: energy is mutual, go for it
@@ -741,6 +784,10 @@ export const getQuickAdvice = async (
 
   } catch (error) {
     console.error("Quick Advice Failed:", error);
+    const fallbackOption = {
+      replies: [{ originalMessage: "their message", reply: "hey" }],
+      conversationHook: "whats good"
+    };
     return {
       vibeCheck: {
         theirEnergy: 'neutral',
@@ -749,9 +796,10 @@ export const getQuickAdvice = async (
         greenFlags: []
       },
       suggestions: {
-        smooth: "hey whats up",
-        bold: "been thinking about u",
-        authentic: "we should hang soon",
+        smooth: [fallbackOption, fallbackOption, fallbackOption],
+        bold: [fallbackOption, fallbackOption, fallbackOption],
+        witty: [fallbackOption, fallbackOption, fallbackOption],
+        authentic: [fallbackOption, fallbackOption, fallbackOption],
         wait: null
       },
       proTip: "ngl couldn't read that one properly, try again",

@@ -728,11 +728,10 @@ function App() {
       console.error('Failed to save user profile:', error);
     }
   };
-  // Show loading while checking auth state
   if (authLoading) {
     return (
-      <div className="flex h-screen w-screen bg-matte-base items-center justify-center">
-        <div className="text-center">
+      <div className="flex h-[100dvh] w-screen bg-matte-base items-center justify-center">
+        <div className="flex flex-col items-center justify-center">
           <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider mb-4">AUTHENTICATING...</div>
           <div className="w-8 h-8 border-2 border-zinc-700 border-t-white rounded-full animate-spin"></div>
         </div>
@@ -747,12 +746,12 @@ function App() {
 
   return (
     <ToastProvider>
-      <div className="flex h-screen w-screen bg-matte-base text-zinc-100 overflow-hidden font-sans selection:bg-white selection:text-black">
+      <div className="flex h-[100dvh] w-screen bg-matte-base text-zinc-100 overflow-hidden font-sans selection:bg-white selection:text-black">
 
         {/* Show loading state while syncing user with database */}
         {isLoadingUser && (
           <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
-            <div className="text-center">
+            <div className="flex flex-col items-center justify-center">
               <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider mb-4">SYNCING...</div>
               <div className="w-8 h-8 border-2 border-zinc-700 border-t-white rounded-full animate-spin"></div>
             </div>
