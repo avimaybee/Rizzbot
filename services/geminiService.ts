@@ -1412,7 +1412,6 @@ User's Own Notes: ${currentNotes.customNotes || 'none'}]
             CLOSURE_SCRIPT_TOOL,
             SAFETY_INTERVENTION_TOOL,
             PARENTAL_PATTERN_TOOL,
-            PARENTAL_PATTERN_TOOL,
             VALUES_MATRIX_TOOL,
             SAVE_MEMORY_TOOL
           ]

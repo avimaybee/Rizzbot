@@ -1,12 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Send, ArrowLeft, HeartHandshake, Loader2, ImagePlus, X, Edit3, ChevronRight, ChevronLeft, Target, Heart, Users, Sparkles, Eye, BookOpen, ShieldAlert, History, PanelRight, PanelRightClose, Activity, Terminal } from 'lucide-react';
+import { Plus, Send, ArrowLeft, HeartHandshake, ImagePlus, X, Edit3, Target, Heart, Users, Sparkles, Eye, BookOpen, ShieldAlert, History, Activity, Clipboard, AlertTriangle, Users2, Scale, Brain, Lightbulb, MessageCircle, ChevronRight, PanelRightOpen, PanelRightClose, Menu, BarChart3 } from 'lucide-react';
 import { streamTherapistAdvice } from '../services/geminiService';
 import { saveTherapistSession, getTherapistSession, getTherapistSessions, TherapistSession, getMemories, saveMemory, deleteMemory, updateMemory, TherapistMemory } from '../services/dbService';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Logo } from './Logo';
-import { TherapistMessage, ClinicalNotes, TherapistExercise, ExerciseType, Epiphany, PerspectiveInsight, PatternInsight, ProjectionInsight, ClosureScript, SafetyIntervention, ParentalPatternV2, ValuesMatrix } from '../types';
-import { Clipboard, Shield, AlertTriangle, Users2, Scale } from 'lucide-react';
+import { TherapistMessage, ClinicalNotes, TherapistExercise, ExerciseType } from '../types';
 
 interface TherapistChatProps {
     onBack: () => void;
@@ -24,59 +22,91 @@ const DEFAULT_NOTES: ClinicalNotes = {
 };
 
 const WELCOME_MESSAGE = `
-### SYSTEM READY. SESSION INITIALIZED.
+### Welcome to Therapist Mode
 
-I am your relationship therapist agent. My directive is to analyze your connections, detect patterns, and optimize your relational clarity.
+I'm here to help you process your relationship experiences, recognize patterns, and gain clarity.
 
-**OPERATIONAL CAPABILITIES:**
-- **VENTING & PROCESSING**: Unfiltered input stream accepted.
-- **PATTERN RECOGNITION**: Detection of recurring behavioral loops.
-- **TACTICAL TOOLS**: Assignment of communication scripts and exercises.
+**How I can help:**
+- **Vent freely** – Share without judgment
+- **Spot patterns** – Identify recurring dynamics  
+- **Get clarity** – Work through confusing situations
+- **Build skills** – Practice healthier communication
 
-**SYSTEM FEATURES:**
-- **MEMORY**: Seasonal and global context retention.
-- **INSIGHTS**: Real-time analysis of attachment style and themes.
-- **EXERCISES**: Targeted behavioral modifications.
-
-Input your status report or query to begin.
+What's on your mind today?
 `;
 
-// --- MOLECULES & ATOMS (RE-STYLED COMPACT) ---
-
-const SectionHeader = ({ icon: Icon, title, right }: { icon?: any, title: string, right?: React.ReactNode }) => (
-    <div className="flex items-center justify-between py-2 border-b border-zinc-900 mb-2 select-none">
-        <div className="flex items-center gap-1.5">
-            {Icon && <Icon className="w-3 h-3 text-zinc-600" />}
-            <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-[0.2em] font-display">{title}</span>
+// Corner Nodes - Matching app design system
+const CornerNodes = ({ className }: { className?: string }) => (
+    <div className={`pointer-events-none absolute inset-0 z-50 ${className}`}>
+        <div className="absolute top-0 left-0">
+            <div className="w-2 h-2 border-t border-l border-zinc-600"></div>
         </div>
-        {right}
+        <div className="absolute top-0 right-0">
+            <div className="w-2 h-2 border-t border-r border-zinc-600"></div>
+        </div>
+        <div className="absolute bottom-0 left-0">
+            <div className="w-2 h-2 border-b border-l border-zinc-600"></div>
+        </div>
+        <div className="absolute bottom-0 right-0">
+            <div className="w-2 h-2 border-b border-r border-zinc-600"></div>
+        </div>
     </div>
 );
 
-const Badge = ({ children, color = 'zinc' }: { children: React.ReactNode, color?: 'zinc' | 'emerald' | 'rose' | 'amber' }) => {
+// Insight Card Component - Polished inline insights
+const InsightCard = ({
+    title,
+    content,
+    icon: Icon,
+    accentColor = 'rose'
+}: {
+    title: string;
+    content: React.ReactNode;
+    icon: any;
+    accentColor?: 'rose' | 'emerald' | 'amber' | 'sky' | 'purple';
+}) => {
     const colors = {
-        zinc: 'bg-zinc-900 text-zinc-400 border-zinc-800',
-        emerald: 'bg-emerald-950/30 text-emerald-500 border-emerald-900/50',
-        rose: 'bg-rose-950/30 text-rose-500 border-rose-900/50',
-        amber: 'bg-amber-950/30 text-amber-500 border-amber-900/50',
+        rose: 'border-l-rose-500 bg-rose-950/20',
+        emerald: 'border-l-emerald-500 bg-emerald-950/20',
+        amber: 'border-l-amber-500 bg-amber-950/20',
+        sky: 'border-l-sky-500 bg-sky-950/20',
+        purple: 'border-l-purple-500 bg-purple-950/20',
     };
+
+    const iconColors = {
+        rose: 'text-rose-400',
+        emerald: 'text-emerald-400',
+        amber: 'text-amber-400',
+        sky: 'text-sky-400',
+        purple: 'text-purple-400',
+    };
+
     return (
-        <span className={`px-1.5 py-0.5 text-[9px] uppercase font-mono border rounded-sm ${colors[color]}`}>
-            {children}
-        </span>
+        <div className={`border-l-2 ${colors[accentColor]} p-3 sm:p-4 my-2 sm:my-3 rounded-r-lg animate-fade-in`}>
+            <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+                <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${iconColors[accentColor]}`} />
+                <span className="text-[10px] sm:text-xs font-mono uppercase tracking-wider text-zinc-400">{title}</span>
+            </div>
+            <div className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                {content}
+            </div>
+        </div>
     );
 };
 
-// Exercise Card Component (Compact)
-const ExerciseCard: React.FC<{ exercise: TherapistExercise; onComplete: (result: any) => void; onSkip: () => void; }> = ({ exercise, onComplete, onSkip }) => {
+// Exercise Card Component
+const ExerciseCard: React.FC<{
+    exercise: TherapistExercise;
+    onComplete: (result: any) => void;
+    onSkip: () => void;
+}> = ({ exercise, onComplete, onSkip }) => {
     const [boundaryInputs, setBoundaryInputs] = useState<string[]>(['', '', '']);
     const [needsValues, setNeedsValues] = useState({ safety: 50, connection: 50, autonomy: 50 });
-    const [quizAnswers, setQuizAnswers] = useState<number[]>([]);
 
     const exerciseConfig: Record<string, any> = {
-        boundary_builder: { icon: Target, title: 'Protocol: Boundaries', color: 'rose' },
-        needs_assessment: { icon: Heart, title: 'Protocol: Needs', color: 'zinc' },
-        attachment_quiz: { icon: Users, title: 'Protocol: Attachment', color: 'emerald' }
+        boundary_builder: { icon: Target, title: 'Boundary Builder', description: 'Define your non-negotiables' },
+        needs_assessment: { icon: Heart, title: 'Needs Assessment', description: 'Understand what you need' },
+        attachment_quiz: { icon: Users, title: 'Attachment Style', description: 'Explore your patterns' }
     };
 
     const config = exerciseConfig[exercise.type] || exerciseConfig.boundary_builder;
@@ -86,75 +116,366 @@ const ExerciseCard: React.FC<{ exercise: TherapistExercise; onComplete: (result:
         let result;
         if (exercise.type === 'boundary_builder') result = { boundaries: boundaryInputs.filter(b => b.trim()) };
         else if (exercise.type === 'needs_assessment') result = needsValues;
-        else if (exercise.type === 'attachment_quiz') result = { answers: quizAnswers };
+        else result = {};
         onComplete(result);
     };
 
     return (
-        <div className="w-full max-w-xl my-2 border border-zinc-800 bg-zinc-950/50 p-3 font-mono animate-fade-in rounded-sm">
-            <div className="flex items-center gap-2 mb-2 border-b border-zinc-900 pb-2">
-                <div className={`p-1 bg-zinc-900 border border-zinc-800`}>
-                    <Icon className="w-3 h-3 text-zinc-400" />
+        <div className="w-full max-w-2xl mx-auto my-3 sm:my-4 border border-zinc-800 bg-zinc-900/80 rounded-xl overflow-hidden animate-fade-in">
+            <CornerNodes className="opacity-30" />
+
+            {/* Header */}
+            <div className="bg-zinc-800/50 px-4 sm:px-5 py-3 sm:py-4 border-b border-zinc-700">
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-zinc-700/50 flex items-center justify-center">
+                        <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400" />
+                    </div>
+                    <div>
+                        <h3 className="text-sm sm:text-base font-semibold text-white">{config.title}</h3>
+                        <p className="text-[10px] sm:text-xs text-zinc-400">{config.description}</p>
+                    </div>
                 </div>
-                <h3 className="text-[10px] font-bold text-zinc-300 uppercase tracking-wider">{config.title}</h3>
             </div>
 
-            <p className="text-[10px] text-zinc-500 mb-4 font-italic">"{exercise.context}"</p>
+            {/* Context */}
+            <div className="px-4 sm:px-5 py-3 sm:py-4">
+                <p className="text-xs sm:text-sm text-zinc-400 italic mb-3 sm:mb-4">"{exercise.context}"</p>
 
-            {exercise.type === 'boundary_builder' && (
-                <div className="space-y-1.5 mb-3">
-                    <p className="text-[9px] text-zinc-600 uppercase">Input Non-Negotiables:</p>
-                    {boundaryInputs.map((input, i) => (
-                        <input key={i} type="text" value={input} onChange={(e) => {
-                            const newInputs = [...boundaryInputs]; newInputs[i] = e.target.value; setBoundaryInputs(newInputs);
-                        }} placeholder={`NON-NEGOTIABLE ${i + 1}...`} className="w-full bg-black border border-zinc-800 px-2 py-1.5 text-[10px] text-emerald-500 placeholder:text-zinc-800 focus:outline-none focus:border-emerald-900" />
-                    ))}
-                </div>
-            )}
+                {exercise.type === 'boundary_builder' && (
+                    <div className="space-y-2.5 sm:space-y-3">
+                        <label className="text-[10px] sm:text-xs font-mono uppercase tracking-wider text-zinc-500">Your Non-Negotiables</label>
+                        {boundaryInputs.map((input, i) => (
+                            <input
+                                key={i}
+                                type="text"
+                                value={input}
+                                onChange={(e) => {
+                                    const newInputs = [...boundaryInputs];
+                                    newInputs[i] = e.target.value;
+                                    setBoundaryInputs(newInputs);
+                                }}
+                                placeholder={`Boundary ${i + 1}...`}
+                                className="w-full bg-zinc-800 border border-zinc-700 px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-rose-500/50 rounded-lg transition-colors"
+                            />
+                        ))}
+                    </div>
+                )}
 
-            {exercise.type === 'needs_assessment' && (
-                <div className="space-y-3 mb-3">
-                    {Object.entries(needsValues).map(([need, value]) => (
-                        <div key={need} className="space-y-0.5">
-                            <div className="flex justify-between text-[9px] uppercase text-zinc-500">
-                                <span>{need}</span>
-                                <span className="text-emerald-500 font-bold">{value}%</span>
+                {exercise.type === 'needs_assessment' && (
+                    <div className="space-y-4">
+                        {Object.entries(needsValues).map(([need, value]) => (
+                            <div key={need}>
+                                <div className="flex justify-between text-xs sm:text-sm mb-2">
+                                    <span className="text-zinc-300 capitalize">{need}</span>
+                                    <span className="text-rose-400 font-mono">{value}%</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    value={value}
+                                    onChange={(e) => setNeedsValues({ ...needsValues, [need]: parseInt(e.target.value) })}
+                                    className="w-full h-2 bg-zinc-700 rounded-full appearance-none cursor-pointer accent-rose-500"
+                                />
                             </div>
-                            <input type="range" value={value} onChange={(e) => setNeedsValues({ ...needsValues, [need]: parseInt(e.target.value) })} className="w-full h-1 bg-zinc-900 appearance-none cursor-crosshair accent-emerald-500" />
-                        </div>
-                    ))}
-                </div>
-            )}
+                        ))}
+                    </div>
+                )}
+            </div>
 
-            <div className="flex gap-2 pt-1">
-                <button onClick={onSkip} className="px-3 py-1.5 border border-zinc-800 text-[9px] text-zinc-500 uppercase hover:bg-zinc-900 transition-colors">Skip</button>
-                <button onClick={handleSubmit} className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 text-[9px] text-emerald-500 font-bold uppercase hover:bg-zinc-800 hover:border-emerald-900 transition-colors">Submit</button>
+            {/* Actions */}
+            <div className="px-4 sm:px-5 py-3 sm:py-4 bg-zinc-800/30 border-t border-zinc-700/50 flex gap-3 justify-end">
+                <button
+                    onClick={onSkip}
+                    className="px-4 py-2.5 text-sm text-zinc-400 hover:text-white transition-colors min-h-[44px]"
+                >
+                    Skip
+                </button>
+                <button
+                    onClick={handleSubmit}
+                    className="px-5 py-2.5 bg-rose-500 hover:bg-rose-400 text-white text-sm font-medium rounded-lg transition-colors min-h-[44px]"
+                >
+                    Complete
+                </button>
             </div>
         </div>
     );
 };
 
-// Generic Insight Card (Compact)
-const InsightBlock = ({ title, icon: Icon, children, accent = 'zinc' }: { title: string, icon: any, children: React.ReactNode, accent?: 'zinc' | 'rose' | 'emerald' | 'amber' }) => {
-    const accents = {
-        zinc: 'border-l-zinc-700',
-        rose: 'border-l-rose-900',
-        emerald: 'border-l-emerald-900',
-        amber: 'border-l-amber-900',
-    };
-    return (
-        <div className={`pl-3 border-l ${accents[accent]} my-2 py-0.5 animate-fade-in`}>
-            <div className="flex items-center gap-1.5 mb-1">
-                <Icon className="w-3 h-3 text-zinc-600" />
-                <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">{title}</span>
-            </div>
-            {children}
+// Analysis Dashboard Card
+const AnalysisCard = ({
+    icon: Icon,
+    label,
+    value,
+    sublabel
+}: {
+    icon: any;
+    label: string;
+    value: string;
+    sublabel?: string;
+}) => (
+    <div className="bg-zinc-800/40 border border-zinc-700/50 rounded-lg p-3 sm:p-4">
+        <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+            <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-500" />
+            <span className="text-[10px] sm:text-xs font-mono uppercase tracking-wider text-zinc-500">{label}</span>
         </div>
+        <div className="text-base sm:text-lg font-semibold text-white capitalize">{value || '—'}</div>
+        {sublabel && <div className="text-[10px] sm:text-xs text-zinc-500 mt-1">{sublabel}</div>}
+    </div>
+);
+
+// Theme Badge
+const ThemeBadge = ({ children }: { children: React.ReactNode }) => (
+    <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-full">
+        {children}
+    </span>
+);
+
+// Memory Item Component
+const MemoryItem: React.FC<{
+    memory: TherapistMemory;
+    onUpdate: (id: number, content: string) => void;
+    onDelete: (id: number) => void;
+}> = ({ memory, onUpdate, onDelete }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [content, setContent] = useState(memory.content);
+
+    if (isEditing) {
+        return (
+            <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-3 animate-fade-in">
+                <textarea
+                    value={content}
+                    onChange={e => setContent(e.target.value)}
+                    className="w-full bg-zinc-900 text-sm text-white p-2 border border-zinc-700 rounded focus:outline-none focus:border-rose-500/50 resize-none"
+                    rows={3}
+                />
+                <div className="flex justify-end gap-3 mt-2">
+                    <button onClick={() => setIsEditing(false)} className="text-xs text-zinc-500 hover:text-white py-2 min-h-[44px]">Cancel</button>
+                    <button
+                        onClick={() => { onUpdate(memory.id!, content); setIsEditing(false); }}
+                        className="text-xs text-rose-400 hover:text-rose-300 py-2 min-h-[44px]"
+                    >
+                        Save
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="group relative bg-zinc-800/30 border border-zinc-700/50 rounded-lg p-3 hover:border-zinc-600 transition-colors">
+            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed pr-12">{memory.content}</p>
+            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => setIsEditing(true)} className="p-1.5 hover:bg-zinc-700 rounded">
+                    <Edit3 className="w-3 h-3 text-zinc-500" />
+                </button>
+                <button onClick={() => memory.id && onDelete(memory.id)} className="p-1.5 hover:bg-zinc-700 rounded">
+                    <X className="w-3 h-3 text-zinc-500" />
+                </button>
+            </div>
+            <div className="text-[10px] text-zinc-600 mt-2 font-mono">
+                {memory.type === 'GLOBAL' ? '📌 Core Memory' : '💭 Session'}
+            </div>
+        </div>
+    );
+};
+
+// Mobile Bottom Sheet for Analysis - Draggable
+const MobileAnalysisSheet = ({
+    isOpen,
+    onClose,
+    clinicalNotes,
+    memories,
+    onUpdateMemory,
+    onDeleteMemory
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    clinicalNotes: ClinicalNotes;
+    memories: TherapistMemory[];
+    onUpdateMemory: (id: number, content: string) => void;
+    onDeleteMemory: (id: number) => void;
+}) => {
+    const [activeTab, setActiveTab] = useState<'analysis' | 'memories'>('analysis');
+    const [sheetHeight, setSheetHeight] = useState(50); // percentage
+    const [isDragging, setIsDragging] = useState(false);
+    const startYRef = useRef(0);
+    const startHeightRef = useRef(50);
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        setIsDragging(true);
+        startYRef.current = e.touches[0].clientY;
+        startHeightRef.current = sheetHeight;
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!isDragging) return;
+        const deltaY = startYRef.current - e.touches[0].clientY;
+        const deltaPercent = (deltaY / window.innerHeight) * 100;
+        const newHeight = Math.min(90, Math.max(30, startHeightRef.current + deltaPercent));
+        setSheetHeight(newHeight);
+    };
+
+    const handleTouchEnd = () => {
+        setIsDragging(false);
+        // Snap to full or half
+        if (sheetHeight > 70) {
+            setSheetHeight(90);
+        } else if (sheetHeight < 40) {
+            setSheetHeight(40);
+        } else {
+            setSheetHeight(50);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <>
+            {/* Backdrop */}
+            <div
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-fade-in"
+                onClick={onClose}
+            />
+
+            {/* Sheet */}
+            <div
+                className="fixed bottom-0 left-0 right-0 bg-zinc-900 border-t border-zinc-700 rounded-t-2xl z-50 flex flex-col animate-slide-up"
+                style={{ height: `${sheetHeight}vh`, transition: isDragging ? 'none' : 'height 0.3s ease-out' }}
+            >
+                {/* Drag Handle */}
+                <div
+                    className="flex justify-center py-3 cursor-grab active:cursor-grabbing touch-none"
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                >
+                    <div className="w-12 h-1.5 bg-zinc-600 rounded-full" />
+                </div>
+
+                {/* Header with Tabs */}
+                <div className="px-4 pb-3 border-b border-zinc-800">
+                    <div className="flex gap-1 p-1 bg-zinc-800 rounded-lg">
+                        <button
+                            onClick={() => setActiveTab('analysis')}
+                            className={`flex-1 py-2.5 text-xs font-medium rounded-md transition-colors ${activeTab === 'analysis'
+                                ? 'bg-zinc-700 text-white'
+                                : 'text-zinc-500'
+                                }`}
+                        >
+                            Analysis
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('memories')}
+                            className={`flex-1 py-2.5 text-xs font-medium rounded-md transition-colors ${activeTab === 'memories'
+                                ? 'bg-zinc-700 text-white'
+                                : 'text-zinc-500'
+                                }`}
+                        >
+                            Memories
+                        </button>
+                    </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-safe">
+                    {activeTab === 'analysis' ? (
+                        <>
+                            {/* Status Cards */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <AnalysisCard
+                                    icon={Brain}
+                                    label="State"
+                                    value={clinicalNotes.emotionalState || 'Listening'}
+                                />
+                                <AnalysisCard
+                                    icon={HeartHandshake}
+                                    label="Attachment"
+                                    value={clinicalNotes.attachmentStyle}
+                                />
+                            </div>
+
+                            {/* Key Themes */}
+                            <div>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Sparkles className="w-4 h-4 text-zinc-500" />
+                                    <span className="text-xs font-mono uppercase tracking-wider text-zinc-500">Themes</span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {clinicalNotes.keyThemes.length > 0 ? (
+                                        clinicalNotes.keyThemes.map((t, i) => <ThemeBadge key={i}>{t}</ThemeBadge>)
+                                    ) : (
+                                        <span className="text-sm text-zinc-600 italic">Themes emerge as we talk...</span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Action Items */}
+                            <div>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Lightbulb className="w-4 h-4 text-zinc-500" />
+                                    <span className="text-xs font-mono uppercase tracking-wider text-zinc-500">Insights</span>
+                                </div>
+                                <div className="space-y-2">
+                                    {clinicalNotes.actionItems.length > 0 ? (
+                                        clinicalNotes.actionItems.map((item, i) => (
+                                            <div key={i} className="flex items-start gap-2 text-sm text-zinc-400">
+                                                <ChevronRight className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                                                <span>{item}</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <span className="text-sm text-zinc-600 italic">Insights will appear here...</span>
+                                    )}
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            {/* Core Memories */}
+                            <div>
+                                <div className="text-xs font-mono uppercase tracking-wider text-zinc-500 mb-3">Core Memories</div>
+                                <div className="space-y-2">
+                                    {memories.filter(m => m.type === 'GLOBAL').length > 0 ? (
+                                        memories.filter(m => m.type === 'GLOBAL').map(m => (
+                                            <MemoryItem
+                                                key={m.id}
+                                                memory={m}
+                                                onUpdate={onUpdateMemory}
+                                                onDelete={onDeleteMemory}
+                                            />
+                                        ))
+                                    ) : (
+                                        <p className="text-sm text-zinc-600 italic">Important patterns will be saved here</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Session Memories */}
+                            <div>
+                                <div className="text-xs font-mono uppercase tracking-wider text-zinc-500 mb-3">Session Context</div>
+                                <div className="space-y-2">
+                                    {memories.filter(m => m.type === 'SESSION').length > 0 ? (
+                                        memories.filter(m => m.type === 'SESSION').map(m => (
+                                            <MemoryItem
+                                                key={m.id}
+                                                memory={m}
+                                                onUpdate={onUpdateMemory}
+                                                onDelete={onDeleteMemory}
+                                            />
+                                        ))
+                                    ) : (
+                                        <p className="text-sm text-zinc-600 italic">Context from this session...</p>
+                                    )}
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+        </>
     );
 };
 
 // --- MAIN COMPONENT ---
-
 export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUid }) => {
     // --- STATE ---
     const [messages, setMessages] = useState<TherapistMessage[]>(() => {
@@ -175,7 +496,10 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
     const [pendingExercise, setPendingExercise] = useState<TherapistExercise | null>(null);
     const [memories, setMemories] = useState<TherapistMemory[]>([]);
     const [sessions, setSessions] = useState<TherapistSession[]>([]);
-    const [activeTab, setActiveTab] = useState<'notes' | 'memories'>('notes');
+    const [activeTab, setActiveTab] = useState<'analysis' | 'memories'>('analysis');
+    const [showRightPanel, setShowRightPanel] = useState(true);
+    const [showSessionDrawer, setShowSessionDrawer] = useState(false);
+    const [showMobileAnalysis, setShowMobileAnalysis] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -211,26 +535,32 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
         localStorage.removeItem('therapist_interaction_id');
         if (firebaseUid) getMemories(firebaseUid, 'GLOBAL').then(setMemories);
         setTimeout(() => setMessages([{ role: 'therapist', content: WELCOME_MESSAGE.trim(), timestamp: Date.now() }]), 0);
+        setShowSessionDrawer(false);
     };
 
     const handleLoadSession = (session: TherapistSession) => {
         setInteractionId(session.interaction_id);
         setMessages(session.messages || []);
         setClinicalNotes(session.clinical_notes || DEFAULT_NOTES);
+        setShowSessionDrawer(false);
     };
 
     const handleSend = async () => {
         const trimmed = inputValue.trim();
         if (!trimmed || isLoading) return;
 
-        const userMsg: TherapistMessage = { role: 'user', content: trimmed, timestamp: Date.now(), images: pendingImages.length ? [...pendingImages] : undefined };
+        const userMsg: TherapistMessage = {
+            role: 'user',
+            content: trimmed,
+            timestamp: Date.now(),
+            images: pendingImages.length ? [...pendingImages] : undefined
+        };
         setMessages(prev => [...prev, userMsg]);
         setInputValue('');
         setPendingImages([]);
         setIsLoading(true);
         setStreamingContent('');
 
-        // Mock Insights Holder
         let insights: any = {};
 
         try {
@@ -251,7 +581,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                 (ex) => setPendingExercise({ type: ex.type as ExerciseType, context: ex.context, completed: false }),
                 (name, args) => {
                     if (name === 'save_memory' && firebaseUid) {
-                        saveMemory(firebaseUid, args.type, args.content, interactionId).then(m => {
+                        saveMemory(firebaseUid, args.type, args.content, interactionId).then(() => {
                             setMemories(prev => [{ type: args.type, content: args.content, created_at: new Date().toISOString() }, ...prev]);
                         });
                     }
@@ -260,7 +590,6 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                 memories
             );
 
-            // Finalize message
             setMessages(prev => [...prev, {
                 role: 'therapist',
                 content: fullResponse,
@@ -274,7 +603,11 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
             setInteractionId(newId || interactionId);
         } catch (e) {
             console.error(e);
-            setMessages(prev => [...prev, { role: 'therapist', content: "SYSTEM ERROR. RE-SYNCING...", timestamp: Date.now() }]);
+            setMessages(prev => [...prev, {
+                role: 'therapist',
+                content: "I'm having trouble processing that right now. Could you try rephrasing, or let me know if you'd like to start fresh?",
+                timestamp: Date.now()
+            }]);
         } finally {
             setIsLoading(false);
             setStreamingContent('');
@@ -288,262 +621,553 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
         }
     };
 
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files?.length) {
+            Array.from(e.target.files).forEach(f => {
+                const r = new FileReader();
+                r.onload = () => setPendingImages(p => [...p, r.result as string]);
+                r.readAsDataURL(f);
+            });
+        }
+    };
+
     // --- RENDER ---
     return (
-        <div className="flex h-[100dvh] w-full bg-[#050505] text-zinc-300 font-mono overflow-hidden selection:bg-emerald-900 selection:text-emerald-50">
+        <div className="flex h-[100dvh] w-full bg-matte-base text-zinc-300 overflow-hidden">
 
-            {/* LEFT SIDEBAR: SESSION LOG (COMPACT: w-64) */}
-            <div className="hidden md:flex flex-col w-64 border-r border-zinc-900 bg-[#050505] relative z-20">
-                <div className="h-10 flex items-center px-3 border-b border-zinc-900 bg-zinc-950/30">
-                    <History className="w-3 h-3 text-zinc-600 mr-2" />
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-display">Session Log</span>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-1.5 scrollbar-hide space-y-0.5">
-                    <button onClick={handleNewSession} className="w-full py-2 mb-2 border border-dashed border-zinc-800 text-[9px] text-zinc-500 hover:text-emerald-500 hover:border-emerald-900 hover:bg-emerald-950/10 transition-all uppercase tracking-wider flex items-center justify-center gap-1.5">
-                        <Plus className="w-2.5 h-2.5" /> Initialize New
-                    </button>
-
-                    {sessions.map((s, i) => (
-                        <button key={i} onClick={() => handleLoadSession(s)} className={`w-full text-left p-2 border-l-2 transition-all group ${s.interaction_id === interactionId ? 'border-emerald-500 bg-zinc-900' : 'border-transparent hover:border-zinc-700 hover:bg-zinc-900/50'}`}>
-                            <div className="flex justify-between items-center mb-0.5">
-                                <span className={`text-[9px] uppercase font-bold ${s.interaction_id === interactionId ? 'text-emerald-500' : 'text-zinc-500 group-hover:text-zinc-400'}`}>
-                                    {new Date(s.created_at || Date.now()).toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })}
-                                </span>
-                                {s.interaction_id === interactionId && <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />}
+            {/* MOBILE SESSION DRAWER (Slide-out) */}
+            {showSessionDrawer && (
+                <>
+                    <div
+                        className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-fade-in"
+                        onClick={() => setShowSessionDrawer(false)}
+                    />
+                    <div className="md:hidden fixed top-0 left-0 bottom-0 w-full bg-zinc-900 z-50 border-r border-zinc-800 flex flex-col animate-slide-up">
+                        {/* Header */}
+                        <div className="h-14 flex items-center justify-between px-4 border-b border-zinc-800">
+                            <div className="flex items-center gap-2">
+                                <History className="w-4 h-4 text-zinc-500" />
+                                <span className="text-sm font-medium text-zinc-300">Sessions</span>
                             </div>
-                            <p className="text-[9px] text-zinc-600 truncate font-mono">
-                                {s.clinical_notes?.keyThemes?.[0] || 'Unlogged Session'}
-                            </p>
-                        </button>
-                    ))}
+                            <button
+                                onClick={() => setShowSessionDrawer(false)}
+                                className="p-2 -mr-2 text-zinc-500 hover:text-white"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* New Session Button */}
+                        <div className="p-3">
+                            <button
+                                onClick={handleNewSession}
+                                className="w-full flex items-center justify-center gap-2 py-3.5 border border-dashed border-zinc-700 hover:border-rose-500/50 hover:bg-rose-500/5 text-zinc-400 hover:text-rose-400 transition-all rounded-xl group min-h-[48px]"
+                            >
+                                <Plus className="w-4 h-4" />
+                                <span className="text-sm font-medium">New Session</span>
+                            </button>
+                        </div>
+
+                        {/* Session List */}
+                        <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-1.5 scrollbar-hide">
+                            {sessions.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <MessageCircle className="w-8 h-8 text-zinc-700 mx-auto mb-3" />
+                                    <p className="text-sm text-zinc-600">No sessions yet</p>
+                                </div>
+                            ) : (
+                                sessions.map((s, i) => (
+                                    <button
+                                        key={i}
+                                        onClick={() => handleLoadSession(s)}
+                                        className={`w-full text-left p-3.5 rounded-xl transition-all min-h-[56px] ${s.interaction_id === interactionId
+                                            ? 'bg-rose-500/10 border border-rose-500/30'
+                                            : 'bg-zinc-800/30 border border-transparent hover:bg-zinc-800/50'
+                                            }`}
+                                    >
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className={`text-xs font-mono ${s.interaction_id === interactionId ? 'text-rose-400' : 'text-zinc-500'
+                                                }`}>
+                                                {new Date(s.created_at || Date.now()).toLocaleDateString(undefined, {
+                                                    month: 'short',
+                                                    day: 'numeric'
+                                                })}
+                                            </span>
+                                            {s.interaction_id === interactionId && (
+                                                <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                                            )}
+                                        </div>
+                                        <p className="text-sm text-zinc-400 truncate">
+                                            {s.clinical_notes?.keyThemes?.[0] || 'Session notes'}
+                                        </p>
+                                    </button>
+                                ))
+                            )}
+                        </div>
+
+                        {/* Back Button */}
+                        <div className="p-3 border-t border-zinc-800 pb-safe">
+                            <button
+                                onClick={onBack}
+                                className="w-full flex items-center justify-center gap-2 py-3 text-sm text-zinc-500 hover:text-white transition-colors min-h-[48px]"
+                            >
+                                <ArrowLeft className="w-4 h-4" />
+                                <span>Back to Home</span>
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* DESKTOP LEFT SIDEBAR: SESSION HISTORY */}
+            <div className="hidden md:flex flex-col w-72 border-r border-zinc-800 bg-zinc-950 z-30">
+                {/* Header */}
+                <div className="h-14 flex items-center justify-between px-4 border-b border-zinc-800">
+                    <div className="flex items-center gap-2">
+                        <History className="w-4 h-4 text-zinc-500" />
+                        <span className="text-sm font-medium text-zinc-400">Sessions</span>
+                    </div>
                 </div>
 
-                <div className="p-2 border-t border-zinc-900">
-                    <button onClick={onBack} className="w-full flex items-center justify-center gap-1.5 py-1.5 text-[9px] uppercase text-zinc-600 hover:text-zinc-200 transition-colors">
-                        <ArrowLeft className="w-3 h-3" /> Return to Base
+                {/* New Session Button */}
+                <div className="p-3">
+                    <button
+                        onClick={handleNewSession}
+                        className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-zinc-700 hover:border-rose-500/50 hover:bg-rose-500/5 text-zinc-400 hover:text-rose-400 transition-all rounded-lg group"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span className="text-sm font-medium">New Session</span>
+                    </button>
+                </div>
+
+                {/* Session List */}
+                <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-1 scrollbar-hide">
+                    {sessions.length === 0 ? (
+                        <div className="text-center py-8">
+                            <MessageCircle className="w-8 h-8 text-zinc-700 mx-auto mb-3" />
+                            <p className="text-sm text-zinc-600">No sessions yet</p>
+                            <p className="text-xs text-zinc-700 mt-1">Start a conversation above</p>
+                        </div>
+                    ) : (
+                        sessions.map((s, i) => (
+                            <button
+                                key={i}
+                                onClick={() => handleLoadSession(s)}
+                                className={`w-full text-left p-3 rounded-lg transition-all group ${s.interaction_id === interactionId
+                                    ? 'bg-rose-500/10 border border-rose-500/30'
+                                    : 'hover:bg-zinc-800/50 border border-transparent'
+                                    }`}
+                            >
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className={`text-xs font-mono ${s.interaction_id === interactionId ? 'text-rose-400' : 'text-zinc-500'
+                                        }`}>
+                                        {new Date(s.created_at || Date.now()).toLocaleDateString(undefined, {
+                                            month: 'short',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                    </span>
+                                    {s.interaction_id === interactionId && (
+                                        <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                                    )}
+                                </div>
+                                <p className="text-sm text-zinc-400 truncate group-hover:text-zinc-300">
+                                    {s.clinical_notes?.keyThemes?.[0] || 'Session notes'}
+                                </p>
+                            </button>
+                        ))
+                    )}
+                </div>
+
+                {/* Back Button */}
+                <div className="p-3 border-t border-zinc-800">
+                    <button
+                        onClick={onBack}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 text-sm text-zinc-500 hover:text-white transition-colors"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span>Back to Home</span>
                     </button>
                 </div>
             </div>
 
-            {/* MAIN CONTENT: CHAT */}
-            <div className="flex-1 flex flex-col relative w-full bg-[#050505]">
-                {/* HEADER (COMPACT: h-10) */}
-                <div className="h-10 border-b border-zinc-900 flex items-center justify-between px-4 bg-[#050505] z-10 shrink-0">
-                    <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-sm animate-pulse" />
-                        <div>
-                            <h1 className="text-sm font-display font-bold text-zinc-100 uppercase tracking-tighter leading-none">Therapist // Mode</h1>
+            {/* MAIN CHAT AREA */}
+            <div className="flex-1 flex flex-col relative bg-matte-base">
+
+                {/* HEADER */}
+                <div className="h-14 border-b border-zinc-800 flex items-center justify-between px-3 sm:px-4 bg-zinc-950/80 backdrop-blur-sm z-20 shrink-0">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        {/* Mobile menu button */}
+                        <button
+                            onClick={() => setShowSessionDrawer(true)}
+                            className="md:hidden p-2 -ml-1 text-zinc-500 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center"
+                        >
+                            <Menu className="w-5 h-5" />
+                        </button>
+
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
+                            <h1 className="text-sm sm:text-base font-semibold text-white">Therapist</h1>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <div className="hidden md:flex items-center gap-1.5 px-1.5 py-0.5 bg-rose-950/20 border border-rose-900/30 rounded-sm">
-                            <Activity className="w-2.5 h-2.5 text-rose-500" />
-                            <span className="text-[9px] text-rose-400 font-mono uppercase">Recording</span>
+                    <div className="flex items-center gap-1 sm:gap-2">
+                        {/* Mobile Analysis Button */}
+                        <button
+                            onClick={() => setShowMobileAnalysis(true)}
+                            className="md:hidden p-2 text-zinc-500 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center"
+                        >
+                            <BarChart3 className="w-5 h-5" />
+                        </button>
+
+                        {/* Desktop Recording indicator */}
+                        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-rose-950/30 border border-rose-500/20 rounded-full">
+                            <Activity className="w-3 h-3 text-rose-400" />
+                            <span className="text-xs text-rose-400 font-mono">Active</span>
                         </div>
+
+                        {/* Desktop Toggle Analysis Panel */}
+                        <button
+                            onClick={() => setShowRightPanel(!showRightPanel)}
+                            className="hidden lg:flex p-2 text-zinc-500 hover:text-white transition-colors"
+                        >
+                            {showRightPanel ? <PanelRightClose className="w-5 h-5" /> : <PanelRightOpen className="w-5 h-5" />}
+                        </button>
                     </div>
                 </div>
 
-                {/* MESSAGES (COMPACT PADDING) */}
-                <div className="flex-1 overflow-y-auto p-3 md:p-5 space-y-4 scrollbar-hide">
-                    {messages.map((msg, idx) => (
-                        <div key={idx} className={`flex flex-col gap-1 max-w-3xl mx-auto animate-fade-in ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                            <div className="flex items-center gap-2 opacity-40">
-                                <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">
-                                    [{new Date(msg.timestamp).toLocaleTimeString([], { hour12: false })}] // {msg.role}
-                                </span>
-                            </div>
+                {/* MESSAGES */}
+                <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 scrollbar-hide">
+                    <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
+                        {messages.map((msg, idx) => (
+                            <div key={idx} className={`flex flex-col gap-1.5 sm:gap-2 animate-fade-in ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
 
-                            <div className={`relative max-w-[95%] md:max-w-[85%] ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                                {msg.images && (
-                                    <div className="flex gap-2 mb-2 justify-end">
-                                        {msg.images.map((img, i) => <img key={i} src={img} className="h-16 w-auto border border-zinc-800 grayscale hover:grayscale-0 transition-all rounded-sm" />)}
+                                {/* Timestamp */}
+                                <div className="flex items-center gap-2 opacity-50">
+                                    <span className="text-[10px] sm:text-xs font-mono text-zinc-500">
+                                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        {' · '}
+                                        {msg.role === 'user' ? 'You' : 'Therapist'}
+                                    </span>
+                                </div>
+
+                                {/* Message Content */}
+                                <div className={`relative max-w-[95%] sm:max-w-[90%] md:max-w-[80%] ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+
+                                    {/* Attached Images */}
+                                    {msg.images && (
+                                        <div className={`flex gap-2 mb-2 sm:mb-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                            {msg.images.map((img, i) => (
+                                                <img
+                                                    key={i}
+                                                    src={img}
+                                                    className="h-16 sm:h-20 w-auto border border-zinc-700 rounded-lg opacity-90 hover:opacity-100 transition-opacity"
+                                                    alt="Attached"
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Message Bubble */}
+                                    <div className={`inline-block px-4 sm:px-5 py-3 sm:py-4 rounded-2xl ${msg.role === 'user'
+                                        ? 'bg-rose-500/20 border border-rose-500/30 text-white'
+                                        : 'bg-zinc-800/60 border border-zinc-700/50 text-zinc-200'
+                                        }`}>
+                                        <div className="prose prose-sm prose-invert prose-p:my-1.5 sm:prose-p:my-2 prose-headings:text-zinc-200 prose-headings:font-semibold prose-strong:text-rose-300 max-w-none text-sm sm:text-base">
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Inline Insights */}
+                                {msg.role === 'therapist' && (
+                                    <div className="w-full max-w-[95%] sm:max-w-[90%] md:max-w-[80%] space-y-1.5 sm:space-y-2">
+                                        {msg.closureScript && (
+                                            <InsightCard
+                                                title="Closure Script"
+                                                icon={Clipboard}
+                                                accentColor="purple"
+                                                content={<p className="whitespace-pre-wrap">{msg.closureScript.script}</p>}
+                                            />
+                                        )}
+                                        {msg.safetyIntervention && (
+                                            <InsightCard
+                                                title="Important Notice"
+                                                icon={AlertTriangle}
+                                                accentColor="rose"
+                                                content={<p>{msg.safetyIntervention.reason}</p>}
+                                            />
+                                        )}
+                                        {msg.parentalPattern && (
+                                            <InsightCard
+                                                title="Pattern Detected"
+                                                icon={Users2}
+                                                accentColor="emerald"
+                                                content={<p className="italic">"{msg.parentalPattern.insight}"</p>}
+                                            />
+                                        )}
+                                        {msg.valuesMatrix && (
+                                            <InsightCard
+                                                title="Values Alignment"
+                                                icon={Scale}
+                                                accentColor="amber"
+                                                content={<p>{msg.valuesMatrix.alignmentScore}% alignment</p>}
+                                            />
+                                        )}
+                                        {(msg as any).perspective && (
+                                            <InsightCard
+                                                title="Their Perspective"
+                                                icon={Eye}
+                                                accentColor="sky"
+                                                content={<p className="italic">{(msg as any).perspective.suggestedMotive}</p>}
+                                            />
+                                        )}
+                                        {(msg as any).pattern && (
+                                            <InsightCard
+                                                title="Pattern Insight"
+                                                icon={BookOpen}
+                                                accentColor="amber"
+                                                content={<p className="font-medium">{(msg as any).pattern.patternName}</p>}
+                                            />
+                                        )}
                                     </div>
                                 )}
+                            </div>
+                        ))}
 
-                                <div className={`prose prose-invert prose-p:text-xs prose-p:font-mono prose-p:leading-relaxed prose-headings:font-display prose-headings:uppercase prose-headings:text-zinc-500 prose-strong:text-emerald-500 ${msg.role === 'user' ? 'text-zinc-100' : 'text-zinc-400'}`}>
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                        {/* Exercise Card */}
+                        {pendingExercise && !pendingExercise.completed && (
+                            <ExerciseCard
+                                exercise={pendingExercise}
+                                onComplete={(res) => {
+                                    setPendingExercise({ ...pendingExercise, completed: true });
+                                    setInputValue(`[Completed: ${pendingExercise.type}] ${JSON.stringify(res)}`);
+                                }}
+                                onSkip={() => setPendingExercise(null)}
+                            />
+                        )}
+
+                        {/* Streaming Response */}
+                        {isLoading && (
+                            <div className="flex flex-col gap-2 items-start animate-fade-in">
+                                <div className="flex items-center gap-2 opacity-50">
+                                    <span className="text-[10px] sm:text-xs font-mono text-rose-400">Processing...</span>
+                                </div>
+                                <div className="inline-block px-4 sm:px-5 py-3 sm:py-4 rounded-2xl bg-zinc-800/60 border border-zinc-700/50 max-w-[90%] sm:max-w-[80%]">
+                                    <div className="text-sm text-zinc-300 whitespace-pre-wrap">
+                                        {streamingContent}
+                                        <span className="inline-block w-2 h-4 bg-rose-500 ml-1 animate-pulse rounded-sm" />
+                                    </div>
                                 </div>
                             </div>
+                        )}
 
-                            {/* RENDER INSIGHTS IN-STREAM (Compact Blocks) */}
-                            <div className="w-full max-w-xl mt-1 space-y-1">
-                                {msg.closureScript && <InsightBlock title="Script Gen" icon={Clipboard} accent="zinc"><div className="text-[10px] text-zinc-300 whitespace-pre-wrap">{msg.closureScript.script}</div></InsightBlock>}
-                                {msg.safetyIntervention && <InsightBlock title="Safety Alert" icon={AlertTriangle} accent="rose"><div className="text-[10px] text-rose-300">{msg.safetyIntervention.reason}</div></InsightBlock>}
-                                {msg.parentalPattern && <InsightBlock title="Pattern Detect" icon={Users2} accent="emerald"><div className="text-[10px] text-emerald-400 italic">"{msg.parentalPattern.insight}"</div></InsightBlock>}
-                                {msg.valuesMatrix && <InsightBlock title="Align Matrix" icon={Scale} accent="amber"><div className="text-[10px] text-amber-400">{msg.valuesMatrix.alignmentScore}% Synergies</div></InsightBlock>}
-
-                                {/* Generic Insights */}
-                                {(msg as any).perspective && <InsightBlock title="Bridge" icon={Eye} accent="zinc"><div className="text-[10px] text-zinc-400 italic">{(msg as any).perspective.suggestedMotive}</div></InsightBlock>}
-                                {(msg as any).pattern && <InsightBlock title="Masterclass" icon={BookOpen} accent="amber"><div className="text-[10px] text-amber-400 font-bold">{(msg as any).pattern.patternName}</div></InsightBlock>}
-                                {(msg as any).projection && <InsightBlock title="Shadow" icon={ShieldAlert} accent="rose"><div className="text-[10px] text-rose-400 italic">Potential Projection of {(msg as any).projection.potentialRoot}</div></InsightBlock>}
-                            </div>
-                        </div>
-                    ))}
-
-                    {pendingExercise && !pendingExercise.completed && (
-                        <div className="flex justify-center">
-                            <ExerciseCard exercise={pendingExercise} onComplete={(res) => {
-                                setPendingExercise({ ...pendingExercise, completed: true });
-                                setInputValue(`[PROTOCOL COMPLETE: ${pendingExercise.type}] RESULTS: ${JSON.stringify(res)}`);
-                            }} onSkip={() => setPendingExercise(null)} />
-                        </div>
-                    )}
-
-                    {isLoading && (
-                        <div className="max-w-3xl mx-auto w-full">
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[9px] font-mono text-emerald-500 animate-pulse uppercase tracking-widest">/// ANALYSIS IN PROGRESS ///</span>
-                            </div>
-                            <div className="text-xs font-mono text-zinc-500 whitespace-pre-wrap leading-relaxed blur-[0.5px]">
-                                {streamingContent}<span className="inline-block w-1.5 h-3 bg-emerald-500 ml-1 animate-pulse" />
-                            </div>
-                        </div>
-                    )}
-                    <div ref={messagesEndRef} />
+                        <div ref={messagesEndRef} />
+                    </div>
                 </div>
 
-                {/* INPUT AREA: TERMINAL (COMPACT) */}
-                <div className="w-full bg-[#050505] p-3 md:p-4 border-t border-zinc-900 z-20 mb-[4.5rem] md:mb-0 shrink-0">
-                    <div className="max-w-4xl mx-auto">
-                        <div className="flex flex-col gap-1.5">
-                            {pendingImages.length > 0 && (
-                                <div className="flex gap-2 overflow-x-auto pb-1.5">
-                                    {pendingImages.map((img, i) => (
-                                        <div key={i} className="relative group">
-                                            <img src={img} className="h-10 w-auto border border-zinc-700 opacity-60 group-hover:opacity-100 rounded-sm" />
-                                            <button onClick={() => setPendingImages(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-3 h-3 flex items-center justify-center text-[8px] rounded-sm">X</button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                {/* INPUT AREA */}
+                <div className="border-t border-zinc-800 bg-zinc-950/80 backdrop-blur-sm p-3 sm:p-4 pb-20 sm:pb-4 md:pb-4">
+                    <div className="max-w-3xl mx-auto">
 
-                            <div className="flex gap-2 items-end">
-                                <span className="text-emerald-500 font-bold font-mono text-sm pb-0.5">{'>'}</span>
-                                <div className="flex-1 relative">
-                                    <input
-                                        ref={inputRef}
-                                        value={inputValue}
-                                        onChange={(e) => setInputValue(e.target.value)}
-                                        onKeyDown={handleKeyDown}
-                                        disabled={isLoading}
-                                        placeholder="ENTER COMMAND OR MESSAGE..."
-                                        className="term-input animate-cursor w-full bg-transparent border-none text-zinc-100 text-xs font-mono focus:ring-0 placeholder:text-zinc-800"
-                                        autoComplete="off"
+                        {/* Pending Images */}
+                        {pendingImages.length > 0 && (
+                            <div className="flex gap-2 mb-3 overflow-x-auto pb-2">
+                                {pendingImages.map((img, i) => (
+                                    <div key={i} className="relative group shrink-0">
+                                        <img src={img} className="h-14 sm:h-16 w-auto rounded-lg border border-zinc-700" alt="Upload" />
+                                        <button
+                                            onClick={() => setPendingImages(prev => prev.filter((_, idx) => idx !== i))}
+                                            className="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 text-white rounded-full flex items-center justify-center text-sm"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Input Row */}
+                        <div className="flex items-center gap-1.5 sm:gap-2 bg-zinc-900 border border-zinc-700 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 focus-within:border-rose-500/50 transition-colors">
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                className="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors shrink-0"
+                            >
+                                <ImagePlus className="w-5 h-5" />
+                            </button>
+
+                            <input
+                                ref={inputRef}
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                disabled={isLoading}
+                                placeholder="Share what's on your mind..."
+                                className="flex-1 bg-transparent text-white text-sm placeholder:text-zinc-600 focus:outline-none py-1"
+                                autoComplete="off"
+                            />
+
+                            <button
+                                onClick={handleSend}
+                                disabled={!inputValue.trim() || isLoading}
+                                className="p-1.5 text-zinc-500 hover:text-rose-400 disabled:opacity-30 disabled:hover:text-zinc-500 transition-colors shrink-0"
+                            >
+                                <Send className="w-5 h-5" />
+                            </button>
+
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleImageUpload}
+                                className="hidden"
+                                multiple
+                                accept="image/*"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* DESKTOP RIGHT SIDEBAR: ANALYSIS PANEL */}
+            {showRightPanel && (
+                <div className="hidden lg:flex flex-col w-80 border-l border-zinc-800 bg-zinc-950">
+
+                    {/* Tab Switcher */}
+                    <div className="h-14 flex items-center px-4 border-b border-zinc-800">
+                        <div className="flex gap-1 p-1 bg-zinc-900 rounded-lg w-full">
+                            <button
+                                onClick={() => setActiveTab('analysis')}
+                                className={`flex-1 py-2 text-xs font-medium rounded-md transition-colors ${activeTab === 'analysis'
+                                    ? 'bg-zinc-800 text-white'
+                                    : 'text-zinc-500 hover:text-zinc-300'
+                                    }`}
+                            >
+                                Analysis
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('memories')}
+                                className={`flex-1 py-2 text-xs font-medium rounded-md transition-colors ${activeTab === 'memories'
+                                    ? 'bg-zinc-800 text-white'
+                                    : 'text-zinc-500 hover:text-zinc-300'
+                                    }`}
+                            >
+                                Memories
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Panel Content */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
+                        {activeTab === 'analysis' ? (
+                            <>
+                                {/* Status Cards */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <AnalysisCard
+                                        icon={Brain}
+                                        label="State"
+                                        value={clinicalNotes.emotionalState || 'Listening'}
+                                    />
+                                    <AnalysisCard
+                                        icon={HeartHandshake}
+                                        label="Attachment"
+                                        value={clinicalNotes.attachmentStyle}
                                     />
                                 </div>
-                                <div className="flex gap-1.5">
-                                    <button onClick={() => fileInputRef.current?.click()} className="p-1.5 text-zinc-600 hover:text-zinc-300 transition-colors"><ImagePlus className="w-3.5 h-3.5" /></button>
-                                    <button onClick={handleSend} disabled={!inputValue.trim()} className="p-1.5 text-zinc-600 hover:text-emerald-500 transition-colors disabled:opacity-30"><Send className="w-3.5 h-3.5" /></button>
+
+                                {/* Key Themes */}
+                                <div>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <Sparkles className="w-4 h-4 text-zinc-500" />
+                                        <span className="text-xs font-mono uppercase tracking-wider text-zinc-500">Themes</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {clinicalNotes.keyThemes.length > 0 ? (
+                                            clinicalNotes.keyThemes.map((t, i) => <ThemeBadge key={i}>{t}</ThemeBadge>)
+                                        ) : (
+                                            <span className="text-sm text-zinc-600 italic">Themes emerge as we talk...</span>
+                                        )}
+                                    </div>
                                 </div>
-                                <input type="file" ref={fileInputRef} onChange={(e) => {
-                                    if (e.target.files?.length) {
-                                        Array.from(e.target.files).forEach(f => {
-                                            const r = new FileReader();
-                                            r.onload = () => setPendingImages(p => [...p, r.result as string]);
-                                            r.readAsDataURL(f);
-                                        });
-                                    }
-                                }} className="hidden" multiple accept="image/*" />
-                            </div>
-                        </div>
+
+                                {/* Action Items */}
+                                <div>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <Lightbulb className="w-4 h-4 text-zinc-500" />
+                                        <span className="text-xs font-mono uppercase tracking-wider text-zinc-500">Insights</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {clinicalNotes.actionItems.length > 0 ? (
+                                            clinicalNotes.actionItems.map((item, i) => (
+                                                <div key={i} className="flex items-start gap-2 text-sm text-zinc-400">
+                                                    <ChevronRight className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                                                    <span>{item}</span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <span className="text-sm text-zinc-600 italic">Insights will appear here...</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                {/* Core Memories */}
+                                <div>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className="text-xs font-mono uppercase tracking-wider text-zinc-500">Core Memories</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {memories.filter(m => m.type === 'GLOBAL').length > 0 ? (
+                                            memories.filter(m => m.type === 'GLOBAL').map(m => (
+                                                <MemoryItem
+                                                    key={m.id}
+                                                    memory={m}
+                                                    onUpdate={(id, c) => updateMemory(id, c, 'GLOBAL')}
+                                                    onDelete={(id) => deleteMemory(id)}
+                                                />
+                                            ))
+                                        ) : (
+                                            <p className="text-sm text-zinc-600 italic">Important patterns will be saved here</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Session Memories */}
+                                <div>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className="text-xs font-mono uppercase tracking-wider text-zinc-500">Session Context</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {memories.filter(m => m.type === 'SESSION').length > 0 ? (
+                                            memories.filter(m => m.type === 'SESSION').map(m => (
+                                                <MemoryItem
+                                                    key={m.id}
+                                                    memory={m}
+                                                    onUpdate={(id, c) => updateMemory(id, c, 'SESSION')}
+                                                    onDelete={(id) => deleteMemory(id)}
+                                                />
+                                            ))
+                                        ) : (
+                                            <p className="text-sm text-zinc-600 italic">Context from this session...</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
-            </div>
+            )}
 
-            {/* RIGHT SIDEBAR: CLINICAL OBSERVER (COMPACT: w-72, lg:flex) */}
-            <div className="hidden lg:flex flex-col w-72 border-l border-zinc-900 bg-[#050505] relative z-20">
-                <div className="flex items-center px-3 h-10 border-b border-zinc-900 bg-zinc-950/30">
-                    <div className="flex gap-1 p-0.5 bg-zinc-900 border border-zinc-800 rounded-sm w-full">
-                        <button onClick={() => setActiveTab('notes')} className={`flex-1 text-[9px] uppercase font-bold py-0.5 ${activeTab === 'notes' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}>Analysis</button>
-                        <button onClick={() => setActiveTab('memories')} className={`flex-1 text-[9px] uppercase font-bold py-0.5 ${activeTab === 'memories' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}>Memory</button>
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-3 scrollbar-hide space-y-4">
-                    {activeTab === 'notes' ? (
-                        <>
-                            {/* HUD STATS (COMPACT) */}
-                            <div className="grid grid-cols-2 gap-2">
-                                <div className="p-2 bg-zinc-900/50 border border-zinc-800 rounded-sm">
-                                    <div className="text-[9px] text-zinc-500 uppercase flex items-center gap-1 mb-0.5"><Target className="w-2.5 h-2.5" /> State</div>
-                                    <div className="text-[10px] text-zinc-200 font-mono capitalize truncate">{clinicalNotes.emotionalState || '---'}</div>
-                                </div>
-                                <div className="p-2 bg-zinc-900/50 border border-zinc-800 rounded-sm">
-                                    <div className="text-[9px] text-zinc-500 uppercase flex items-center gap-1 mb-0.5"><HeartHandshake className="w-2.5 h-2.5" /> Attach</div>
-                                    <div className="text-[10px] text-zinc-200 font-mono capitalize truncate">{clinicalNotes.attachmentStyle}</div>
-                                </div>
-                            </div>
-
-                            {/* THEMES */}
-                            <div>
-                                <SectionHeader title="Themes" icon={Sparkles} />
-                                <div className="flex flex-wrap gap-1">
-                                    {clinicalNotes.keyThemes.length ? clinicalNotes.keyThemes.map((t, i) => <Badge key={i}>{t}</Badge>) : <span className="text-[9px] text-zinc-700 italic">No patterns...</span>}
-                                </div>
-                            </div>
-
-                            {/* DIRECTIVES */}
-                            <div>
-                                <SectionHeader title="Directives" icon={Shield} />
-                                <ul className="space-y-1.5">
-                                    {clinicalNotes.actionItems.length ? clinicalNotes.actionItems.map((item, i) => (
-                                        <li key={i} className="text-[10px] text-zinc-400 font-mono pl-2 border-l border-emerald-900/50 flex gap-1.5">
-                                            <span className="text-emerald-900 font-bold">::</span> {item}
-                                        </li>
-                                    )) : <span className="text-[9px] text-zinc-700 italic">Awaiting protocol...</span>}
-                                </ul>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="space-y-4">
-                            <div>
-                                <SectionHeader title="Core Memories" icon={Terminal} />
-                                <div className="space-y-1.5">
-                                    {memories.filter(m => m.type === 'GLOBAL').map(m => (
-                                        <MemoryItem key={m.id} memory={m} onUpdate={(id, c) => updateMemory(id, c, 'GLOBAL')} onDelete={(id) => deleteMemory(id)} className="text-[10px] bg-zinc-900/30 p-2 border border-zinc-900" />
-                                    ))}
-                                </div>
-                            </div>
-                            <div>
-                                <SectionHeader title="Session Context" icon={History} />
-                                <div className="space-y-1.5">
-                                    {memories.filter(m => m.type === 'SESSION').map(m => (
-                                        <MemoryItem key={m.id} memory={m} onUpdate={(id, c) => updateMemory(id, c, 'SESSION')} onDelete={(id) => deleteMemory(id)} className="text-[10px] bg-zinc-900/30 p-2 border border-zinc-900" />
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// Memory Item Helper for Compact Mode
-const MemoryItem: React.FC<{ memory: TherapistMemory; onUpdate: (id: number, c: string) => void; onDelete: (id: number) => void; className?: string }> = ({ memory, onUpdate, onDelete, className }) => {
-    const [isEditing, setIsEditing] = useState(false);
-    const [content, setContent] = useState(memory.content);
-
-    if (isEditing) return (
-        <div className="space-y-1 p-2 bg-zinc-950 border border-zinc-800 animate-fade-in">
-            <textarea value={content} onChange={e => setContent(e.target.value)} className="w-full bg-black text-[10px] text-white p-1 border border-zinc-800 focus:outline-none scrollbar-hide" rows={2} />
-            <div className="flex justify-end gap-2">
-                <button onClick={() => setIsEditing(false)} className="text-[9px] text-zinc-600">CANCEL</button>
-                <button onClick={() => { onUpdate(memory.id!, content); setIsEditing(false); }} className="text-[9px] text-emerald-500">SAVE</button>
-            </div>
-        </div>
-    );
-
-    return (
-        <div className={`group relative ${className || 'p-2'}`}>
-            <p className="text-[10px] text-zinc-400 leading-snug">{memory.content}</p>
-            <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50">
-                <button onClick={() => setIsEditing(true)}><Edit3 className="w-2.5 h-2.5 text-zinc-500 hover:text-white" /></button>
-                <button onClick={() => memory.id && onDelete(memory.id)}><X className="w-2.5 h-2.5 text-zinc-500 hover:text-white" /></button>
-            </div>
+            {/* MOBILE ANALYSIS BOTTOM SHEET */}
+            <MobileAnalysisSheet
+                isOpen={showMobileAnalysis}
+                onClose={() => setShowMobileAnalysis(false)}
+                clinicalNotes={clinicalNotes}
+                memories={memories}
+                onUpdateMemory={(id, c) => updateMemory(id, c, 'GLOBAL')}
+                onDeleteMemory={(id) => deleteMemory(id)}
+            />
         </div>
     );
 };
