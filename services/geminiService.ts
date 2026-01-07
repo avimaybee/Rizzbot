@@ -2,14 +2,31 @@ import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { SimResult, Persona, SimAnalysisResult, QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, StyleExtractionRequest, StyleExtractionResponse, AIExtractedStyleProfile } from "../types";
 import { getPromptBias } from "./feedbackService";
 
-// Get API key from Vite environment variable
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string;
+// Get API key from Vite environment variable or process.env
+// Try multiple formats to be robust (VITE_ prefixed or raw GEMINI_)
+const getEnvVar = (key: string) => {
+  if (import.meta.env && import.meta.env[key]) return import.meta.env[key];
+  try {
+    // Safe check for process.env in case it's available (some setups polyfill it)
+    // @ts-ignore
+    if (typeof process !== 'undefined' && process.env && process.env[key]) {
+      // @ts-ignore
+      return process.env[key];
+    }
+  } catch (e) {
+    // ignore
+  }
+  return '';
+};
+
+const apiKey = getEnvVar('VITE_GEMINI_API_KEY') || getEnvVar('GEMINI_API_KEY');
 
 if (!apiKey) {
-  console.error('VITE_GEMINI_API_KEY is not set. Please create a .env file with GEMINI_API_KEY=your_key');
+  console.error('API KEY MISSING: VITE_GEMINI_API_KEY or GEMINI_API_KEY not found.');
 }
 
-const ai = new GoogleGenAI({ apiKey: apiKey || '' });
+// Initialize with a dummy key if missing to prevent immediate crash, but calls will fail
+const ai = new GoogleGenAI({ apiKey: apiKey || 'dummy_key' });
 
 // SAFETY SETTINGS: BLOCK_NONE as requested for mature/unrestricted feedback
 const safetySettings = [
@@ -55,6 +72,59 @@ async function retryWithBackoff<T>(
 
   // This should never be reached, but ensures we always throw a meaningful error
   throw lastError;
+}
+
+// --- FALLBACK LOGIC ---
+const PRIMARY_MODEL = "gemini-3-flash-preview";
+const FALLBACK_MODEL = "gemini-2.5-flash"; // Standard free tier, reliable
+
+/**
+ * Robust wrapper for Gemini generation with Model Fallback.
+ * Tries PRIMARY_MODEL first. If it hits 429 (Quota) or 503 (Overloaded), 
+ * it seamlessly retries with FALLBACK_MODEL.
+ */
+async function runWithFallback(
+  operation: (model: string) => Promise<any>,
+  operationName: string
+): Promise<any> {
+  try {
+    // Try Primary Model
+    return await retryWithBackoff(() => operation(PRIMARY_MODEL), `${operationName} [Primary]`);
+  } catch (error: any) {
+    const msg = error?.message || error?.toString() || '';
+
+    // Check for Quota (429) or Overloaded (503) or generic 500s that might be model specific
+    if (msg.includes('429') || msg.includes('503') || msg.includes('Quota') || msg.includes('Overloaded')) {
+      console.warn(`⚠️ ${operationName}: Primary model (${PRIMARY_MODEL}) failed (${msg}). Switching to fallback: ${FALLBACK_MODEL}`);
+
+      // Try Fallback Model
+      return await retryWithBackoff(() => operation(FALLBACK_MODEL), `${operationName} [Fallback]`);
+    }
+
+    // If it's a safety block or request error, don't retry with fallback, just throw
+    throw error;
+  }
+}
+
+/**
+ * Robust wrapper for STREAMING with Fallback.
+ * Note: Once a stream starts successfully, we can't fallback mid-stream easily.
+ * This protects against the initial connection/handshake failing.
+ */
+async function runStreamWithFallback(
+  operation: (model: string) => Promise<any>,
+  operationName: string
+): Promise<any> {
+  try {
+    return await operation(PRIMARY_MODEL);
+  } catch (error: any) {
+    const msg = error?.message || error?.toString() || '';
+    if (msg.includes('429') || msg.includes('503') || msg.includes('Quota')) {
+      console.warn(`⚠️ ${operationName}: Primary stream failed. Switching to fallback.`);
+      return await operation(FALLBACK_MODEL);
+    }
+    throw error;
+  }
 }
 
 export const generatePersona = async (
@@ -117,9 +187,9 @@ export const generatePersona = async (
   });
 
   try {
-    const response = await retryWithBackoff(
-      () => ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+    const response = await runWithFallback(
+      (modelId) => ai.models.generateContent({
+        model: modelId,
         contents: { parts: parts },
         config: { safetySettings: safetySettings }
       }),
@@ -431,9 +501,9 @@ export const analyzeSimulation = async (
   `;
 
   try {
-    const response = await retryWithBackoff(
-      () => ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+    const response = await runWithFallback(
+      (modelId) => ai.models.generateContent({
+        model: modelId,
         contents: prompt,
         config: { safetySettings: safetySettings }
       }),
@@ -762,9 +832,9 @@ export const getQuickAdvice = async (
   }
 
   try {
-    const response = await retryWithBackoff(
-      () => ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+    const response = await runWithFallback(
+      (modelId) => ai.models.generateContent({
+        model: modelId,
         contents: parts,
         config: { safetySettings: safetySettings }
       }),
@@ -966,10 +1036,16 @@ const THERAPIST_SYSTEM_INSTRUCTION = `You are a Relationship Therapist AI. Your 
 
 CORE PRINCIPLES:
 1. UNBIASED OBSERVER: You do not take sides. You help the user see ALL perspectives, including uncomfortable truths they might be avoiding.
+
 2. PROBING QUESTIONS: Ask clarifying questions to uncover the REAL issues. Don't accept surface-level explanations. Dig deeper.
 3. PATTERN RECOGNITION: Identify recurring patterns in their behavior and their partner's behavior. Help them see what they can't.
 4. EMPOWERMENT: Guide them toward their own realizations rather than telling them what to do. Use Socratic questioning.
 5. HONESTY: Be kind, but don't sugarcoat. If they're in a toxic situation, gently help them see it. If they're the problem, help them recognize it without shaming.
+6. MEMORY MANAGEMENT: You have access to "Memories". 
+   - GLOBAL memories are facts about the user (names, history, core patterns) that persist forever.
+   - SESSION memories are relevant only to the current conversation context.
+   - You MUST use the 'save_memory' tool when you learn something new and significant. 
+   - DONT be redundant. If you already know something from the context, don't save it again.
 
 COMMUNICATION STYLE:
 - Warm but professional
@@ -979,6 +1055,7 @@ COMMUNICATION STYLE:
 - Use lowercase for a more intimate, conversational feel
 - Avoid being preachy or lecture-y. this is a conversation, not a ted talk.
 - you can use light slang naturally (ngl, tbh) but keep it professional-ish
+- **DO NOT USE HTML TAGS** (like <small>, <br>, etc). Use standard Markdown only. Use *italics* for asides.
 
 WHAT YOU UNCOVER:
 - Attachment styles at play
@@ -1000,6 +1077,7 @@ You have access to an "assign_exercise" tool. Use it when you believe the user w
 Only assign ONE exercise at a time, and explain why you're assigning it in your response text.
 
 ADVANCED THERAPEUTIC TOOLS:
+- **save_memory**: Save a new fact or insight. Use 'GLOBAL' for user facts (e.g. "Name is Sarah", "Has trust issues from dad") or 'SESSION' for temp info.
 - **log_epiphany**: Whenever the user reaches a breakthrough or a major realization, log it. These will be tracked in their Insight Timeline.
 - **show_perspective_bridge**: Use this to rebuild empathy. Reconstruct the partner's likely inner experience or "Core Wound" based on the patterns you see. This helps the user see the "Untold Story."
 - **show_communication_insight**: Provide academic/contextual education (e.g., Gottman's Four Horsemen) when you see specific behaviors. Explain the "WHY" behind the behavior.
@@ -1214,6 +1292,20 @@ const VALUES_MATRIX_TOOL = {
   }
 };
 
+// Tool for Saving Memories
+const SAVE_MEMORY_TOOL = {
+  name: "save_memory",
+  description: "Save a significant fact, pattern, or insight about the user as a memory.",
+  parameters: {
+    type: "object",
+    properties: {
+      type: { type: "string", enum: ["GLOBAL", "SESSION"], description: "GLOBAL = Permanent fact/pattern. SESSION = Context for this convo only." },
+      content: { type: "string", description: "The content of the memory (e.g. 'Partner's name is Alex', 'User feels anxious when ignored')" }
+    },
+    required: ["type", "content"]
+  }
+};
+
 
 // Helper to safely extract text from a chunk/response
 function getResponseText(response: any): string {
@@ -1256,10 +1348,21 @@ export const streamTherapistAdvice = async (
   onChunk: (text: string) => void,
   onNotesUpdate: (notes: Partial<ClinicalNotes>) => void,
   onExerciseAssign?: (exercise: { type: string; context: string }) => void,
-  onToolCall?: (toolName: string, args: any) => void
+  onToolCall?: (toolName: string, args: any) => void,
+  memories?: { type: 'GLOBAL' | 'SESSION', content: string, created_at?: string }[]
 ): Promise<string> => {
   try {
     const parts: any[] = [];
+
+    // Add Memories Context
+    if (memories && memories.length > 0) {
+      const globalMems = memories.filter(m => m.type === 'GLOBAL').map(m => `- ${m.content}`).join('\n');
+      const sessionMems = memories.filter(m => m.type === 'SESSION').map(m => `- ${m.content}`).join('\n');
+
+      parts.push({
+        text: `[EXISTING MEMORIES/CONTEXT]\n\nGLOBAL MEMORIES (Permanent Context):\n${globalMems || 'None'}\n\nSESSION MEMORIES (Current Context):\n${sessionMems || 'None'}\n\n`
+      });
+    }
 
     // Add current clinical notes context if available
     if (currentNotes && (currentNotes.keyThemes?.length || currentNotes.customNotes)) {
@@ -1294,7 +1397,7 @@ User's Own Notes: ${currentNotes.customNotes || 'none'}]
     parts.push({ text: userMessage });
 
     const result = await ai.models.generateContentStream({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: [{ role: "user", parts }],
       config: {
         systemInstruction: THERAPIST_SYSTEM_INSTRUCTION,
@@ -1309,7 +1412,9 @@ User's Own Notes: ${currentNotes.customNotes || 'none'}]
             CLOSURE_SCRIPT_TOOL,
             SAFETY_INTERVENTION_TOOL,
             PARENTAL_PATTERN_TOOL,
-            VALUES_MATRIX_TOOL
+            PARENTAL_PATTERN_TOOL,
+            VALUES_MATRIX_TOOL,
+            SAVE_MEMORY_TOOL
           ]
         }],
         safetySettings: safetySettings,

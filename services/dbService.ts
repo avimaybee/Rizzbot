@@ -409,3 +409,59 @@ export async function getTherapistSessions(firebaseUid: string): Promise<Therapi
     clinical_notes: typeof s.clinical_notes === 'string' ? JSON.parse(s.clinical_notes) : s.clinical_notes
   }));
 }
+
+// ===== Therapist Memories API =====
+
+export interface TherapistMemory {
+  id?: number;
+  user_id?: string;
+  session_id?: string | null;
+  type: 'GLOBAL' | 'SESSION';
+  content: string;
+  created_at?: string;
+}
+
+export async function getMemories(firebaseUid: string, type?: 'GLOBAL' | 'SESSION', sessionId?: string): Promise<TherapistMemory[]> {
+  const params = new URLSearchParams({ anon_id: firebaseUid });
+  if (type) params.set('type', type);
+  if (sessionId) params.set('session_id', sessionId);
+
+  const res = await fetch(`/api/memories?${params}`);
+  if (!res.ok) throw new Error(`Failed to get memories: ${res.statusText}`);
+  const data = await res.json();
+  return data.memories || [];
+}
+
+export async function saveMemory(firebaseUid: string, type: 'GLOBAL' | 'SESSION', content: string, sessionId?: string): Promise<{ success: boolean; id?: number }> {
+  const res = await fetch('/api/memories', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      user_anon_id: firebaseUid,
+      type,
+      content,
+      session_id: sessionId
+    })
+  });
+  if (!res.ok) throw new Error(`Failed to save memory: ${res.statusText}`);
+  return res.json();
+}
+
+export async function deleteMemory(id: number): Promise<{ success: boolean }> {
+  const res = await fetch(`/api/memories?id=${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error(`Failed to delete memory: ${res.statusText}`);
+  return res.json();
+}
+
+export async function updateMemory(id: number, content: string, type: 'GLOBAL' | 'SESSION'): Promise<{ success: boolean }> {
+  const res = await fetch(`/api/memories`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, content, type })
+  });
+  if (!res.ok) throw new Error(`Failed to update memory: ${res.statusText}`);
+  return res.json();
+}
+

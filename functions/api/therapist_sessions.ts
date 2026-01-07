@@ -116,8 +116,8 @@ export async function onRequest(context: any) {
           SET messages = ?, clinical_notes = ?, summary = ?, updated_at = CURRENT_TIMESTAMP
           WHERE interaction_id = ?
         `).bind(
-                    JSON.stringify(messages),
-                    JSON.stringify(clinical_notes),
+                    JSON.stringify(messages || []),
+                    JSON.stringify(clinical_notes || {}),
                     summary || null,
                     interaction_id
                 ).run();
@@ -131,8 +131,8 @@ export async function onRequest(context: any) {
         `).bind(
                     resolvedUserId,
                     interaction_id,
-                    JSON.stringify(messages),
-                    JSON.stringify(clinical_notes),
+                    JSON.stringify(messages || []),
+                    JSON.stringify(clinical_notes || {}),
                     summary || null
                 ).run();
 

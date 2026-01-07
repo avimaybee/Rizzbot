@@ -5,10 +5,12 @@ Your AI-powered texting coach that helps you craft authentic, confident response
 ## Features
 
 - **🚀 Quick Mode:** Upload screenshots or paste messages for instant advice
+- **🧠 Relationship Therapist:** Deep-dive AI persona for uncovering relationship blind spots
 - **🎯 Practice Mode:** Simulate conversations with AI personas before sending
 - **📜 History:** Review past sessions with full context
 - **👤 Your Style:** AI learns your unique texting voice
 - **🔥 Vibe Check:** Instant analysis of their energy and interest level
+- **🎨 New Branding**: Professional organic AI-generated logo and aesthetic integration
 
 ## Run Locally
 
