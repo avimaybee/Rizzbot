@@ -1214,6 +1214,37 @@ const VALUES_MATRIX_TOOL = {
   }
 };
 
+
+// Helper to safely extract text from a chunk/response
+function getResponseText(response: any): string {
+  if (typeof response.text === 'function') {
+    return response.text();
+  } else if (typeof response.text === 'string') {
+    return response.text;
+  } else if (response.candidates?.[0]?.content?.parts?.[0]?.text) {
+    return response.candidates[0].content.parts[0].text;
+  }
+  return '';
+}
+
+// Helper to safely extract function calls from a chunk/response
+function getResponseFunctionCalls(response: any): any[] {
+  if (typeof response.functionCalls === 'function') {
+    return response.functionCalls();
+  } else if (Array.isArray(response.functionCalls)) {
+    return response.functionCalls;
+  } else if (response.candidates?.[0]?.content?.parts) {
+    const calls = [];
+    for (const part of response.candidates[0].content.parts) {
+      if (part.functionCall) {
+        calls.push(part.functionCall);
+      }
+    }
+    return calls;
+  }
+  return [];
+}
+
 /**
  * Stream therapist response with function calling for clinical notes and exercises.
  */
@@ -1287,16 +1318,16 @@ User's Own Notes: ${currentNotes.customNotes || 'none'}]
 
     let fullText = "";
 
-    for await (const chunk of result.stream) {
+    for await (const chunk of result) {
       // Handle text chunks
-      const chunkText = chunk.text;
+      const chunkText = getResponseText(chunk);
       if (chunkText) {
         fullText += chunkText;
         onChunk(chunkText);
       }
 
       // Handle function calls
-      const functionCalls = chunk.functionCalls;
+      const functionCalls = getResponseFunctionCalls(chunk);
       if (functionCalls && functionCalls.length > 0) {
         for (const fc of functionCalls) {
           if (fc.name === 'update_session_analysis' && fc.args) {
@@ -1358,11 +1389,11 @@ export const getTherapistAdvice = async (
     );
 
     const response = result;
-    const reply = response.text || "i'm having trouble processing that. can you try rephrasing?";
+    const reply = getResponseText(response) || "i'm having trouble processing that. can you try rephrasing?";
 
     // Extract clinical notes from any function calls
     let clinicalNotes: Partial<ClinicalNotes> | undefined;
-    const functionCalls = response.functionCalls;
+    const functionCalls = getResponseFunctionCalls(response);
     if (functionCalls && functionCalls.length > 0) {
       const analysisCall = functionCalls.find(fc => fc.name === 'update_session_analysis');
       if (analysisCall?.args) {
