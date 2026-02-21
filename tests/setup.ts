@@ -1,6 +1,6 @@
 
 class LocalStorageMock {
-  store: Record<string, string> = {};
+  private store: Record<string, string> = {};
 
   clear() {
     this.store = {};

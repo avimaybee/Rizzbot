@@ -1,4 +1,4 @@
-import { expect, test, describe, beforeEach, afterEach, spyOn, vi } from "bun:test";
+import { expect, test, describe, beforeEach, afterEach, spyOn } from "bun:test";
 import {
   checkWellbeing,
   logSession,
@@ -16,10 +16,11 @@ describe("checkWellbeing", () => {
   });
 
   afterEach(() => {
-    spyOn(Date, 'now').mockRestore();
     if ((global as any).originalDate) {
       global.Date = (global as any).originalDate;
+      delete (global as any).originalDate;
     }
+    spyOn(Date, 'now').mockRestore();
   });
 
   const mockTime = (timestamp: number) => {
@@ -66,15 +67,32 @@ describe("checkWellbeing", () => {
   });
 
   test("respects lastCheckIn frequency (2h)", () => {
-    const now = Date.now();
+    // Start at 1 AM to stay within the 0-4 AM window for the late-night heuristic
+    const baseDate = new Date();
+    baseDate.setHours(1, 0, 0, 0);
+    const now = baseDate.getTime();
     mockTime(now);
 
+    // Set up conditions that would normally trigger a wellbeing check
+    logSession('quick');
+    logSession('quick');
+    logSession('quick');
+
+    // Simulate a recent wellbeing check, which should throttle further checks
     triggerWellbeingCheckIn('high_frequency');
     expect(checkWellbeing()).toBeNull();
 
-    // Still null after 1 hour
+    // Still null after 1 hour (within the 2h window)
     mockTime(now + 60 * 60 * 1000);
     expect(checkWellbeing()).toBeNull();
+
+    // After 2.5 hours, throttling should expire and the heuristic should trigger again
+    const later = now + 2.5 * 60 * 60 * 1000;
+    mockTime(later);
+    logSession('quick');
+    logSession('quick');
+    logSession('quick');
+    expect(checkWellbeing()).toBe('late_night');
   });
 
   test("Heuristic 1: Late night usage (0-4am)", () => {
@@ -92,7 +110,7 @@ describe("checkWellbeing", () => {
     expect(checkWellbeing()).toBe('late_night');
   });
 
-  test("Heuristic 1 should NOT trigger if current hour is not 0-4am", () => {
+  test("Heuristic 1: should NOT trigger during daytime even if past late-night sessions exist", () => {
     // Set time to 10 AM
     const baseDate = new Date();
     baseDate.setHours(10, 0, 0, 0);
@@ -163,7 +181,7 @@ describe("checkWellbeing", () => {
     for (let i = 0; i < 4; i++) {
       logSession('quick', `Persona ${i}`);
     }
-    logSession('quick', 'Persona 0'); // Persona 0 has 2 sessions, others have 1
+    logSession('quick', 'Persona 0'); // 5 total sessions across 4 personas: Persona 0 has 2, others have 1 each
 
     expect(checkWellbeing()).toBeNull();
   });

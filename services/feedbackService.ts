@@ -274,12 +274,12 @@ export const checkWellbeing = (): WellbeingState['reason'] | null => {
     return null;
   }
 
-  // Get sessions from last 2 hours
+  // Get sessions from last 2 hours and last 24 hours
   const recentSessions = sessions.filter(s => (now - s.timestamp) < 2 * 60 * 60 * 1000);
+  const last24h = sessions.filter(s => (now - s.timestamp) < 24 * 60 * 60 * 1000);
 
   // HEURISTIC 1: Late night usage (midnight to 4am) with high activity in last 24h
   if (currentHour >= 0 && currentHour < 4) {
-    const last24h = sessions.filter(s => (now - s.timestamp) < 24 * 60 * 60 * 1000);
     const lateNightSessions = last24h.filter(s => {
       const sessionTime = new Date(s.timestamp);
       return sessionTime.getHours() >= 0 && sessionTime.getHours() < 4;
@@ -291,7 +291,6 @@ export const checkWellbeing = (): WellbeingState['reason'] | null => {
   }
 
   // HEURISTIC 2: Same person obsession (5+ sessions about same persona in 24h)
-  const last24h = sessions.filter(s => (now - s.timestamp) < 24 * 60 * 60 * 1000);
   const personaCounts: Record<string, number> = {};
   last24h.forEach(s => {
     if (s.personaName) {
