@@ -19,6 +19,37 @@ const FEEDBACK_KEY = 'therizzbot_feedback';
 const SESSIONS_KEY = 'therizzbot_sessions';
 const WELLBEING_KEY = 'therizzbot_wellbeing';
 
+/**
+ * Get user-specific storage key.
+ * Throws if userId is empty or whitespace to prevent key collisions.
+ */
+const getUserKey = (baseKey: string, userId: string): string => {
+  if (!userId || !userId.trim()) {
+    throw new Error('userId must be a non-empty string for user-specific storage');
+  }
+  return `${baseKey}_${userId}`;
+};
+
+/**
+ * Get stored data with fallback to legacy keys and migration.
+ */
+const getStoredData = (key: string, userId: string): string | null => {
+  const userKey = getUserKey(key, userId);
+  let stored = localStorage.getItem(userKey);
+
+  if (!stored) {
+    // Fallback to legacy key for backward compatibility
+    stored = localStorage.getItem(key);
+    if (stored) {
+      // Migrate to user-specific key and remove legacy key to prevent
+      // other users on the same device from re-importing the same data.
+      localStorage.setItem(userKey, stored);
+      localStorage.removeItem(key);
+    }
+  }
+  return stored;
+};
+
 // ============================================
 // FEEDBACK FUNCTIONS
 // ============================================
@@ -34,9 +65,9 @@ const generateId = (): string => {
 /**
  * Get all feedback entries from storage.
  */
-export const getFeedbackEntries = (): FeedbackEntry[] => {
+export const getFeedbackEntries = (userId: string): FeedbackEntry[] => {
   try {
-    const stored = localStorage.getItem(FEEDBACK_KEY);
+    const stored = getStoredData(FEEDBACK_KEY, userId);
     return stored ? JSON.parse(stored) : [];
   } catch (error) {
     console.error('Failed to load feedback:', error);
@@ -47,7 +78,7 @@ export const getFeedbackEntries = (): FeedbackEntry[] => {
 /**
  * Save a new feedback entry.
  */
-export const saveFeedback = (entry: Omit<FeedbackEntry, 'id' | 'timestamp'>): FeedbackEntry => {
+export const saveFeedback = (userId: string, entry: Omit<FeedbackEntry, 'id' | 'timestamp'>): FeedbackEntry => {
   const newEntry: FeedbackEntry = {
     ...entry,
     id: generateId(),
@@ -55,12 +86,12 @@ export const saveFeedback = (entry: Omit<FeedbackEntry, 'id' | 'timestamp'>): Fe
   };
 
   try {
-    const entries = getFeedbackEntries();
+    const entries = getFeedbackEntries(userId);
     entries.push(newEntry);
 
     // Keep only last 100 entries to avoid storage bloat
     const trimmed = entries.slice(-100);
-    localStorage.setItem(FEEDBACK_KEY, JSON.stringify(trimmed));
+    localStorage.setItem(getUserKey(FEEDBACK_KEY, userId), JSON.stringify(trimmed));
 
     return newEntry;
   } catch (error) {
@@ -72,8 +103,8 @@ export const saveFeedback = (entry: Omit<FeedbackEntry, 'id' | 'timestamp'>): Fe
 /**
  * Calculate aggregate feedback statistics for prompt biasing.
  */
-export const calculateFeedbackStats = (): FeedbackStats => {
-  const entries = getFeedbackEntries();
+export const calculateFeedbackStats = (userId: string): FeedbackStats => {
+  const entries = getFeedbackEntries(userId);
 
   const stats: FeedbackStats = {
     totalFeedback: entries.length,
@@ -137,8 +168,8 @@ export const calculateFeedbackStats = (): FeedbackStats => {
  * Generate prompt bias instructions based on feedback stats.
  * Used by getQuickAdvice() and simulateDraft().
  */
-export const getPromptBias = (): string => {
-  const stats = calculateFeedbackStats();
+export const getPromptBias = (userId: string): string => {
+  const stats = calculateFeedbackStats(userId);
 
   // Need minimum feedback to generate bias
   if (stats.totalFeedback < 10) {
@@ -185,9 +216,9 @@ ${biases.map(b => `- ${b}`).join('\n')}
 /**
  * Get all session logs.
  */
-export const getSessionLogs = (): SessionLog[] => {
+export const getSessionLogs = (userId: string): SessionLog[] => {
   try {
-    const stored = localStorage.getItem(SESSIONS_KEY);
+    const stored = getStoredData(SESSIONS_KEY, userId);
     return stored ? JSON.parse(stored) : [];
   } catch (error) {
     console.error('Failed to load sessions:', error);
@@ -199,6 +230,7 @@ export const getSessionLogs = (): SessionLog[] => {
  * Log a new session.
  */
 export const logSession = (
+  userId: string,
   module: 'quick' | 'practice',
   personaName?: string,
   ghostRisk?: number
@@ -213,12 +245,12 @@ export const logSession = (
   };
 
   try {
-    const sessions = getSessionLogs();
+    const sessions = getSessionLogs(userId);
     sessions.push(session);
 
     // Keep only last 50 sessions
     const trimmed = sessions.slice(-50);
-    localStorage.setItem(SESSIONS_KEY, JSON.stringify(trimmed));
+    localStorage.setItem(getUserKey(SESSIONS_KEY, userId), JSON.stringify(trimmed));
 
     return session;
   } catch (error) {
@@ -234,9 +266,9 @@ export const logSession = (
 /**
  * Get current wellbeing state.
  */
-export const getWellbeingState = (): WellbeingState => {
+export const getWellbeingState = (userId: string): WellbeingState => {
   try {
-    const stored = localStorage.getItem(WELLBEING_KEY);
+    const stored = getStoredData(WELLBEING_KEY, userId);
     return stored ? JSON.parse(stored) : { triggered: false };
   } catch (error) {
     return { triggered: false };
@@ -246,9 +278,9 @@ export const getWellbeingState = (): WellbeingState => {
 /**
  * Save wellbeing state.
  */
-export const saveWellbeingState = (state: WellbeingState): void => {
+export const saveWellbeingState = (userId: string, state: WellbeingState): void => {
   try {
-    localStorage.setItem(WELLBEING_KEY, JSON.stringify(state));
+    localStorage.setItem(getUserKey(WELLBEING_KEY, userId), JSON.stringify(state));
   } catch (error) {
     console.error('Failed to save wellbeing state:', error);
   }
@@ -258,13 +290,13 @@ export const saveWellbeingState = (state: WellbeingState): void => {
  * Check if wellbeing intervention should trigger.
  * Returns the reason if triggered, null otherwise.
  */
-export const checkWellbeing = (): WellbeingState['reason'] | null => {
-  const sessions = getSessionLogs();
+export const checkWellbeing = (userId: string): WellbeingState['reason'] | null => {
+  const sessions = getSessionLogs(userId);
   const now = Date.now();
   const currentHour = new Date().getHours();
 
   // Check if dismissed recently (within 24 hours)
-  const state = getWellbeingState();
+  const state = getWellbeingState(userId);
   if (state.dismissedUntil && state.dismissedUntil > now) {
     return null;
   }
@@ -322,35 +354,35 @@ export const checkWellbeing = (): WellbeingState['reason'] | null => {
 /**
  * Trigger wellbeing check-in state.
  */
-export const triggerWellbeingCheckIn = (reason: WellbeingState['reason']): void => {
+export const triggerWellbeingCheckIn = (userId: string, reason: WellbeingState['reason']): void => {
   const state: WellbeingState = {
     lastCheckIn: Date.now(),
     triggered: true,
     reason,
   };
-  saveWellbeingState(state);
+  saveWellbeingState(userId, state);
 };
 
 /**
  * Dismiss wellbeing check-in for specified duration.
  */
-export const dismissWellbeingCheckIn = (hours: number = 24): void => {
+export const dismissWellbeingCheckIn = (userId: string, hours: number = 24): void => {
   const state: WellbeingState = {
     lastCheckIn: Date.now(),
     triggered: false,
     dismissedUntil: Date.now() + (hours * 60 * 60 * 1000),
     reason: undefined,
   };
-  saveWellbeingState(state);
+  saveWellbeingState(userId, state);
 };
 
 /**
  * Clear wellbeing triggered state (after showing check-in).
  */
-export const clearWellbeingTrigger = (): void => {
-  const state = getWellbeingState();
+export const clearWellbeingTrigger = (userId: string): void => {
+  const state = getWellbeingState(userId);
   state.triggered = false;
-  saveWellbeingState(state);
+  saveWellbeingState(userId, state);
 };
 
 // ============================================
@@ -361,11 +393,11 @@ export const clearWellbeingTrigger = (): void => {
  * Export all local data for migration.
  * Call this when setting up Supabase sync.
  */
-export const exportLocalData = () => {
+export const exportLocalData = (userId: string) => {
   return {
-    feedback: getFeedbackEntries(),
-    sessions: getSessionLogs(),
-    wellbeing: getWellbeingState(),
+    feedback: getFeedbackEntries(userId),
+    sessions: getSessionLogs(userId),
+    wellbeing: getWellbeingState(userId),
     exportedAt: Date.now(),
   };
 };
@@ -373,8 +405,8 @@ export const exportLocalData = () => {
 /**
  * Clear all local data after successful migration.
  */
-export const clearLocalData = (): void => {
-  localStorage.removeItem(FEEDBACK_KEY);
-  localStorage.removeItem(SESSIONS_KEY);
-  localStorage.removeItem(WELLBEING_KEY);
+export const clearLocalData = (userId: string): void => {
+  localStorage.removeItem(getUserKey(FEEDBACK_KEY, userId));
+  localStorage.removeItem(getUserKey(SESSIONS_KEY, userId));
+  localStorage.removeItem(getUserKey(WELLBEING_KEY, userId));
 };

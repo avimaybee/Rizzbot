@@ -116,6 +116,7 @@ export interface QuickAdviceRequest {
   context?: 'new' | 'talking' | 'dating' | 'complicated' | 'ex';
   userStyle?: UserStyleProfile; // If available from onboarding
   screenshots?: string[]; // Optional: screenshots of the conversation
+  userId?: string; // Optional: user ID for feedback biasing
 }
 
 /**
