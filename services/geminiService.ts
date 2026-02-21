@@ -217,6 +217,7 @@ export const generatePersona = async (
 };
 
 export const simulateDraft = async (
+  userId: string,
   draft: string,
   persona: Persona,
   userStyle?: UserStyleProfile | null,
@@ -257,7 +258,7 @@ export const simulateDraft = async (
   }
 
   // Get feedback-based prompt bias
-  const feedbackBias = getPromptBias();
+  const feedbackBias = getPromptBias(userId);
 
   const prompt = `
     SYSTEM IDENTITY: THE WINGMAN
@@ -545,6 +546,7 @@ export const analyzeSimulation = async (
  * No persona setup needed, instant vibe check and suggestions.
  */
 export const getQuickAdvice = async (
+  userId: string,
   request: QuickAdviceRequest
 ): Promise<QuickAdviceResponse> => {
 
@@ -586,7 +588,7 @@ export const getQuickAdvice = async (
   const situationAdvice = request.context ? situationGuidelines[request.context] : '';
 
   // Get feedback-based prompt bias
-  const feedbackBias = getPromptBias();
+  const feedbackBias = getPromptBias(userId);
 
   const prompt = `
     SYSTEM IDENTITY: THE WINGMAN

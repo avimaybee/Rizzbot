@@ -722,10 +722,12 @@ function App() {
 
   // Check wellbeing on module changes and periodically
   useEffect(() => {
+    if (!authUser) return;
+
     const checkAndTriggerWellbeing = () => {
-      const reason = checkWellbeing();
+      const reason = checkWellbeing(authUser.uid);
       if (reason) {
-        triggerWellbeingCheckIn(reason);
+        triggerWellbeingCheckIn(authUser.uid, reason);
         setWellbeingCheckIn({ triggered: true, reason });
       }
     };
@@ -738,16 +740,18 @@ function App() {
     // Also check every 10 minutes while using the app
     const interval = setInterval(checkAndTriggerWellbeing, 10 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [activeModule]);
+  }, [activeModule, authUser]);
 
   // Handle wellbeing dismissal
   const handleWellbeingDismiss = () => {
-    clearWellbeingTrigger();
+    if (!authUser) return;
+    clearWellbeingTrigger(authUser.uid);
     setWellbeingCheckIn(null);
   };
 
   const handleWellbeingDismissForDay = () => {
-    dismissWellbeingCheckIn(24);
+    if (!authUser) return;
+    dismissWellbeingCheckIn(authUser.uid, 24);
     setWellbeingCheckIn(null);
   };
 

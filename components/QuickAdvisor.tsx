@@ -219,10 +219,10 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
     };
 
     try {
-      const response = await getQuickAdvice(request);
+      const response = await getQuickAdvice(firebaseUid || 'anon', request);
       setResult(response);
       // Log session for wellbeing tracking
-      logSession('quick', undefined, undefined);
+      logSession(firebaseUid || 'anon', 'quick', undefined, undefined);
 
       // Save session to D1 with enhanced metadata
       if (firebaseUid) {
@@ -263,7 +263,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
 
   const handleFeedback = useCallback((suggestionType: 'smooth' | 'bold' | 'witty' | 'authentic', rating: 'helpful' | 'mid' | 'off') => {
     // Save feedback locally
-    saveFeedback({
+    saveFeedback(firebaseUid || 'anon', {
       source: 'quick',
       suggestionType,
       rating,
@@ -295,7 +295,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
 
     // Show toast notification
     showToast('Thanks for the feedback!', 'success');
-  }, [context, result, userId, showToast]);
+  }, [context, result, userId, showToast, firebaseUid]);
 
   const resetForm = useCallback(() => {
     setResult(null);

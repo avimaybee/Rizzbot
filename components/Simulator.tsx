@@ -119,15 +119,16 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
   // Handle feedback on rewrite suggestions
   const handleFeedback = useCallback((suggestionType: 'safe' | 'bold' | 'spicy' | 'you', rating: 'helpful' | 'mid' | 'off', entryIndex: number) => {
+    if (!firebaseUid) return;
     const key = `${entryIndex}-${suggestionType}`;
-    saveFeedback({
+    saveFeedback(firebaseUid, {
       source: 'practice',
       suggestionType,
       rating,
       context: relationshipContext.toLowerCase(),
     });
     setFeedbackGiven(prev => ({ ...prev, [key]: rating }));
-  }, [relationshipContext]);
+  }, [relationshipContext, firebaseUid]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -186,26 +187,26 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
   const runSimulation = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!draft.trim() || !activePersona) return;
+    if (!draft.trim() || !activePersona || !firebaseUid) return;
     const sentMessage = draft;
     setPendingMessage(sentMessage);
     setDraft('');
     setChatLoading(true);
-    const result = await simulateDraft(sentMessage, activePersona, userProfile);
+    const result = await simulateDraft(firebaseUid, sentMessage, activePersona, userProfile);
     setSimHistory(prev => [...prev, { draft: sentMessage, result }]);
     setPendingMessage(null);
     setChatLoading(false);
   };
 
   const handleEndSim = async () => {
-    if (!activePersona || simHistory.length === 0) return;
+    if (!activePersona || simHistory.length === 0 || !firebaseUid) return;
     setAnalyzing(true);
     try {
       const result = await analyzeSimulation(simHistory, activePersona, userProfile);
       setAnalysisResult(result);
 
       // Log session for wellbeing tracking
-      logSession('practice', activePersona.name, result.ghostRisk);
+      logSession(firebaseUid, 'practice', activePersona.name, result.ghostRisk);
 
       // Save session to D1 with enhanced metadata
       if (firebaseUid) {
