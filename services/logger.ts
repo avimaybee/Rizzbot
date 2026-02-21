@@ -4,20 +4,20 @@
  * In production mode, only warnings and errors are output to the console.
  */
 export const logger = {
-  log: (message: string, ...args: any[]) => {
+  log: (...args: unknown[]) => {
     if (import.meta.env.DEV) {
-      console.log(message, ...args);
+      console.log(...args);
     }
   },
-  warn: (message: string, ...args: any[]) => {
-    console.warn(message, ...args);
+  warn: (...args: unknown[]) => {
+    console.warn(...args);
   },
-  error: (message: string, ...args: any[]) => {
-    console.error(message, ...args);
+  error: (...args: unknown[]) => {
+    console.error(...args);
   },
-  debug: (message: string, ...args: any[]) => {
+  debug: (...args: unknown[]) => {
     if (import.meta.env.DEV) {
-      console.debug(message, ...args);
+      console.debug(...args);
     }
   }
 };

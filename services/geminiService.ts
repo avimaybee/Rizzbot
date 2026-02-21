@@ -66,7 +66,7 @@ async function retryWithBackoff<T>(
       }
 
       const delay = INITIAL_DELAY_MS * Math.pow(2, attempt);
-      logger.log(`${operationName}: Retry ${attempt + 1}/${MAX_RETRIES} after ${delay}ms (503 error)`);
+      logger.warn(`${operationName}: Retry ${attempt + 1}/${MAX_RETRIES} after ${delay}ms (503 error)`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
