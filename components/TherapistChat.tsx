@@ -82,7 +82,7 @@ const InsightCard = ({
     };
 
     return (
-        <div className={`border-l-2 ${colors[accentColor]} p-3 sm:p-4 my-2 sm:my-3 rounded-r-lg animate-fade-in`}>
+        <div className={`border-l-2 ${colors[accentColor]} p-3 sm:p-4 my-2 sm:my-3 border-r border-zinc-800 animate-fade-in`}>
             <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
                 <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${iconColors[accentColor]}`} />
                 <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">{title}</span>
@@ -121,13 +121,13 @@ const ExerciseCard: React.FC<{
     };
 
     return (
-        <div className="w-full max-w-2xl mx-auto my-3 sm:my-4 border border-zinc-800 bg-zinc-900/80 rounded-xl overflow-hidden animate-fade-in">
+        <div className="w-full max-w-2xl mx-auto my-3 sm:my-4 border border-zinc-800 bg-zinc-900/80 overflow-hidden animate-fade-in">
             <CornerNodes className="opacity-30" />
 
             {/* Header */}
             <div className="bg-zinc-800/50 px-4 sm:px-5 py-3 sm:py-4 border-b border-zinc-700">
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-zinc-700/50 flex items-center justify-center">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 bg-zinc-700/50 flex items-center justify-center">
                         <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400" />
                     </div>
                     <div>
@@ -155,7 +155,7 @@ const ExerciseCard: React.FC<{
                                     setBoundaryInputs(newInputs);
                                 }}
                                 placeholder={`Boundary ${i + 1}...`}
-                                className="w-full bg-zinc-800 border border-zinc-700 px-3 sm:px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-rose-500/50 rounded-lg transition-colors"
+                                className="w-full bg-zinc-800 border border-zinc-700 px-3 sm:px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-rose-500/50 transition-colors"
                             />
                         ))}
                     </div>
@@ -173,7 +173,7 @@ const ExerciseCard: React.FC<{
                                     type="range"
                                     value={value}
                                     onChange={(e) => setNeedsValues({ ...needsValues, [need]: parseInt(e.target.value) })}
-                                    className="w-full h-2 bg-zinc-700 rounded-full appearance-none cursor-pointer accent-rose-500"
+                                    className="w-full h-2 bg-zinc-700 appearance-none cursor-pointer accent-rose-500"
                                 />
                             </div>
                         ))}
@@ -191,7 +191,7 @@ const ExerciseCard: React.FC<{
                 </button>
                 <button
                     onClick={handleSubmit}
-                    className="px-5 py-2.5 bg-rose-500 hover:bg-rose-400 text-white text-sm font-medium rounded-lg transition-colors min-h-[44px]"
+                    className="px-5 py-2.5 bg-rose-500 hover:bg-rose-400 text-white text-sm font-medium transition-colors min-h-[44px]"
                 >
                     Complete
                 </button>
@@ -212,7 +212,7 @@ const AnalysisCard = ({
     value: string;
     sublabel?: string;
 }) => (
-    <div className="bg-zinc-800/40 border border-zinc-700/50 rounded-lg p-3 sm:p-4">
+    <div className="bg-zinc-800/40 border border-zinc-700/50 p-3 sm:p-4">
         <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
             <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-500" />
             <span className="text-xs font-mono uppercase tracking-wider text-zinc-500">{label}</span>
@@ -224,7 +224,7 @@ const AnalysisCard = ({
 
 // Theme Badge
 const ThemeBadge = ({ children }: { children: React.ReactNode }) => (
-    <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs font-medium text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-full">
+    <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs font-medium text-zinc-300 bg-zinc-800 border border-zinc-700">
         {children}
     </span>
 );
@@ -240,11 +240,11 @@ const MemoryItem: React.FC<{
 
     if (isEditing) {
         return (
-            <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-3 animate-fade-in">
+            <div className="bg-zinc-800/50 border border-zinc-700 p-3 animate-fade-in">
                 <textarea
                     value={content}
                     onChange={e => setContent(e.target.value)}
-                    className="w-full bg-zinc-900 text-sm text-white p-2 border border-zinc-700 rounded focus:outline-none focus:border-rose-500/50 resize-none"
+                    className="w-full bg-zinc-900 text-sm text-white p-2 border border-zinc-700 focus:outline-none focus:border-rose-500/50 resize-none"
                     rows={3}
                 />
                 <div className="flex justify-end gap-3 mt-2">
@@ -261,13 +261,13 @@ const MemoryItem: React.FC<{
     }
 
     return (
-        <div className="group relative bg-zinc-800/30 border border-zinc-700/50 rounded-lg p-3 hover:border-zinc-600 transition-colors">
+        <div className="group relative bg-zinc-800/30 border border-zinc-700/50 p-3 hover:border-zinc-600 transition-colors">
             <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed pr-12">{memory.content}</p>
             <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => setIsEditing(true)} className="p-1.5 hover:bg-zinc-700 rounded min-h-[30px] min-w-[30px] flex items-center justify-center">
+                <button onClick={() => setIsEditing(true)} className="p-1.5 hover:bg-zinc-700 min-h-[30px] min-w-[30px] flex items-center justify-center">
                     <Edit3 className="w-3 h-3 text-zinc-500" />
                 </button>
-                <button onClick={() => memory.id && onDelete(memory.id)} className="p-1.5 hover:bg-zinc-700 rounded min-h-[30px] min-w-[30px] flex items-center justify-center">
+                <button onClick={() => memory.id && onDelete(memory.id)} className="p-1.5 hover:bg-zinc-700 min-h-[30px] min-w-[30px] flex items-center justify-center">
                     <X className="w-3 h-3 text-zinc-500" />
                 </button>
             </div>
@@ -338,7 +338,7 @@ const MobileAnalysisSheet = ({
 
             {/* Sheet */}
             <div
-                className="fixed bottom-0 left-0 right-0 bg-zinc-900 border-t border-zinc-700 rounded-t-2xl z-50 flex flex-col animate-slide-up"
+                className="fixed bottom-0 left-0 right-0 bg-zinc-900 border-t border-zinc-700 z-50 flex flex-col animate-slide-up"
                 style={{ height: `${sheetHeight}vh`, transition: isDragging ? 'none' : 'height 0.3s ease-out' }}
             >
                 {/* Drag Handle */}
@@ -348,15 +348,15 @@ const MobileAnalysisSheet = ({
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                 >
-                    <div className="w-12 h-1.5 bg-zinc-600 rounded-full" />
+                    <div className="w-12 h-1.5 bg-zinc-600" />
                 </div>
 
                 {/* Header with Tabs */}
                 <div className="px-4 pb-3 border-b border-zinc-800">
-                    <div className="flex gap-1 p-1 bg-zinc-800 rounded-lg">
+                    <div className="flex gap-1 p-1 bg-zinc-800">
                         <button
                             onClick={() => setActiveTab('analysis')}
-                            className={`flex-1 py-2.5 text-xs font-medium rounded-md transition-colors min-h-[44px] ${activeTab === 'analysis'
+                            className={`flex-1 py-2.5 text-xs font-medium transition-colors min-h-[44px] ${activeTab === 'analysis'
                                 ? 'bg-zinc-700 text-white'
                                 : 'text-zinc-500'
                                 }`}
@@ -365,7 +365,7 @@ const MobileAnalysisSheet = ({
                         </button>
                         <button
                             onClick={() => setActiveTab('memories')}
-                            className={`flex-1 py-2.5 text-xs font-medium rounded-md transition-colors min-h-[44px] ${activeTab === 'memories'
+                            className={`flex-1 py-2.5 text-xs font-medium transition-colors min-h-[44px] ${activeTab === 'memories'
                                 ? 'bg-zinc-700 text-white'
                                 : 'text-zinc-500'
                                 }`}
@@ -661,7 +661,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                         <div className="p-3">
                             <button
                                 onClick={handleNewSession}
-                                className="w-full flex items-center justify-center gap-2 py-3.5 border border-dashed border-zinc-700 hover:border-rose-500/50 hover:bg-rose-500/5 text-zinc-400 hover:text-rose-400 transition-all rounded-xl group min-h-[48px]"
+                                className="w-full flex items-center justify-center gap-2 py-3.5 border border-dashed border-zinc-700 hover:border-rose-500/50 hover:bg-rose-500/5 text-zinc-400 hover:text-rose-400 transition-all group min-h-[48px]"
                             >
                                 <Plus className="w-4 h-4" />
                                 <span className="text-sm font-medium">New Session</span>
@@ -680,7 +680,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                     <button
                                         key={i}
                                         onClick={() => handleLoadSession(s)}
-                                        className={`w-full text-left p-3.5 rounded-xl transition-all min-h-[56px] ${s.interaction_id === interactionId
+                                        className={`w-full text-left p-3.5 transition-all min-h-[56px] ${s.interaction_id === interactionId
                                             ? 'bg-rose-500/10 border border-rose-500/30'
                                             : 'bg-zinc-800/30 border border-transparent hover:bg-zinc-800/50'
                                             }`}
@@ -694,7 +694,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                                 })}
                                             </span>
                                             {s.interaction_id === interactionId && (
-                                                <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                                                <div className="w-2 h-2 bg-rose-500 animate-pulse" />
                                             )}
                                         </div>
                                         <p className="text-sm text-zinc-400 truncate">
@@ -733,7 +733,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                 <div className="p-3">
                     <button
                         onClick={handleNewSession}
-                        className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-zinc-700 hover:border-rose-500/50 hover:bg-rose-500/5 text-zinc-400 hover:text-rose-400 transition-all rounded-lg group"
+                        className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-zinc-700 hover:border-rose-500/50 hover:bg-rose-500/5 text-zinc-400 hover:text-rose-400 transition-all group"
                     >
                         <Plus className="w-4 h-4" />
                         <span className="text-sm font-medium">New Session</span>
@@ -753,7 +753,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                             <button
                                 key={i}
                                 onClick={() => handleLoadSession(s)}
-                                className={`w-full text-left p-3 rounded-lg transition-all group ${s.interaction_id === interactionId
+                                className={`w-full text-left p-3 transition-all group ${s.interaction_id === interactionId
                                     ? 'bg-rose-500/10 border border-rose-500/30'
                                     : 'hover:bg-zinc-800/50 border border-transparent'
                                     }`}
@@ -769,7 +769,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                         })}
                                     </span>
                                     {s.interaction_id === interactionId && (
-                                        <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                                        <div className="w-2 h-2 bg-rose-500 animate-pulse" />
                                     )}
                                 </div>
                                 <p className="text-sm text-zinc-400 truncate group-hover:text-zinc-300">
@@ -822,7 +822,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                         </button>
 
                         {/* Desktop Recording indicator */}
-                        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-rose-950/30 border border-rose-500/20 rounded-full">
+                        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-rose-950/30 border border-rose-500/20">
                             <Activity className="w-3 h-3 text-rose-400" />
                             <span className="text-xs text-rose-400 font-mono">Active</span>
                         </div>
@@ -862,7 +862,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                                 <img
                                                     key={i}
                                                     src={img}
-                                                    className="h-16 sm:h-20 w-auto border border-zinc-700 rounded-lg opacity-90 hover:opacity-100 transition-opacity"
+                                                    className="h-16 sm:h-20 w-auto border border-zinc-700 opacity-90 hover:opacity-100 transition-opacity"
                                                     alt="Attached"
                                                 />
                                             ))}
@@ -870,7 +870,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                     )}
 
                                     {/* Message Bubble */}
-                                    <div className={`inline-block px-4 sm:px-5 py-3 sm:py-4 rounded-2xl ${msg.role === 'user'
+                                    <div className={`inline-block px-4 sm:px-5 py-3 sm:py-4 ${msg.role === 'user'
                                         ? 'bg-rose-500/20 border border-rose-500/30 text-white'
                                         : 'bg-zinc-800/60 border border-zinc-700/50 text-zinc-200'
                                         }`}>
@@ -954,10 +954,10 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                 <div className="flex items-center gap-2 opacity-50">
                                     <span className="text-xs font-mono text-rose-400">Processing...</span>
                                 </div>
-                                <div className="inline-block px-4 sm:px-5 py-3 sm:py-4 rounded-2xl bg-zinc-800/60 border border-zinc-700/50 max-w-[90%] sm:max-w-[80%]">
+                                <div className="inline-block px-4 sm:px-5 py-3 sm:py-4 bg-zinc-800/60 border border-zinc-700/50 max-w-[90%] sm:max-w-[80%]">
                                     <div className="text-sm text-zinc-300 whitespace-pre-wrap">
                                         {streamingContent}
-                                        <span className="inline-block w-2 h-4 bg-rose-500 ml-1 animate-pulse rounded-sm" />
+                                        <span className="inline-block w-2 h-4 bg-rose-500 ml-1 animate-pulse" />
                                     </div>
                                 </div>
                             </div>
@@ -976,10 +976,10 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                             <div className="flex gap-2 mb-3 overflow-x-auto pb-2">
                                 {pendingImages.map((img, i) => (
                                     <div key={i} className="relative group shrink-0">
-                                        <img src={img} className="h-14 sm:h-16 w-auto rounded-lg border border-zinc-700" alt="Upload" />
+                                        <img src={img} className="h-14 sm:h-16 w-auto border border-zinc-700" alt="Upload" />
                                         <button
                                             onClick={() => setPendingImages(prev => prev.filter((_, idx) => idx !== i))}
-                                            className="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 text-white rounded-full flex items-center justify-center text-sm min-h-[30px] min-w-[30px]"
+                                            className="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 text-white flex items-center justify-center text-sm min-h-[30px] min-w-[30px]"
                                         >
                                             ×
                                         </button>
@@ -989,7 +989,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                         )}
 
                         {/* Input Row */}
-                        <div className="flex items-center gap-1.5 sm:gap-2 bg-zinc-900 border border-zinc-700 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 focus-within:border-rose-500/50 transition-colors">
+                        <div className="flex items-center gap-1.5 sm:gap-2 bg-zinc-900 border border-zinc-700 px-2 sm:px-3 py-1.5 sm:py-2 focus-within:border-rose-500/50 transition-colors">
                             <button
                                 onClick={() => fileInputRef.current?.click()}
                                 className="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors shrink-0 min-h-[44px] flex items-center justify-center"
@@ -1035,10 +1035,10 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
 
                     {/* Tab Switcher */}
                     <div className="h-14 flex items-center px-4 border-b border-zinc-800">
-                        <div className="flex gap-1 p-1 bg-zinc-900 rounded-lg w-full">
+                        <div className="flex gap-1 p-1 bg-zinc-900 w-full">
                             <button
                                 onClick={() => setActiveTab('analysis')}
-                                className={`flex-1 py-2 text-xs font-medium rounded-md transition-colors ${activeTab === 'analysis'
+                                className={`flex-1 py-2 text-xs font-medium transition-colors ${activeTab === 'analysis'
                                     ? 'bg-zinc-800 text-white'
                                     : 'text-zinc-500 hover:text-zinc-300'
                                     }`}
@@ -1047,7 +1047,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                             </button>
                             <button
                                 onClick={() => setActiveTab('memories')}
-                                className={`flex-1 py-2 text-xs font-medium rounded-md transition-colors ${activeTab === 'memories'
+                                className={`flex-1 py-2 text-xs font-medium transition-colors ${activeTab === 'memories'
                                     ? 'bg-zinc-800 text-white'
                                     : 'text-zinc-500 hover:text-zinc-300'
                                     }`}

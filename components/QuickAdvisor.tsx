@@ -29,19 +29,15 @@ const CornerNodes = ({ className }: { className?: string }) => (
   <div className={`pointer-events-none absolute inset-0 z-50 ${className}`}>
     <div className="absolute top-0 left-0">
       <div className="w-2 h-2 border-t border-l border-zinc-500"></div>
-      <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 text-zinc-600 text-[8px]">+</div>
     </div>
     <div className="absolute top-0 right-0">
       <div className="w-2 h-2 border-t border-r border-zinc-500"></div>
-      <div className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 text-zinc-600 text-[8px]">+</div>
     </div>
     <div className="absolute bottom-0 left-0">
       <div className="w-2 h-2 border-b border-l border-zinc-500"></div>
-      <div className="absolute bottom-0 left-0 -translate-x-1/2 translate-y-1/2 text-zinc-600 text-[8px]">+</div>
     </div>
     <div className="absolute bottom-0 right-0">
       <div className="w-2 h-2 border-b border-r border-zinc-500"></div>
-      <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 text-zinc-600 text-[8px]">+</div>
     </div>
   </div>
 );
@@ -69,100 +65,91 @@ const SuggestionCategory: React.FC<SuggestionCategoryProps> = ({
   onFeedback,
 }) => {
   return (
-    <div className="relative">
+    <div className="border-b border-zinc-800 pb-8 mb-8 last:border-0 last:mb-0 last:pb-0">
       {/* Category Header */}
-      <div className="flex items-center gap-2 mb-3">
-        <span className={`text-xs font-mono tracking-widest ${titleColor} uppercase`}>{title}</span>
-        <span className="text-xs font-mono text-zinc-600">({options.length} OPTIONS)</span>
+      <div className="flex items-center gap-3 mb-6 px-4 sm:px-0">
+        <div className={`w-2 h-2 ${titleColor.replace('text-', 'bg-')}`}></div>
+        <span className="text-xs font-mono tracking-widest text-zinc-400 uppercase">{title} MODE</span>
+        <span className="text-xs font-mono text-zinc-600">//{options.length}</span>
       </div>
 
       {/* Options */}
-      <div className="space-y-4">
+      <div className="space-y-6 px-4 sm:px-0">
         {options.map((option, optIndex) => (
-          <div
-            key={optIndex}
-            className="bg-zinc-900 border border-zinc-800 relative group/option"
-          >
-            <CornerNodes className="opacity-30 transition-opacity group-hover/option:opacity-60" />
-            <div className="p-4">
-              {/* Option Header */}
-              <div className="text-xs font-mono text-zinc-500 mb-3 uppercase tracking-widest">
-                OPTION {optIndex + 1}
-              </div>
-
-              {/* Individual Replies */}
-              <div className="space-y-2 mb-3">
-                {option.replies.map((replyItem, replyIndex) => {
-                  const replyKey = `${categoryKey}-${optIndex}-reply-${replyIndex}`;
-                  const isCopied = copiedIndex === replyKey;
-                  return (
-                    <button
-                      key={replyIndex}
-                      onClick={() => onCopy(replyItem.reply, replyKey)}
-                      className="w-full text-left bg-black/20 border border-zinc-800/50 hover:bg-black/40 hover:border-zinc-600 p-3 transition-all group active:scale-[0.99] relative overflow-hidden min-h-[44px]"
-                    >
-                      <div className="flex justify-between items-start gap-4 mb-1.5 opacity-60">
-                        <span className="text-xs font-mono text-zinc-500 flex items-center gap-1.5 truncate max-w-[80%]">
-                          <CornerDownRight className="w-3 h-3" />
-                          <span className="truncate">"{replyItem.originalMessage}"</span>
-                        </span>
-                        <div className={`flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider transition-colors ${isCopied ? 'text-emerald-500' : 'text-zinc-700 group-hover:text-zinc-400'
-                          }`}>
-                          {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                          <span className="hidden sm:inline">{isCopied ? 'COPIED' : 'COPY'}</span>
-                        </div>
-                      </div>
-                      <p className="text-zinc-100 text-sm leading-relaxed pl-4 border-l-2 border-zinc-800 group-hover:border-zinc-600 transition-colors font-sans">
-                        {replyItem.reply}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Conversation Hook */}
-              {option.conversationHook && (
-                <button
-                  onClick={() => onCopy(option.conversationHook, `${categoryKey}-${optIndex}-hook`)}
-                  className="w-full text-left bg-zinc-800/20 border border-zinc-800 hover:border-hard-gold/50 hover:bg-zinc-800/40 p-3 transition-all group active:scale-[0.99] min-h-[44px]"
-                >
-                  <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-xs font-mono text-hard-gold/60 flex items-center gap-1.5 uppercase tracking-wider">
-                      <Link2 className="w-3 h-3" />
-                      Conversation Hook
-                    </span>
-                    <div className={`flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider transition-colors ${copiedIndex === `${categoryKey}-${optIndex}-hook` ? 'text-hard-gold' : 'text-zinc-700 group-hover:text-hard-gold/70'
-                      }`}>
-                      {copiedIndex === `${categoryKey}-${optIndex}-hook` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                      <span className="hidden sm:inline">{copiedIndex === `${categoryKey}-${optIndex}-hook` ? 'COPIED' : 'COPY'}</span>
-                    </div>
-                  </div>
-                  <p className="text-zinc-300 text-sm leading-relaxed font-sans">{option.conversationHook}</p>
-                </button>
-              )}
+          <div key={optIndex} className="relative group/option">
+            {/* Option Label */}
+            <div className="text-[10px] font-mono text-zinc-600 mb-2 uppercase tracking-widest pl-1">
+              OPTION_0{optIndex + 1}
             </div>
+
+            {/* Individual Replies */}
+            <div className="space-y-3 mb-4">
+              {option.replies.map((replyItem, replyIndex) => {
+                const replyKey = `${categoryKey}-${optIndex}-reply-${replyIndex}`;
+                const isCopied = copiedIndex === replyKey;
+                return (
+                  <button
+                    key={replyIndex}
+                    onClick={() => onCopy(replyItem.reply, replyKey)}
+                    className="w-full text-left bg-zinc-900/30 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900 transition-all p-4 active:bg-zinc-800 relative group overflow-hidden"
+                  >
+                    <div className="flex justify-between items-start gap-4 mb-2 opacity-50">
+                      <span className="text-[10px] font-mono text-zinc-500 flex items-center gap-2 truncate max-w-[80%] uppercase tracking-wider">
+                        <CornerDownRight className="w-3 h-3" />
+                        <span className="truncate">RE: "{replyItem.originalMessage}"</span>
+                      </span>
+                      <div className={`flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider transition-colors ${isCopied ? 'text-emerald-500' : 'text-zinc-700 group-hover:text-zinc-400'
+                        }`}>
+                        {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                        <span className="hidden sm:inline">{isCopied ? 'COPIED' : 'COPY'}</span>
+                      </div>
+                    </div>
+                    <p className="text-zinc-100 text-sm leading-relaxed font-sans pl-1 border-l border-zinc-700/50 group-hover:border-zinc-500 transition-colors">
+                      {replyItem.reply}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Conversation Hook */}
+            {option.conversationHook && (
+              <button
+                onClick={() => onCopy(option.conversationHook, `${categoryKey}-${optIndex}-hook`)}
+                className="w-full text-left pl-4 pr-4 py-3 border-l border-zinc-800 hover:border-hard-gold/50 transition-all group"
+              >
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[10px] font-mono text-hard-gold/60 flex items-center gap-1.5 uppercase tracking-wider">
+                    <Link2 className="w-3 h-3" />
+                    Conversation Hook
+                  </span>
+                </div>
+                <p className="text-zinc-400 text-xs leading-relaxed font-mono">{option.conversationHook}</p>
+              </button>
+            )}
           </div>
         ))}
       </div>
 
       {/* Feedback buttons */}
-      <div className="flex gap-2 mt-3 justify-end">
+      <div className="flex gap-0 mt-6 border-t border-zinc-800 mx-4 sm:mx-0">
         {(['helpful', 'mid', 'off'] as const).map((rating) => (
           <button
             key={rating}
             onClick={() => onFeedback(rating)}
             disabled={!!feedbackGiven}
-            className={`px-3 py-2 border transition-all min-w-[44px] min-h-[44px] flex items-center justify-center active:scale-95 ${feedbackGiven === rating
-              ? rating === 'helpful' ? 'bg-emerald-900/20 border-emerald-500/50 text-emerald-400' :
-                rating === 'mid' ? 'bg-yellow-900/20 border-yellow-500/50 text-yellow-400' :
-                  'bg-red-900/20 border-red-500/50 text-red-400'
+            className={`flex-1 py-3 border-r border-zinc-800 last:border-0 flex items-center justify-center gap-2 transition-colors ${feedbackGiven === rating
+              ? rating === 'helpful' ? 'bg-emerald-900/20 text-emerald-400' :
+                rating === 'mid' ? 'bg-yellow-900/20 text-yellow-400' :
+                  'bg-red-900/20 text-red-400'
               : feedbackGiven
-                ? 'border-zinc-800 text-zinc-700 cursor-not-allowed opacity-50'
-                : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300'
+                ? 'text-zinc-700 cursor-not-allowed opacity-50'
+                : 'text-zinc-600 hover:bg-zinc-900 hover:text-zinc-300'
               }`}
             title={rating === 'helpful' ? 'Helpful' : rating === 'mid' ? 'Neutral' : 'Not helpful'}
           >
-            {rating === 'helpful' ? <ThumbsUp className="w-4 h-4" /> : rating === 'mid' ? <Minus className="w-4 h-4" /> : <ThumbsDown className="w-4 h-4" />}
+            {rating === 'helpful' ? <ThumbsUp className="w-3 h-3" /> : rating === 'mid' ? <Minus className="w-3 h-3" /> : <ThumbsDown className="w-3 h-3" />}
+            <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">{rating}</span>
           </button>
         ))}
       </div>
@@ -320,13 +307,13 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
   // Action badge styling
   const getActionStyle = (action: string) => {
     switch (action) {
-      case 'SEND': return 'bg-white text-black';
-      case 'WAIT': return 'bg-hard-gold text-black';
-      case 'PULL_BACK': return 'bg-zinc-700 text-white';
-      case 'ABORT': return 'bg-red-600 text-white';
-      case 'MATCH': return 'bg-hard-blue text-white';
-      case 'CALL': return 'bg-purple-600 text-white';
-      default: return 'bg-zinc-800 text-white';
+      case 'SEND': return 'bg-white text-black border-white';
+      case 'WAIT': return 'bg-hard-gold text-black border-hard-gold';
+      case 'PULL_BACK': return 'bg-zinc-800 text-zinc-300 border-zinc-700';
+      case 'ABORT': return 'bg-red-900/20 text-red-500 border-red-900';
+      case 'MATCH': return 'bg-hard-blue/20 text-hard-blue border-hard-blue';
+      case 'CALL': return 'bg-purple-900/20 text-purple-400 border-purple-900';
+      default: return 'bg-zinc-800 text-white border-zinc-700';
     }
   };
 
@@ -345,161 +332,158 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
   // Input View
   if (!result) {
     return (
-      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-24 md:pb-0">
-
-        {/* TACTICAL HUD HEADER */}
-        <div className="border-b border-zinc-800 px-4 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
+      <div className="h-full w-full flex flex-col bg-matte-base relative">
+        {/* Header - Fixed */}
+        <div className="border-b border-zinc-800 px-4 py-3 flex items-center justify-between bg-matte-base/95 backdrop-blur-sm z-30 shrink-0">
           <button
             onClick={onBack}
             className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2 min-w-[44px]"
           >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-xs font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">BACK</span>
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-[10px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">BACK</span>
           </button>
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 bg-hard-gold animate-pulse"></div>
-            <span className="text-xs font-mono uppercase tracking-widest text-zinc-500">QUICK_MODE</span>
+            <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">QUICK_MODE</span>
           </div>
         </div>
-        {/* Background Pattern */}
-        <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
 
-        {/* Main Content */}
-        <div className="flex-1 p-4 sm:p-6 md:p-10 flex flex-col relative z-10 overflow-y-auto">
-          {/* Title Section - More compact */}
-          <div className="mb-4 sm:mb-6">
-            <div className="label-sm text-hard-gold mb-1">QUICK MODE</div>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-impact text-white uppercase tracking-tight">WHAT DO I SAY?</h2>
-            <p className="text-zinc-500 text-xs sm:text-sm mt-1.5 font-mono">Paste the texts. Get the texts.</p>
+        {/* Main Scroll Container */}
+        <div className="flex-1 overflow-y-auto scrollbar-hide pb-32">
+          {/* Hero Section */}
+          <div className="p-6 sm:p-8 md:p-10 border-b border-zinc-800">
+            <div className="text-[10px] font-mono text-hard-gold uppercase tracking-widest mb-2">DIAGNOSTIC_V3</div>
+            <h2 className="text-3xl font-impact text-white uppercase tracking-tight mb-2">WHAT DO I SAY?</h2>
+            <p className="text-zinc-500 text-sm font-mono max-w-md">Input required. Provide screenshot or text context to initiate analysis.</p>
           </div>
 
-          {/* Form Grid - More compact spacing */}
-          <div className="grid md:grid-cols-2 gap-3 sm:gap-5 flex-1">
-            {/* Left Column - Inputs */}
-            <div className="space-y-4">
-              {/* Screenshot Upload (Primary) */}
-              <div>
-                <label className="label-sm text-hard-gold mb-1.5 block flex items-center gap-1.5">
-                  <Image className="w-3 h-3" />
-                  EVIDENCE (SCREENSHOTS)
-                </label>
+          {/* Form Grid */}
+          <div className="grid md:grid-cols-2">
 
-                {/* File Input */}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                />
-
-                {/* Upload Zone / Preview */}
-                <div className="space-y-3">
-                  {screenshots.length > 0 ? (
-                    <div className="grid grid-cols-3 gap-2">
-                      {screenshots.map((src, index) => (
-                        <div key={index} className="relative aspect-[9/16] group bg-black border border-zinc-800">
-                          <img src={src} alt="Screenshot" className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" />
-                          <button
-                            onClick={() => removeScreenshot(index)}
-                            className="absolute top-1 right-1 bg-red-600 text-white p-0.5 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity min-w-[24px] min-h-[24px] flex items-center justify-center"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                      {/* Add more button */}
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="aspect-[9/16] border border-zinc-800 border-dashed flex flex-col items-center justify-center gap-2 text-zinc-600 hover:text-zinc-400 hover:border-zinc-600 transition-all min-h-[44px]"
-                      >
-                        <Upload className="w-4 h-4" />
-                        <span className="text-xs font-mono uppercase">ADD MORE</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full h-32 border border-zinc-700 border-dashed bg-zinc-900/50 hover:bg-zinc-900 hover:border-zinc-500 transition-all flex flex-col items-center justify-center gap-3 group"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center group-hover:bg-zinc-700 transition-colors">
-                        <Upload className="w-5 h-5 text-zinc-400 group-hover:text-white" />
-                      </div>
-                      <div className="text-center">
-                        <div className="text-xs font-mono text-zinc-300 uppercase tracking-wider mb-1">UPLOAD SCREENSHOTS</div>
-                        <div className="text-xs text-zinc-500 font-mono">Tap to browse or drop files</div>
-                      </div>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Additional Context (Secondary) - More compact */}
-              <div>
-                <label className="label-sm text-zinc-500 mb-1.5 block">ADDITIONAL CONTEXT <span className="text-zinc-600">(OPTIONAL)</span></label>
-                <textarea
-                  value={theirMessage}
-                  onChange={(e) => setTheirMessage(e.target.value)}
-                  placeholder={screenshots.length > 0 ? "Any backstory? e.g., 'We haven't talked in 2 weeks'" : "No screenshot? Paste their message here."}
-                  className="w-full bg-zinc-900 border border-zinc-700 p-3 text-base sm:text-sm text-white placeholder:text-zinc-500/60 resize-none focus:outline-none focus:border-white transition-colors h-20 font-mono"
-                />
-              </div>
-
-              {/* Your Draft - More compact */}
-              <div>
-                <label className="label-sm text-zinc-400 mb-1.5 block">YOUR POTENTIAL REPLY <span className="text-zinc-600">(OPTIONAL)</span></label>
-                <textarea
-                  value={yourDraft}
-                  onChange={(e) => setYourDraft(e.target.value)}
-                  placeholder="What are you thinking of saying?"
-                  className="w-full bg-zinc-900 border border-zinc-700 p-3 text-base sm:text-sm text-white placeholder:text-zinc-500/60 resize-none focus:outline-none focus:border-white transition-colors h-20 font-mono"
-                />
+            {/* Context Section */}
+            <div className="border-b border-zinc-800 p-6 sm:p-8">
+              <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4 block">01 // SITUATION</label>
+              <div className="grid grid-cols-5 gap-0 border border-zinc-800">
+                {contextOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setContext(opt.value)}
+                    className={`py-3 px-1 text-[10px] font-mono tracking-wider transition-all border-r border-zinc-800 last:border-0 min-h-[44px] hover:bg-zinc-900 ${context === opt.value
+                      ? 'bg-white text-black font-bold'
+                      : 'bg-transparent text-zinc-500 hover:text-zinc-300'
+                      }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Right Column - Context & Action */}
-            <div className="flex flex-col">
-              {/* Context Selector - More compact */}
-              <div className="mb-4">
-                <label className="label-sm text-zinc-400 mb-2 block">SITUATION</label>
-                <div className="grid grid-cols-5 gap-1">
-                  {contextOptions.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setContext(opt.value)}
-                      className={`py-3 px-1 border text-xs font-mono tracking-wider transition-all min-h-[44px] ${context === opt.value
-                        ? 'bg-white text-black border-white'
-                        : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500 hover:text-zinc-300'
-                        }`}
-                    >
-                      {opt.label}
-                    </button>
+            {/* Evidence Section */}
+            <div className="border-b border-zinc-800 p-6 sm:p-8">
+              <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4 block flex items-center gap-2">
+                02 // EVIDENCE (SCREENSHOTS)
+                <span className="text-zinc-700">OPTIONAL</span>
+              </label>
+
+              {/* File Input */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                accept="image/*"
+                multiple
+                className="hidden"
+              />
+
+              {screenshots.length > 0 ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {screenshots.map((src, index) => (
+                    <div key={index} className="relative aspect-[9/16] group bg-black border border-zinc-800">
+                      <img src={src} alt="Screenshot" className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" />
+                      <button
+                        onClick={() => removeScreenshot(index)}
+                        className="absolute top-0 right-0 bg-red-600 text-white w-6 h-6 flex items-center justify-center hover:bg-red-500 transition-colors z-10"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
                   ))}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="aspect-[9/16] border border-dashed border-zinc-800 hover:border-zinc-500 hover:bg-zinc-900 transition-all flex flex-col items-center justify-center gap-2 min-h-[44px]"
+                  >
+                    <Upload className="w-4 h-4 text-zinc-600" />
+                    <span className="text-[10px] font-mono text-zinc-600 uppercase">ADD</span>
+                  </button>
                 </div>
-              </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full h-32 border border-dashed border-zinc-800 hover:border-zinc-500 hover:bg-zinc-900 transition-all flex flex-col items-center justify-center gap-3 group"
+                >
+                  <Upload className="w-5 h-5 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+                  <div className="text-center">
+                    <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-1">UPLOAD IMAGE</div>
+                    <div className="text-[10px] text-zinc-600 font-mono">Tap to browse files</div>
+                  </div>
+                </button>
+              )}
+            </div>
 
-              {/* Spacer */}
-              <div className="flex-1 min-h-[20px]"></div>
+            {/* Additional Context */}
+            <div className="border-b border-zinc-800 p-6 sm:p-8">
+              <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4 block">
+                03 // CONTEXT <span className="text-zinc-700">OPTIONAL</span>
+              </label>
+              <textarea
+                value={theirMessage}
+                onChange={(e) => setTheirMessage(e.target.value)}
+                placeholder={screenshots.length > 0 ? "Any backstory? e.g., 'We haven't talked in 2 weeks'" : "No screenshot? Paste their message here."}
+                className="w-full bg-transparent border-b border-zinc-800 pb-2 text-sm text-white placeholder:text-zinc-700 resize-none focus:outline-none focus:border-white transition-colors h-24 font-sans leading-relaxed"
+              />
+            </div>
 
-              {/* Submit Button - More compact on mobile */}
-              <button
-                onClick={handleAnalyze}
-                disabled={(!theirMessage.trim() && screenshots.length === 0) || isLoading}
-                className={`w-full py-3.5 sm:py-4 font-impact text-lg sm:text-xl uppercase tracking-wide border transition-all min-h-[50px] ${(!theirMessage.trim() && screenshots.length === 0) || isLoading
-                  ? 'bg-zinc-900 text-zinc-600 border-zinc-800 cursor-not-allowed'
-                  : 'bg-white text-black border-white hover:bg-zinc-200 active:bg-zinc-300'
-                  }`}
-              >
-                {isLoading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Sparkles className="w-4 h-4 animate-spin" />
-                    ANALYZING...
-                  </span>
-                ) : (
-                  'RUN DIAGNOSTIC'
-                )}
-              </button>
+            {/* Your Draft */}
+            <div className="border-b border-zinc-800 p-6 sm:p-8">
+              <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4 block">
+                04 // YOUR DRAFT <span className="text-zinc-700">OPTIONAL</span>
+              </label>
+              <textarea
+                value={yourDraft}
+                onChange={(e) => setYourDraft(e.target.value)}
+                placeholder="What are you thinking of saying?"
+                className="w-full bg-transparent border-b border-zinc-800 pb-2 text-sm text-white placeholder:text-zinc-700 resize-none focus:outline-none focus:border-white transition-colors h-24 font-sans leading-relaxed"
+              />
+            </div>
+          </div>
+
+          {/* Action Area */}
+          <div className="p-6 sm:p-8">
+            <button
+              onClick={handleAnalyze}
+              disabled={(!theirMessage.trim() && screenshots.length === 0) || isLoading}
+              className={`w-full py-5 font-mono text-sm uppercase tracking-widest border transition-all min-h-[50px] flex items-center justify-center gap-3 group ${(!theirMessage.trim() && screenshots.length === 0) || isLoading
+                ? 'bg-zinc-900 text-zinc-600 border-zinc-800 cursor-not-allowed'
+                : 'bg-white text-black border-white hover:bg-zinc-200 active:bg-zinc-300'
+                }`}
+            >
+              {isLoading ? (
+                <>
+                  <Sparkles className="w-4 h-4 animate-spin" />
+                  <span>ANALYZING DATA...</span>
+                </>
+              ) : (
+                <>
+                  <span>RUN DIAGNOSTIC</span>
+                  <span className="text-xs opacity-50 group-hover:translate-x-1 transition-transform">→</span>
+                </>
+              )}
+            </button>
+            <div className="text-center mt-4">
+              <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest">
+                AI_MODEL: GEMINI_FLASH_2.0 // LATENCY: LOW
+              </span>
             </div>
           </div>
         </div>
@@ -509,246 +493,175 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
 
   // Results View
   return (
-    <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-24 md:pb-0">
-      {/* Background */}
-      <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
-      <div className="absolute inset-0 bg-scan-lines opacity-10 pointer-events-none"></div>
-
-      {/* Header - More compact */}
-      <div className="border-b border-zinc-800 px-4 sm:px-6 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
+    <div className="h-full w-full flex flex-col bg-matte-base relative">
+      {/* Header - Fixed */}
+      <div className="border-b border-zinc-800 px-4 py-3 flex items-center justify-between bg-matte-base/95 backdrop-blur-sm z-30 shrink-0 sticky top-0">
         <button
           onClick={resetForm}
           className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2 min-w-[44px]"
         >
           <span className="text-lg">←</span>
-          <span className="text-xs font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">NEW</span>
+          <span className="text-[10px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">NEW SCAN</span>
         </button>
-        <div className={`px-3 py-1.5 text-xs font-bold tracking-widest ${getActionStyle(result.recommendedAction)}`}>
+        <div className={`px-3 py-1.5 text-[10px] font-mono font-bold tracking-widest uppercase border ${getActionStyle(result.recommendedAction)}`}>
           {getActionLabel(result.recommendedAction)}
         </div>
       </div>
 
-      {/* Results Content - More compact */}
-      <div className="flex-1 p-3 sm:p-5 md:p-8 relative z-10">
-        <div className="max-w-4xl mx-auto space-y-3 sm:space-y-5">
-
-          {/* Page Title - Compact */}
-          <div className="mb-1">
-            <div className="label-sm text-hard-gold mb-0.5">ANALYSIS COMPLETE</div>
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-impact text-white uppercase tracking-tight">YOUR VIBE CHECK</h2>
-          </div>
-
-          {/* Vibe Check Card - More compact */}
-          <div className="bg-zinc-900 border border-zinc-800 relative">
-            <CornerNodes className="opacity-50" />
-            <div className="p-4 sm:p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="label-sm text-zinc-500 flex items-center gap-1.5">
-                  <div className="w-1 h-1 bg-hard-gold"></div>
-                  THEIR MESSAGE
-                </div>
-                <div className={`text-xl sm:text-2xl font-impact ${getEnergyStyle(result.vibeCheck.theirEnergy)}`}>
-                  {result.vibeCheck.theirEnergy.toUpperCase()}
-                </div>
+      {/* Main Scroll Container */}
+      <div className="flex-1 overflow-y-auto scrollbar-hide pb-32">
+        {/* Vibe Check Header */}
+        <div className="p-6 sm:p-8 border-b border-zinc-800 bg-zinc-900/20">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div>
+              <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-2">VIBE_CHECK // RESULT</div>
+              <div className={`text-4xl sm:text-5xl font-impact uppercase tracking-tight ${getEnergyStyle(result.vibeCheck.theirEnergy)}`}>
+                {result.vibeCheck.theirEnergy}
               </div>
-
-              {/* Show extracted target message from OCR or user input */}
-              <div className="bg-black/50 border border-zinc-800 p-3 mb-4">
-                {result.extractedTargetMessage ? (
-                  <div>
-                    <div className="text-xs font-mono text-hard-gold uppercase tracking-wider mb-1.5">
-                      📱 EXTRACTED FROM SCREENSHOT
-                    </div>
-                    <p className="text-zinc-300 text-sm font-mono italic">"{result.extractedTargetMessage}"</p>
-                  </div>
-                ) : (
-                  <p className="text-zinc-300 text-sm font-mono italic">"{theirMessage}"</p>
-                )}
-              </div>
-
-              {/* Interest Level Bar */}
-              <div className="mb-4">
-                <div className="flex justify-between text-xs font-mono text-zinc-500 mb-2 uppercase tracking-wider">
-                  <span>INTEREST LEVEL</span>
-                  <span>{result.vibeCheck.interestLevel}%</span>
-                </div>
-                <div className="h-1 bg-zinc-800 relative">
-                  <div
-                    className={`h-full transition-all ${result.vibeCheck.interestLevel >= 70 ? 'bg-white' :
-                      result.vibeCheck.interestLevel >= 40 ? 'bg-hard-gold' : 'bg-hard-blue'
-                      }`}
-                    style={{ width: `${result.vibeCheck.interestLevel}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Flags */}
-              <div className="flex flex-wrap gap-2">
-                {result.vibeCheck.greenFlags.map((flag, i) => (
-                  <span key={`green-${i}`} className="text-xs font-mono uppercase tracking-wider border border-zinc-700 px-2 py-1 text-zinc-300">
-                    ✓ {flag}
-                  </span>
-                ))}
-                {result.vibeCheck.redFlags.map((flag, i) => (
-                  <span key={`red-${i}`} className="text-xs font-mono uppercase tracking-wider border border-red-900 px-2 py-1 text-red-400">
-                    ⚠ {flag}
-                  </span>
-                ))}
-              </div>
+            </div>
+            <div className="flex flex-col items-start sm:items-end">
+              <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1">INTEREST LEVEL</div>
+              <div className="text-2xl font-mono text-white">{result.vibeCheck.interestLevel}%</div>
             </div>
           </div>
 
-          {/* Draft Analysis (if provided) */}
-          {result.draftAnalysis && (
-            <div className={`bg-zinc-900 border relative ${result.draftAnalysis.confidenceScore < 40 ? 'border-red-900/50' : 'border-zinc-800'
-              }`}>
-              <CornerNodes className="opacity-50" />
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="label-sm text-zinc-500 flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 ${result.draftAnalysis.confidenceScore < 40 ? 'bg-red-500' : 'bg-hard-blue'}`}></div>
-                    YOUR DRAFT {result.draftAnalysis.confidenceScore < 40 && <span className="text-red-500">// DON'T SEND THIS</span>}
-                  </div>
-                  <div className={`text-3xl font-impact ${result.draftAnalysis.confidenceScore >= 70 ? 'text-white' :
-                    result.draftAnalysis.confidenceScore >= 40 ? 'text-hard-gold' : 'text-red-500'
-                    }`}>
-                    {result.draftAnalysis.confidenceScore}%
-                  </div>
-                </div>
+          {/* Progress Bar */}
+          <div className="w-full h-1 bg-zinc-800 mt-4 relative">
+            <div
+              className={`absolute top-0 left-0 h-full ${result.vibeCheck.interestLevel >= 70 ? 'bg-white' : result.vibeCheck.interestLevel >= 40 ? 'bg-hard-gold' : 'bg-hard-blue'}`}
+              style={{ width: `${result.vibeCheck.interestLevel}%` }}
+            ></div>
+          </div>
 
-                {/* Show user's actual draft */}
-                <div className={`border p-3 mb-4 ${result.draftAnalysis.confidenceScore < 40
-                  ? 'bg-red-950/30 border-red-900/50'
-                  : 'bg-black/50 border-zinc-800'
-                  }`}>
-                  <p className="text-zinc-300 text-sm font-mono italic">"{yourDraft}"</p>
-                </div>
+          {/* Flags */}
+          <div className="flex flex-wrap gap-2 mt-4">
+             {result.vibeCheck.greenFlags.map((flag, i) => (
+               <span key={`green-${i}`} className="text-[10px] font-mono uppercase tracking-wider border border-zinc-800 bg-zinc-900/50 px-2 py-1 text-zinc-400">
+                 + {flag}
+               </span>
+             ))}
+             {result.vibeCheck.redFlags.map((flag, i) => (
+               <span key={`red-${i}`} className="text-[10px] font-mono uppercase tracking-wider border border-red-900/30 bg-red-900/10 px-2 py-1 text-red-400">
+                 ! {flag}
+               </span>
+             ))}
+          </div>
+        </div>
 
-                <p className="text-zinc-400 text-sm mb-4 font-mono uppercase">{result.draftAnalysis.verdict}</p>
-                <div className="flex flex-wrap gap-2">
-                  {result.draftAnalysis.strengths.map((s, i) => (
-                    <span key={`str-${i}`} className="text-xs font-mono uppercase tracking-wider border border-zinc-700 px-2 py-1 text-zinc-300">
-                      ✓ {s}
-                    </span>
-                  ))}
-                  {result.draftAnalysis.issues.map((issue, i) => (
-                    <span key={`issue-${i}`} className="text-xs font-mono uppercase tracking-wider border border-red-900 px-2 py-1 text-red-400">
-                      ✗ {issue}
-                    </span>
-                  ))}
-                </div>
+        {/* Extracted Message Display */}
+        <div className="p-6 sm:p-8 border-b border-zinc-800">
+          <div className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest mb-3">ANALYZED CONTENT</div>
+          <div className="pl-4 border-l-2 border-zinc-800">
+            <p className="text-zinc-300 text-sm font-sans italic leading-relaxed">
+              "{result.extractedTargetMessage || theirMessage}"
+            </p>
+          </div>
+        </div>
+
+        {/* Draft Analysis (if provided) */}
+        {result.draftAnalysis && (
+          <div className="p-6 sm:p-8 border-b border-zinc-800 bg-zinc-900/10">
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">YOUR DRAFT ANALYSIS</div>
+              <div className={`text-xl font-impact ${result.draftAnalysis.confidenceScore >= 70 ? 'text-white' : result.draftAnalysis.confidenceScore >= 40 ? 'text-hard-gold' : 'text-red-500'}`}>
+                {result.draftAnalysis.confidenceScore}/100
               </div>
+            </div>
+            <p className="text-zinc-400 text-sm font-mono uppercase mb-4">{result.draftAnalysis.verdict}</p>
+            <div className="bg-black border border-zinc-800 p-4 mb-4">
+               <p className="text-zinc-500 text-xs font-mono">"{yourDraft}"</p>
+            </div>
+          </div>
+        )}
+
+        {/* Suggestions List */}
+        <div>
+          <div className="p-6 sm:p-8 pb-4">
+            <div className="text-[10px] font-mono text-hard-gold uppercase tracking-widest flex items-center gap-2">
+              <Sparkles className="w-3 h-3" />
+              RECOMMENDED RESPONSES
+            </div>
+          </div>
+
+          {/* Smooth Options */}
+          <SuggestionCategory
+            title="SMOOTH"
+            titleColor="text-hard-gold"
+            options={result.suggestions.smooth}
+            copiedIndex={copiedIndex}
+            onCopy={copyToClipboard}
+            categoryKey="smooth"
+            feedbackGiven={feedbackGiven['smooth']}
+            onFeedback={(rating) => handleFeedback('smooth', rating)}
+          />
+
+          {/* Bold Options */}
+          <SuggestionCategory
+            title="BOLD"
+            titleColor="text-hard-blue"
+            options={result.suggestions.bold}
+            copiedIndex={copiedIndex}
+            onCopy={copyToClipboard}
+            categoryKey="bold"
+            feedbackGiven={feedbackGiven['bold']}
+            onFeedback={(rating) => handleFeedback('bold', rating)}
+          />
+
+          {/* Witty Options */}
+          <SuggestionCategory
+            title="WITTY"
+            titleColor="text-purple-400"
+            options={result.suggestions.witty}
+            copiedIndex={copiedIndex}
+            onCopy={copyToClipboard}
+            categoryKey="witty"
+            feedbackGiven={feedbackGiven['witty']}
+            onFeedback={(rating) => handleFeedback('witty', rating)}
+          />
+
+          {/* Authentic Options */}
+          <SuggestionCategory
+            title="AUTHENTIC"
+            titleColor="text-white"
+            options={result.suggestions.authentic}
+            copiedIndex={copiedIndex}
+            onCopy={copyToClipboard}
+            categoryKey="authentic"
+            feedbackGiven={feedbackGiven['authentic']}
+            onFeedback={(rating) => handleFeedback('authentic', rating)}
+          />
+
+          {/* Wait Option */}
+          {result.suggestions.wait && (
+            <div className="p-6 sm:p-8 border-b border-zinc-800 bg-zinc-900/30">
+              <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-2">ALTERNATIVE STRATEGY</div>
+              <p className="text-zinc-400 text-sm">{result.suggestions.wait}</p>
             </div>
           )}
+        </div>
 
-          {/* Suggestions */}
-          <div>
-            <div className="label-sm text-zinc-500 mb-4 flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <Sparkles className="w-3 h-3 text-hard-gold" />
-                SAY THIS INSTEAD
-              </span>
-            </div>
-            <div className="space-y-3">
-              {/* Smooth Options */}
-              <SuggestionCategory
-                title="SMOOTH"
-                titleColor="text-hard-gold"
-                options={result.suggestions.smooth}
-                copiedIndex={copiedIndex}
-                onCopy={copyToClipboard}
-                categoryKey="smooth"
-                feedbackGiven={feedbackGiven['smooth']}
-                onFeedback={(rating) => handleFeedback('smooth', rating)}
-              />
+        {/* Pro Tip */}
+        <div className="p-6 sm:p-8 border-b border-zinc-800 bg-gradient-to-r from-hard-gold/5 to-transparent">
+          <div className="text-[10px] font-mono text-hard-gold uppercase tracking-widest mb-2">PRO TIP</div>
+          <p className="text-zinc-300 text-sm leading-relaxed">{result.proTip}</p>
+        </div>
 
-              {/* Bold Options */}
-              <SuggestionCategory
-                title="BOLD"
-                titleColor="text-hard-blue"
-                options={result.suggestions.bold}
-                copiedIndex={copiedIndex}
-                onCopy={copyToClipboard}
-                categoryKey="bold"
-                feedbackGiven={feedbackGiven['bold']}
-                onFeedback={(rating) => handleFeedback('bold', rating)}
-              />
-
-              {/* Witty Options */}
-              <SuggestionCategory
-                title="WITTY"
-                titleColor="text-hard-purple"
-                options={result.suggestions.witty}
-                copiedIndex={copiedIndex}
-                onCopy={copyToClipboard}
-                categoryKey="witty"
-                feedbackGiven={feedbackGiven['witty']}
-                onFeedback={(rating) => handleFeedback('witty', rating)}
-              />
-
-              {/* Authentic Options */}
-              <SuggestionCategory
-                title="AUTHENTIC"
-                titleColor="text-white"
-                options={result.suggestions.authentic}
-                copiedIndex={copiedIndex}
-                onCopy={copyToClipboard}
-                categoryKey="authentic"
-                feedbackGiven={feedbackGiven['authentic']}
-                onFeedback={(rating) => handleFeedback('authentic', rating)}
-              />
-
-              {/* Wait Option (if applicable) */}
-              {result.suggestions.wait && (
-                <div className="bg-zinc-900/50 border border-zinc-800 p-5 relative">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-mono tracking-widest text-zinc-500 uppercase">OR WAIT</span>
-                  </div>
-                  <p className="text-zinc-400 text-sm">{result.suggestions.wait}</p>
-                </div>
-              )}
-            </div>
+        {/* Final Action Call */}
+        <div className="p-8 text-center bg-zinc-900/50">
+          <div className="text-[10px] font-mono uppercase tracking-widest opacity-60 mb-2">
+            FINAL VERDICT
           </div>
-
-          {/* Pro Tip */}
-          <div className="bg-zinc-900 border border-hard-gold/30 relative">
-            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-hard-gold/50 via-hard-gold to-hard-gold/50"></div>
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-3">
-                <Sparkles className="w-4 h-4 text-hard-gold" />
-                <span className="text-xs font-mono tracking-widest text-hard-gold uppercase">PRO TIP</span>
-              </div>
-              <p className="text-zinc-300 text-sm leading-relaxed">{result.proTip}</p>
-            </div>
+          <div className="font-impact text-3xl uppercase tracking-wide mb-4 text-white">
+            {getActionLabel(result.recommendedAction)}
           </div>
-
-          {/* Action Banner - Clarify this is for the AI suggestions */}
-          <div className={`${getActionStyle(result.recommendedAction)} p-6 text-center`}>
-            <div className="text-xs font-mono uppercase tracking-widest opacity-60 mb-2">
-              USE ONE OF THE SUGGESTIONS ABOVE
-            </div>
-            <div className="font-impact text-3xl uppercase tracking-wide mb-1">
-              {getActionLabel(result.recommendedAction)}
-            </div>
-            <div className="text-xs font-mono uppercase tracking-widest opacity-70">
-              {result.recommendedAction === 'SEND' && 'PICK A REPLY ABOVE. SEND THAT.'}
-              {result.recommendedAction === 'WAIT' && 'CHILL FOR A BIT FIRST.'}
-              {result.recommendedAction === 'PULL_BACK' && "UR DOING TOO MUCH."}
-              {result.recommendedAction === 'ABORT' && 'WALK AWAY BESTIE.'}
-              {result.recommendedAction === 'MATCH' && 'MIRROR THEIR VIBE.'}
-              {result.recommendedAction === 'CALL' && "TEXTING AINT IT. CALL."}
-            </div>
-          </div>
-
-          {/* New Scan Button */}
           <button
             onClick={() => setResult(null)}
-            className="w-full py-4 border border-zinc-700 text-zinc-400 hover:text-white hover:border-white transition-all font-mono text-sm uppercase tracking-widest min-h-[44px]"
+            className="px-8 py-3 border border-zinc-700 text-zinc-400 hover:text-white hover:border-white transition-all font-mono text-xs uppercase tracking-widest"
           >
-            ← NEW SCAN
+            START NEW SCAN
           </button>
-
         </div>
+
       </div>
     </div>
   );

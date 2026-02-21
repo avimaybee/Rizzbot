@@ -371,7 +371,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                       <div className="w-7 h-7 bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-500 shrink-0">
                         <User className="w-3.5 h-3.5" />
                       </div>
-                      <div className="bg-zinc-800 text-zinc-300 p-3 rounded-xl rounded-bl-none max-w-[85%] text-xs border border-zinc-700">
+                      <div className="bg-zinc-800 text-zinc-300 p-3 max-w-[85%] text-xs border border-zinc-700">
                         {item.text}
                       </div>
                     </div>
@@ -381,7 +381,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                       <textarea
                         value={sampleTexts[index]}
                         onChange={(e) => handleSampleChange(index, e.target.value)}
-                        className="w-full bg-black border border-zinc-700 p-3 text-white text-base sm:text-xs rounded-xl rounded-br-none focus:border-white focus:outline-none min-h-[60px] resize-none placeholder:text-zinc-700"
+                        className="w-full bg-black border border-zinc-700 p-3 text-white text-base sm:text-xs focus:border-white focus:outline-none min-h-[60px] resize-none placeholder:text-zinc-700"
                         placeholder="Type your response..."
                       />
                     </div>
@@ -404,7 +404,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
             <div className="bg-zinc-900/50 border border-dashed border-zinc-800 p-6 hover:border-zinc-600 transition-colors">
               <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-zinc-800 flex items-center justify-center rounded-full shrink-0">
+                  <div className="w-12 h-12 bg-zinc-800 flex items-center justify-center shrink-0">
                     <Image className="w-5 h-5 text-zinc-400" />
                   </div>
                   <div>
@@ -613,10 +613,10 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                           <img
                             src={authUser.photoURL}
                             alt=""
-                            className="w-12 h-12 rounded-full border-2 border-zinc-700"
+                            className="w-12 h-12 border border-zinc-700"
                           />
                         ) : (
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-white text-lg font-bold">
+                          <div className="w-12 h-12 bg-zinc-800 border border-zinc-700 flex items-center justify-center text-white text-lg font-bold">
                             {(authUser.displayName || authUser.email || 'U')[0].toUpperCase()}
                           </div>
                         )}
@@ -660,7 +660,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                       <div className="text-xs font-mono text-zinc-500 uppercase mb-2">YOUR EMOJIS</div>
                       <div className="flex flex-wrap gap-2">
                         {profile.favoriteEmojis.map((emoji, i) => (
-                          <span key={i} className="text-2xl bg-zinc-800 px-3 py-1.5 rounded-lg border border-zinc-700 hover:border-hard-gold transition-colors">
+                          <span key={i} className="text-2xl bg-zinc-800 px-3 py-1.5 border border-zinc-700 hover:border-hard-gold transition-colors">
                             {emoji}
                           </span>
                         ))}

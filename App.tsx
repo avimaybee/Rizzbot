@@ -226,20 +226,20 @@ const SideDock = ({ activeModule, setModule, authUser, onSignOut }: {
                 <img
                   src={authUser.photoURL}
                   alt={authUser.displayName || 'User'}
-                  className="w-10 h-10 rounded-full border-2 border-zinc-700 group-hover:border-zinc-500 transition-all shadow-lg"
+                  className="w-10 h-10 border border-zinc-700 group-hover:border-zinc-500 transition-all shadow-lg"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-hard-gold/80 via-amber-500 to-orange-500 flex items-center justify-center text-white text-sm font-bold shadow-lg ring-2 ring-zinc-800 group-hover:ring-zinc-600 transition-all">
+                <div className="w-10 h-10 bg-zinc-800 flex items-center justify-center text-white text-sm font-bold shadow-lg border border-zinc-700 group-hover:border-zinc-500 transition-all">
                   {(authUser.displayName || authUser.email || 'U')[0].toUpperCase()}
                 </div>
               )}
               {/* Online indicator dot */}
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-matte-base"></div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border border-matte-base"></div>
             </div>
             {onSignOut && (
               <button
                 onClick={onSignOut}
-                className="flex items-center gap-1.5 px-2 py-1 text-zinc-600 hover:text-red-400 hover:bg-red-900/20 rounded transition-all text-[9px] font-mono uppercase tracking-wider"
+                className="flex items-center gap-1.5 px-2 py-1 text-zinc-600 hover:text-red-400 hover:bg-red-900/20 transition-all text-[9px] font-mono uppercase tracking-wider"
                 title="Sign out"
               >
                 <LogOut className="w-3 h-3" />
@@ -309,9 +309,9 @@ const MobileTabItemSvg = ({ active, onClick, label, Icon }: {
 }) => (
   <button
     onClick={onClick}
-    className={`flex flex-col items-center justify-center gap-0.5 min-w-[56px] py-1.5 px-1.5 rounded-md transition-all ${active
-      ? 'text-white bg-zinc-800/80'
-      : 'text-zinc-500 active:text-zinc-300'
+    className={`flex flex-col items-center justify-center gap-0.5 min-w-[56px] py-1.5 px-1.5 transition-all ${active
+      ? 'text-white bg-zinc-800/80 border-t-2 border-hard-gold'
+      : 'text-zinc-500 active:text-zinc-300 border-t-2 border-transparent'
       }`}
   >
     <Icon className={`${active ? 'w-5 h-5' : 'w-4 h-4'}`} />
@@ -372,7 +372,7 @@ const StandbyScreen = ({ onActivate, hasProfile, authUser, userProfile }: {
           {authUser && (
             <div className="mb-3 flex items-center gap-2">
               {authUser.photoURL && (
-                <img src={authUser.photoURL} alt="" className="w-5 h-5 rounded-full" />
+                <img src={authUser.photoURL} alt="" className="w-5 h-5 border border-zinc-700" />
               )}
               <span className="text-xs text-zinc-400">
                 hey, <span className="text-white font-medium">{authUser.displayName || authUser.email?.split('@')[0] || 'friend'}</span>
@@ -472,11 +472,11 @@ const StandbyScreen = ({ onActivate, hasProfile, authUser, userProfile }: {
         <div className="flex items-center justify-between mb-2">
           <span className="label-sm text-hard-gold">COMMAND CENTER</span>
           {authUser && (
-            <div className="flex items-center gap-2 bg-zinc-900/80 px-2 py-1 rounded-full border border-zinc-800">
+            <div className="flex items-center gap-2 bg-zinc-900/80 px-2 py-1 border border-zinc-800">
               {authUser.photoURL ? (
-                <img src={authUser.photoURL} alt="" className="w-3 h-3 rounded-full" />
+                <img src={authUser.photoURL} alt="" className="w-3 h-3 border border-zinc-700" />
               ) : (
-                <div className="w-3 h-3 rounded-full bg-zinc-700"></div>
+                <div className="w-3 h-3 bg-zinc-700 border border-zinc-600"></div>
               )}
               <span className="text-[9px] font-mono text-zinc-300 uppercase">{authUser.displayName?.split(' ')[0] || 'User'}</span>
             </div>

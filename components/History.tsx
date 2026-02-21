@@ -81,7 +81,7 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
         {theirMessage && (
           <div className="bg-zinc-900 border border-zinc-800 p-4 sm:p-6">
             <div className="label-sm text-zinc-400 mb-3">THEIR MESSAGE</div>
-            <p className="text-white bg-zinc-800 p-4 rounded-lg border border-zinc-700">{theirMessage}</p>
+            <p className="text-white bg-zinc-800 p-4 border border-zinc-700">{theirMessage}</p>
           </div>
         )}
 

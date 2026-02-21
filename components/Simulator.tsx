@@ -251,7 +251,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
       <div className="w-full h-full flex flex-col items-center justify-center bg-matte-panel border border-zinc-800 max-w-2xl mx-auto p-12 relative">
         <CornerNodes />
         <div className="relative mb-8">
-          <div className="w-16 h-16 border-4 border-zinc-800 border-t-hard-blue animate-spin rounded-full"></div>
+          <div className="w-16 h-16 border-4 border-zinc-800 border-t-hard-blue animate-spin"></div>
         </div>
         <h2 className="text-4xl font-impact text-white mb-2 uppercase tracking-wide">
           {analyzing ? "Running Diagnostics" : "Building Profile"}
@@ -295,10 +295,10 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
               onClick={() => setShowPracticePartners(!showPracticePartners)}
             >
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-hard-blue rounded-sm"></div>
+                <div className="w-2 h-2 bg-hard-blue"></div>
                 <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Practice Partners</h4>
                 {savedPersonas.length > 0 && (
-                  <span className="text-xs font-mono text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">{savedPersonas.length}</span>
+                  <span className="text-xs font-mono text-zinc-500 bg-zinc-800 px-2 py-0.5">{savedPersonas.length}</span>
                 )}
               </div>
               <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${showPracticePartners ? 'rotate-180' : ''}`} />
@@ -311,10 +311,10 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                   <button
                     key={idx}
                     onClick={() => loadPersona(p)}
-                    className="w-full text-left p-4 bg-zinc-900/80 border border-zinc-800 hover:border-hard-blue hover:bg-zinc-800/80 transition-all group rounded-sm min-h-[44px]"
+                    className="w-full text-left p-4 bg-zinc-900/80 border border-zinc-800 hover:border-hard-blue hover:bg-zinc-800/80 transition-all group min-h-[44px]"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 shrink-0 bg-gradient-to-br from-hard-blue/20 to-hard-blue/5 border border-hard-blue/30 rounded-sm flex items-center justify-center text-hard-blue text-sm font-bold">
+                      <div className="w-8 h-8 shrink-0 bg-gradient-to-br from-hard-blue/20 to-hard-blue/5 border border-hard-blue/30 flex items-center justify-center text-hard-blue text-sm font-bold">
                         {p.name.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -331,18 +331,18 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
             <div className="hidden md:flex md:flex-col md:h-full md:p-6">
               <div className="flex items-center justify-between mb-6 shrink-0">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-hard-blue rounded-sm"></div>
+                  <div className="w-2 h-2 bg-hard-blue"></div>
                   <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Practice Partners</h4>
                 </div>
                 {savedPersonas.length > 0 && (
-                  <span className="text-xs font-mono text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">{savedPersonas.length}</span>
+                  <span className="text-xs font-mono text-zinc-500 bg-zinc-800 px-2 py-0.5">{savedPersonas.length}</span>
                 )}
               </div>
 
               <div className={`space-y-2 overflow-y-auto flex-1 scrollbar-hide ${savedPersonas.length === 0 ? 'flex items-center justify-center' : ''}`}>
                 {savedPersonas.length === 0 ? (
                   <div className="text-center py-8">
-                    <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-zinc-800 flex items-center justify-center">
+                    <div className="w-12 h-12 mx-auto mb-4 bg-zinc-800 flex items-center justify-center">
                       <MessageSquare className="w-5 h-5 text-zinc-600" />
                     </div>
                     <p className="text-sm font-medium text-zinc-400 mb-1">No saved personas yet</p>
@@ -353,10 +353,10 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                     <button
                       key={idx}
                       onClick={() => loadPersona(p)}
-                      className="w-full text-left p-4 bg-zinc-900/80 border border-zinc-800 hover:border-hard-blue hover:bg-zinc-800/80 transition-all group rounded-sm"
+                      className="w-full text-left p-4 bg-zinc-900/80 border border-zinc-800 hover:border-hard-blue hover:bg-zinc-800/80 transition-all group"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="w-9 h-9 shrink-0 bg-gradient-to-br from-hard-blue/20 to-hard-blue/5 border border-hard-blue/30 rounded-sm flex items-center justify-center text-hard-blue text-sm font-bold group-hover:from-hard-blue/30 group-hover:to-hard-blue/10 transition-all">
+                        <div className="w-9 h-9 shrink-0 bg-gradient-to-br from-hard-blue/20 to-hard-blue/5 border border-hard-blue/30 flex items-center justify-center text-hard-blue text-sm font-bold group-hover:from-hard-blue/30 group-hover:to-hard-blue/10 transition-all">
                           {p.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -489,7 +489,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                       <span className="text-xs font-bold text-zinc-400 group-hover:text-white uppercase tracking-wider">Upload Screenshots</span>
                     </div>
                     <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
-                    {previewUrls.length > 0 && <span className="text-xs font-bold text-hard-blue border border-hard-blue/30 px-2 py-0.5 rounded-sm">{previewUrls.length} FILES</span>}
+                    {previewUrls.length > 0 && <span className="text-xs font-bold text-hard-blue border border-hard-blue/30 px-2 py-0.5">{previewUrls.length} FILES</span>}
                   </div>
 
                   {/* Screenshot Previews with Remove */}
@@ -509,7 +509,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                               setPreviewUrls(prev => prev.filter((_, i) => i !== index));
                               setScreenshots(prev => prev.filter((_, i) => i !== index));
                             }}
-                            className="absolute top-1 right-1 w-5 h-5 bg-red-600 hover:bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-sm min-w-[24px] min-h-[24px]"
+                            className="absolute top-1 right-1 w-5 h-5 bg-red-600 hover:bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity min-w-[24px] min-h-[24px]"
                           >
                             <span className="text-xs font-bold">×</span>
                           </button>
@@ -614,7 +614,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                     </span>
                     <span className={`text-2xl ${riskColors.text} ml-1`}>%</span>
                   </div>
-                  <div className="w-full h-2 bg-black/50 mt-6 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-black/50 mt-6 overflow-hidden">
                     <div
                       className={`h-full ${riskColors.bar} transition-all duration-500`}
                       style={{ width: `${analysisResult.ghostRisk}%` }}
@@ -636,7 +636,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                     </span>
                     <span className="text-2xl text-zinc-500 ml-1">%</span>
                   </div>
-                  <div className="w-full h-2 bg-black/50 mt-6 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-black/50 mt-6 overflow-hidden">
                     <div
                       className="h-full bg-hard-blue transition-all duration-500"
                       style={{ width: `${analysisResult.vibeMatch}%` }}
@@ -656,7 +656,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                     </span>
                     <span className="text-2xl text-zinc-500 ml-1">%</span>
                   </div>
-                  <div className="w-full h-2 bg-black/50 mt-6 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-black/50 mt-6 overflow-hidden">
                     <div
                       className="h-full bg-hard-gold transition-all duration-500"
                       style={{ width: `${analysisResult.effortBalance}%` }}
