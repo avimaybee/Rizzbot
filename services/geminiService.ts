@@ -2,31 +2,34 @@ import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { SimResult, Persona, SimAnalysisResult, QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, StyleExtractionRequest, StyleExtractionResponse, AIExtractedStyleProfile } from "../types";
 import { getPromptBias } from "./feedbackService";
 
-// Get API key from Vite environment variable or process.env
-// Try multiple formats to be robust (VITE_ prefixed or raw GEMINI_)
-const getEnvVar = (key: string) => {
-  if (import.meta.env && import.meta.env[key]) return import.meta.env[key];
-  try {
-    // Safe check for process.env in case it's available (some setups polyfill it)
-    // @ts-ignore
-    if (typeof process !== 'undefined' && process.env && process.env[key]) {
-      // @ts-ignore
-      return process.env[key];
+/**
+ * SECURITY NOTE: The Gemini API key is no longer stored in the frontend bundle.
+ * Instead, we proxy all requests through our own backend function at /api/gemini
+ * which injects the key securely from an environment variable.
+ */
+const originalFetch = window.fetch;
+window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+  const url = typeof input === 'string'
+    ? input
+    : (input instanceof URL ? input.href : input.url);
+
+  if (url.includes('generativelanguage.googleapis.com')) {
+    const proxyUrl = url.replace('https://generativelanguage.googleapis.com', '/api/gemini');
+
+    // Handle cases where input is a Request object to preserve headers, method, and body
+    if (typeof input !== 'string' && !(input instanceof URL)) {
+      // Create a new Request based on the original but with the proxy URL
+      const modifiedRequest = new Request(proxyUrl, input);
+      return originalFetch(modifiedRequest);
     }
-  } catch (e) {
-    // ignore
+
+    return originalFetch(proxyUrl, init);
   }
-  return '';
+  return originalFetch(input, init);
 };
 
-const apiKey = getEnvVar('VITE_GEMINI_API_KEY') || getEnvVar('GEMINI_API_KEY');
-
-if (!apiKey) {
-  console.error('API KEY MISSING: VITE_GEMINI_API_KEY or GEMINI_API_KEY not found.');
-}
-
-// Initialize with a dummy key if missing to prevent immediate crash, but calls will fail
-const ai = new GoogleGenAI({ apiKey: apiKey || 'dummy_key' });
+// Initialize with a placeholder. The actual key is handled by the backend proxy.
+const ai = new GoogleGenAI({ apiKey: 'PROXY_SECURED' });
 
 // SAFETY SETTINGS: BLOCK_NONE as requested for mature/unrestricted feedback
 const safetySettings = [
