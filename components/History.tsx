@@ -20,10 +20,7 @@ interface HistoryProps {
 
 // Session Detail View Component
 const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ session, onBack }) => {
-  let parsedResult: any = null;
-  try {
-    parsedResult = typeof session.result === 'string' ? JSON.parse(session.result) : session.result;
-  } catch { }
+  const parsedResult = session.parsedResult;
 
   const screenshots = parsedResult?.request?.screenshots || parsedResult?.screenshots || [];
   const vibeCheck = parsedResult?.vibeCheck || parsedResult?.response?.vibeCheck;
@@ -370,10 +367,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
         ) : (
           <div className="p-4 sm:p-6 space-y-3">
             {sessions.map((session) => {
-              let parsedResult: any = null;
-              try {
-                parsedResult = typeof session.result === 'string' ? JSON.parse(session.result) : session.result;
-              } catch { }
+              const parsedResult = session.parsedResult;
 
               const headline = session.headline || parsedResult?.headline || parsedResult?.vibeCheck?.theirEnergy || 'Session';
               const ghostRisk = session.ghost_risk || parsedResult?.ghostRisk || parsedResult?.vibeCheck?.interestLevel;
