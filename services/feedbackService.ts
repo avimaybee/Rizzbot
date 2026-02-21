@@ -21,8 +21,14 @@ const WELLBEING_KEY = 'therizzbot_wellbeing';
 
 /**
  * Get user-specific storage key.
+ * Throws if userId is empty or whitespace to prevent key collisions.
  */
-const getUserKey = (baseKey: string, userId: string): string => `${baseKey}_${userId}`;
+const getUserKey = (baseKey: string, userId: string): string => {
+  if (!userId || !userId.trim()) {
+    throw new Error('userId must be a non-empty string for user-specific storage');
+  }
+  return `${baseKey}_${userId}`;
+};
 
 /**
  * Get stored data with fallback to legacy keys and migration.
@@ -35,10 +41,10 @@ const getStoredData = (key: string, userId: string): string | null => {
     // Fallback to legacy key for backward compatibility
     stored = localStorage.getItem(key);
     if (stored) {
-      // Migrate to user-specific key
+      // Migrate to user-specific key and remove legacy key to prevent
+      // other users on the same device from re-importing the same data.
       localStorage.setItem(userKey, stored);
-      // We keep the legacy key for now to avoid data loss if migration fails,
-      // but in a real app we might want to clear it after successful migration.
+      localStorage.removeItem(key);
     }
   }
   return stored;
