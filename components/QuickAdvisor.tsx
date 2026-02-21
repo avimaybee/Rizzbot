@@ -300,7 +300,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
 
     // Show toast notification
     showToast('Thanks for the feedback!', 'success');
-  }, [context, result, userId, showToast]);
+  }, [context, result, firebaseUid, userId, showToast]);
 
   const resetForm = useCallback(() => {
     setResult(null);

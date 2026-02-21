@@ -193,7 +193,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
     setPendingMessage(sentMessage);
     setDraft('');
     setChatLoading(true);
-    const result = await simulateDraft(firebaseUid || '', sentMessage, activePersona, userProfile);
+    const result = await simulateDraft(firebaseUid ?? undefined, sentMessage, activePersona, userProfile);
     setSimHistory(prev => [...prev, { draft: sentMessage, result }]);
     setPendingMessage(null);
     setChatLoading(false);

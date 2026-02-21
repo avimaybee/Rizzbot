@@ -217,7 +217,7 @@ export const generatePersona = async (
 };
 
 export const simulateDraft = async (
-  userId: string,
+  userId: string | undefined,
   draft: string,
   persona: Persona,
   userStyle?: UserStyleProfile | null,
@@ -257,8 +257,8 @@ export const simulateDraft = async (
     `;
   }
 
-  // Get feedback-based prompt bias
-  const feedbackBias = getPromptBias(userId);
+  // Get feedback-based prompt bias (only when userId is available)
+  const feedbackBias = userId ? getPromptBias(userId) : '';
 
   const prompt = `
     SYSTEM IDENTITY: THE WINGMAN
