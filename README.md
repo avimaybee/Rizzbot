@@ -24,7 +24,7 @@ Your AI-powered texting coach that helps you craft authentic, confident response
 2. Set up environment variables:
    Create a `.env.local` file with:
    ```
-   VITE_GEMINI_API_KEY=your_gemini_api_key
+   GEMINI_API_KEY=your_gemini_api_key
    VITE_FIREBASE_API_KEY=your_firebase_api_key
    VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
    VITE_FIREBASE_PROJECT_ID=your_project_id
