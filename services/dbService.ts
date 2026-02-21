@@ -74,43 +74,6 @@ export interface FeedbackEntry {
   created_at?: string;
 }
 
-export interface ParsedSessionResult {
-  // Quick mode fields
-  vibeCheck?: {
-    theirEnergy?: string;
-    interestLevel?: number;
-    redFlags?: string[];
-    greenFlags?: string[];
-  };
-  suggestions?: {
-    smooth?: string | string[];
-    bold?: string | string[];
-    authentic?: string | string[];
-    witty?: unknown[];
-    wait?: string | null;
-  };
-  screenshots?: string[];
-  request?: {
-    screenshots?: string[];
-    theirMessage?: string;
-  };
-  response?: {
-    vibeCheck?: ParsedSessionResult['vibeCheck'];
-    suggestions?: ParsedSessionResult['suggestions'];
-  };
-  // Simulator mode fields
-  history?: Array<{ role?: string; content?: string; [key: string]: unknown }>;
-  analysis?: {
-    ghostRisk?: number;
-    vibeMatch?: number;
-    effortBalance?: number;
-    headline?: string;
-    insights?: string[];
-  };
-  headline?: string;
-  ghostRisk?: number;
-}
-
 export interface Session {
   id: number;
   user_id?: number;
@@ -123,7 +86,7 @@ export interface Session {
   ghost_risk?: number;
   message_count?: number;
   created_at: string;
-  parsedResult?: ParsedSessionResult;
+  parsedResult?: any;
 }
 
 export interface SessionsResponse {
@@ -340,11 +303,11 @@ export async function getSessions(firebaseUid?: string, limit = 20, offset = 0):
   const data = await res.json();
   if (data.sessions) {
     data.sessions = data.sessions.map((s: any) => {
-      let parsedResult: ParsedSessionResult = {};
+      let parsedResult = null;
       try {
-        parsedResult = typeof s.result === 'string' ? JSON.parse(s.result) : s.result ?? {};
+        parsedResult = typeof s.result === 'string' ? JSON.parse(s.result) : s.result;
       } catch (e) {
-        logDbError('Failed to parse session result', e);
+        console.error('Failed to parse session result:', e);
       }
       return { ...s, parsedResult };
     });
