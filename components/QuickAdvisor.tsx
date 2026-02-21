@@ -24,6 +24,24 @@ const contextOptions: { value: ContextOption; label: string }[] = [
   { value: 'ex', label: 'EX' },
 ];
 
+// Corner Nodes Component - matching App.tsx style
+const CornerNodes = ({ className }: { className?: string }) => (
+  <div className={`pointer-events-none absolute inset-0 z-50 ${className}`}>
+    <div className="absolute top-0 left-0">
+      <div className="w-2 h-2 border-t border-l border-zinc-500"></div>
+    </div>
+    <div className="absolute top-0 right-0">
+      <div className="w-2 h-2 border-t border-r border-zinc-500"></div>
+    </div>
+    <div className="absolute bottom-0 left-0">
+      <div className="w-2 h-2 border-b border-l border-zinc-500"></div>
+    </div>
+    <div className="absolute bottom-0 right-0">
+      <div className="w-2 h-2 border-b border-r border-zinc-500"></div>
+    </div>
+  </div>
+);
+
 // Suggestion Category Component - handles new multi-bubble SuggestionOption[] structure
 interface SuggestionCategoryProps {
   title: string;
