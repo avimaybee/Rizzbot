@@ -1,5 +1,19 @@
 export async function onRequest(context: { env: any; request: Request }) {
   const { env, request } = context;
+
+  // CORS headers following the pattern used in other Pages Functions
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, x-goog-api-key',
+    'Content-Type': 'application/json',
+  };
+
+  // Handle preflight
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
   const url = new URL(request.url);
 
   // Extract path for Google API
@@ -7,7 +21,7 @@ export async function onRequest(context: { env: any; request: Request }) {
   if (!path || path === '/') {
     return new Response(JSON.stringify({ error: 'Missing path' }), {
       status: 400,
-      headers: { 'Content-Type': 'application/json' }
+      headers: corsHeaders,
     });
   }
 
@@ -24,7 +38,7 @@ export async function onRequest(context: { env: any; request: Request }) {
     console.error('GEMINI_API_KEY not found in backend environment');
     return new Response(JSON.stringify({ error: 'GEMINI_API_KEY not configured in backend' }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: corsHeaders,
     });
   }
   googleUrl.searchParams.set('key', apiKey);
@@ -33,10 +47,8 @@ export async function onRequest(context: { env: any; request: Request }) {
   const headers = new Headers(request.headers);
   headers.delete('host');
 
-  // Ensure x-goog-api-key header is also set if used
-  if (headers.has('x-goog-api-key')) {
-    headers.set('x-goog-api-key', apiKey);
-  }
+  // Always set x-goog-api-key to the backend API key to replace any placeholder value
+  headers.set('x-goog-api-key', apiKey);
 
   try {
     const response = await fetch(googleUrl.toString(), {
@@ -58,7 +70,7 @@ export async function onRequest(context: { env: any; request: Request }) {
     console.error('Gemini Proxy Error:', error);
     return new Response(JSON.stringify({ error: 'Proxy Error', message: error.message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: corsHeaders,
     });
   }
 }
