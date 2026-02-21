@@ -1,19 +1,19 @@
 // Database Service Layer – client-side helpers for fetching/posting to D1 APIs
+import { logger } from './logger';
 
 const API_BASE = typeof window === 'undefined' ? '' : '';
-const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
 // Reduce console spam in development when DB is unavailable
 const logDbError = (message: string, ...args: any[]) => {
-  if (isDevelopment) {
+  if (import.meta.env.DEV) {
     // Only log once per session using a flag
     const logKey = `db_error_${message.slice(0, 30)}`;
-    if (!(window as any)[logKey]) {
-      console.warn(`[DB] ${message} (local dev - DB features disabled)`, ...args);
+    if (typeof window !== 'undefined' && !(window as any)[logKey]) {
+      logger.warn(`[DB] ${message} (local dev - DB features disabled)`, ...args);
       (window as any)[logKey] = true;
     }
   } else {
-    console.error(`[DB] ${message}`, ...args);
+    logger.error(`[DB] ${message}`, ...args);
   }
 };
 
@@ -119,7 +119,7 @@ export async function getOrCreateUser(firebaseUid: string, userData?: UserData):
     // User exists, update their data if provided
     if (userData && data.user) {
       // Fire off update in background (don't block)
-      updateUserData(data.user.id, userData).catch(console.error);
+      updateUserData(data.user.id, userData).catch(err => logger.error('Background user update failed:', err));
     }
     return data.user;
   }
@@ -156,7 +156,7 @@ export async function updateUserData(userId: number, userData: UserData): Promis
     body: JSON.stringify({ id: userId, ...userData }),
   });
   if (!res.ok) {
-    console.error(`Failed to update user data: ${res.statusText}`);
+    logger.error(`Failed to update user data: ${res.statusText}`);
   }
 }
 
