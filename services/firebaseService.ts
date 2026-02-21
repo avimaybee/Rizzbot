@@ -17,6 +17,7 @@ import {
   updateProfile,
 } from 'firebase/auth';
 import { getAnalytics, logEvent } from 'firebase/analytics';
+import { logger } from './logger';
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -80,7 +81,7 @@ export const signUpWithEmail = async (
       providerId: userCredential.user.providerData[0]?.providerId || 'password',
     };
   } catch (error) {
-    console.error('Sign up error:', error);
+    logger.error('Sign up error:', error);
     throw error;
   }
 };
@@ -104,7 +105,7 @@ export const signInWithEmail = async (
       providerId: userCredential.user.providerData[0]?.providerId || 'password',
     };
   } catch (error) {
-    console.error('Sign in error:', error);
+    logger.error('Sign in error:', error);
     throw error;
   }
 };
@@ -126,7 +127,7 @@ export const signInWithGoogle = async (): Promise<AuthUser> => {
       providerId: userCredential.user.providerData[0]?.providerId || 'google.com',
     };
   } catch (error) {
-    console.error('Google sign in error:', error);
+    logger.error('Google sign in error:', error);
     throw error;
   }
 };
@@ -138,7 +139,7 @@ export const resetPassword = async (email: string): Promise<void> => {
   try {
     await sendPasswordResetEmail(auth, email);
   } catch (error) {
-    console.error('Password reset error:', error);
+    logger.error('Password reset error:', error);
     throw error;
   }
 };
@@ -150,7 +151,7 @@ export const signOutUser = async (): Promise<void> => {
   try {
     await signOut(auth);
   } catch (error) {
-    console.error('Sign out error:', error);
+    logger.error('Sign out error:', error);
     throw error;
   }
 };

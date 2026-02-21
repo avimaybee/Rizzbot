@@ -1,6 +1,7 @@
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { SimResult, Persona, SimAnalysisResult, QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, StyleExtractionRequest, StyleExtractionResponse, AIExtractedStyleProfile } from "../types";
 import { getPromptBias } from "./feedbackService";
+import { logger } from "./logger";
 
 /**
  * SECURITY NOTE: The Gemini API key is no longer stored in the frontend bundle.
@@ -76,7 +77,7 @@ async function retryWithBackoff<T>(
       }
 
       const delay = INITIAL_DELAY_MS * Math.pow(2, attempt);
-      console.log(`${operationName}: Retry ${attempt + 1}/${MAX_RETRIES} after ${delay}ms (503 error)`);
+      logger.warn(`${operationName}: Retry ${attempt + 1}/${MAX_RETRIES} after ${delay}ms (503 error)`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -106,7 +107,7 @@ async function runWithFallback(
 
     // Check for Quota (429) or Overloaded (503) or generic 500s that might be model specific
     if (msg.includes('429') || msg.includes('503') || msg.includes('Quota') || msg.includes('Overloaded')) {
-      console.warn(`⚠️ ${operationName}: Primary model (${PRIMARY_MODEL}) failed (${msg}). Switching to fallback: ${FALLBACK_MODEL}`);
+      logger.warn(`⚠️ ${operationName}: Primary model (${PRIMARY_MODEL}) failed (${msg}). Switching to fallback: ${FALLBACK_MODEL}`);
 
       // Try Fallback Model
       return await retryWithBackoff(() => operation(FALLBACK_MODEL), `${operationName} [Fallback]`);
@@ -131,7 +132,7 @@ async function runStreamWithFallback(
   } catch (error: any) {
     const msg = error?.message || error?.toString() || '';
     if (msg.includes('429') || msg.includes('503') || msg.includes('Quota')) {
-      console.warn(`⚠️ ${operationName}: Primary stream failed. Switching to fallback.`);
+      logger.warn(`⚠️ ${operationName}: Primary stream failed. Switching to fallback.`);
       return await operation(FALLBACK_MODEL);
     }
     throw error;
@@ -214,7 +215,7 @@ export const generatePersona = async (
     const data = JSON.parse(text);
     return { ...data, id: Date.now().toString(), description };
   } catch (e) {
-    console.error("Persona Gen Failed", e);
+    logger.error("Persona Gen Failed", e);
     return {
       id: Date.now().toString(),
       name: "The Mystery",
@@ -228,6 +229,7 @@ export const generatePersona = async (
 };
 
 export const simulateDraft = async (
+  userId: string | undefined,
   draft: string,
   persona: Persona,
   userStyle?: UserStyleProfile | null,
@@ -267,8 +269,8 @@ export const simulateDraft = async (
     `;
   }
 
-  // Get feedback-based prompt bias
-  const feedbackBias = getPromptBias();
+  // Get feedback-based prompt bias (only when userId is available)
+  const feedbackBias = userId ? getPromptBias(userId) : '';
 
   const prompt = `
     SYSTEM IDENTITY: THE WINGMAN
@@ -382,7 +384,7 @@ export const simulateDraft = async (
   try {
     const response = await retryWithBackoff(
       () => ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-flash-lite-latest",
         contents: prompt,
         config: { safetySettings: safetySettings }
       }),
@@ -402,7 +404,7 @@ export const simulateDraft = async (
     return JSON.parse(text) as SimResult;
 
   } catch (error) {
-    console.error("Sim Failed:", error);
+    logger.error("Sim Failed:", error);
     return {
       regretLevel: 50,
       verdict: "SYSTEM ERROR",
@@ -512,9 +514,9 @@ export const analyzeSimulation = async (
   `;
 
   try {
-    const response = await runWithFallback(
-      (modelId) => ai.models.generateContent({
-        model: modelId,
+    const response = await retryWithBackoff(
+      () => ai.models.generateContent({
+        model: "gemini-flash-lite-latest",
         contents: prompt,
         config: { safetySettings: safetySettings }
       }),
@@ -534,7 +536,7 @@ export const analyzeSimulation = async (
     return JSON.parse(text) as SimAnalysisResult;
 
   } catch (error) {
-    console.error("Analysis Failed:", error);
+    logger.error("Analysis Failed:", error);
     return {
       ghostRisk: 50,
       vibeMatch: 50,
@@ -597,7 +599,7 @@ export const getQuickAdvice = async (
   const situationAdvice = request.context ? situationGuidelines[request.context] : '';
 
   // Get feedback-based prompt bias
-  const feedbackBias = getPromptBias();
+  const feedbackBias = request.userId ? getPromptBias(request.userId) : '';
 
   const prompt = `
     SYSTEM IDENTITY: THE WINGMAN
@@ -865,7 +867,7 @@ export const getQuickAdvice = async (
     return JSON.parse(text) as QuickAdviceResponse;
 
   } catch (error) {
-    console.error("Quick Advice Failed:", error);
+    logger.error("Quick Advice Failed:", error);
     const fallbackOption = {
       replies: [{ originalMessage: "their message", reply: "hey" }],
       conversationHook: "whats good"
@@ -1017,7 +1019,7 @@ IMPORTANT:
     return JSON.parse(text) as StyleExtractionResponse;
 
   } catch (error) {
-    console.error("Style Extraction Failed:", error);
+    logger.error("Style Extraction Failed:", error);
     // Return a neutral default profile
     return {
       profile: {
@@ -1408,7 +1410,7 @@ User's Own Notes: ${currentNotes.customNotes || 'none'}]
     parts.push({ text: userMessage });
 
     const result = await ai.models.generateContentStream({
-      model: "gemini-2.5-flash",
+      model: "gemini-flash-lite-latest",
       contents: [{ role: "user", parts }],
       config: {
         systemInstruction: THERAPIST_SYSTEM_INSTRUCTION,
@@ -1461,7 +1463,7 @@ User's Own Notes: ${currentNotes.customNotes || 'none'}]
     return `session_${Date.now()}`;
 
   } catch (error) {
-    console.error("Streaming Therapist Advice Failed:", error);
+    logger.error("Streaming Therapist Advice Failed:", error);
     onChunk("something went wrong. let's try that again?");
     return "";
   }
@@ -1492,7 +1494,7 @@ export const getTherapistAdvice = async (
 
     const result = await retryWithBackoff(
       () => ai.models.generateContent({
-        model: "gemini-2.0-flash-exp",
+        model: "gemini-flash-lite-latest",
         contents: [{ role: "user", parts }],
         config: {
           systemInstruction: THERAPIST_SYSTEM_INSTRUCTION,
@@ -1523,7 +1525,7 @@ export const getTherapistAdvice = async (
     };
 
   } catch (error) {
-    console.error("Therapist Advice Failed:", error);
+    logger.error("Therapist Advice Failed:", error);
     return {
       reply: "something went wrong on my end. let's take a breath and try again?",
       interactionId: ""
