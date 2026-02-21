@@ -86,6 +86,7 @@ export interface Session {
   ghost_risk?: number;
   message_count?: number;
   created_at: string;
+  parsedResult?: any;
 }
 
 export interface SessionsResponse {
@@ -299,7 +300,20 @@ export async function getSessions(firebaseUid?: string, limit = 20, offset = 0):
     throw new Error(`Failed to get sessions: ${res.statusText}`);
   }
 
-  return res.json();
+  const data = await res.json();
+  if (data.sessions) {
+    data.sessions = data.sessions.map((s: any) => {
+      let parsedResult = null;
+      try {
+        parsedResult = typeof s.result === 'string' ? JSON.parse(s.result) : s.result;
+      } catch (e) {
+        console.error('Failed to parse session result:', e);
+      }
+      return { ...s, parsedResult };
+    });
+  }
+
+  return data;
 }
 
 /**
