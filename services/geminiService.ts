@@ -372,7 +372,7 @@ export const simulateDraft = async (
   try {
     const response = await retryWithBackoff(
       () => ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-flash-lite-latest",
         contents: prompt,
         config: { safetySettings: safetySettings }
       }),
@@ -502,9 +502,9 @@ export const analyzeSimulation = async (
   `;
 
   try {
-    const response = await runWithFallback(
-      (modelId) => ai.models.generateContent({
-        model: modelId,
+    const response = await retryWithBackoff(
+      () => ai.models.generateContent({
+        model: "gemini-flash-lite-latest",
         contents: prompt,
         config: { safetySettings: safetySettings }
       }),
@@ -1398,7 +1398,7 @@ User's Own Notes: ${currentNotes.customNotes || 'none'}]
     parts.push({ text: userMessage });
 
     const result = await ai.models.generateContentStream({
-      model: "gemini-2.5-flash",
+      model: "gemini-flash-lite-latest",
       contents: [{ role: "user", parts }],
       config: {
         systemInstruction: THERAPIST_SYSTEM_INSTRUCTION,
@@ -1482,7 +1482,7 @@ export const getTherapistAdvice = async (
 
     const result = await retryWithBackoff(
       () => ai.models.generateContent({
-        model: "gemini-2.0-flash-exp",
+        model: "gemini-flash-lite-latest",
         contents: [{ role: "user", parts }],
         config: {
           systemInstruction: THERAPIST_SYSTEM_INSTRUCTION,
