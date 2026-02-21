@@ -120,14 +120,16 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
   // Handle feedback on rewrite suggestions
   const handleFeedback = useCallback((suggestionType: 'safe' | 'bold' | 'spicy' | 'you', rating: 'helpful' | 'mid' | 'off', entryIndex: number) => {
     const key = `${entryIndex}-${suggestionType}`;
-    saveFeedback({
-      source: 'practice',
-      suggestionType,
-      rating,
-      context: relationshipContext.toLowerCase(),
-    });
+    if (firebaseUid) {
+      saveFeedback(firebaseUid, {
+        source: 'practice',
+        suggestionType,
+        rating,
+        context: relationshipContext.toLowerCase(),
+      });
+    }
     setFeedbackGiven(prev => ({ ...prev, [key]: rating }));
-  }, [relationshipContext]);
+  }, [relationshipContext, firebaseUid]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -191,7 +193,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
     setPendingMessage(sentMessage);
     setDraft('');
     setChatLoading(true);
-    const result = await simulateDraft(sentMessage, activePersona, userProfile);
+    const result = await simulateDraft(firebaseUid || '', sentMessage, activePersona, userProfile);
     setSimHistory(prev => [...prev, { draft: sentMessage, result }]);
     setPendingMessage(null);
     setChatLoading(false);
@@ -205,7 +207,9 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
       setAnalysisResult(result);
 
       // Log session for wellbeing tracking
-      logSession('practice', activePersona.name, result.ghostRisk);
+      if (firebaseUid) {
+        logSession(firebaseUid, 'practice', activePersona.name, result.ghostRisk);
+      }
 
       // Save session to D1 with enhanced metadata
       if (firebaseUid) {

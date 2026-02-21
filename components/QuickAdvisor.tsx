@@ -215,14 +215,17 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
       yourDraft: yourDraft.trim() || undefined,
       context,
       userStyle: userProfile || undefined,
-      screenshots: screenshots.length > 0 ? screenshots : undefined
+      screenshots: screenshots.length > 0 ? screenshots : undefined,
+      userId: firebaseUid || undefined
     };
 
     try {
       const response = await getQuickAdvice(request);
       setResult(response);
       // Log session for wellbeing tracking
-      logSession('quick', undefined, undefined);
+      if (firebaseUid) {
+        logSession(firebaseUid, 'quick', undefined, undefined);
+      }
 
       // Save session to D1 with enhanced metadata
       if (firebaseUid) {
@@ -263,14 +266,16 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
 
   const handleFeedback = useCallback((suggestionType: 'smooth' | 'bold' | 'witty' | 'authentic', rating: 'helpful' | 'mid' | 'off') => {
     // Save feedback locally
-    saveFeedback({
-      source: 'quick',
-      suggestionType,
-      rating,
-      context,
-      theirEnergy: result?.vibeCheck.theirEnergy,
-      recommendedAction: result?.recommendedAction,
-    });
+    if (firebaseUid) {
+      saveFeedback(firebaseUid, {
+        source: 'quick',
+        suggestionType,
+        rating,
+        context,
+        theirEnergy: result?.vibeCheck.theirEnergy,
+        recommendedAction: result?.recommendedAction,
+      });
+    }
 
     // Save feedback to D1 if userId available
     if (userId) {
