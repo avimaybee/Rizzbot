@@ -74,6 +74,24 @@ export interface FeedbackEntry {
   created_at?: string;
 }
 
+export interface SessionResult {
+  headline?: string;
+  ghostRisk?: number;
+  screenshots?: string[];
+  vibeCheck?: any;
+  suggestions?: any;
+  history?: any[];
+  analysis?: any;
+  request?: {
+    screenshots?: string[];
+    theirMessage?: string;
+  };
+  response?: {
+    vibeCheck?: any;
+    suggestions?: any;
+  };
+}
+
 export interface Session {
   id: number;
   user_id?: number;
@@ -86,7 +104,7 @@ export interface Session {
   ghost_risk?: number;
   message_count?: number;
   created_at: string;
-  parsedResult?: any;
+  parsedResult?: SessionResult;
 }
 
 export interface SessionsResponse {
@@ -303,13 +321,13 @@ export async function getSessions(firebaseUid?: string, limit = 20, offset = 0):
   const data = await res.json();
   if (data.sessions) {
     data.sessions = data.sessions.map((s: any) => {
-      let parsedResult = null;
+      let parsedResult: SessionResult = {};
       try {
         parsedResult = typeof s.result === 'string' ? JSON.parse(s.result) : s.result;
       } catch (e) {
         console.error('Failed to parse session result:', e);
       }
-      return { ...s, parsedResult };
+      return { ...s, parsedResult: parsedResult || {} };
     });
   }
 
