@@ -4,8 +4,9 @@ import { logger } from './logger';
 const API_BASE = typeof window === 'undefined' ? '' : '';
 
 // Reduce console spam in development when DB is unavailable
-const logDbError = (message: string, ...args: any[]) => {
-  if (import.meta.env.DEV) {
+const logDbError = (message: string, ...args: unknown[]) => {
+  const isLocalDev = import.meta.env.DEV || (typeof window !== 'undefined' && window.location.hostname === 'localhost');
+  if (isLocalDev) {
     // Only log once per session using a flag
     const logKey = `db_error_${message.slice(0, 30)}`;
     if (typeof window !== 'undefined' && !(window as any)[logKey]) {
