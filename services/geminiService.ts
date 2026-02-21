@@ -9,12 +9,20 @@ import { getPromptBias } from "./feedbackService";
  */
 const originalFetch = window.fetch;
 window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-  const url = typeof input === 'string'
+  const urlStr = typeof input === 'string'
     ? input
     : (input instanceof URL ? input.href : input.url);
 
-  if (url.includes('generativelanguage.googleapis.com')) {
-    const proxyUrl = url.replace('https://generativelanguage.googleapis.com', '/api/gemini');
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(urlStr);
+  } catch {
+    // If the URL can't be parsed (e.g., a relative or malformed URL), fall through to original fetch
+    return originalFetch(input, init);
+  }
+
+  if (parsedUrl.hostname === 'generativelanguage.googleapis.com') {
+    const proxyUrl = `/api/gemini${parsedUrl.pathname}${parsedUrl.search}`;
 
     // Handle cases where input is a Request object to preserve headers, method, and body
     if (typeof input !== 'string' && !(input instanceof URL)) {
