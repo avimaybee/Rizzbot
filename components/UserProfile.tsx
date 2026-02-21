@@ -233,7 +233,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
   // Intro Screen
   if (currentStep === 'intro') {
     return (
-      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-hidden scrollbar-hide pb-32 md:pb-0">
+      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-hidden scrollbar-hide pb-24 md:pb-0">
         <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
 
         {/* Header - More compact */}
@@ -241,18 +241,18 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
         <div className="border-b border-zinc-800 px-4 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2"
+            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2 min-w-[44px]"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="text-[10px] sm:text-[9px] font-mono uppercase tracking-widest group-hover:text-emerald-400 transition-colors">BACK</span>
+            <span className="text-xs font-mono uppercase tracking-widest group-hover:text-emerald-400 transition-colors">BACK</span>
           </button>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 bg-emerald-400 animate-pulse"></div>
-              <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-500">PROFILE</span>
+              <span className="text-xs font-mono uppercase tracking-widest text-zinc-500">PROFILE</span>
             </div>
             {onSignOut && (
-              <button onClick={onSignOut} className="text-zinc-500 hover:text-red-400 transition-colors">
+              <button onClick={onSignOut} className="text-zinc-500 hover:text-red-400 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
                 <LogOut className="w-4 h-4" />
               </button>
             )}
@@ -295,7 +295,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
 
                   <button
                     onClick={() => setCurrentStep('samples')}
-                    className="w-full py-3 sm:py-3.5 bg-white text-black font-impact text-base sm:text-lg uppercase tracking-wide hover:bg-zinc-200 transition-colors"
+                    className="w-full py-3 sm:py-3.5 bg-white text-black font-impact text-base sm:text-lg uppercase tracking-wide hover:bg-zinc-200 transition-colors min-h-[50px]"
                   >
                     GET STARTED
                   </button>
@@ -311,7 +311,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
   // Samples Collection Screen
   if (currentStep === 'samples') {
     return (
-      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-32 md:pb-0">
+      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-24 md:pb-0">
         <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
 
         {/* Header - More compact */}
@@ -319,24 +319,24 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
         <div className="border-b border-zinc-800 px-4 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
           <button
             onClick={() => setCurrentStep('intro')}
-            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2"
+            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2 min-w-[44px]"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="text-[10px] sm:text-[9px] font-mono uppercase tracking-widest group-hover:text-emerald-400 transition-colors">BACK</span>
+            <span className="text-xs font-mono uppercase tracking-widest group-hover:text-emerald-400 transition-colors">BACK</span>
           </button>
           <div className="flex items-center gap-3">
             <div className="label-sm text-zinc-500">1/2</div>
             {initialProfile && (
               <button
                 onClick={() => setCurrentStep('review')}
-                className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors group"
+                className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors group min-w-[44px]"
               >
-                <span className="text-[9px] font-mono uppercase tracking-widest group-hover:text-emerald-400 transition-colors">SKIP</span>
+                <span className="text-xs font-mono uppercase tracking-widest group-hover:text-emerald-400 transition-colors">SKIP</span>
                 <ArrowRight className="w-3 h-3" />
               </button>
             )}
             {onSignOut && (
-              <button onClick={onSignOut} className="text-zinc-500 hover:text-red-400 transition-colors ml-1">
+              <button onClick={onSignOut} className="text-zinc-500 hover:text-red-400 transition-colors ml-1 min-w-[44px] min-h-[44px] flex items-center justify-center">
                 <LogOut className="w-4 h-4" />
               </button>
             )}
@@ -366,7 +366,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
               ].map((item, index) => (
                 <div key={index} className="space-y-2">
                   <div className="space-y-1">
-                    <div className="ml-9 text-[9px] font-mono text-zinc-500 uppercase tracking-wider">{item.scenario}</div>
+                    <div className="ml-9 text-xs font-mono text-zinc-500 uppercase tracking-wider">{item.scenario}</div>
                     <div className="flex items-end gap-2">
                       <div className="w-7 h-7 bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-500 shrink-0">
                         <User className="w-3.5 h-3.5" />
@@ -381,7 +381,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                       <textarea
                         value={sampleTexts[index]}
                         onChange={(e) => handleSampleChange(index, e.target.value)}
-                        className="w-full bg-black border border-zinc-700 p-3 text-white text-xs rounded-xl rounded-br-none focus:border-white focus:outline-none min-h-[60px] resize-none placeholder:text-zinc-700"
+                        className="w-full bg-black border border-zinc-700 p-3 text-white text-base sm:text-xs rounded-xl rounded-br-none focus:border-white focus:outline-none min-h-[60px] resize-none placeholder:text-zinc-700"
                         placeholder="Type your response..."
                       />
                     </div>
@@ -396,7 +396,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                 <div className="w-full border-t border-zinc-800"></div>
               </div>
               <div className="relative flex justify-center">
-                <span className="bg-matte-base px-4 text-[10px] font-mono uppercase text-zinc-500 tracking-widest">WANT MORE ACCURACY?</span>
+                <span className="bg-matte-base px-4 text-xs font-mono uppercase text-zinc-500 tracking-widest">WANT MORE ACCURACY?</span>
               </div>
             </div>
 
@@ -424,12 +424,12 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-6 py-2 bg-zinc-800 text-white text-xs font-mono uppercase tracking-wider hover:bg-zinc-700 transition-colors border border-zinc-700"
+                    className="px-6 py-2 bg-zinc-800 text-white text-xs font-mono uppercase tracking-wider hover:bg-zinc-700 transition-colors border border-zinc-700 min-h-[44px]"
                   >
                     CHOOSE FILES
                   </button>
                   {screenshots.length > 0 && (
-                    <div className="text-[10px] text-hard-gold font-mono">
+                    <div className="text-xs text-hard-gold font-mono">
                       {screenshots.length} FILE{screenshots.length !== 1 ? 'S' : ''} SELECTED
                     </div>
                   )}
@@ -448,7 +448,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                       />
                       <button
                         onClick={() => removeScreenshot(index)}
-                        className="absolute top-0 right-0 w-5 h-5 bg-red-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-0 right-0 w-5 h-5 bg-red-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity min-w-[24px] min-h-[24px]"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -462,7 +462,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
             <button
               onClick={analyzeWithAI}
               disabled={!canAnalyze || isAnalyzing}
-              className={`w-full py-3.5 sm:py-4 font-impact text-lg sm:text-xl uppercase tracking-wide border transition-all flex items-center justify-center gap-2 ${!canAnalyze || isAnalyzing
+              className={`w-full py-3.5 sm:py-4 font-impact text-lg sm:text-xl uppercase tracking-wide border transition-all flex items-center justify-center gap-2 min-h-[50px] ${!canAnalyze || isAnalyzing
                 ? 'bg-zinc-900 text-zinc-600 border-zinc-800 cursor-not-allowed'
                 : 'bg-white text-black border-white hover:bg-zinc-200'
                 }`}
@@ -481,7 +481,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
               <button
                 onClick={analyzeTexts}
                 disabled={isAnalyzing}
-                className="w-full py-3 text-zinc-500 hover:text-white text-[10px] font-mono uppercase tracking-wider transition-colors"
+                className="w-full py-3 text-zinc-500 hover:text-white text-xs font-mono uppercase tracking-wider transition-colors min-h-[44px]"
               >
                 OR USE QUICK LOCAL ANALYSIS (NO AI)
               </button>
@@ -494,7 +494,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
 
   // Review & Edit Screen
   return (
-    <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-32 md:pb-0">
+    <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-24 md:pb-0">
       <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
 
       {/* Header - More compact */}
@@ -502,15 +502,15 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
       <div className="border-b border-zinc-800 px-4 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
         <button
           onClick={() => setCurrentStep('samples')}
-          className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2"
+          className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2 min-w-[44px]"
         >
           <ArrowLeft className="w-5 h-5" />
-          <span className="text-[10px] sm:text-[9px] font-mono uppercase tracking-widest group-hover:text-emerald-400 transition-colors">EDIT</span>
+          <span className="text-xs font-mono uppercase tracking-widest group-hover:text-emerald-400 transition-colors">EDIT</span>
         </button>
         <div className="flex items-center gap-3">
           <div className="label-sm text-zinc-500">2/2</div>
           {onSignOut && (
-            <button onClick={onSignOut} className="text-zinc-500 hover:text-red-400 transition-colors">
+            <button onClick={onSignOut} className="text-zinc-500 hover:text-red-400 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
               <LogOut className="w-4 h-4" />
             </button>
           )}
@@ -545,8 +545,8 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="text-[10px] font-mono text-zinc-500">CONFIDENCE</div>
-                        <div className={`px-2 py-1 text-[10px] font-mono font-bold ${analysisResult.confidence >= 70 ? 'bg-green-900/50 text-green-400 border border-green-700' :
+                        <div className="text-xs font-mono text-zinc-500">CONFIDENCE</div>
+                        <div className={`px-2 py-1 text-xs font-mono font-bold ${analysisResult.confidence >= 70 ? 'bg-green-900/50 text-green-400 border border-green-700' :
                           analysisResult.confidence >= 40 ? 'bg-yellow-900/50 text-yellow-400 border border-yellow-700' :
                             'bg-red-900/50 text-red-400 border border-red-700'
                           }`}>
@@ -562,7 +562,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
 
                     {/* Show retry hint when AI fails */}
                     {analysisResult.confidence === 0 && (
-                      <div className="text-[10px] font-mono text-zinc-500 border-t border-zinc-800 pt-3 mt-3">
+                      <div className="text-xs font-mono text-zinc-500 border-t border-zinc-800 pt-3 mt-3">
                         ⚡ AI service temporarily unavailable. You can still manually configure your style below, or try again later.
                       </div>
                     )}
@@ -627,7 +627,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                           <div className="text-zinc-500 text-sm">
                             {authUser.email}
                           </div>
-                          <div className="text-zinc-600 text-[10px] font-mono mt-1">
+                          <div className="text-zinc-600 text-xs font-mono mt-1">
                             via {authUser.providerId === 'google.com' ? 'Google' : 'Email'}
                           </div>
                         </div>
@@ -635,7 +635,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                       {onSignOut && (
                         <button
                           onClick={onSignOut}
-                          className="flex items-center gap-2 px-4 py-2 border border-zinc-700 text-zinc-400 hover:border-red-500 hover:text-red-400 transition-colors text-sm"
+                          className="flex items-center gap-2 px-4 py-2 border border-zinc-700 text-zinc-400 hover:border-red-500 hover:text-red-400 transition-colors text-sm min-h-[44px]"
                         >
                           <LogOut className="w-4 h-4" />
                           Sign Out
@@ -657,7 +657,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                   {/* Display extracted emojis from user's samples */}
                   {profile.favoriteEmojis && profile.favoriteEmojis.length > 0 && (
                     <div className="mb-4">
-                      <div className="text-[10px] font-mono text-zinc-500 uppercase mb-2">YOUR EMOJIS</div>
+                      <div className="text-xs font-mono text-zinc-500 uppercase mb-2">YOUR EMOJIS</div>
                       <div className="flex flex-wrap gap-2">
                         {profile.favoriteEmojis.map((emoji, i) => (
                           <span key={i} className="text-2xl bg-zinc-800 px-3 py-1.5 rounded-lg border border-zinc-700 hover:border-hard-gold transition-colors">
@@ -668,13 +668,13 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                     </div>
                   )}
                   {/* Frequency selector */}
-                  <div className="text-[10px] font-mono text-zinc-500 uppercase mb-2">FREQUENCY</div>
+                  <div className="text-xs font-mono text-zinc-500 uppercase mb-2">FREQUENCY</div>
                   <div className="grid grid-cols-4 gap-2">
                     {(['none', 'minimal', 'moderate', 'heavy'] as const).map((level) => (
                       <button
                         key={level}
                         onClick={() => setProfile({ ...profile, emojiUsage: level })}
-                        className={`py-2 px-3 border text-[10px] font-mono uppercase tracking-wider transition-all ${profile.emojiUsage === level
+                        className={`py-2 px-3 border text-xs font-mono uppercase tracking-wider transition-all min-h-[44px] ${profile.emojiUsage === level
                           ? 'bg-white text-black border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]'
                           : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500'
                           }`}
@@ -696,7 +696,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                       <button
                         key={level}
                         onClick={() => setProfile({ ...profile, capitalization: level })}
-                        className={`py-2 px-3 border text-[10px] font-mono uppercase tracking-wider transition-all ${profile.capitalization === level
+                        className={`py-2 px-3 border text-xs font-mono uppercase tracking-wider transition-all min-h-[44px] ${profile.capitalization === level
                           ? 'bg-white text-black border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]'
                           : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500'
                           }`}
@@ -718,7 +718,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                       <button
                         key={level}
                         onClick={() => setProfile({ ...profile, punctuation: level })}
-                        className={`py-2 px-3 border text-[10px] font-mono uppercase tracking-wider transition-all ${profile.punctuation === level
+                        className={`py-2 px-3 border text-xs font-mono uppercase tracking-wider transition-all min-h-[44px] ${profile.punctuation === level
                           ? 'bg-white text-black border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]'
                           : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500'
                           }`}
@@ -740,7 +740,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                       <button
                         key={level}
                         onClick={() => setProfile({ ...profile, averageLength: level })}
-                        className={`py-2 px-3 border text-[10px] font-mono uppercase tracking-wider transition-all ${profile.averageLength === level
+                        className={`py-2 px-3 border text-xs font-mono uppercase tracking-wider transition-all min-h-[44px] ${profile.averageLength === level
                           ? 'bg-white text-black border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]'
                           : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500'
                           }`}
@@ -762,7 +762,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                       <button
                         key={level}
                         onClick={() => setProfile({ ...profile, slangLevel: level })}
-                        className={`py-2 px-3 border text-[10px] font-mono uppercase tracking-wider transition-all ${profile.slangLevel === level
+                        className={`py-2 px-3 border text-xs font-mono uppercase tracking-wider transition-all min-h-[44px] ${profile.slangLevel === level
                           ? 'bg-white text-black border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]'
                           : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500'
                           }`}
@@ -784,7 +784,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                       <button
                         key={tone}
                         onClick={() => setProfile({ ...profile, preferredTone: tone })}
-                        className={`py-2 px-3 border text-[10px] font-mono uppercase tracking-wider transition-all ${profile.preferredTone === tone
+                        className={`py-2 px-3 border text-xs font-mono uppercase tracking-wider transition-all min-h-[44px] ${profile.preferredTone === tone
                           ? 'bg-white text-black border-white font-bold shadow-[0_0_10px_rgba(255,255,255,0.3)]'
                           : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500'
                           }`}
@@ -802,7 +802,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
           <div className="mt-8">
             <button
               onClick={handleSave}
-              className="w-full py-5 bg-white text-black font-impact text-2xl uppercase tracking-wide hover:bg-zinc-200 transition-colors"
+              className="w-full py-5 bg-white text-black font-impact text-2xl uppercase tracking-wide hover:bg-zinc-200 transition-colors min-h-[60px]"
             >
               SAVE PROFILE
             </button>
