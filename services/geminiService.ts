@@ -1,6 +1,7 @@
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { SimResult, Persona, SimAnalysisResult, QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, StyleExtractionRequest, StyleExtractionResponse, AIExtractedStyleProfile } from "../types";
 import { getPromptBias } from "./feedbackService";
+import { logger } from "./logger";
 
 // Get API key from Vite environment variable or process.env
 // Try multiple formats to be robust (VITE_ prefixed or raw GEMINI_)
@@ -22,7 +23,7 @@ const getEnvVar = (key: string) => {
 const apiKey = getEnvVar('VITE_GEMINI_API_KEY') || getEnvVar('GEMINI_API_KEY');
 
 if (!apiKey) {
-  console.error('API KEY MISSING: VITE_GEMINI_API_KEY or GEMINI_API_KEY not found.');
+  logger.error('API KEY MISSING: VITE_GEMINI_API_KEY or GEMINI_API_KEY not found.');
 }
 
 // Initialize with a dummy key if missing to prevent immediate crash, but calls will fail
@@ -65,7 +66,7 @@ async function retryWithBackoff<T>(
       }
 
       const delay = INITIAL_DELAY_MS * Math.pow(2, attempt);
-      console.log(`${operationName}: Retry ${attempt + 1}/${MAX_RETRIES} after ${delay}ms (503 error)`);
+      logger.warn(`${operationName}: Retry ${attempt + 1}/${MAX_RETRIES} after ${delay}ms (503 error)`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -95,7 +96,7 @@ async function runWithFallback(
 
     // Check for Quota (429) or Overloaded (503) or generic 500s that might be model specific
     if (msg.includes('429') || msg.includes('503') || msg.includes('Quota') || msg.includes('Overloaded')) {
-      console.warn(`⚠️ ${operationName}: Primary model (${PRIMARY_MODEL}) failed (${msg}). Switching to fallback: ${FALLBACK_MODEL}`);
+      logger.warn(`⚠️ ${operationName}: Primary model (${PRIMARY_MODEL}) failed (${msg}). Switching to fallback: ${FALLBACK_MODEL}`);
 
       // Try Fallback Model
       return await retryWithBackoff(() => operation(FALLBACK_MODEL), `${operationName} [Fallback]`);
@@ -120,7 +121,7 @@ async function runStreamWithFallback(
   } catch (error: any) {
     const msg = error?.message || error?.toString() || '';
     if (msg.includes('429') || msg.includes('503') || msg.includes('Quota')) {
-      console.warn(`⚠️ ${operationName}: Primary stream failed. Switching to fallback.`);
+      logger.warn(`⚠️ ${operationName}: Primary stream failed. Switching to fallback.`);
       return await operation(FALLBACK_MODEL);
     }
     throw error;
@@ -203,7 +204,7 @@ export const generatePersona = async (
     const data = JSON.parse(text);
     return { ...data, id: Date.now().toString(), description };
   } catch (e) {
-    console.error("Persona Gen Failed", e);
+    logger.error("Persona Gen Failed", e);
     return {
       id: Date.now().toString(),
       name: "The Mystery",
@@ -392,7 +393,7 @@ export const simulateDraft = async (
     return JSON.parse(text) as SimResult;
 
   } catch (error) {
-    console.error("Sim Failed:", error);
+    logger.error("Sim Failed:", error);
     return {
       regretLevel: 50,
       verdict: "SYSTEM ERROR",
@@ -524,7 +525,7 @@ export const analyzeSimulation = async (
     return JSON.parse(text) as SimAnalysisResult;
 
   } catch (error) {
-    console.error("Analysis Failed:", error);
+    logger.error("Analysis Failed:", error);
     return {
       ghostRisk: 50,
       vibeMatch: 50,
@@ -855,7 +856,7 @@ export const getQuickAdvice = async (
     return JSON.parse(text) as QuickAdviceResponse;
 
   } catch (error) {
-    console.error("Quick Advice Failed:", error);
+    logger.error("Quick Advice Failed:", error);
     const fallbackOption = {
       replies: [{ originalMessage: "their message", reply: "hey" }],
       conversationHook: "whats good"
@@ -1007,7 +1008,7 @@ IMPORTANT:
     return JSON.parse(text) as StyleExtractionResponse;
 
   } catch (error) {
-    console.error("Style Extraction Failed:", error);
+    logger.error("Style Extraction Failed:", error);
     // Return a neutral default profile
     return {
       profile: {
@@ -1451,7 +1452,7 @@ User's Own Notes: ${currentNotes.customNotes || 'none'}]
     return `session_${Date.now()}`;
 
   } catch (error) {
-    console.error("Streaming Therapist Advice Failed:", error);
+    logger.error("Streaming Therapist Advice Failed:", error);
     onChunk("something went wrong. let's try that again?");
     return "";
   }
@@ -1513,7 +1514,7 @@ export const getTherapistAdvice = async (
     };
 
   } catch (error) {
-    console.error("Therapist Advice Failed:", error);
+    logger.error("Therapist Advice Failed:", error);
     return {
       reply: "something went wrong on my end. let's take a breath and try again?",
       interactionId: ""
