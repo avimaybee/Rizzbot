@@ -72,8 +72,8 @@ const SuggestionCategory: React.FC<SuggestionCategoryProps> = ({
     <div className="relative">
       {/* Category Header */}
       <div className="flex items-center gap-2 mb-3">
-        <span className={`text-[10px] font-mono tracking-widest ${titleColor} uppercase`}>{title}</span>
-        <span className="text-[9px] font-mono text-zinc-600">({options.length} OPTIONS)</span>
+        <span className={`text-xs font-mono tracking-widest ${titleColor} uppercase`}>{title}</span>
+        <span className="text-xs font-mono text-zinc-600">({options.length} OPTIONS)</span>
       </div>
 
       {/* Options */}
@@ -86,7 +86,7 @@ const SuggestionCategory: React.FC<SuggestionCategoryProps> = ({
             <CornerNodes className="opacity-30 transition-opacity group-hover/option:opacity-60" />
             <div className="p-4">
               {/* Option Header */}
-              <div className="text-[9px] font-mono text-zinc-500 mb-3 uppercase tracking-widest">
+              <div className="text-xs font-mono text-zinc-500 mb-3 uppercase tracking-widest">
                 OPTION {optIndex + 1}
               </div>
 
@@ -99,14 +99,14 @@ const SuggestionCategory: React.FC<SuggestionCategoryProps> = ({
                     <button
                       key={replyIndex}
                       onClick={() => onCopy(replyItem.reply, replyKey)}
-                      className="w-full text-left bg-black/20 border border-zinc-800/50 hover:bg-black/40 hover:border-zinc-600 p-3 transition-all group active:scale-[0.99] relative overflow-hidden"
+                      className="w-full text-left bg-black/20 border border-zinc-800/50 hover:bg-black/40 hover:border-zinc-600 p-3 transition-all group active:scale-[0.99] relative overflow-hidden min-h-[44px]"
                     >
                       <div className="flex justify-between items-start gap-4 mb-1.5 opacity-60">
-                        <span className="text-[9px] font-mono text-zinc-500 flex items-center gap-1.5 truncate max-w-[80%]">
+                        <span className="text-xs font-mono text-zinc-500 flex items-center gap-1.5 truncate max-w-[80%]">
                           <CornerDownRight className="w-3 h-3" />
                           <span className="truncate">"{replyItem.originalMessage}"</span>
                         </span>
-                        <div className={`flex items-center gap-1.5 text-[8px] font-mono uppercase tracking-wider transition-colors ${isCopied ? 'text-emerald-500' : 'text-zinc-700 group-hover:text-zinc-400'
+                        <div className={`flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider transition-colors ${isCopied ? 'text-emerald-500' : 'text-zinc-700 group-hover:text-zinc-400'
                           }`}>
                           {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                           <span className="hidden sm:inline">{isCopied ? 'COPIED' : 'COPY'}</span>
@@ -124,14 +124,14 @@ const SuggestionCategory: React.FC<SuggestionCategoryProps> = ({
               {option.conversationHook && (
                 <button
                   onClick={() => onCopy(option.conversationHook, `${categoryKey}-${optIndex}-hook`)}
-                  className="w-full text-left bg-zinc-800/20 border border-zinc-800 hover:border-hard-gold/50 hover:bg-zinc-800/40 p-3 transition-all group active:scale-[0.99]"
+                  className="w-full text-left bg-zinc-800/20 border border-zinc-800 hover:border-hard-gold/50 hover:bg-zinc-800/40 p-3 transition-all group active:scale-[0.99] min-h-[44px]"
                 >
                   <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-[9px] font-mono text-hard-gold/60 flex items-center gap-1.5 uppercase tracking-wider">
+                    <span className="text-xs font-mono text-hard-gold/60 flex items-center gap-1.5 uppercase tracking-wider">
                       <Link2 className="w-3 h-3" />
                       Conversation Hook
                     </span>
-                    <div className={`flex items-center gap-1.5 text-[8px] font-mono uppercase tracking-wider transition-colors ${copiedIndex === `${categoryKey}-${optIndex}-hook` ? 'text-hard-gold' : 'text-zinc-700 group-hover:text-hard-gold/70'
+                    <div className={`flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider transition-colors ${copiedIndex === `${categoryKey}-${optIndex}-hook` ? 'text-hard-gold' : 'text-zinc-700 group-hover:text-hard-gold/70'
                       }`}>
                       {copiedIndex === `${categoryKey}-${optIndex}-hook` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                       <span className="hidden sm:inline">{copiedIndex === `${categoryKey}-${optIndex}-hook` ? 'COPIED' : 'COPY'}</span>
@@ -345,20 +345,20 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
   // Input View
   if (!result) {
     return (
-      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-32 md:pb-0">
+      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-24 md:pb-0">
 
         {/* TACTICAL HUD HEADER */}
         <div className="border-b border-zinc-800 px-4 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2"
+            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2 min-w-[44px]"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="text-[10px] sm:text-[9px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">BACK</span>
+            <span className="text-xs font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">BACK</span>
           </button>
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 bg-hard-gold animate-pulse"></div>
-            <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-500">QUICK_MODE</span>
+            <span className="text-xs font-mono uppercase tracking-widest text-zinc-500">QUICK_MODE</span>
           </div>
         </div>
         {/* Background Pattern */}
@@ -403,7 +403,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
                           <img src={src} alt="Screenshot" className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" />
                           <button
                             onClick={() => removeScreenshot(index)}
-                            className="absolute top-1 right-1 bg-red-600 text-white p-0.5 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute top-1 right-1 bg-red-600 text-white p-0.5 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity min-w-[24px] min-h-[24px] flex items-center justify-center"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -412,10 +412,10 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
                       {/* Add more button */}
                       <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="aspect-[9/16] border border-zinc-800 border-dashed flex flex-col items-center justify-center gap-2 text-zinc-600 hover:text-zinc-400 hover:border-zinc-600 transition-all"
+                        className="aspect-[9/16] border border-zinc-800 border-dashed flex flex-col items-center justify-center gap-2 text-zinc-600 hover:text-zinc-400 hover:border-zinc-600 transition-all min-h-[44px]"
                       >
                         <Upload className="w-4 h-4" />
-                        <span className="text-[9px] font-mono uppercase">ADD MORE</span>
+                        <span className="text-xs font-mono uppercase">ADD MORE</span>
                       </button>
                     </div>
                   ) : (
@@ -428,7 +428,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
                       </div>
                       <div className="text-center">
                         <div className="text-xs font-mono text-zinc-300 uppercase tracking-wider mb-1">UPLOAD SCREENSHOTS</div>
-                        <div className="text-[10px] text-zinc-500 font-mono">Tap to browse or drop files</div>
+                        <div className="text-xs text-zinc-500 font-mono">Tap to browse or drop files</div>
                       </div>
                     </button>
                   )}
@@ -442,7 +442,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
                   value={theirMessage}
                   onChange={(e) => setTheirMessage(e.target.value)}
                   placeholder={screenshots.length > 0 ? "Any backstory? e.g., 'We haven't talked in 2 weeks'" : "No screenshot? Paste their message here."}
-                  className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white placeholder:text-zinc-500/60 resize-none focus:outline-none focus:border-white transition-colors h-20 font-mono text-sm"
+                  className="w-full bg-zinc-900 border border-zinc-700 p-3 text-base sm:text-sm text-white placeholder:text-zinc-500/60 resize-none focus:outline-none focus:border-white transition-colors h-20 font-mono"
                 />
               </div>
 
@@ -453,7 +453,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
                   value={yourDraft}
                   onChange={(e) => setYourDraft(e.target.value)}
                   placeholder="What are you thinking of saying?"
-                  className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white placeholder:text-zinc-500/60 resize-none focus:outline-none focus:border-white transition-colors h-20 font-mono text-sm"
+                  className="w-full bg-zinc-900 border border-zinc-700 p-3 text-base sm:text-sm text-white placeholder:text-zinc-500/60 resize-none focus:outline-none focus:border-white transition-colors h-20 font-mono"
                 />
               </div>
             </div>
@@ -468,7 +468,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
                     <button
                       key={opt.value}
                       onClick={() => setContext(opt.value)}
-                      className={`py-3 px-1 border text-[10px] sm:text-[9px] font-mono tracking-wider transition-all ${context === opt.value
+                      className={`py-3 px-1 border text-xs font-mono tracking-wider transition-all min-h-[44px] ${context === opt.value
                         ? 'bg-white text-black border-white'
                         : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500 hover:text-zinc-300'
                         }`}
@@ -486,7 +486,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
               <button
                 onClick={handleAnalyze}
                 disabled={(!theirMessage.trim() && screenshots.length === 0) || isLoading}
-                className={`w-full py-3.5 sm:py-4 font-impact text-lg sm:text-xl uppercase tracking-wide border transition-all ${(!theirMessage.trim() && screenshots.length === 0) || isLoading
+                className={`w-full py-3.5 sm:py-4 font-impact text-lg sm:text-xl uppercase tracking-wide border transition-all min-h-[50px] ${(!theirMessage.trim() && screenshots.length === 0) || isLoading
                   ? 'bg-zinc-900 text-zinc-600 border-zinc-800 cursor-not-allowed'
                   : 'bg-white text-black border-white hover:bg-zinc-200 active:bg-zinc-300'
                   }`}
@@ -509,7 +509,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
 
   // Results View
   return (
-    <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-16 md:pb-0">
+    <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-24 md:pb-0">
       {/* Background */}
       <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
       <div className="absolute inset-0 bg-scan-lines opacity-10 pointer-events-none"></div>
@@ -518,12 +518,12 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
       <div className="border-b border-zinc-800 px-4 sm:px-6 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
         <button
           onClick={resetForm}
-          className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2"
+          className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2 min-w-[44px]"
         >
           <span className="text-lg">←</span>
-          <span className="text-[10px] sm:text-[9px] font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">NEW</span>
+          <span className="text-xs font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">NEW</span>
         </button>
-        <div className={`px-3 py-1.5 text-[9px] font-bold tracking-widest ${getActionStyle(result.recommendedAction)}`}>
+        <div className={`px-3 py-1.5 text-xs font-bold tracking-widest ${getActionStyle(result.recommendedAction)}`}>
           {getActionLabel(result.recommendedAction)}
         </div>
       </div>
@@ -556,7 +556,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
               <div className="bg-black/50 border border-zinc-800 p-3 mb-4">
                 {result.extractedTargetMessage ? (
                   <div>
-                    <div className="text-[9px] font-mono text-hard-gold uppercase tracking-wider mb-1.5">
+                    <div className="text-xs font-mono text-hard-gold uppercase tracking-wider mb-1.5">
                       📱 EXTRACTED FROM SCREENSHOT
                     </div>
                     <p className="text-zinc-300 text-sm font-mono italic">"{result.extractedTargetMessage}"</p>
@@ -568,7 +568,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
 
               {/* Interest Level Bar */}
               <div className="mb-4">
-                <div className="flex justify-between text-[10px] font-mono text-zinc-500 mb-2 uppercase tracking-wider">
+                <div className="flex justify-between text-xs font-mono text-zinc-500 mb-2 uppercase tracking-wider">
                   <span>INTEREST LEVEL</span>
                   <span>{result.vibeCheck.interestLevel}%</span>
                 </div>
@@ -585,12 +585,12 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
               {/* Flags */}
               <div className="flex flex-wrap gap-2">
                 {result.vibeCheck.greenFlags.map((flag, i) => (
-                  <span key={`green-${i}`} className="text-[9px] font-mono uppercase tracking-wider border border-zinc-700 px-2 py-1 text-zinc-300">
+                  <span key={`green-${i}`} className="text-xs font-mono uppercase tracking-wider border border-zinc-700 px-2 py-1 text-zinc-300">
                     ✓ {flag}
                   </span>
                 ))}
                 {result.vibeCheck.redFlags.map((flag, i) => (
-                  <span key={`red-${i}`} className="text-[9px] font-mono uppercase tracking-wider border border-red-900 px-2 py-1 text-red-400">
+                  <span key={`red-${i}`} className="text-xs font-mono uppercase tracking-wider border border-red-900 px-2 py-1 text-red-400">
                     ⚠ {flag}
                   </span>
                 ))}
@@ -627,12 +627,12 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
                 <p className="text-zinc-400 text-sm mb-4 font-mono uppercase">{result.draftAnalysis.verdict}</p>
                 <div className="flex flex-wrap gap-2">
                   {result.draftAnalysis.strengths.map((s, i) => (
-                    <span key={`str-${i}`} className="text-[9px] font-mono uppercase tracking-wider border border-zinc-700 px-2 py-1 text-zinc-300">
+                    <span key={`str-${i}`} className="text-xs font-mono uppercase tracking-wider border border-zinc-700 px-2 py-1 text-zinc-300">
                       ✓ {s}
                     </span>
                   ))}
                   {result.draftAnalysis.issues.map((issue, i) => (
-                    <span key={`issue-${i}`} className="text-[9px] font-mono uppercase tracking-wider border border-red-900 px-2 py-1 text-red-400">
+                    <span key={`issue-${i}`} className="text-xs font-mono uppercase tracking-wider border border-red-900 px-2 py-1 text-red-400">
                       ✗ {issue}
                     </span>
                   ))}
@@ -702,7 +702,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
               {result.suggestions.wait && (
                 <div className="bg-zinc-900/50 border border-zinc-800 p-5 relative">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">OR WAIT</span>
+                    <span className="text-xs font-mono tracking-widest text-zinc-500 uppercase">OR WAIT</span>
                   </div>
                   <p className="text-zinc-400 text-sm">{result.suggestions.wait}</p>
                 </div>
@@ -716,7 +716,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
             <div className="p-6">
               <div className="flex items-center gap-3 mb-3">
                 <Sparkles className="w-4 h-4 text-hard-gold" />
-                <span className="text-[10px] font-mono tracking-widest text-hard-gold uppercase">PRO TIP</span>
+                <span className="text-xs font-mono tracking-widest text-hard-gold uppercase">PRO TIP</span>
               </div>
               <p className="text-zinc-300 text-sm leading-relaxed">{result.proTip}</p>
             </div>
@@ -724,13 +724,13 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
 
           {/* Action Banner - Clarify this is for the AI suggestions */}
           <div className={`${getActionStyle(result.recommendedAction)} p-6 text-center`}>
-            <div className="text-[9px] font-mono uppercase tracking-widest opacity-60 mb-2">
+            <div className="text-xs font-mono uppercase tracking-widest opacity-60 mb-2">
               USE ONE OF THE SUGGESTIONS ABOVE
             </div>
             <div className="font-impact text-3xl uppercase tracking-wide mb-1">
               {getActionLabel(result.recommendedAction)}
             </div>
-            <div className="text-[10px] font-mono uppercase tracking-widest opacity-70">
+            <div className="text-xs font-mono uppercase tracking-widest opacity-70">
               {result.recommendedAction === 'SEND' && 'PICK A REPLY ABOVE. SEND THAT.'}
               {result.recommendedAction === 'WAIT' && 'CHILL FOR A BIT FIRST.'}
               {result.recommendedAction === 'PULL_BACK' && "UR DOING TOO MUCH."}
@@ -743,7 +743,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
           {/* New Scan Button */}
           <button
             onClick={() => setResult(null)}
-            className="w-full py-4 border border-zinc-700 text-zinc-400 hover:text-white hover:border-white transition-all font-mono text-sm uppercase tracking-widest"
+            className="w-full py-4 border border-zinc-700 text-zinc-400 hover:text-white hover:border-white transition-all font-mono text-sm uppercase tracking-widest min-h-[44px]"
           >
             ← NEW SCAN
           </button>

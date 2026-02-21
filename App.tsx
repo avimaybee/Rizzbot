@@ -128,7 +128,7 @@ const WellbeingCheckIn = ({ reason, onDismiss, onDismissForDay }: {
         <div className="bg-zinc-800 border-b border-zinc-700 px-6 py-4 flex items-center gap-3">
           <span className="text-3xl">{content.emoji}</span>
           <div>
-            <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">WELLBEING CHECK</div>
+            <div className="text-xs font-mono text-zinc-500 uppercase tracking-wider">WELLBEING CHECK</div>
             <h3 className="font-impact text-xl text-white uppercase">{content.title}</h3>
           </div>
         </div>
@@ -143,20 +143,20 @@ const WellbeingCheckIn = ({ reason, onDismiss, onDismissForDay }: {
           <div className="space-y-3">
             <button
               onClick={onDismiss}
-              className="w-full py-3 bg-white text-black font-bold text-sm uppercase tracking-wider hover:bg-zinc-200 transition-colors"
+              className="w-full py-3 bg-white text-black font-bold text-sm uppercase tracking-wider hover:bg-zinc-200 transition-colors min-h-[44px]"
             >
               im good, keep going
             </button>
             <button
               onClick={onDismissForDay}
-              className="w-full py-3 border border-zinc-700 text-zinc-400 text-sm uppercase tracking-wider hover:border-zinc-500 hover:text-zinc-200 transition-colors"
+              className="w-full py-3 border border-zinc-700 text-zinc-400 text-sm uppercase tracking-wider hover:border-zinc-500 hover:text-zinc-200 transition-colors min-h-[44px]"
             >
               dont remind me today
             </button>
           </div>
 
           {/* Footer note */}
-          <p className="text-[10px] text-zinc-600 text-center mt-4 font-mono">
+          <p className="text-xs text-zinc-600 text-center mt-4 font-mono">
             we just want u to win →
           </p>
         </div>
@@ -259,7 +259,7 @@ const SideDock = ({ activeModule, setModule, authUser, onSignOut }: {
 const BottomTabs = ({ activeModule, setModule }: { activeModule: Module, setModule: (m: Module) => void }) => {
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-900/95 backdrop-blur-sm border-t border-zinc-800/80 safe-area-inset-bottom">
-      <div className="flex justify-around items-center h-14 px-1">
+      <div className="flex justify-around items-center h-16 px-1">
         <MobileTabItemSvg
           active={activeModule === 'standby'}
           onClick={() => setModule('standby')}
@@ -309,13 +309,13 @@ const MobileTabItemSvg = ({ active, onClick, label, Icon }: {
 }) => (
   <button
     onClick={onClick}
-    className={`flex flex-col items-center justify-center gap-0.5 min-w-[50px] py-1.5 px-1.5 rounded-md transition-all ${active
+    className={`flex flex-col items-center justify-center gap-0.5 min-w-[56px] py-1.5 px-1.5 rounded-md transition-all ${active
       ? 'text-white bg-zinc-800/80'
       : 'text-zinc-500 active:text-zinc-300'
       }`}
   >
     <Icon className={`${active ? 'w-5 h-5' : 'w-4 h-4'}`} />
-    <span className={`text-[8px] font-bold tracking-wide uppercase ${active ? '' : 'opacity-60'}`}>
+    <span className={`text-[10px] font-bold tracking-wide uppercase ${active ? '' : 'opacity-60'}`}>
       {label}
     </span>
   </button>
@@ -330,7 +330,7 @@ const MobileTabItem = ({ active, onClick, label, icon }: { active: boolean, onCl
       }`}
   >
     <span className="text-lg">{icon}</span>
-    <span className={`text-[9px] font-bold tracking-wider ${active ? '' : 'opacity-70'}`}>
+    <span className={`text-xs font-bold tracking-wider ${active ? '' : 'opacity-70'}`}>
       {label}
     </span>
   </button>

@@ -85,7 +85,7 @@ const InsightCard = ({
         <div className={`border-l-2 ${colors[accentColor]} p-3 sm:p-4 my-2 sm:my-3 rounded-r-lg animate-fade-in`}>
             <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
                 <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${iconColors[accentColor]}`} />
-                <span className="text-[10px] sm:text-xs font-mono uppercase tracking-wider text-zinc-400">{title}</span>
+                <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">{title}</span>
             </div>
             <div className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
                 {content}
@@ -132,7 +132,7 @@ const ExerciseCard: React.FC<{
                     </div>
                     <div>
                         <h3 className="text-sm sm:text-base font-semibold text-white">{config.title}</h3>
-                        <p className="text-[10px] sm:text-xs text-zinc-400">{config.description}</p>
+                        <p className="text-xs text-zinc-400">{config.description}</p>
                     </div>
                 </div>
             </div>
@@ -143,7 +143,7 @@ const ExerciseCard: React.FC<{
 
                 {exercise.type === 'boundary_builder' && (
                     <div className="space-y-2.5 sm:space-y-3">
-                        <label className="text-[10px] sm:text-xs font-mono uppercase tracking-wider text-zinc-500">Your Non-Negotiables</label>
+                        <label className="text-xs font-mono uppercase tracking-wider text-zinc-500">Your Non-Negotiables</label>
                         {boundaryInputs.map((input, i) => (
                             <input
                                 key={i}
@@ -155,7 +155,7 @@ const ExerciseCard: React.FC<{
                                     setBoundaryInputs(newInputs);
                                 }}
                                 placeholder={`Boundary ${i + 1}...`}
-                                className="w-full bg-zinc-800 border border-zinc-700 px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-rose-500/50 rounded-lg transition-colors"
+                                className="w-full bg-zinc-800 border border-zinc-700 px-3 sm:px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-rose-500/50 rounded-lg transition-colors"
                             />
                         ))}
                     </div>
@@ -215,16 +215,16 @@ const AnalysisCard = ({
     <div className="bg-zinc-800/40 border border-zinc-700/50 rounded-lg p-3 sm:p-4">
         <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
             <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-500" />
-            <span className="text-[10px] sm:text-xs font-mono uppercase tracking-wider text-zinc-500">{label}</span>
+            <span className="text-xs font-mono uppercase tracking-wider text-zinc-500">{label}</span>
         </div>
         <div className="text-base sm:text-lg font-semibold text-white capitalize">{value || '—'}</div>
-        {sublabel && <div className="text-[10px] sm:text-xs text-zinc-500 mt-1">{sublabel}</div>}
+        {sublabel && <div className="text-xs text-zinc-500 mt-1">{sublabel}</div>}
     </div>
 );
 
 // Theme Badge
 const ThemeBadge = ({ children }: { children: React.ReactNode }) => (
-    <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-full">
+    <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs font-medium text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-full">
         {children}
     </span>
 );
@@ -264,14 +264,14 @@ const MemoryItem: React.FC<{
         <div className="group relative bg-zinc-800/30 border border-zinc-700/50 rounded-lg p-3 hover:border-zinc-600 transition-colors">
             <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed pr-12">{memory.content}</p>
             <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => setIsEditing(true)} className="p-1.5 hover:bg-zinc-700 rounded">
+                <button onClick={() => setIsEditing(true)} className="p-1.5 hover:bg-zinc-700 rounded min-h-[30px] min-w-[30px] flex items-center justify-center">
                     <Edit3 className="w-3 h-3 text-zinc-500" />
                 </button>
-                <button onClick={() => memory.id && onDelete(memory.id)} className="p-1.5 hover:bg-zinc-700 rounded">
+                <button onClick={() => memory.id && onDelete(memory.id)} className="p-1.5 hover:bg-zinc-700 rounded min-h-[30px] min-w-[30px] flex items-center justify-center">
                     <X className="w-3 h-3 text-zinc-500" />
                 </button>
             </div>
-            <div className="text-[10px] text-zinc-600 mt-2 font-mono">
+            <div className="text-xs text-zinc-600 mt-2 font-mono">
                 {memory.type === 'GLOBAL' ? '📌 Core Memory' : '💭 Session'}
             </div>
         </div>
@@ -356,7 +356,7 @@ const MobileAnalysisSheet = ({
                     <div className="flex gap-1 p-1 bg-zinc-800 rounded-lg">
                         <button
                             onClick={() => setActiveTab('analysis')}
-                            className={`flex-1 py-2.5 text-xs font-medium rounded-md transition-colors ${activeTab === 'analysis'
+                            className={`flex-1 py-2.5 text-xs font-medium rounded-md transition-colors min-h-[44px] ${activeTab === 'analysis'
                                 ? 'bg-zinc-700 text-white'
                                 : 'text-zinc-500'
                                 }`}
@@ -365,7 +365,7 @@ const MobileAnalysisSheet = ({
                         </button>
                         <button
                             onClick={() => setActiveTab('memories')}
-                            className={`flex-1 py-2.5 text-xs font-medium rounded-md transition-colors ${activeTab === 'memories'
+                            className={`flex-1 py-2.5 text-xs font-medium rounded-md transition-colors min-h-[44px] ${activeTab === 'memories'
                                 ? 'bg-zinc-700 text-white'
                                 : 'text-zinc-500'
                                 }`}
@@ -845,7 +845,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
 
                                 {/* Timestamp */}
                                 <div className="flex items-center gap-2 opacity-50">
-                                    <span className="text-[10px] sm:text-xs font-mono text-zinc-500">
+                                    <span className="text-xs font-mono text-zinc-500">
                                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         {' · '}
                                         {msg.role === 'user' ? 'You' : 'Therapist'}
@@ -952,7 +952,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                         {isLoading && (
                             <div className="flex flex-col gap-2 items-start animate-fade-in">
                                 <div className="flex items-center gap-2 opacity-50">
-                                    <span className="text-[10px] sm:text-xs font-mono text-rose-400">Processing...</span>
+                                    <span className="text-xs font-mono text-rose-400">Processing...</span>
                                 </div>
                                 <div className="inline-block px-4 sm:px-5 py-3 sm:py-4 rounded-2xl bg-zinc-800/60 border border-zinc-700/50 max-w-[90%] sm:max-w-[80%]">
                                     <div className="text-sm text-zinc-300 whitespace-pre-wrap">
@@ -968,7 +968,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                 </div>
 
                 {/* INPUT AREA */}
-                <div className="border-t border-zinc-800 bg-zinc-950/80 backdrop-blur-sm p-3 sm:p-4 pb-20 sm:pb-4 md:pb-4">
+                <div className="border-t border-zinc-800 bg-zinc-950/80 backdrop-blur-sm p-3 sm:p-4 pb-24 sm:pb-4 md:pb-4">
                     <div className="max-w-3xl mx-auto">
 
                         {/* Pending Images */}
@@ -979,7 +979,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                         <img src={img} className="h-14 sm:h-16 w-auto rounded-lg border border-zinc-700" alt="Upload" />
                                         <button
                                             onClick={() => setPendingImages(prev => prev.filter((_, idx) => idx !== i))}
-                                            className="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 text-white rounded-full flex items-center justify-center text-sm"
+                                            className="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 text-white rounded-full flex items-center justify-center text-sm min-h-[30px] min-w-[30px]"
                                         >
                                             ×
                                         </button>
@@ -992,7 +992,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                         <div className="flex items-center gap-1.5 sm:gap-2 bg-zinc-900 border border-zinc-700 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 focus-within:border-rose-500/50 transition-colors">
                             <button
                                 onClick={() => fileInputRef.current?.click()}
-                                className="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors shrink-0"
+                                className="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors shrink-0 min-h-[44px] flex items-center justify-center"
                             >
                                 <ImagePlus className="w-5 h-5" />
                             </button>
@@ -1004,14 +1004,14 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                 onKeyDown={handleKeyDown}
                                 disabled={isLoading}
                                 placeholder="Share what's on your mind..."
-                                className="flex-1 bg-transparent text-white text-sm placeholder:text-zinc-600 focus:outline-none py-1"
+                                className="flex-1 bg-transparent text-white text-base sm:text-sm placeholder:text-zinc-600 focus:outline-none py-1"
                                 autoComplete="off"
                             />
 
                             <button
                                 onClick={handleSend}
                                 disabled={!inputValue.trim() || isLoading}
-                                className="p-1.5 text-zinc-500 hover:text-rose-400 disabled:opacity-30 disabled:hover:text-zinc-500 transition-colors shrink-0"
+                                className="p-1.5 text-zinc-500 hover:text-rose-400 disabled:opacity-30 disabled:hover:text-zinc-500 transition-colors shrink-0 min-h-[44px] flex items-center justify-center"
                             >
                                 <Send className="w-5 h-5" />
                             </button>

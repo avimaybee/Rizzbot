@@ -38,13 +38,13 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
       <div className="border-b border-zinc-800 px-4 py-3 flex items-center gap-4 shrink-0 sticky top-0 bg-matte-base/95 backdrop-blur-sm z-30">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2"
+          className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2 min-w-[44px]"
         >
           <ArrowLeft className="w-5 h-5" />
-          <span className="text-[10px] sm:text-[9px] font-mono uppercase tracking-widest group-hover:text-white transition-colors">BACK</span>
+          <span className="text-xs font-mono uppercase tracking-widest group-hover:text-white transition-colors">BACK</span>
         </button>
         <div className="flex-1 min-w-0">
-          <div className={`text-[9px] font-mono uppercase tracking-widest mb-0.5 ${session.mode === 'quick' ? 'text-hard-blue' : 'text-hard-gold'
+          <div className={`text-xs font-mono uppercase tracking-widest mb-0.5 ${session.mode === 'quick' ? 'text-hard-blue' : 'text-hard-gold'
             }`}>
             {session.mode === 'quick' ? 'QUICK_MODE' : 'PRACTICE_MODE'}
           </div>
@@ -158,13 +158,13 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
                 <div key={idx} className="space-y-2">
                   <div className="flex justify-end">
                     <div className="bg-hard-gold/20 border border-hard-gold/30 p-3 max-w-[80%]">
-                      <div className="text-[10px] text-hard-gold mb-1">YOU SENT</div>
+                      <div className="text-xs text-hard-gold mb-1">YOU SENT</div>
                       <p className="text-white text-sm">{turn.draft}</p>
                     </div>
                   </div>
                   <div className="flex justify-start">
                     <div className="bg-zinc-800 border border-zinc-700 p-3 max-w-[80%]">
-                      <div className="text-[10px] text-zinc-500 mb-1">PREDICTED REPLY</div>
+                      <div className="text-xs text-zinc-500 mb-1">PREDICTED REPLY</div>
                       <p className="text-white text-sm">{turn.result?.predictedReply}</p>
                     </div>
                   </div>
@@ -325,18 +325,18 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className={`w-1.5 h-1.5 animate-pulse ${loading ? 'bg-zinc-500' : 'bg-zinc-400'}`}></div>
-            <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-400">HISTORY_LOG</span>
+            <span className="text-xs font-mono uppercase tracking-widest text-zinc-400">HISTORY_LOG</span>
           </div>
-          <p className="text-[9px] text-zinc-600 font-mono border-l border-zinc-800 pl-3">
+          <p className="text-xs text-zinc-600 font-mono border-l border-zinc-800 pl-3">
             {pagination.total} SESSION{pagination.total !== 1 ? 'S' : ''}
           </p>
         </div>
         <button
           onClick={() => fetchSessions(0)}
           disabled={loading}
-          className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group"
+          className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group min-w-[44px]"
         >
-          <span className="text-[9px] font-mono uppercase tracking-widest hidden sm:inline group-hover:text-zinc-300 transition-colors">REFRESH</span>
+          <span className="text-xs font-mono uppercase tracking-widest hidden sm:inline group-hover:text-zinc-300 transition-colors">REFRESH</span>
           <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
@@ -386,7 +386,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
                     setSelectedSession(session);
                     onSelectSession?.(session);
                   }}
-                  className={`group relative border border-zinc-800 hover:border-zinc-600 transition-all cursor-pointer ${getRiskBg(ghostRisk)}`}
+                  className={`group relative border border-zinc-800 hover:border-zinc-600 transition-all cursor-pointer min-h-[80px] ${getRiskBg(ghostRisk)}`}
                 >
                   <div className="p-4 sm:p-5 flex items-center gap-4">
                     {/* Mode Icon */}
@@ -404,7 +404,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-[10px] uppercase tracking-wider font-bold ${session.mode === 'quick' ? 'text-hard-blue' : 'text-hard-gold'
+                        <span className={`text-xs uppercase tracking-wider font-bold ${session.mode === 'quick' ? 'text-hard-blue' : 'text-hard-gold'
                           }`}>
                           {session.mode === 'quick' ? 'QUICK MODE' : 'PRACTICE'}
                         </span>
@@ -436,12 +436,12 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
                       </div>
                     )}
 
-                    {/* Actions */}
+                    {/* Actions - Always visible on mobile, hover on desktop */}
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={(e) => handleDelete(session.id, e)}
                         disabled={deletingId === session.id}
-                        className="w-8 h-8 flex items-center justify-center text-zinc-600 hover:text-red-400 hover:bg-red-950/30 transition-colors opacity-0 group-hover:opacity-100"
+                        className="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-950/30 transition-colors md:opacity-0 md:group-hover:opacity-100 min-w-[32px] min-h-[32px]"
                         title="Delete session"
                       >
                         {deletingId === session.id ? (
@@ -462,7 +462,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
               <button
                 onClick={() => fetchSessions(pagination.offset)}
                 disabled={loading}
-                className="w-full py-4 border border-zinc-800 hover:border-zinc-700 text-sm text-zinc-400 hover:text-white transition-colors flex items-center justify-center gap-2"
+                className="w-full py-4 border border-zinc-800 hover:border-zinc-700 text-sm text-zinc-400 hover:text-white transition-colors flex items-center justify-center gap-2 min-h-[44px]"
               >
                 {loading ? (
                   <>

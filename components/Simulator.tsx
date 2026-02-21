@@ -273,14 +273,14 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
         <div className="border-b border-zinc-800 px-4 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2"
+            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2 min-w-[44px]"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="text-[10px] sm:text-[9px] font-mono uppercase tracking-widest group-hover:text-hard-blue transition-colors">BACK</span>
+            <span className="text-xs font-mono uppercase tracking-widest group-hover:text-hard-blue transition-colors">BACK</span>
           </button>
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 bg-hard-blue animate-pulse"></div>
-            <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-500">PRACTICE_MODE</span>
+            <span className="text-xs font-mono uppercase tracking-widest text-zinc-500">PRACTICE_MODE</span>
           </div>
         </div>
 
@@ -291,14 +291,14 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
           <div className={`order-2 md:order-1 w-full md:w-1/3 border-t md:border-t-0 md:border-r border-zinc-800 bg-zinc-900/50 flex flex-col md:h-full ${savedPersonas.length === 0 ? 'hidden md:flex' : ''}`}>
             {/* Mobile: Collapsible dropdown header - More compact */}
             <button
-              className="md:hidden w-full p-3 flex items-center justify-between"
+              className="md:hidden w-full p-3 flex items-center justify-between min-h-[44px]"
               onClick={() => setShowPracticePartners(!showPracticePartners)}
             >
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-hard-blue rounded-sm"></div>
                 <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Practice Partners</h4>
                 {savedPersonas.length > 0 && (
-                  <span className="text-[10px] font-mono text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">{savedPersonas.length}</span>
+                  <span className="text-xs font-mono text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">{savedPersonas.length}</span>
                 )}
               </div>
               <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${showPracticePartners ? 'rotate-180' : ''}`} />
@@ -311,7 +311,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                   <button
                     key={idx}
                     onClick={() => loadPersona(p)}
-                    className="w-full text-left p-4 bg-zinc-900/80 border border-zinc-800 hover:border-hard-blue hover:bg-zinc-800/80 transition-all group rounded-sm"
+                    className="w-full text-left p-4 bg-zinc-900/80 border border-zinc-800 hover:border-hard-blue hover:bg-zinc-800/80 transition-all group rounded-sm min-h-[44px]"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 shrink-0 bg-gradient-to-br from-hard-blue/20 to-hard-blue/5 border border-hard-blue/30 rounded-sm flex items-center justify-center text-hard-blue text-sm font-bold">
@@ -319,7 +319,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-bold text-sm text-zinc-200 truncate">{p.name}</div>
-                        <div className="text-[10px] text-zinc-500 truncate">{p.relationshipContext?.replace('_', ' ')}</div>
+                        <div className="text-xs text-zinc-500 truncate">{p.relationshipContext?.replace('_', ' ')}</div>
                       </div>
                     </div>
                   </button>
@@ -335,7 +335,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                   <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Practice Partners</h4>
                 </div>
                 {savedPersonas.length > 0 && (
-                  <span className="text-[10px] font-mono text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">{savedPersonas.length}</span>
+                  <span className="text-xs font-mono text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">{savedPersonas.length}</span>
                 )}
               </div>
 
@@ -346,7 +346,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                       <MessageSquare className="w-5 h-5 text-zinc-600" />
                     </div>
                     <p className="text-sm font-medium text-zinc-400 mb-1">No saved personas yet</p>
-                    <p className="text-[11px] text-zinc-600">create your first practice partner →</p>
+                    <p className="text-xs text-zinc-600">create your first practice partner →</p>
                   </div>
                 ) : (
                   savedPersonas.map((p, idx) => (
@@ -363,12 +363,12 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                           <div className="flex items-center justify-between gap-2 mb-1">
                             <div className="font-bold text-sm text-zinc-200 group-hover:text-white truncate">{p.name}</div>
                             {p.relationshipContext && (
-                              <span className="text-[8px] font-mono text-zinc-500 bg-zinc-800 px-1.5 py-0.5 uppercase shrink-0">
+                              <span className="text-xs font-mono text-zinc-500 bg-zinc-800 px-1.5 py-0.5 uppercase shrink-0">
                                 {p.relationshipContext.replace('_', ' ')}
                               </span>
                             )}
                           </div>
-                          <div className="text-[10px] text-zinc-500 truncate">{p.tone}</div>
+                          <div className="text-xs text-zinc-500 truncate">{p.tone}</div>
                         </div>
                       </div>
                     </button>
@@ -393,7 +393,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                     <label className="label-sm text-zinc-400">Their Name <span className="text-hard-gold">*</span></label>
                     <input
                       type="text"
-                      className="w-full bg-zinc-900 border border-zinc-700 p-2.5 text-white text-xs font-mono focus:border-white focus:outline-none uppercase placeholder:text-zinc-500/60"
+                      className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white text-base sm:text-sm font-mono focus:border-white focus:outline-none uppercase placeholder:text-zinc-500/60"
                       placeholder="ALEX"
                       value={customName}
                       onChange={(e) => setCustomName(e.target.value)}
@@ -404,7 +404,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                     <button
                       type="button"
                       onClick={() => setShowContextDropdown(!showContextDropdown)}
-                      className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white text-xs font-mono focus:border-white focus:outline-none uppercase cursor-pointer text-left flex justify-between items-center"
+                      className="w-full bg-zinc-900 border border-zinc-700 p-3 text-white text-base sm:text-sm font-mono focus:border-white focus:outline-none uppercase cursor-pointer text-left flex justify-between items-center min-h-[44px]"
                     >
                       <span>{relationshipContext.replace('_', ' ')}</span>
                       <span className="text-zinc-500">{showContextDropdown ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}</span>
@@ -419,7 +419,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                               setRelationshipContext(option);
                               setShowContextDropdown(false);
                             }}
-                            className={`w-full p-3 text-left text-xs font-mono uppercase transition-colors ${relationshipContext === option
+                            className={`w-full p-3 text-left text-xs font-mono uppercase transition-colors min-h-[44px] ${relationshipContext === option
                               ? 'bg-white text-black'
                               : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
                               }`}
@@ -443,7 +443,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                       {harshnessLevel === 5 && 'BRUTAL'}
                     </span>
                   </label>
-                  <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-700 p-4">
+                  <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-700 p-4 min-h-[44px]">
                     <span className="text-xs text-zinc-500 font-mono">1</span>
                     <input
                       type="range"
@@ -459,7 +459,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                     />
                     <span className="text-xs text-zinc-500 font-mono">5</span>
                   </div>
-                  <p className="text-[10px] text-zinc-600 font-mono mt-1">
+                  <p className="text-xs text-zinc-600 font-mono mt-1">
                     {harshnessLevel === 1 && '→ Gentle encouragement, positive framing'}
                     {harshnessLevel === 2 && '→ Supportive feedback with soft corrections'}
                     {harshnessLevel === 3 && '→ Honest reality checks, balanced approach'}
@@ -471,7 +471,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                 <div className="space-y-2">
                   <label className="label-sm text-zinc-400">Their Red Flags</label>
                   <textarea
-                    className="w-full bg-zinc-900 border border-zinc-700 p-4 text-white text-sm focus:border-white focus:outline-none h-32 resize-none leading-relaxed placeholder:text-zinc-500/60"
+                    className="w-full bg-zinc-900 border border-zinc-700 p-4 text-white text-base sm:text-sm focus:border-white focus:outline-none h-32 resize-none leading-relaxed placeholder:text-zinc-500/60"
                     placeholder="Describe their vibe. Dry texter? Love bomber? Emoji abuser? The devil's in the details."
                     value={personaDescription}
                     onChange={(e) => setPersonaDescription(e.target.value)}
@@ -482,14 +482,14 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                   <label className="label-sm text-zinc-400">Receipts (Optional)</label>
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="border border-dashed border-zinc-700 bg-zinc-900/50 p-4 flex items-center justify-between cursor-pointer hover:bg-zinc-800 transition-all group"
+                    className="border border-dashed border-zinc-700 bg-zinc-900/50 p-4 flex items-center justify-between cursor-pointer hover:bg-zinc-800 transition-all group min-h-[44px]"
                   >
                     <div className="flex items-center gap-4">
                       <span className="text-zinc-500 text-lg group-hover:text-white"><Upload className="w-4 h-4" /></span>
                       <span className="text-xs font-bold text-zinc-400 group-hover:text-white uppercase tracking-wider">Upload Screenshots</span>
                     </div>
                     <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
-                    {previewUrls.length > 0 && <span className="text-[10px] font-bold text-hard-blue border border-hard-blue/30 px-2 py-0.5 rounded-sm">{previewUrls.length} FILES</span>}
+                    {previewUrls.length > 0 && <span className="text-xs font-bold text-hard-blue border border-hard-blue/30 px-2 py-0.5 rounded-sm">{previewUrls.length} FILES</span>}
                   </div>
 
                   {/* Screenshot Previews with Remove */}
@@ -509,7 +509,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                               setPreviewUrls(prev => prev.filter((_, i) => i !== index));
                               setScreenshots(prev => prev.filter((_, i) => i !== index));
                             }}
-                            className="absolute top-1 right-1 w-5 h-5 bg-red-600 hover:bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-sm"
+                            className="absolute top-1 right-1 w-5 h-5 bg-red-600 hover:bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-sm min-w-[24px] min-h-[24px]"
                           >
                             <span className="text-xs font-bold">×</span>
                           </button>
@@ -522,7 +522,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                 <button
                   onClick={buildPersona}
                   disabled={!customName.trim() || (!personaDescription && screenshots.length === 0)}
-                  className="w-full bg-white text-black font-impact text-xl py-4 hover:bg-zinc-200 transition-all disabled:opacity-50 mt-6 border border-white tracking-wide uppercase"
+                  className="w-full bg-white text-black font-impact text-xl py-4 hover:bg-zinc-200 transition-all disabled:opacity-50 mt-6 border border-white tracking-wide uppercase min-h-[50px]"
                 >
                   Lock & Load
                 </button>
@@ -554,7 +554,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
     };
 
     return (
-      <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative scrollbar-hide pb-16 md:pb-0">
+      <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative scrollbar-hide pb-24 md:pb-0">
         <CornerNodes />
 
         {/* Header - More compact */}
@@ -565,12 +565,12 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
             </div>
             <div>
               <h2 className="font-impact text-base sm:text-lg text-white tracking-wide uppercase">Analysis</h2>
-              <p className="text-[10px] text-zinc-500 font-mono">
+              <p className="text-xs text-zinc-500 font-mono">
                 {simHistory.length} exchange{simHistory.length !== 1 ? 's' : ''}
               </p>
             </div>
           </div>
-          <button onClick={() => setView('chat')} className="label-sm text-zinc-400 hover:text-white border border-zinc-700 px-4 py-2 hover:bg-zinc-800 transition-colors">
+          <button onClick={() => setView('chat')} className="label-sm text-zinc-400 hover:text-white border border-zinc-700 px-4 py-2 hover:bg-zinc-800 transition-colors min-h-[44px]">
             ← BACK
           </button>
         </div>
@@ -706,13 +706,13 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
         <div className="p-4 sm:p-6 border-t border-zinc-800 bg-zinc-900 flex justify-center gap-4 shrink-0">
           <button
             onClick={() => setView('chat')}
-            className="label-sm text-zinc-400 hover:text-white border border-zinc-700 px-6 py-3 hover:bg-zinc-800 transition-colors"
+            className="label-sm text-zinc-400 hover:text-white border border-zinc-700 px-6 py-3 hover:bg-zinc-800 transition-colors min-h-[44px]"
           >
             ← Continue Chat
           </button>
           <button
             onClick={resetSim}
-            className="label-sm text-white bg-zinc-800 border border-zinc-600 px-6 py-3 hover:bg-zinc-700 transition-colors"
+            className="label-sm text-white bg-zinc-800 border border-zinc-600 px-6 py-3 hover:bg-zinc-700 transition-colors min-h-[44px]"
           >
             Start New Session
           </button>
@@ -723,7 +723,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
   // --- CHAT VIEW ---
   return (
-    <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative shadow-2xl scrollbar-hide pb-16 md:pb-0">
+    <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative shadow-2xl scrollbar-hide pb-24 md:pb-0">
       <CornerNodes />
 
       {/* CHAT HEADER - More compact */}
@@ -734,18 +734,18 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
           </div>
           <div>
             <h2 className="font-impact text-white text-xs sm:text-sm uppercase tracking-wider">{activePersona?.name}</h2>
-            <span className="text-[10px] text-zinc-500 font-mono">
+            <span className="text-xs text-zinc-500 font-mono">
               {simHistory.length} msg{simHistory.length !== 1 ? 's' : ''}
             </span>
           </div>
         </div>
         <div className="flex gap-2 sm:gap-3 items-center">
           {simHistory.length > 0 && (
-            <button onClick={handleEndSim} className="label-sm text-red-400 hover:text-red-300 border border-red-800/50 px-2 sm:px-3 py-1.5 bg-red-950/30 hover:bg-red-900/40 transition-colors">
+            <button onClick={handleEndSim} className="label-sm text-red-400 hover:text-red-300 border border-red-800/50 px-2 sm:px-3 py-1.5 bg-red-950/30 hover:bg-red-900/40 transition-colors min-h-[44px]">
               END
             </button>
           )}
-          <button onClick={() => setView('setup')} className="label-sm text-zinc-500 hover:text-white transition-colors px-2 py-1.5">
+          <button onClick={() => setView('setup')} className="label-sm text-zinc-500 hover:text-white transition-colors px-2 py-1.5 min-h-[44px]">
             EXIT
           </button>
         </div>
@@ -782,7 +782,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                       <p className="text-black">{entry.draft}</p>
                       <button
                         onClick={() => copyToClipboard(entry.draft)}
-                        className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-700 border border-zinc-300"
+                        className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-700 border border-zinc-300 min-w-[28px] min-h-[28px]"
                         title="Copy to clipboard"
                       >
                         {copiedText === entry.draft ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
@@ -801,7 +801,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                         <p>{entry.result.predictedReply}</p>
                         <button
                           onClick={() => copyToClipboard(entry.result.predictedReply || '')}
-                          className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 flex items-center justify-center bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 text-zinc-400 hover:text-white"
+                          className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 flex items-center justify-center bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 text-zinc-400 hover:text-white min-w-[28px] min-h-[28px]"
                           title="Copy reply"
                         >
                           {copiedText === entry.result.predictedReply ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
@@ -835,26 +835,26 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                       <button
                         key={key}
                         onClick={() => copyToDraft(text as string)}
-                        className={`group relative p-3 border text-left transition-all hover:scale-[1.02] ${key === 'safe' ? 'border-zinc-700 hover:border-zinc-500 bg-zinc-800/30' :
+                        className={`group relative p-3 border text-left transition-all hover:scale-[1.02] min-h-[60px] ${key === 'safe' ? 'border-zinc-700 hover:border-zinc-500 bg-zinc-800/30' :
                           key === 'bold' ? 'border-blue-900/50 hover:border-blue-700/70 bg-blue-950/20' :
                             key === 'spicy' ? 'border-red-900/50 hover:border-red-700/70 bg-red-950/20' :
                               'border-hard-gold/40 hover:border-hard-gold/70 bg-amber-950/20'
                           }`}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${key === 'safe' ? 'text-zinc-400' :
+                          <span className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1 ${key === 'safe' ? 'text-zinc-400' :
                             key === 'bold' ? 'text-blue-400' :
                               key === 'spicy' ? 'text-red-400' :
                                 'text-hard-gold'
                             }`}>
                             {key === 'you' ? <><Sparkles className="w-3 h-3" /> YOUR STYLE</> : key}
                           </span>
-                          <span className="text-[8px] text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity">TAP TO USE</span>
+                          <span className="text-[10px] text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity">TAP TO USE</span>
                         </div>
                         <p className="text-xs text-zinc-300 leading-relaxed line-clamp-2">"{text as string}"</p>
                         <button
                           onClick={(e) => { e.stopPropagation(); copyToClipboard(text as string); }}
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 flex items-center justify-center bg-zinc-700 hover:bg-zinc-600 text-[10px]"
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 flex items-center justify-center bg-zinc-700 hover:bg-zinc-600 text-[10px] min-w-[24px] min-h-[24px]"
                           title="Copy"
                         >
                           {copiedText === text ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
@@ -870,7 +870,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                 idx < simHistory.length - 1 && (
                   <div className="flex items-center gap-4 py-4">
                     <div className="flex-1 h-px bg-zinc-800"></div>
-                    <span className="text-[10px] text-zinc-600 font-mono">EXCHANGE {idx + 2}</span>
+                    <span className="text-xs text-zinc-600 font-mono">EXCHANGE {idx + 2}</span>
                     <div className="flex-1 h-px bg-zinc-800"></div>
                   </div>
                 )
@@ -917,12 +917,12 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Type your message..."
             disabled={chatLoading}
-            className="flex-1 bg-transparent px-4 sm:px-6 py-4 sm:py-5 text-white focus:outline-none placeholder:text-zinc-600 text-sm"
+            className="flex-1 bg-transparent px-4 sm:px-6 py-4 sm:py-5 text-white focus:outline-none placeholder:text-zinc-600 text-base sm:text-sm"
           />
           <button
             type="submit"
             disabled={!draft.trim() || chatLoading}
-            className="bg-white text-black font-impact px-6 sm:px-10 hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider text-sm"
+            className="bg-white text-black font-impact px-6 sm:px-10 hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider text-sm min-h-[50px]"
           >
             SEND
           </button>

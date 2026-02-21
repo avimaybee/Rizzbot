@@ -170,7 +170,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                 <div className="flex mb-5 sm:mb-6 border-b border-zinc-800">
                   <button
                     onClick={() => switchMode('signin')}
-                    className={`flex-1 pb-2.5 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all relative ${mode === 'signin'
+                    className={`flex-1 pb-2.5 text-xs font-mono uppercase tracking-widest transition-all relative ${mode === 'signin'
                       ? 'text-white'
                       : 'text-zinc-600 hover:text-zinc-400'
                       }`}
@@ -182,7 +182,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                   </button>
                   <button
                     onClick={() => switchMode('signup')}
-                    className={`flex-1 pb-2.5 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all relative ${mode === 'signup'
+                    className={`flex-1 pb-2.5 text-xs font-mono uppercase tracking-widest transition-all relative ${mode === 'signup'
                       ? 'text-white'
                       : 'text-zinc-600 hover:text-zinc-400'
                       }`}
@@ -200,7 +200,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                 <div className="mb-6">
                   <button
                     onClick={() => switchMode('signin')}
-                    className="text-zinc-500 hover:text-white text-[10px] font-mono uppercase tracking-widest flex items-center gap-2 mb-4 transition-colors"
+                    className="text-zinc-500 hover:text-white text-xs font-mono uppercase tracking-widest flex items-center gap-2 mb-4 transition-colors"
                   >
                     ← Back to Login
                   </button>
@@ -217,7 +217,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                   <button
                     onClick={handleGoogleAuth}
                     disabled={loading}
-                    className="w-full flex items-center justify-center gap-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 text-white font-mono text-xs py-2.5 px-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+                    className="w-full flex items-center justify-center gap-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 text-white font-mono text-xs py-3 px-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed group min-h-[44px]"
                   >
                     <svg className="w-4 h-4 grayscale group-hover:grayscale-0 transition-all" viewBox="0 0 24 24">
                       <path
@@ -237,7 +237,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                       />
                     </svg>
-                    <span className="uppercase tracking-wider text-[10px]">Continue with Google</span>
+                    <span className="uppercase tracking-wider text-xs">Continue with Google</span>
                   </button>
 
                   {/* Divider - More compact */}
@@ -245,7 +245,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                     <div className="absolute inset-0 flex items-center">
                       <div className="w-full border-t border-zinc-800"></div>
                     </div>
-                    <div className="relative flex justify-center text-[10px] font-mono uppercase">
+                    <div className="relative flex justify-center text-xs font-mono uppercase">
                       <span className="px-2 bg-zinc-900 text-zinc-600">or use email</span>
                     </div>
                   </div>
@@ -267,7 +267,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                       onChange={(e) => setDisplayName(e.target.value)}
                       autoComplete="name"
                       placeholder="ENTER DISPLAY NAME"
-                      className="w-full bg-zinc-950 border border-zinc-800 focus:border-hard-blue px-3 py-2.5 text-white placeholder-zinc-700 focus:outline-none transition-all font-mono text-sm"
+                      className="w-full bg-zinc-950 border border-zinc-800 focus:border-hard-blue px-3 py-3 text-base sm:text-sm text-white placeholder-zinc-700 focus:outline-none transition-all font-mono"
                     />
                   </div>
                 )}
@@ -285,7 +285,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                     required
                     autoComplete="email"
                     placeholder="USER@EXAMPLE.COM"
-                    className="w-full bg-zinc-950 border border-zinc-800 focus:border-hard-gold px-3 py-2.5 text-white placeholder-zinc-700 focus:outline-none transition-all font-mono text-sm"
+                    className="w-full bg-zinc-950 border border-zinc-800 focus:border-hard-gold px-3 py-3 text-base sm:text-sm text-white placeholder-zinc-700 focus:outline-none transition-all font-mono"
                   />
                 </div>
 
@@ -304,7 +304,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                       autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
                       placeholder="••••••••"
                       minLength={6}
-                      className="w-full bg-zinc-950 border border-zinc-800 focus:border-hard-gold px-3 py-2.5 text-white placeholder-zinc-700 focus:outline-none transition-all font-mono text-sm"
+                      className="w-full bg-zinc-950 border border-zinc-800 focus:border-hard-gold px-3 py-3 text-base sm:text-sm text-white placeholder-zinc-700 focus:outline-none transition-all font-mono"
                     />
                   </div>
                 )}
@@ -327,7 +327,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`w-full py-3 sm:py-3.5 font-impact text-lg sm:text-xl uppercase tracking-wide border transition-all flex items-center justify-center gap-2 ${loading
+                  className={`w-full py-3 sm:py-3.5 font-impact text-lg sm:text-xl uppercase tracking-wide border transition-all flex items-center justify-center gap-2 min-h-[44px] ${loading
                     ? 'bg-zinc-800 text-zinc-500 border-zinc-700 cursor-not-allowed'
                     : mode === 'signup'
                       ? 'bg-white text-black border-white hover:bg-zinc-200'
@@ -350,7 +350,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
                 <div className="mt-6 text-center">
                   <button
                     onClick={() => switchMode('reset')}
-                    className="text-zinc-600 hover:text-hard-gold text-[10px] font-mono uppercase tracking-widest transition-colors"
+                    className="text-zinc-600 hover:text-hard-gold text-xs font-mono uppercase tracking-widest transition-colors min-h-[44px] flex items-center justify-center mx-auto"
                   >
                     Forgot password?
                   </button>
@@ -361,7 +361,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
 
           {/* Footer - More compact */}
           <div className="mt-5 sm:mt-6 text-center">
-            <p className="text-zinc-600 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest">
+            <p className="text-zinc-600 text-xs font-mono uppercase tracking-widest">
               By accessing, you agree to protocols & privacy standards.
             </p>
           </div>
