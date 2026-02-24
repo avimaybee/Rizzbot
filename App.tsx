@@ -15,7 +15,7 @@ import { AppState, UserStyleProfile, WellbeingState } from './types';
 import { StandbyScreen } from './components/StandbyScreen';
 import { WellbeingCheckIn } from './components/WellbeingCheckIn';
 import { SystemTicker } from './components/SystemTicker';
-import { MobileTabBar } from './components/navigation/MobileTabBar';
+import { MobileTabBar, QuickActionsFab } from './components/navigation/MobileTabBar';
 import { DesktopSideDock } from './components/navigation/DesktopSideDock';
 import { CornerNodes } from './components/ui/CornerNodes';
 
@@ -286,6 +286,8 @@ function App() {
                   <UserProfile
                     onBack={() => setActiveModule('standby')}
                     onSave={handleSaveProfile}
+                    onHistory={() => setActiveModule('history')}
+                    onTherapist={() => setActiveModule('therapist')}
                     initialProfile={userProfile}
                     userId={userId}
                     authUser={authUser}
@@ -322,6 +324,12 @@ function App() {
 
         {/* Mobile Bottom Navigation */}
         <MobileTabBar activeTab={activeModule} onTabChange={(tabId) => setActiveModule(tabId as Module)} />
+        
+        {/* Quick Actions FAB for secondary features (History, Therapist) */}
+        <QuickActionsFab 
+          onOpenHistory={() => setActiveModule('history')}
+          onOpenTherapist={() => setActiveModule('therapist')}
+        />
       </div>
     </ToastProvider>
   );
