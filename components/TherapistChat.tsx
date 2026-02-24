@@ -8,6 +8,12 @@ import { TherapistMessage, ClinicalNotes, TherapistExercise, ExerciseType } from
 import { CornerNodes } from './ui/CornerNodes';
 import { ScreenHeader } from './ui/ScreenHeader';
 import { Button } from './ui/Button';
+// Extracted components
+import { TherapistHeader } from './therapist/TherapistHeader';
+import { TherapistMessageBubble } from './therapist/TherapistMessage';
+import { TherapistInput } from './therapist/TherapistInput';
+import { InsightCard } from './therapist/InsightCard';
+import { ExerciseCard } from './therapist/ExerciseCard';
 
 interface TherapistChatProps {
     onBack: () => void;

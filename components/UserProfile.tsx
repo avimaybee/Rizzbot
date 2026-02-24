@@ -7,6 +7,9 @@ import { CornerNodes } from './ui/CornerNodes';
 import { ScreenHeader } from './ui/ScreenHeader';
 import { Button } from './ui/Button';
 import { Input, TextArea } from './ui/Input';
+// Extracted components
+import { StyleSelector } from './profile/StyleSelector';
+import { AccountSection } from './profile/AccountSection';
 
 interface UserProfileProps {
   onBack: () => void;

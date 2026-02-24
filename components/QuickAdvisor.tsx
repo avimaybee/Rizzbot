@@ -10,6 +10,8 @@ import { CornerNodes } from './ui/CornerNodes';
 import { ScreenHeader } from './ui/ScreenHeader';
 import { Button } from './ui/Button';
 import { Input, TextArea } from './ui/Input';
+// Extracted components
+import { VibeCheckCard } from './quick/VibeCheckCard';
 
 interface QuickAdvisorProps {
   onBack: () => void;

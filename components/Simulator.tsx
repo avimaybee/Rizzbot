@@ -10,6 +10,8 @@ import { ScreenHeader } from './ui/ScreenHeader';
 import { Button } from './ui/Button';
 import { Input, TextArea } from './ui/Input';
 import { ActionCard } from './ui/ActionCard';
+// Extracted components
+import { PersonaCard } from './simulator/PersonaCard';
 
 interface SimulatorProps {  // User's style profile for personalized suggestions
   userProfile?: UserStyleProfile | null;
