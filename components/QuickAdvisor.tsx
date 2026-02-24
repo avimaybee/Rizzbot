@@ -6,6 +6,12 @@ import { createSession, submitFeedback } from '../services/dbService';
 import { Sparkles, Upload, X, Image, ThumbsUp, Minus, ThumbsDown, ArrowLeft, Info, CornerDownRight, Link2, Copy, Check } from 'lucide-react';
 import { useGlobalToast } from './Toast';
 import { Logo } from './Logo';
+import { CornerNodes } from './ui/CornerNodes';
+import { ScreenHeader } from './ui/ScreenHeader';
+import { Button } from './ui/Button';
+import { Input, TextArea } from './ui/Input';
+// Extracted components
+import { VibeCheckCard } from './quick/VibeCheckCard';
 
 interface QuickAdvisorProps {
   onBack: () => void;
@@ -23,28 +29,6 @@ const contextOptions: { value: ContextOption; label: string }[] = [
   { value: 'complicated', label: 'COMPLICATED' },
   { value: 'ex', label: 'EX' },
 ];
-
-// Corner Nodes Component - matching App.tsx style
-const CornerNodes = ({ className }: { className?: string }) => (
-  <div className={`pointer-events-none absolute inset-0 z-50 ${className}`}>
-    <div className="absolute top-0 left-0">
-      <div className="w-2 h-2 border-t border-l border-zinc-500"></div>
-      <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 text-zinc-600 text-[8px]">+</div>
-    </div>
-    <div className="absolute top-0 right-0">
-      <div className="w-2 h-2 border-t border-r border-zinc-500"></div>
-      <div className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 text-zinc-600 text-[8px]">+</div>
-    </div>
-    <div className="absolute bottom-0 left-0">
-      <div className="w-2 h-2 border-b border-l border-zinc-500"></div>
-      <div className="absolute bottom-0 left-0 -translate-x-1/2 translate-y-1/2 text-zinc-600 text-[8px]">+</div>
-    </div>
-    <div className="absolute bottom-0 right-0">
-      <div className="w-2 h-2 border-b border-r border-zinc-500"></div>
-      <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 text-zinc-600 text-[8px]">+</div>
-    </div>
-  </div>
-);
 
 // Suggestion Category Component - handles new multi-bubble SuggestionOption[] structure
 interface SuggestionCategoryProps {
@@ -264,7 +248,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
     setTimeout(() => setCopiedIndex(null), 1500);
   }, [showToast]);
 
-  const handleFeedback = useCallback((suggestionType: 'smooth' | 'bold' | 'witty' | 'authentic', rating: 'helpful' | 'mid' | 'off') => {
+  const handleFeedback = useCallback((suggestionType: 'smooth' | 'bold' | 'authentic' | 'safe' | 'spicy' | 'you', rating: 'helpful' | 'mid' | 'off') => {
     // Save feedback locally
     if (firebaseUid) {
       saveFeedback(firebaseUid, {
@@ -352,20 +336,13 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
     return (
       <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide pb-24 md:pb-0">
 
-        {/* TACTICAL HUD HEADER */}
-        <div className="border-b border-zinc-800 px-4 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2 min-w-[44px]"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-xs font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">BACK</span>
-          </button>
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 bg-hard-gold animate-pulse"></div>
-            <span className="text-xs font-mono uppercase tracking-widest text-zinc-500">QUICK_MODE</span>
-          </div>
-        </div>
+        <ScreenHeader
+          title="QUICK MODE"
+          subtitle="FAST LANE"
+          variant="gold"
+          onBack={onBack}
+        />
+        
         {/* Background Pattern */}
         <div className="absolute inset-0 bg-topo-pattern opacity-5 pointer-events-none"></div>
 

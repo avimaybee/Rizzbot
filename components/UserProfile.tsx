@@ -1,41 +1,28 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { ArrowLeft, Circle, Upload, Image, X, AlertTriangle, Sparkles, ArrowRight, User, LogOut } from 'lucide-react';
+import { ArrowLeft, Circle, Upload, Image, X, AlertTriangle, Sparkles, ArrowRight, User, LogOut, Clock, HeartHandshake } from 'lucide-react';
 import { UserStyleProfile, StyleExtractionResponse, AIExtractedStyleProfile } from '../types';
 import { extractUserStyle } from '../services/geminiService';
 import { AuthUser } from '../services/firebaseService';
+import { CornerNodes } from './ui/CornerNodes';
+import { ScreenHeader } from './ui/ScreenHeader';
+import { Button } from './ui/Button';
+import { Input, TextArea } from './ui/Input';
+// Extracted components
+import { StyleSelector } from './profile/StyleSelector';
+import { AccountSection } from './profile/AccountSection';
 
 interface UserProfileProps {
   onBack: () => void;
   onSave: (profile: UserStyleProfile) => void;
+  onHistory?: () => void;
+  onTherapist?: () => void;
   initialProfile?: UserStyleProfile | null;
   userId?: number | null;
   authUser?: AuthUser | null;
   onSignOut?: () => void;
 }
 
-// Corner Nodes Component
-const CornerNodes = ({ className }: { className?: string }) => (
-  <div className={`pointer-events-none absolute inset-0 z-50 ${className}`}>
-    <div className="absolute top-0 left-0">
-      <div className="w-2 h-2 border-t border-l border-zinc-500"></div>
-      <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 text-zinc-600 text-[8px]">+</div>
-    </div>
-    <div className="absolute top-0 right-0">
-      <div className="w-2 h-2 border-t border-r border-zinc-500"></div>
-      <div className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 text-zinc-600 text-[8px]">+</div>
-    </div>
-    <div className="absolute bottom-0 left-0">
-      <div className="w-2 h-2 border-b border-l border-zinc-500"></div>
-      <div className="absolute bottom-0 left-0 -translate-x-1/2 translate-y-1/2 text-zinc-600 text-[8px]">+</div>
-    </div>
-    <div className="absolute bottom-0 right-0">
-      <div className="w-2 h-2 border-b border-r border-zinc-500"></div>
-      <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 text-zinc-600 text-[8px]">+</div>
-    </div>
-  </div>
-);
-
-export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initialProfile, userId, authUser, onSignOut }) => {
+export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, onHistory, onTherapist, initialProfile, userId, authUser, onSignOut }) => {
   // Profile state
   const [profile, setProfile] = useState<UserStyleProfile>({
     emojiUsage: 'moderate',
@@ -632,15 +619,36 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                           </div>
                         </div>
                       </div>
-                      {onSignOut && (
-                        <button
-                          onClick={onSignOut}
-                          className="flex items-center gap-2 px-4 py-2 border border-zinc-700 text-zinc-400 hover:border-red-500 hover:text-red-400 transition-colors text-sm min-h-[44px]"
-                        >
-                          <LogOut className="w-4 h-4" />
-                          Sign Out
-                        </button>
-                      )}
+                      {/* Quick Links */}
+                      <div className="flex flex-wrap gap-2 mt-4">
+                        {onHistory && (
+                          <button
+                            onClick={onHistory}
+                            className="flex items-center gap-2 px-4 py-2 border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white transition-colors text-sm min-h-[44px]"
+                          >
+                            <Clock className="w-4 h-4" />
+                            History
+                          </button>
+                        )}
+                        {onTherapist && (
+                          <button
+                            onClick={onTherapist}
+                            className="flex items-center gap-2 px-4 py-2 border border-rose-700/50 text-rose-400 hover:border-rose-500 hover:text-rose-300 transition-colors text-sm min-h-[44px]"
+                          >
+                            <HeartHandshake className="w-4 h-4" />
+                            Therapist
+                          </button>
+                        )}
+                        {onSignOut && (
+                          <button
+                            onClick={onSignOut}
+                            className="flex items-center gap-2 px-4 py-2 border border-zinc-700 text-zinc-400 hover:border-red-500 hover:text-red-400 transition-colors text-sm min-h-[44px]"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            Sign Out
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
