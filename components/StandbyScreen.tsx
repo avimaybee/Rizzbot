@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, HeartHandshake } from 'lucide-react';
+import { ArrowRight, HeartHandshake, RefreshCw } from 'lucide-react';
 import { UserStyleProfile } from '../types';
 import { AuthUser } from '../services/firebaseService';
 import { ActionCard, StatusBadge, CornerNodes } from './ui';
@@ -131,13 +131,13 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
         </div>
       </div>
 
-      {/* MOBILE LAYOUT */}
+      {/* MOBILE LAYOUT - Modernized with staggered animations */}
       <div className="md:hidden flex-1 min-h-0 flex flex-col overflow-y-auto bg-black relative">
         {/* Topographic Pattern Background */}
         <div className="absolute inset-0 bg-topo-pattern opacity-10 pointer-events-none fixed"></div>
 
-        {/* Hero Section */}
-        <div className="pt-6 pb-3 px-4 relative z-10">
+        {/* Hero Section - with entrance animation */}
+        <div className="pt-6 pb-3 px-4 relative z-10 animate-fade-in">
           <div className="flex items-center justify-between mb-2">
             <span className="label-sm text-hard-gold">COMMAND CENTER</span>
             {authUser && (
@@ -157,36 +157,49 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
           </h1>
         </div>
 
-        {/* Status Widget */}
-        <div className="px-4 mb-3 relative z-10">
-          <div className="border border-zinc-800 bg-zinc-900/60 p-3 relative overflow-hidden">
+        {/* Status Widget - More prominent with animation */}
+        <div className="px-4 mb-3 relative z-10 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+          <div className="border border-zinc-800 bg-zinc-900/60 p-3 relative overflow-hidden group hover:border-zinc-700 transition-colors">
             <CornerNodes variant="subtle" className="opacity-40" />
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 flex items-center justify-center border ${hasProfile ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-zinc-700 bg-zinc-800'}`}>
+              <div className={`w-12 h-12 flex items-center justify-center border-2 ${hasProfile ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-yellow-500/30 bg-yellow-500/10'}`}>
                 {hasProfile ? (
-                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.5)]"></div>
+                  <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_12px_rgba(52,211,153,0.6)]"></div>
                 ) : (
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
                 )}
               </div>
               <div className="flex-1">
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className={`text-[9px] font-mono uppercase tracking-widest ${hasProfile ? 'text-emerald-400' : 'text-yellow-500'}`}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className={`text-[10px] font-bold uppercase tracking-widest ${hasProfile ? 'text-emerald-400' : 'text-yellow-500'}`}>
                     {hasProfile ? 'SYSTEM CALIBRATED' : 'SYSTEM UNTRAINED'}
                   </span>
-                  {hasProfile && <span className="text-[8px] font-mono text-zinc-500">V.1.0</span>}
+                  {hasProfile && (
+                    <button 
+                      onClick={() => onActivate('profile')}
+                      className="text-[8px] text-zinc-500 hover:text-white transition-colors flex items-center gap-1"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      REFRESH
+                    </button>
+                  )}
                 </div>
                 {hasProfile ? (
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-white font-bold uppercase">{userProfile?.preferredTone || 'Balanced'} Voice</span>
-                    <button onClick={() => onActivate('profile')} className="text-[8px] underline text-zinc-500 uppercase hover:text-white">Adjust</button>
+                    <span className="text-sm text-white font-bold uppercase">{userProfile?.preferredTone || 'Balanced'} Voice</span>
+                    <button 
+                      onClick={() => onActivate('profile')} 
+                      className="text-[8px] underline text-zinc-500 uppercase hover:text-white"
+                    >
+                      Adjust
+                    </button>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-zinc-400">Personalize AI responses</span>
                     <button
                       onClick={() => onActivate('profile')}
-                      className="bg-white text-black text-[9px] font-bold px-2 py-0.5 uppercase tracking-wide hover:bg-zinc-200"
+                      className="bg-white text-black text-[9px] font-bold px-3 py-1.5 uppercase tracking-wide hover:bg-zinc-200 active:scale-95 transition-all"
                     >
                       INITIATE
                     </button>
@@ -197,43 +210,49 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
           </div>
         </div>
 
-        {/* Action Modules - Mobile Optimized */}
+        {/* Action Modules - Mobile Optimized with staggered animations */}
         <div className="flex-1 px-4 space-y-2.5 pb-6 relative z-10">
-          {/* Quick Mode - Gold */}
-          <ActionCard
-            title="QUICK MODE"
-            subtitle="PRIORITY_ACCESS"
-            variant="gold"
-            actionLabel="DEPLOY"
-            onClick={() => onActivate('quick')}
-            className="h-28"
-          >
-            <ArrowRight className="w-4 h-4 -rotate-45" />
-          </ActionCard>
+          {/* Quick Mode - Gold - with entrance animation */}
+          <div className="animate-slide-up" style={{ animationDelay: '0.15s' }}>
+            <ActionCard
+              title="QUICK MODE"
+              subtitle="PRIORITY_ACCESS"
+              variant="gold"
+              actionLabel="DEPLOY"
+              onClick={() => onActivate('quick')}
+              className="h-28 active:scale-[0.99] transition-transform"
+            >
+              <ArrowRight className="w-4 h-4 -rotate-45" />
+            </ActionCard>
+          </div>
 
-          {/* Therapist Mode - Rose */}
-          <ActionCard
-            title="THERAPIST"
-            subtitle="DEEP_DIVE"
-            variant="rose"
-            actionLabel="ENTER"
-            onClick={() => onActivate('therapist')}
-            className="h-28"
-          >
-            <HeartHandshake className="w-4 h-4" />
-          </ActionCard>
+          {/* Therapist Mode - Rose - with entrance animation */}
+          <div className="animate-slide-up" style={{ animationDelay: '0.25s' }}>
+            <ActionCard
+              title="THERAPIST"
+              subtitle="DEEP_DIVE"
+              variant="rose"
+              actionLabel="ENTER"
+              onClick={() => onActivate('therapist')}
+              className="h-28 active:scale-[0.99] transition-transform"
+            >
+              <HeartHandshake className="w-4 h-4" />
+            </ActionCard>
+          </div>
 
-          {/* Practice Mode - Blue */}
-          <ActionCard
-            title="PRACTICE"
-            subtitle="SIMULATION_03"
-            variant="blue"
-            actionLabel="ENTER"
-            onClick={() => onActivate('simulator')}
-            className="h-28"
-          >
-            <ArrowRight className="w-4 h-4 -rotate-45" />
-          </ActionCard>
+          {/* Practice Mode - Blue - with entrance animation */}
+          <div className="animate-slide-up" style={{ animationDelay: '0.35s' }}>
+            <ActionCard
+              title="PRACTICE"
+              subtitle="SIMULATION_03"
+              variant="blue"
+              actionLabel="ENTER"
+              onClick={() => onActivate('simulator')}
+              className="h-28 active:scale-[0.99] transition-transform"
+            >
+              <ArrowRight className="w-4 h-4 -rotate-45" />
+            </ActionCard>
+          </div>
         </div>
       </div>
     </div>

@@ -13,6 +13,7 @@ interface ActionCardProps {
   showCornerNodes?: boolean;
   className?: string;
   children?: React.ReactNode;
+  delay?: number;
 }
 
 const variantConfig = {
@@ -68,6 +69,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   showCornerNodes = false,
   className = '',
   children,
+  delay,
 }) => {
   const config = variantConfig[variant];
   const Tag = onClick ? 'button' : 'div';
@@ -75,6 +77,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   return (
     <Tag
       onClick={onClick}
+      style={delay ? { animationDelay: `${delay}s` } : undefined}
       className={`
         w-full h-28 sm:h-32 relative border ${config.border} ${config.bg} 
         transition-all group overflow-hidden flex flex-col justify-between p-4
