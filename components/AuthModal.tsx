@@ -6,34 +6,15 @@ import {
   resetPassword,
 } from '../services/firebaseService';
 import { Sparkles, ArrowRight, Lock, Mail, User } from 'lucide-react';
+import { CornerNodes } from './ui/CornerNodes';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 
 interface AuthModalProps {
   onAuthSuccess: () => void;
 }
 
 type AuthMode = 'signin' | 'signup' | 'reset';
-
-// Corner Nodes Component - matching App.tsx style
-const CornerNodes = ({ className }: { className?: string }) => (
-  <div className={`pointer-events-none absolute inset-0 z-50 ${className}`}>
-    <div className="absolute top-0 left-0">
-      <div className="w-2 h-2 border-t border-l border-zinc-500"></div>
-      <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 text-zinc-600 text-[8px]">+</div>
-    </div>
-    <div className="absolute top-0 right-0">
-      <div className="w-2 h-2 border-t border-r border-zinc-500"></div>
-      <div className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 text-zinc-600 text-[8px]">+</div>
-    </div>
-    <div className="absolute bottom-0 left-0">
-      <div className="w-2 h-2 border-b border-l border-zinc-500"></div>
-      <div className="absolute bottom-0 left-0 -translate-x-1/2 translate-y-1/2 text-zinc-600 text-[8px]">+</div>
-    </div>
-    <div className="absolute bottom-0 right-0">
-      <div className="w-2 h-2 border-b border-r border-zinc-500"></div>
-      <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 text-zinc-600 text-[8px]">+</div>
-    </div>
-  </div>
-);
 
 export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
   const [mode, setMode] = useState<AuthMode>('signin');

@@ -290,3 +290,54 @@ select {
 .font-courier {
   font-family: 'Courier Prime', 'Courier New', Courier, monospace;
 }
+
+/* ========================================
+   MOBILE CARD STYLES
+   ======================================== */
+
+.module-card {
+  @apply relative border border-zinc-800 bg-zinc-900/40 overflow-hidden;
+}
+
+.module-card:hover {
+  @apply bg-zinc-900/60;
+}
+
+.tactical-border {
+  @apply border border-zinc-800;
+}
+
+/* ========================================
+   MOBILE NAV IMPROVEMENTS
+   ======================================== */
+
+/* Larger touch targets for mobile navigation */
+@media (max-width: 768px) {
+  .bottom-nav-height {
+    height: 4rem;
+    /* 64px */
+  }
+  
+  .bottom-nav-padding {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* ========================================
+   IMPROVED MOBILE SCROLL
+   ======================================== */
+
+.mobile-smooth-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Hide scrollbar but allow scrolling */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

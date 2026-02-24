@@ -1,16 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, MessageSquare, Zap, ChevronRight, Trash2, AlertCircle, RefreshCw, Ghost, X, Image, ArrowLeft } from 'lucide-react';
 import { getSessions, deleteSession, Session, SessionsResponse } from '../services/dbService';
-
-// Corner decorative nodes
-const CornerNodes = () => (
-  <>
-    <div className="absolute -top-px -left-px w-3 h-3 border-t-2 border-l-2 border-zinc-600"></div>
-    <div className="absolute -top-px -right-px w-3 h-3 border-t-2 border-r-2 border-zinc-600"></div>
-    <div className="absolute -bottom-px -left-px w-3 h-3 border-b-2 border-l-2 border-zinc-600"></div>
-    <div className="absolute -bottom-px -right-px w-3 h-3 border-b-2 border-r-2 border-zinc-600"></div>
-  </>
-);
+import { CornerNodes } from './ui/CornerNodes';
+import { ScreenHeader } from './ui/ScreenHeader';
 
 interface HistoryProps {
   firebaseUid?: string;
