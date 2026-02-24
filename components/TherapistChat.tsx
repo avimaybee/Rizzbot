@@ -5,6 +5,9 @@ import { saveTherapistSession, getTherapistSession, getTherapistSessions, Therap
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { TherapistMessage, ClinicalNotes, TherapistExercise, ExerciseType } from '../types';
+import { CornerNodes } from './ui/CornerNodes';
+import { ScreenHeader } from './ui/ScreenHeader';
+import { Button } from './ui/Button';
 
 interface TherapistChatProps {
     onBack: () => void;
@@ -34,24 +37,6 @@ I'm here to help you process your relationship experiences, recognize patterns, 
 
 What's on your mind today?
 `;
-
-// Corner Nodes - Matching app design system
-const CornerNodes = ({ className }: { className?: string }) => (
-    <div className={`pointer-events-none absolute inset-0 z-50 ${className}`}>
-        <div className="absolute top-0 left-0">
-            <div className="w-2 h-2 border-t border-l border-zinc-600"></div>
-        </div>
-        <div className="absolute top-0 right-0">
-            <div className="w-2 h-2 border-t border-r border-zinc-600"></div>
-        </div>
-        <div className="absolute bottom-0 left-0">
-            <div className="w-2 h-2 border-b border-l border-zinc-600"></div>
-        </div>
-        <div className="absolute bottom-0 right-0">
-            <div className="w-2 h-2 border-b border-r border-zinc-600"></div>
-        </div>
-    </div>
-);
 
 // Insight Card Component - Polished inline insights
 const InsightCard = ({

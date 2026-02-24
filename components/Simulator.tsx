@@ -5,6 +5,11 @@ import { saveFeedback, logSession } from '../services/feedbackService';
 import { createPersona, createSession } from '../services/dbService';
 import { SimResult, Persona, SimAnalysisResult, UserStyleProfile } from '../types';
 import { useGlobalToast } from './Toast';
+import { CornerNodes } from './ui/CornerNodes';
+import { ScreenHeader } from './ui/ScreenHeader';
+import { Button } from './ui/Button';
+import { Input, TextArea } from './ui/Input';
+import { ActionCard } from './ui/ActionCard';
 
 interface SimulatorProps {  // User's style profile for personalized suggestions
   userProfile?: UserStyleProfile | null;
@@ -16,23 +21,6 @@ interface SimulatorProps {  // User's style profile for personalized suggestions
 }
 
 type View = 'setup' | 'chat' | 'analysis';
-
-const CornerNodes = ({ className }: { className?: string }) => (
-  <div className={`pointer-events-none absolute inset-0 z-50 ${className}`}>
-    <div className="absolute top-0 left-0">
-      <div className="w-2 h-2 border-t border-l border-zinc-500"></div>
-    </div>
-    <div className="absolute top-0 right-0">
-      <div className="w-2 h-2 border-t border-r border-zinc-500"></div>
-    </div>
-    <div className="absolute bottom-0 left-0">
-      <div className="w-2 h-2 border-b border-l border-zinc-500"></div>
-    </div>
-    <div className="absolute bottom-0 right-0">
-      <div className="w-2 h-2 border-b border-r border-zinc-500"></div>
-    </div>
-  </div>
-);
 
 export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, userId, onBack }) => {
   const [view, setView] = useState<View>('setup');
@@ -273,20 +261,12 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
       <div className="w-full h-full max-w-full mx-auto bg-matte-panel border border-zinc-800 flex flex-col shadow-2xl relative overflow-hidden pb-32 md:pb-0">
         <CornerNodes />
 
-        {/* TACTICAL HUD HEADER */}
-        <div className="border-b border-zinc-800 px-4 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2 min-w-[44px]"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-xs font-mono uppercase tracking-widest group-hover:text-hard-blue transition-colors">BACK</span>
-          </button>
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 bg-hard-blue animate-pulse"></div>
-            <span className="text-xs font-mono uppercase tracking-widest text-zinc-500">PRACTICE_MODE</span>
-          </div>
-        </div>
+        <ScreenHeader
+          title="PRACTICE MODE"
+          subtitle="SIMULATION_03"
+          variant="blue"
+          onBack={onBack}
+        />
 
         {/* MOBILE: Show header first, then archive inline */}
         <div className="flex flex-col md:flex-row h-full overflow-hidden">
