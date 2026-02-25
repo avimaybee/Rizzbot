@@ -31,3 +31,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [ ] **Track: Home Screen Overhaul**
   *Link: [./tracks/home_screen_overhaul_20260225/](./tracks/home_screen_overhaul_20260225/)*
+
+---
+
+- [ ] **Track: Auth & System Overhaul**
+  *Link: [./tracks/auth_system_overhaul_20260225/](./tracks/auth_system_overhaul_20260225/)*
