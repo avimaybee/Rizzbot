@@ -6,12 +6,12 @@
 - [x] Task: Implement the Bottom Tab Bar component for mobile-first navigation. (f62ea5c)
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Foundation & Navigation' (Protocol in workflow.md) (1be3e45)
 
-## Phase 2: Quick Mode Preview-First Redesign
-- [ ] Task: Write tests for the Preview-First layout container.
-- [ ] Task: Implement the Preview-First layout (image preview top, floating actions bottom).
-- [ ] Task: Write tests for Quick Mode upload and generate actions ensuring One-Tap Actions UX.
-- [ ] Task: Implement the redesigned Quick Mode actions and Progressive Reveal logic.
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Quick Mode Preview-First Redesign' (Protocol in workflow.md)
+## Phase 2: Quick Mode Preview-First Redesign [checkpoint: 44de0aa]
+- [x] Task: Write tests for the Preview-First layout container. (e4cd570)
+- [x] Task: Implement the Preview-First layout (image preview top, floating actions bottom). (e4cd570)
+- [x] Task: Write tests for Quick Mode upload and generate actions ensuring One-Tap Actions UX. (e4cd570)
+- [x] Task: Implement the redesigned Quick Mode actions and Progressive Reveal logic. (e4cd570)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Quick Mode Preview-First Redesign' (Protocol in workflow.md) (44de0aa)
 
 ## Phase 3: Polish & Interactions
 - [ ] Task: Update typography to Monospaced Accents across the Quick Mode UI.
