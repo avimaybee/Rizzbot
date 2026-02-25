@@ -16,3 +16,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [ ] **Track: Practice Mode Overhaul**
   *Link: [./tracks/practice_mode_overhaul_20260225/](./tracks/practice_mode_overhaul_20260225/)*
+
+---
+
+- [ ] **Track: History Mode Overhaul**
+  *Link: [./tracks/history_mode_overhaul_20260225/](./tracks/history_mode_overhaul_20260225/)*

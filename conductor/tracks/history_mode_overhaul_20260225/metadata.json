@@ -1,0 +1,8 @@
+{
+  "track_id": "history_mode_overhaul_20260225",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-02-25T17:50:00Z",
+  "updated_at": "2026-02-25T17:50:00Z",
+  "description": "Overhauling the History Mode with a Visual Gallery of session cards, Tactical Search, and Session Resumption."
+}
