@@ -14,6 +14,7 @@ import { ToastProvider } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppState, UserStyleProfile, WellbeingState } from './types';
 import { Logo } from './components/Logo';
+import BottomTabBar from './components/BottomTabBar';
 
 type Module = 'standby' | 'simulator' | 'quick' | 'profile' | 'history' | 'therapist';
 
@@ -254,87 +255,6 @@ const SideDock = ({ activeModule, setModule, authUser, onSignOut }: {
     </div>
   );
 };
-
-// --- COMPONENT: BOTTOM TABS (Mobile) - Compact & Touch-Friendly ---
-const BottomTabs = ({ activeModule, setModule }: { activeModule: Module, setModule: (m: Module) => void }) => {
-  return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-900/95 backdrop-blur-sm border-t border-zinc-800/80 safe-area-inset-bottom">
-      <div className="flex justify-around items-center h-16 px-1">
-        <MobileTabItemSvg
-          active={activeModule === 'standby'}
-          onClick={() => setModule('standby')}
-          label="HOME"
-          Icon={Home}
-        />
-        <MobileTabItemSvg
-          active={activeModule === 'quick'}
-          onClick={() => setModule('quick')}
-          label="QUICK"
-          Icon={Zap}
-        />
-        <MobileTabItemSvg
-          active={activeModule === 'simulator'}
-          onClick={() => setModule('simulator')}
-          label="SIM"
-          Icon={MessageSquare}
-        />
-        <MobileTabItemSvg
-          active={activeModule === 'history'}
-          onClick={() => setModule('history')}
-          label="LOG"
-          Icon={Clock}
-        />
-        <MobileTabItemSvg
-          active={activeModule === 'profile'}
-          onClick={() => setModule('profile')}
-          label="YOU"
-          Icon={User}
-        />
-        <MobileTabItemSvg
-          active={activeModule === 'therapist'}
-          onClick={() => setModule('therapist')}
-          label="TALK"
-          Icon={HeartHandshake}
-        />
-      </div>
-    </div>
-  );
-};
-
-const MobileTabItemSvg = ({ active, onClick, label, Icon }: {
-  active: boolean,
-  onClick: () => void,
-  label: string,
-  Icon: React.FC<{ className?: string }>
-}) => (
-  <button
-    onClick={onClick}
-    className={`flex flex-col items-center justify-center gap-0.5 min-w-[56px] py-1.5 px-1.5 rounded-md transition-all ${active
-      ? 'text-white bg-zinc-800/80'
-      : 'text-zinc-500 active:text-zinc-300'
-      }`}
-  >
-    <Icon className={`${active ? 'w-5 h-5' : 'w-4 h-4'}`} />
-    <span className={`text-[10px] font-bold tracking-wide uppercase ${active ? '' : 'opacity-60'}`}>
-      {label}
-    </span>
-  </button>
-);
-
-const MobileTabItem = ({ active, onClick, label, icon }: { active: boolean, onClick: () => void, label: string, icon: string }) => (
-  <button
-    onClick={onClick}
-    className={`flex flex-col items-center justify-center gap-1 min-w-[60px] py-2 px-3 rounded-lg transition-all ${active
-      ? 'text-white bg-zinc-800'
-      : 'text-zinc-500 hover:text-zinc-300'
-      }`}
-  >
-    <span className="text-lg">{icon}</span>
-    <span className={`text-xs font-bold tracking-wider ${active ? '' : 'opacity-70'}`}>
-      {label}
-    </span>
-  </button>
-);
 
 const DockItem = ({ active, onClick, label, index }: { active: boolean, onClick: () => void, label: string, index: string }) => (
   <button
@@ -915,7 +835,7 @@ function App() {
         </div>
 
         {/* Mobile Bottom Navigation */}
-        <BottomTabs activeModule={activeModule} setModule={setActiveModule} />
+        <BottomTabBar activeTab={activeModule} onTabChange={(tabId) => setActiveModule(tabId as Module)} />
       </div>
     </ToastProvider>
   );
