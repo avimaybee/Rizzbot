@@ -1,3 +1,18 @@
+import { GlobalWindow } from 'happy-dom';
+import { expect } from "bun:test";
+import * as matchers from "@testing-library/jest-dom/matchers";
+
+// Initialize happy-dom
+const window = new GlobalWindow();
+global.window = window as any;
+global.document = window.document as any;
+global.navigator = window.navigator as any;
+global.Node = window.Node as any;
+global.Element = window.Element as any;
+global.HTMLElement = window.HTMLElement as any;
+
+// Add jest-dom matchers
+expect.extend(matchers);
 
 class LocalStorageMock {
   private store: Record<string, string> = {};
