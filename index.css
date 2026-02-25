@@ -6,6 +6,14 @@
    RIZZBOT MOBILE-FIRST RESPONSIVE DESIGN
    ======================================== */
 
+.soft-edge {
+  @apply rounded-organic;
+}
+
+.mono-accent {
+  @apply font-mono;
+}
+
 /* Base body styles */
 body {
   background-color: #050505;

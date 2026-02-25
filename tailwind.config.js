@@ -25,6 +25,12 @@ export default {
                     border: '#27272a',
                 }
             },
+            borderRadius: {
+                'organic': '2rem',
+            },
+            spacing: {
+                'organic': '3rem',
+            },
             fontFamily: {
                 sans: ['Inter', 'sans-serif'],
                 mono: ['Courier Prime', 'monospace'],
