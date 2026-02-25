@@ -11,3 +11,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [ ] **Track: Therapist Mode Overhaul**
   *Link: [./tracks/therapist_mode_overhaul_20260225/](./tracks/therapist_mode_overhaul_20260225/)*
+
+---
+
+- [ ] **Track: Practice Mode Overhaul**
+  *Link: [./tracks/practice_mode_overhaul_20260225/](./tracks/practice_mode_overhaul_20260225/)*
