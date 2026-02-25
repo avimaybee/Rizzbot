@@ -1,5 +1,5 @@
 import { GlobalWindow } from 'happy-dom';
-import { expect, afterEach } from "bun:test";
+import { expect, afterEach, vi } from "bun:test";
 import * as matchers from "@testing-library/jest-dom/matchers";
 import { cleanup } from "@testing-library/react";
 
@@ -13,6 +13,22 @@ global.window = window;
 global.document = document;
 // @ts-ignore
 global.navigator = window.navigator;
+
+// Mock navigator properties that are missing in happy-dom
+Object.defineProperty(global.navigator, 'vibrate', {
+  value: vi.fn((pattern: any) => true),
+  writable: true,
+  configurable: true
+});
+
+Object.defineProperty(global.navigator, 'clipboard', {
+  value: {
+    writeText: vi.fn(async (text: string) => {})
+  },
+  writable: true,
+  configurable: true
+});
+
 // @ts-ignore
 global.Node = window.Node;
 // @ts-ignore

@@ -1,18 +1,3 @@
-import { GlobalWindow } from 'happy-dom';
-const window = new GlobalWindow();
-// @ts-ignore
-global.window = window;
-// @ts-ignore
-global.document = window.document;
-// @ts-ignore
-global.navigator = window.navigator;
-// @ts-ignore
-global.Node = window.Node;
-// @ts-ignore
-global.Element = window.Element;
-// @ts-ignore
-global.HTMLElement = window.HTMLElement;
-
 import { expect, test, describe } from "bun:test";
 import { render, fireEvent } from "@testing-library/react";
 import React from "react";
