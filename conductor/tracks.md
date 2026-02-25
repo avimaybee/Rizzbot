@@ -26,3 +26,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [ ] **Track: User Profile Overhaul**
   *Link: [./tracks/user_profile_overhaul_20260225/](./tracks/user_profile_overhaul_20260225/)*
+
+---
+
+- [ ] **Track: Home Screen Overhaul**
+  *Link: [./tracks/home_screen_overhaul_20260225/](./tracks/home_screen_overhaul_20260225/)*

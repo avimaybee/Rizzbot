@@ -1,0 +1,8 @@
+{
+  "track_id": "home_screen_overhaul_20260225",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-02-25T21:54:00Z",
+  "updated_at": "2026-02-25T21:54:00Z",
+  "description": "Overhauling the Home Screen (Standby) with a Minimalist Zen UI, Instant Scan node, and tactile mode switchers."
+}
