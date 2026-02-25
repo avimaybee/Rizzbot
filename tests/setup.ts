@@ -1,8 +1,9 @@
 import { GlobalWindow } from 'happy-dom';
-import { expect } from "bun:test";
+import { expect, afterEach } from "bun:test";
 import * as matchers from "@testing-library/jest-dom/matchers";
+import { cleanup } from "@testing-library/react";
 
-// Initialize happy-dom
+// Initialize happy-dom once at the top level
 const window = new GlobalWindow();
 const document = window.document;
 
@@ -44,9 +45,17 @@ global.HTMLUListElement = window.HTMLUListElement;
 global.HTMLLIElement = window.HTMLLIElement;
 // @ts-ignore
 global.HTMLImageElement = window.HTMLImageElement;
+// @ts-ignore
+global.SVGElement = window.SVGElement;
 
 // Add jest-dom matchers
 expect.extend(matchers);
+
+// Automatic cleanup after each test
+afterEach(() => {
+  cleanup();
+  document.body.innerHTML = '';
+});
 
 class LocalStorageMock {
   private store: Record<string, string> = {};

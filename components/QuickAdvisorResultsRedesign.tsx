@@ -29,7 +29,7 @@ const SuggestionSection = ({
   if (options.length === 0) return null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 animate-slide-up">
       <div className="flex items-center justify-between px-1">
         <h3 className="text-xs font-mono uppercase tracking-[0.2em] text-zinc-500">{title}</h3>
         <div className="flex gap-1">
@@ -88,6 +88,7 @@ const QuickAdvisorResultsRedesign: React.FC<QuickAdvisorResultsRedesignProps> = 
   const { showToast } = useGlobalToast();
 
   const handleCopy = useCallback((text: string, id: string) => {
+    if (window.navigator.vibrate) window.navigator.vibrate(10);
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     showToast('Copied', 'success');
@@ -95,6 +96,7 @@ const QuickAdvisorResultsRedesign: React.FC<QuickAdvisorResultsRedesignProps> = 
   }, [showToast]);
 
   const handleLocalFeedback = (type: any, rating: any) => {
+    if (window.navigator.vibrate) window.navigator.vibrate(5);
     setFeedbackState(prev => ({ ...prev, [type]: rating }));
     onFeedback(type, rating);
   };
@@ -104,10 +106,17 @@ const QuickAdvisorResultsRedesign: React.FC<QuickAdvisorResultsRedesignProps> = 
       <div className="p-6 max-w-sm mx-auto w-full space-y-10 pb-32">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <button onClick={onNewScan} className="text-zinc-500 hover:text-white transition-colors p-2 -ml-2">
+          <button 
+            onClick={() => {
+              if (window.navigator.vibrate) window.navigator.vibrate(5);
+              onNewScan();
+            }} 
+            className="text-zinc-500 hover:text-white transition-colors p-2 -ml-2"
+          >
             <ArrowLeft size={20} />
           </button>
-          <div className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-mono text-hard-gold uppercase tracking-widest">
+          <div className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-mono text-hard-gold uppercase tracking-widest flex items-center gap-1.5 shadow-[0_0_15px_rgba(251,191,36,0.1)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-hard-gold animate-pulse"></span>
             Analysis Live
           </div>
         </div>
@@ -120,7 +129,7 @@ const QuickAdvisorResultsRedesign: React.FC<QuickAdvisorResultsRedesignProps> = 
           </h2>
           <div className="flex justify-center gap-4">
             <div className="flex flex-col items-center">
-              <span className="text-xl font-impact text-white">{result.vibeCheck.interestLevel}%</span>
+              <span className="text-xl font-mono font-bold text-white">{result.vibeCheck.interestLevel}%</span>
               <span className="text-[8px] font-mono text-zinc-600 uppercase tracking-widest">Interest</span>
             </div>
           </div>
@@ -192,12 +201,17 @@ const QuickAdvisorResultsRedesign: React.FC<QuickAdvisorResultsRedesignProps> = 
             <Sparkles size={16} className="text-hard-gold" />
             <span className="text-[10px] font-mono text-hard-gold uppercase tracking-widest">Pro Tip</span>
           </div>
-          <p className="text-zinc-300 text-sm leading-relaxed italic">"{result.proTip}"</p>
+          <p className="text-zinc-300 text-sm leading-relaxed font-mono opacity-80">
+            {result.proTip}
+          </p>
         </div>
 
         {/* Footer Actions */}
         <button 
-          onClick={onNewScan}
+          onClick={() => {
+            if (window.navigator.vibrate) window.navigator.vibrate(5);
+            onNewScan();
+          }}
           className="w-full py-4 rounded-organic border border-zinc-800 text-zinc-500 font-mono text-[10px] uppercase tracking-widest hover:bg-zinc-900 hover:text-white transition-all"
         >
           New Diagnostic

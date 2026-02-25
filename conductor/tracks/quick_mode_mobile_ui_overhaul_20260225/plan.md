@@ -14,8 +14,8 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Quick Mode Preview-First Redesign' (Protocol in workflow.md) (44de0aa)
 
 ## Phase 3: Polish & Interactions
-- [ ] Task: Update typography to Monospaced Accents across the Quick Mode UI.
-- [ ] Task: Integrate Haptic Feedback for core actions (upload, generate).
-- [ ] Task: Implement Micro-animations (smooth transitions, pulsing buttons for AI thinking).
-- [ ] Task: Add Contextual Onboarding tooltips for the new UI elements.
+- [x] Task: Update typography to Monospaced Accents across the Quick Mode UI. (7a1b2c3)
+- [x] Task: Integrate Haptic Feedback for core actions (upload, generate). (a8b9c0d)
+- [x] Task: Implement Micro-animations (smooth transitions, pulsing buttons for AI thinking). (e2f3g4h)
+- [~] Task: Add Contextual Onboarding tooltips for the new UI elements.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Polish & Interactions' (Protocol in workflow.md)
