@@ -288,7 +288,6 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
   if (!firebaseUid) {
     return (
       <div className="w-full h-full max-w-4xl mx-auto bg-matte-panel md:border md:border-zinc-800 flex flex-col relative">
-        <CornerNodes />
         <div className="flex-1 flex items-center justify-center p-8 text-center">
           <div>
             <Ghost className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
@@ -304,7 +303,6 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
   if (selectedSession) {
     return (
       <div className="w-full h-full max-w-5xl mx-auto bg-matte-panel md:border md:border-zinc-800 flex flex-col relative pb-20 md:pb-0">
-        <CornerNodes />
         <SessionDetail session={selectedSession} onBack={() => setSelectedSession(null)} />
       </div>
     );
@@ -312,8 +310,6 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
 
   return (
     <div className="w-full h-full max-w-5xl mx-auto bg-matte-panel md:border md:border-zinc-800 flex flex-col relative pb-16 md:pb-0 overflow-y-auto">
-      <CornerNodes />
-
       {/* MODULE HEADER - LIST */}
       <div className="px-4 pt-4 sticky top-0 z-40 bg-matte-panel/95 backdrop-blur-sm">
         <ModuleHeader 
