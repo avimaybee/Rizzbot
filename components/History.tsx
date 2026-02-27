@@ -76,15 +76,15 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
         {/* Vibe Check Analysis */}
         {vibeCheck && (
           <div className="bg-white/5 border border-white/5 p-8 rounded-[32px] shadow-xl relative overflow-hidden">
-            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-10 px-1">Linguistic Analysis</div>
+            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-10 px-1">Analysis</div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-10">
               <div className="p-6 bg-white/5 rounded-2xl text-center shadow-lg border border-white/5">
                 <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Energy</div>
-                <div className="text-white font-bold text-2xl uppercase tracking-tight tabular-nums">{vibeCheck.theirEnergy || 'N/A'}</div>
+                <div className="text-white font-bold text-2xl uppercase tracking-tight">{vibeCheck.theirEnergy || 'N/A'}</div>
               </div>
               <div className="p-6 bg-white/5 rounded-2xl text-center shadow-lg border border-white/5">
                 <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Interest</div>
-                <div className="text-blue-400 font-bold text-2xl tracking-tight tabular-nums">{vibeCheck.interestLevel ?? '0'}%</div>
+                <div className="text-blue-400 font-bold text-2xl tracking-tight">{vibeCheck.interestLevel ?? '0'}%</div>
               </div>
             </div>
             

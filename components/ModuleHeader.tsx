@@ -28,7 +28,7 @@ export const ModuleHeader: React.FC<ModuleHeaderProps> = ({
   };
 
   return (
-    <div className="mb-8 border-b border-white/5 pb-6 sticky top-0 z-40 bg-matte-base/80 backdrop-blur-md">
+    <div className="mb-8 border-b border-white/5 pb-6">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-6">
           <button

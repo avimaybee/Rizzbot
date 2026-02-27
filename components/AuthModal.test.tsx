@@ -34,7 +34,7 @@ describe("AuthModal", () => {
     expect(getByText("Login")).toBeTruthy();
     expect(getByPlaceholderText("user@system.secure")).toBeTruthy();
     expect(getByPlaceholderText("••••••••••••")).toBeTruthy();
-    expect(getByText("Establish Uplink")).toBeTruthy();
+    expect(getByText("Sign In")).toBeTruthy();
   });
 
   test("switches to signup mode", () => {
@@ -76,7 +76,7 @@ describe("AuthModal", () => {
       passwordInput.dispatchEvent(new Event('change', { bubbles: true }));
     });
     
-    const submitBtn = getByText("Establish Uplink");
+    const submitBtn = getByText("Sign In");
     act(() => {
       fireEvent.click(submitBtn);
     });
@@ -187,7 +187,7 @@ describe("AuthModal", () => {
     });
     
     act(() => {
-      fireEvent.click(getByText("Establish Uplink"));
+      fireEvent.click(getByText("Sign In"));
     });
     
     const errorMsg = await findByText(/ACCESS DENIED/i);
