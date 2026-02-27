@@ -70,12 +70,12 @@ describe("History Component Redesign", () => {
     });
 
     const quickCard = getByText("Quick Session 1").closest(".group");
-    expect(quickCard).toHaveTextContent("SCAN_LOG");
-    expect(quickCard).toHaveTextContent("RISK_45%");
+    expect(quickCard).toHaveTextContent("SCAN");
+    expect(quickCard).toHaveTextContent("RISK 45%");
 
     const practiceCard = getByText("Practice Session 1").closest(".group");
-    expect(practiceCard).toHaveTextContent("SIM_DATA");
-    expect(practiceCard).toHaveTextContent("RISK_15%");
+    expect(practiceCard).toHaveTextContent("SIM");
+    expect(practiceCard).toHaveTextContent("RISK 15%");
   });
 
   test("shows image preview when screenshots are available", async () => {
@@ -131,7 +131,7 @@ describe("History Component Redesign", () => {
       expect(getByText("Practice Session 1")).toBeInTheDocument();
     });
 
-    const searchInput = getByPlaceholderText("ARCHIVE_SEARCH_QUERY...");
+    const searchInput = getByPlaceholderText("Search your history...");
     fireEvent.change(searchInput, { target: { value: "Emma" } });
 
     await waitFor(() => {

@@ -7,14 +7,14 @@ import { Module, UserStyleProfile, WellbeingReason } from '../types';
 // --- SUB-COMPONENTS ---
 
 const ProfileStats = ({ sessions, personas }: { sessions: number, personas: number }) => (
-  <div className="grid grid-cols-2 gap-3 w-full max-w-[240px] mt-4">
-    <div className="bg-white/5 border border-white/5 p-3 rounded-2xl">
-      <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Sessions</div>
-      <div className="text-xl font-bold text-white tabular-nums">{sessions}</div>
+  <div className="flex gap-6 w-full mt-4">
+    <div className="flex flex-col">
+      <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Sessions</div>
+      <div className="text-2xl font-bold text-white tabular-nums">{sessions}</div>
     </div>
-    <div className="bg-white/5 border border-white/5 p-3 rounded-2xl">
-      <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Partners</div>
-      <div className="text-xl font-bold text-white tabular-nums">{personas}</div>
+    <div className="flex flex-col border-l border-white/5 pl-6">
+      <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Partners</div>
+      <div className="text-2xl font-bold text-white tabular-nums">{personas}</div>
     </div>
   </div>
 );
@@ -23,10 +23,10 @@ const AppStatus = ({ wellbeingReason }: { wellbeingReason: WellbeingReason | nul
   const getStatus = () => {
     switch (wellbeingReason) {
       case 'late_night': return { label: 'Rest Recommended', color: 'text-amber-400', icon: Clock };
-      case 'high_frequency': return { label: 'Taking a Sec', color: 'text-blue-400', icon: Activity };
+      case 'high_frequency': return { label: 'Taking a Break', color: 'text-blue-400', icon: Activity };
       case 'same_person': return { label: 'Deep Focus', color: 'text-red-400', icon: Target };
       case 'high_risk': return { label: 'Vibe Check', color: 'text-red-400', icon: AlertTriangle };
-      default: return { label: 'System Ready', color: 'text-emerald-400', icon: Activity };
+      default: return { label: 'Ready', color: 'text-emerald-400', icon: CheckCircle2 };
     }
   };
 
@@ -34,9 +34,9 @@ const AppStatus = ({ wellbeingReason }: { wellbeingReason: WellbeingReason | nul
   const StatusIcon = status.icon;
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/5 rounded-full">
-      <StatusIcon className={`w-3.5 h-3.5 ${status.color}`} />
-      <span className={`text-[10px] font-bold uppercase tracking-widest ${status.color}`}>
+    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/5">
+      <StatusIcon className={`w-3 h-3 ${status.color}`} />
+      <span className={`text-[10px] font-bold uppercase tracking-wider ${status.color}`}>
         {status.label}
       </span>
     </div>
@@ -51,15 +51,15 @@ const SetupChecklist = ({ hasProfile, sessionCount, onActivate }: { hasProfile: 
   ];
 
   return (
-    <div className="mt-12 space-y-3 w-full max-w-xs">
-      <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+    <div className="mt-8 space-y-3 w-full max-w-xs">
+      <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4">
         Getting Started
       </div>
       {items.map((item, i) => (
         <button
           key={i}
           disabled={item.complete}
-          onClick={() => onActivate(item.action ? 'profile' : 'quick')} // Simplified logic for demo
+          onClick={() => item.action?.()}
           className={`w-full flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl transition-all ${
             item.complete 
               ? 'opacity-40' 
@@ -124,19 +124,19 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
 
   return (
     <div className="h-full w-full flex flex-col relative overflow-hidden bg-matte-base font-sans select-none">
-      <div className="bg-matte-grain"></div>
+      <div className="bg-matte-grain opacity-[0.03]"></div>
       
       {/* 1. TOP BAR */}
-      <div className="pt-12 px-8 md:px-16 flex flex-col md:flex-row justify-between items-start gap-8 relative z-10">
+      <div className="pt-16 px-10 md:px-20 flex flex-col md:flex-row justify-between items-start gap-10 relative z-10">
         <div className="flex flex-col">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-6">
             <AppStatus wellbeingReason={wellbeingReason} />
           </div>
-          <h1 className="text-6xl md:text-8xl font-black text-white uppercase tracking-tighter leading-none mb-4">
+          <h1 className="text-7xl md:text-9xl font-black text-white uppercase tracking-tighter leading-none mb-6">
             RIZZ<span className="text-zinc-800">BOT</span>
           </h1>
-          <p className="text-zinc-500 text-sm max-w-xs leading-relaxed font-medium">
-            Your personal AI wingman for authentic, confident digital communication.
+          <p className="text-zinc-500 text-base max-w-sm leading-relaxed font-medium">
+            Your personal AI advisor for authentic, confident digital communication.
           </p>
         </div>
 
@@ -144,20 +144,20 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
           <div className="flex flex-col items-end w-full md:w-auto">
             <div 
               onClick={() => handleModeActivate('profile')}
-              className="w-full md:w-auto flex items-center gap-5 bg-white/5 border border-white/5 p-4 rounded-3xl shadow-2xl group cursor-pointer hover:bg-white/10 transition-all active:scale-[0.98]"
+              className="w-full md:w-auto flex items-center gap-5 bg-white/5 border border-white/5 p-5 rounded-[2rem] shadow-2xl group cursor-pointer hover:bg-white/10 transition-all active:scale-[0.98]"
             >
               <div className="relative">
                 {authUser.photoURL ? (
-                  <img src={authUser.photoURL} alt="" className="w-12 h-12 rounded-2xl grayscale group-hover:grayscale-0 transition-all border border-white/10" />
+                  <img src={authUser.photoURL} alt="" className="w-14 h-14 rounded-2xl grayscale group-hover:grayscale-0 transition-all border border-white/10" />
                 ) : (
-                  <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-zinc-500 border border-white/10">
-                    <User className="w-6 h-6" />
+                  <div className="w-14 h-14 bg-zinc-900 rounded-2xl flex items-center justify-center text-zinc-500 border border-white/10">
+                    <User className="w-7 h-7" />
                   </div>
                 )}
-                <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-matte-base"></div>
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-matte-base shadow-sm"></div>
               </div>
-              <div className="flex flex-col pr-4">
-                <span className="text-base font-bold text-white truncate max-w-[160px] tracking-tight">{authUser.displayName || 'Authorized User'}</span>
+              <div className="flex flex-col pr-6">
+                <span className="text-lg font-bold text-white truncate max-w-[180px] tracking-tight">{authUser.displayName || 'Authorized User'}</span>
                 <div className="flex items-center gap-2 mt-1">
                   {hasProfile ? (
                     <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Voice Calibrated</span>
@@ -173,23 +173,22 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
       </div>
 
       {/* 2. MAIN CENTER */}
-      <div className="flex-1 flex flex-col items-center justify-center relative z-10 px-8 py-12">
-        <div className="w-full max-w-5xl flex flex-col md:flex-row items-center justify-center gap-16 lg:gap-32">
+      <div className="flex-1 flex flex-col items-center justify-center relative z-10 px-10 py-16">
+        <div className="w-full max-w-6xl flex flex-col md:flex-row items-center justify-center gap-20 lg:gap-40">
           
           <div className="relative group">
-            {/* Functional Glow */}
-            <div className="absolute inset-0 bg-white/[0.03] rounded-full blur-[80px]"></div>
+            <div className="absolute inset-0 bg-blue-500/[0.02] rounded-full blur-[100px] transition-all group-hover:bg-blue-500/[0.05]"></div>
             
-            {/* Main Action Button */}
             <button
               onClick={() => handleModeActivate('quick')}
-              className="w-64 h-64 md:w-80 md:h-80 rounded-full bg-white text-black flex flex-col items-center justify-center relative overflow-hidden transition-all duration-500 hover:scale-105 active:scale-95 shadow-[0_40px_100px_rgba(255,255,255,0.1)]"
+              className="w-72 h-72 md:w-96 md:h-96 rounded-full bg-white text-black flex flex-col items-center justify-center relative overflow-hidden transition-all duration-700 hover:scale-105 active:scale-95 shadow-[0_50px_120px_rgba(255,255,255,0.1)] group"
             >
-              <Zap className="w-16 h-16 mb-6" />
+              <Zap className="w-20 h-20 mb-8 transition-transform duration-500 group-hover:scale-110" fill="currentColor" />
               <div className="flex flex-col items-center">
-                <span className="text-xl font-black uppercase tracking-tight">Analyze</span>
-                <span className="text-xs font-bold opacity-40 mt-1 uppercase tracking-widest">Message Flow</span>
+                <span className="text-2xl font-black uppercase tracking-tight">Analyze Message</span>
+                <span className="text-[10px] font-bold opacity-40 mt-2 uppercase tracking-[0.2em]">Start Quick Scan</span>
               </div>
+              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-transparent to-blue-500/5"></div>
             </button>
           </div>
 
@@ -197,13 +196,13 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
             {(!hasProfile || stats.sessions === 0) ? (
               <SetupChecklist hasProfile={hasProfile} sessionCount={stats.sessions} onActivate={handleModeActivate} />
             ) : (
-              <div className="bg-white/5 border border-white/5 p-8 rounded-3xl w-full">
-                <div className="flex items-center gap-3 mb-4">
+              <div className="bg-white/5 border border-white/5 p-10 rounded-[2.5rem] w-full shadow-xl">
+                <div className="flex items-center gap-3 mb-6">
                    <Activity className="w-5 h-5 text-blue-400" />
-                   <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Recent Activity</span>
+                   <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Recent Performance</span>
                 </div>
-                <p className="text-zinc-300 text-sm leading-relaxed font-medium">
-                  Analysis engine ready. Upload a conversation to receive personalized feedback.
+                <p className="text-zinc-300 text-base leading-relaxed font-medium">
+                  Your communication engine is primed. Upload a screenshot to begin analysis.
                 </p>
               </div>
             )}
@@ -212,38 +211,38 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
       </div>
 
       {/* 3. BOTTOM: NAVIGATION */}
-      <div className="p-8 md:p-16 grid grid-cols-2 md:grid-cols-3 gap-6 relative z-10">
+      <div className="p-10 md:p-20 grid grid-cols-2 md:grid-cols-3 gap-8 relative z-10">
         <button
           onClick={() => handleModeActivate('simulator')}
-          className="group flex flex-col bg-white/5 border border-white/5 hover:bg-white/10 p-6 transition-all rounded-3xl active:scale-[0.98]"
+          className="group flex flex-col bg-white/5 border border-white/5 hover:bg-white/10 p-8 transition-all rounded-[2rem] active:scale-[0.98] shadow-lg"
         >
-          <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 mb-8 group-hover:scale-110 transition-transform">
-            <Target className="w-6 h-6" />
+          <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 mb-10 group-hover:scale-110 transition-transform">
+            <Target className="w-7 h-7" />
           </div>
-          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 group-hover:text-blue-400 transition-colors">Training</span>
-          <span className="text-xl font-black text-white uppercase tracking-tight">Practice</span>
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 group-hover:text-blue-400 transition-colors">Improve Skills</span>
+          <span className="text-2xl font-black text-white uppercase tracking-tight">Practice</span>
         </button>
 
         <button
           onClick={() => handleModeActivate('therapist')}
-          className="group flex flex-col bg-white/5 border border-white/5 hover:bg-white/10 p-6 transition-all rounded-3xl active:scale-[0.98]"
+          className="group flex flex-col bg-white/5 border border-white/5 hover:bg-white/10 p-8 transition-all rounded-[2rem] active:scale-[0.98] shadow-lg"
         >
-          <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-400 mb-8 group-hover:scale-110 transition-transform">
-            <HeartHandshake className="w-6 h-6" />
+          <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-400 mb-10 group-hover:scale-110 transition-transform">
+            <HeartHandshake className="w-7 h-7" />
           </div>
-          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 group-hover:text-red-400 transition-colors">Insights</span>
-          <span className="text-xl font-black text-white uppercase tracking-tight">Support</span>
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 group-hover:text-red-400 transition-colors">Expert Advice</span>
+          <span className="text-2xl font-black text-white uppercase tracking-tight">Support</span>
         </button>
 
         <button
           onClick={() => handleModeActivate('history')}
-          className="hidden md:flex group flex flex-col bg-white/5 border border-white/5 hover:bg-white/10 p-6 transition-all rounded-3xl active:scale-[0.98]"
+          className="hidden md:flex group flex flex-col bg-white/5 border border-white/5 hover:bg-white/10 p-8 transition-all rounded-[2rem] active:scale-[0.98] shadow-lg"
         >
-          <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-zinc-400 mb-8 group-hover:scale-110 transition-transform">
-            <Shield className="w-6 h-6" />
+          <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-zinc-400 mb-10 group-hover:scale-110 transition-transform">
+            <Shield className="w-7 h-7" />
           </div>
-          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 group-hover:text-zinc-300 transition-colors">Archive</span>
-          <span className="text-xl font-black text-white uppercase tracking-tight">History</span>
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 group-hover:text-white transition-colors">Past Insights</span>
+          <span className="text-2xl font-black text-white uppercase tracking-tight">History</span>
         </button>
       </div>
     </div>

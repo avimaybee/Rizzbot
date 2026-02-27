@@ -14,16 +14,16 @@ interface DockItemProps {
 const DockItem: React.FC<DockItemProps> = ({ active, onClick, label, icon: Icon }) => (
   <button
     onClick={onClick}
-    className="w-full flex flex-col items-center justify-center gap-2 group relative py-3"
+    className={`w-full flex flex-col items-center justify-center gap-1 group relative py-4 transition-all ${active ? 'bg-white/5' : 'hover:bg-white/[0.02]'}`}
   >
     {/* Active Indicator */}
-    <div className={`absolute left-0 w-1 h-6 bg-white rounded-r-full transition-all duration-300 ${active ? 'opacity-100' : 'opacity-0 scale-y-0'}`}></div>
+    <div className={`absolute left-0 w-1 h-8 bg-blue-500 rounded-r-full transition-all duration-300 ${active ? 'opacity-100' : 'opacity-0 scale-y-0'}`}></div>
     
-    <div className={`transition-all duration-300 ${active ? 'text-white scale-110' : 'text-zinc-600 group-hover:text-zinc-400'}`}>
+    <div className={`transition-all duration-300 ${active ? 'text-blue-400 scale-110' : 'text-zinc-500 group-hover:text-zinc-300'}`}>
       <Icon className="w-5 h-5" />
     </div>
     
-    <span className={`text-[9px] font-bold tracking-widest uppercase transition-colors ${active ? 'text-white' : 'text-zinc-700 group-hover:text-zinc-500'}`}>
+    <span className={`text-[10px] font-medium transition-colors ${active ? 'text-white' : 'text-zinc-600 group-hover:text-zinc-400'}`}>
       {label}
     </span>
   </button>
@@ -43,12 +43,12 @@ export const SideDock: React.FC<SideDockProps> = ({ activeModule, setModule, aut
   };
 
   return (
-    <div className="hidden md:flex w-20 border-r border-white/5 bg-black flex-col items-center py-10 z-50 h-full relative font-sans">
+    <div className="hidden md:flex w-20 border-r border-white/5 bg-matte-base flex-col items-center py-10 z-50 h-full relative font-sans">
       <div className="mb-12 group cursor-pointer" onClick={() => handleAction('standby')}>
         <Logo size={32} className="opacity-80 group-hover:opacity-100 transition-opacity" />
       </div>
 
-      <div className="flex-1 flex flex-col gap-4 w-full">
+      <div className="flex-1 flex flex-col w-full">
         <DockItem
           active={activeModule === 'standby'}
           onClick={() => handleAction('standby')}
@@ -58,7 +58,7 @@ export const SideDock: React.FC<SideDockProps> = ({ activeModule, setModule, aut
         <DockItem
           active={activeModule === 'quick'}
           onClick={() => handleAction('quick')}
-          label="Scan"
+          label="Analyze"
           icon={Zap}
         />
         <DockItem
@@ -107,7 +107,7 @@ export const SideDock: React.FC<SideDockProps> = ({ activeModule, setModule, aut
                   </div>
                 )}
               </div>
-              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-black shadow-sm"></div>
+              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-matte-base shadow-sm"></div>
             </div>
             
             {onSignOut && (

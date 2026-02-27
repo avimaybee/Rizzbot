@@ -39,50 +39,39 @@ export class ErrorBoundary extends React.Component<Props, State> {
             }
 
             return (
-                <div className="w-full h-full min-h-[400px] flex items-center justify-center bg-matte-base p-6 font-mono">
-                    <div className="absolute inset-0 bg-scan-lines opacity-[0.05] pointer-events-none"></div>
+                <div className="w-full h-full min-h-[400px] flex items-center justify-center bg-matte-base p-8 font-sans select-none relative overflow-hidden">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] bg-red-500/5 rounded-full blur-[120px]"></div>
                     
-                    <div className="max-w-md w-full glass-dark border-red-500/20 relative shadow-[0_30px_60px_rgba(0,0,0,0.6)] overflow-hidden soft-edge">
-                        {/* Error Header Accent */}
-                        <div className="absolute top-0 left-0 w-full h-[2px] bg-red-500/50"></div>
-                        
-                        <div className="p-8 flex flex-col items-center text-center">
-                            <div className="w-16 h-16 glass flex items-center justify-center border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.15)] mb-6 rounded-full relative">
-                                <ShieldAlert className="w-8 h-8 text-red-500 animate-pulse" />
-                                <div className="absolute inset-0 rounded-full border border-red-500/30 animate-ping opacity-20"></div>
+                    <div className="max-w-md w-full bg-white/5 border border-red-500/20 rounded-[40px] shadow-2xl relative overflow-hidden p-1">
+                        <div className="bg-black/20 rounded-[36px] p-10 flex flex-col items-center text-center">
+                            <div className="w-20 h-20 bg-white/5 border border-white/10 rounded-3xl flex items-center justify-center mb-10 shadow-xl">
+                                <AlertTriangle className="w-10 h-10 text-red-500" />
                             </div>
                             
-                            <div className="flex items-center gap-3 mb-2">
-                               <Cpu className="w-3 h-3 text-red-500/50" />
-                               <h2 className="text-2xl font-impact text-white uppercase tracking-tighter">
-                                   CORE_CRITICAL_FAILURE
-                               </h2>
-                            </div>
+                            <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-2">
+                                Unexpected Error
+                            </h2>
                             
-                            <div className="text-[10px] uppercase tracking-[0.3em] text-red-500/60 font-bold mb-6">
-                               System Integrity Compromised
-                            </div>
+                            <p className="text-[10px] font-bold text-red-400/60 uppercase tracking-widest mb-10">
+                               An interruption occurred
+                            </p>
                             
-                            <div className="w-full bg-black/40 border border-white/5 p-4 mb-8 text-left">
-                                <p className="text-[10px] text-zinc-500 leading-relaxed uppercase mb-2 border-b border-white/5 pb-2">
-                                    Error Log Trace:
+                            <div className="w-full bg-black/40 border border-white/5 p-6 rounded-2xl mb-10 text-left">
+                                <p className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-3 border-b border-white/5 pb-2">
+                                    Error Details
                                 </p>
-                                <p className="text-[11px] text-red-400/80 font-mono break-all line-clamp-3">
-                                    {this.state.error?.message || "UNDEFINED_SYSTEM_EXCEPTION"}
+                                <p className="text-xs text-zinc-400 font-mono break-all leading-relaxed line-clamp-4">
+                                    {this.state.error?.message || "An unknown system error occurred."}
                                 </p>
                             </div>
                             
                             <button
                                 onClick={() => window.location.reload()}
-                                className="w-full py-4 bg-white text-black font-impact text-xl uppercase tracking-wider hover:bg-zinc-200 transition-all flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(255,255,255,0.1)] group"
+                                className="w-full py-4 bg-white text-black font-bold text-sm rounded-2xl hover:bg-zinc-200 transition-all flex items-center justify-center gap-3 shadow-xl active:scale-[0.98]"
                             >
-                                <RefreshCw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-700" />
-                                REBOOT_SESSION
+                                <RefreshCw className="w-4 h-4" />
+                                Reload Application
                             </button>
-                            
-                            <div className="mt-6 text-[9px] text-zinc-600 uppercase tracking-widest opacity-50">
-                                Error Code: ERR_MODULE_PANIC_0x001
-                            </div>
                         </div>
                     </div>
                 </div>

@@ -27,40 +27,32 @@ export const ModuleHeader: React.FC<ModuleHeaderProps> = ({
     emerald: 'text-emerald-400',
   };
 
-  const accentBorder = {
-    gold: 'border-amber-400',
-    blue: 'border-blue-400',
-    red: 'border-red-400',
-    emerald: 'border-emerald-400',
-  };
-
   return (
-    <div className="mb-8 border-l-2 border-white/10 pl-6 py-1 sticky top-0 z-40 bg-matte-base/80 backdrop-blur-md">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex flex-col gap-1">
+    <div className="mb-8 border-b border-white/5 pb-6 sticky top-0 z-40 bg-matte-base/80 backdrop-blur-md">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-6">
           <button
             onClick={onBack}
-            className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors group p-1 -ml-1 w-fit"
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 transition-all active:scale-90"
+            aria-label="Go back"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">Back</span>
+            <ArrowLeft className="w-5 h-5" />
           </button>
+          
           <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest opacity-60">
-              {mode}
-            </span>
-            <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">
+            <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">
               {title}
             </h2>
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+              {mode}
+            </span>
           </div>
         </div>
         
         {statusLabel && statusValue && (
-          <div className="flex items-center gap-4">
-            <div className="px-4 py-2 bg-white/5 border border-white/5 rounded-xl min-w-[140px]">
-              <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-0.5">{statusLabel}</div>
-              <div className={`text-xs font-bold ${statusClasses[statusColor]}`}>{statusValue}</div>
-            </div>
+          <div className="hidden md:flex flex-col items-end">
+            <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-0.5">{statusLabel}</div>
+            <div className={`text-xs font-bold ${statusClasses[statusColor]}`}>{statusValue}</div>
           </div>
         )}
       </div>

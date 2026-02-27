@@ -12,31 +12,31 @@ export const WellbeingCheckIn: React.FC<WellbeingCheckInProps> = ({ reason, onDi
   const messages: Record<NonNullable<WellbeingState['reason']>, { icon: React.ElementType; color: string; title: string; subtitle: string; message: string }> = {
     late_night: {
       icon: Clock,
-      color: 'text-hard-gold',
-      title: "Taking a Break?",
-      subtitle: "Late Night Activity",
-      message: "It's past 2 AM. Your analytical precision might be lower than usual. Consider revisiting this conversation after some rest for the best results."
+      color: 'text-amber-400',
+      title: "Late Night Reminder",
+      subtitle: "Sleep is important for clarity",
+      message: "Analytical accuracy and social intuition often decrease after 2 AM. Consider resting and reviewing your messages tomorrow for the best results."
     },
     same_person: {
       icon: Target,
-      color: 'text-hard-red',
-      title: "Recalibrate Focus",
-      subtitle: "Unbalanced Engagement",
-      message: "You've been focusing heavily on a single person recently. It might be helpful to take a step back and recalibrate your social energy."
+      color: 'text-red-400',
+      title: "Single Focus Detected",
+      subtitle: "Balance your social bandwidth",
+      message: "You've been spending a significant amount of energy on a single conversation. Taking a step back can help maintain a healthy perspective."
     },
     high_frequency: {
       icon: Activity,
-      color: 'text-hard-blue',
-      title: "Mental Fatigue",
-      subtitle: "High Usage Detected",
-      message: "You've been analyzing a lot of messages lately. Taking a breather can help you stay objective and effective in your communications."
+      color: 'text-blue-400',
+      title: "Usage Milestone",
+      subtitle: "Time for a mental breather",
+      message: "You've been analyzing many interactions recently. A short break can help prevent cognitive fatigue and ensure your responses stay authentic."
     },
     high_risk: {
       icon: ShieldAlert,
-      color: 'text-hard-red',
-      title: "Caution Advised",
-      subtitle: "Communication Risk Detected",
-      message: "Our patterns indicate this interaction might be heading in an unproductive direction. Would you like to focus on some self-care right now?"
+      color: 'text-red-400',
+      title: "Vibe Check",
+      subtitle: "Focus on your wellbeing",
+      message: "Pattern recognition suggests some recent interactions might be stressful. It might be a good time to prioritize your own peace of mind."
     }
   };
 
@@ -49,53 +49,40 @@ export const WellbeingCheckIn: React.FC<WellbeingCheckInProps> = ({ reason, onDi
   };
 
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[1000] flex items-center justify-center p-6 animate-fade-in font-sans select-none">
-      <div className="glass-dark border-white/5 max-w-lg w-full relative soft-edge shadow-[0_50px_100px_rgba(0,0,0,0.8)] overflow-hidden">
-
-        {/* Header Section */}
-        <div className="p-8 pb-4">
-          <div className="flex items-center gap-5 mb-8">
-            <div className={`w-16 h-16 glass flex items-center justify-center border-white/5 rounded-full relative shadow-[0_0_30px_rgba(0,0,0,0.3)]`}>
-              <Icon className={`w-8 h-8 ${content.color}`} />
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[1000] flex items-center justify-center p-6 animate-fade-in font-sans select-none">
+      <div className="bg-zinc-900/80 border border-white/5 max-w-lg w-full relative rounded-[40px] shadow-2xl overflow-hidden p-1">
+        <div className="bg-black/20 rounded-[36px] overflow-hidden p-8 md:p-12">
+          {/* Header */}
+          <div className="flex flex-col items-center text-center space-y-8 mb-10">
+            <div className="w-20 h-20 bg-white/5 border border-white/10 rounded-3xl flex items-center justify-center shadow-xl">
+              <Icon className={`w-10 h-10 ${content.color}`} />
             </div>
             <div>
-              <div className={`text-[10px] font-mono font-bold ${content.color} uppercase tracking-widest mb-2`}>Wellbeing Check</div>
-              <h3 className="font-impact text-3xl text-white uppercase tracking-tighter leading-none">{content.title}</h3>
+              <h3 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tight mb-2 leading-none">{content.title}</h3>
+              <p className={`text-[10px] font-bold ${content.color} uppercase tracking-widest`}>{content.subtitle}</p>
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="bg-black/40 border border-white/5 p-5 relative soft-edge">
-               <div className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-widest mb-3 border-b border-white/5 pb-2">
-                  Observation: {content.subtitle}
-               </div>
-               <p className="text-zinc-300 text-sm leading-relaxed">
-                  {content.message}
-               </p>
-            </div>
+          <div className="space-y-10">
+            <p className="text-zinc-400 text-sm leading-relaxed text-center font-medium">
+              {content.message}
+            </p>
 
             {/* Actions */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-3">
               <button
                 onClick={() => handleAction(onDismiss)}
-                className="py-4 bg-white text-black font-impact text-xl uppercase tracking-widest hover:bg-zinc-200 transition-all active:scale-[0.98] shadow-xl soft-edge"
+                className="w-full py-4 bg-white text-black font-bold text-sm rounded-2xl hover:bg-zinc-200 transition-all shadow-xl active:scale-[0.98]"
               >
-                Continue
+                Continue Anyway
               </button>
               <button
                 onClick={() => handleAction(onDismissForDay)}
-                className="py-4 glass-zinc border-white/5 text-zinc-500 font-mono font-bold text-[10px] uppercase tracking-widest hover:text-white hover:border-white/10 transition-all active:scale-[0.98] soft-edge"
+                className="w-full py-4 bg-white/5 border border-white/5 text-zinc-500 font-bold text-[10px] uppercase tracking-widest hover:text-white transition-all rounded-2xl"
               >
-                Dismiss for 24h
+                Dismiss for 24 hours
               </button>
             </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-8 py-6 bg-black/40 border-t border-white/5 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-             <div className="text-[8px] font-mono font-bold text-zinc-700 uppercase tracking-widest">RizzBot Wellness v2.0</div>
           </div>
         </div>
       </div>

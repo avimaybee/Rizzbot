@@ -11,31 +11,26 @@ interface ToastProps {
   visible: boolean;
 }
 
-const toastConfig: Record<ToastType, { icon: React.ReactNode; accentColor: string; textColor: string }> = {
+const toastConfig: Record<ToastType, { icon: React.ReactNode; color: string }> = {
   success: {
     icon: <CheckCircle className="w-4 h-4" />,
-    accentColor: 'bg-emerald-500',
-    textColor: 'text-emerald-400',
+    color: 'text-emerald-400',
   },
   error: {
     icon: <XCircle className="w-4 h-4" />,
-    accentColor: 'bg-red-500',
-    textColor: 'text-red-400',
+    color: 'text-red-400',
   },
   warning: {
     icon: <AlertCircle className="w-4 h-4" />,
-    accentColor: 'bg-amber-500',
-    textColor: 'text-amber-400',
+    color: 'text-amber-400',
   },
   info: {
     icon: <Bell className="w-4 h-4" />,
-    accentColor: 'bg-hard-blue',
-    textColor: 'text-blue-400',
+    color: 'text-blue-400',
   },
   copied: {
     icon: <Copy className="w-4 h-4" />,
-    accentColor: 'bg-hard-gold',
-    textColor: 'text-hard-gold',
+    color: 'text-amber-400',
   },
 };
 
@@ -52,7 +47,6 @@ export const Toast: React.FC<ToastProps> = ({
   useEffect(() => {
     if (!visible) return;
 
-    // Haptic feedback for system notification
     if ('vibrate' in navigator) {
       if (type === 'error') navigator.vibrate([30, 50, 30]);
       else navigator.vibrate(10);
@@ -77,21 +71,17 @@ export const Toast: React.FC<ToastProps> = ({
 
   return (
     <div 
-      className={`fixed bottom-24 md:bottom-10 left-1/2 -translate-x-1/2 z-[200] transition-all duration-500 ease-out ${
+      className={`fixed bottom-28 md:bottom-12 left-1/2 -translate-x-1/2 z-[200] transition-all duration-500 ease-out ${
         isExiting ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100'
       }`}
     >
       <div 
-        className="glass-dark border-white/5 px-5 py-3.5 flex items-center gap-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] min-w-[280px] max-w-[90vw] relative overflow-hidden"
+        className="bg-zinc-900/90 backdrop-blur-xl border border-white/10 px-6 py-4 rounded-2xl flex items-center gap-4 shadow-2xl min-w-[280px] max-w-[90vw]"
       >
-        {/* Leading accent bar */}
-        <div className={`absolute top-0 left-0 w-1 h-full ${config.accentColor} opacity-60`}></div>
+        <span className={config.color}>{config.icon}</span>
         
-        <span className={config.textColor}>{config.icon}</span>
-        
-        <div className="flex flex-col gap-0.5 flex-1">
-          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">System Alert</span>
-          <span className="text-white text-xs font-mono uppercase tracking-wide">
+        <div className="flex-1">
+          <span className="text-white text-xs font-bold uppercase tracking-tight">
             {message}
           </span>
         </div>
@@ -101,9 +91,9 @@ export const Toast: React.FC<ToastProps> = ({
             setIsExiting(true);
             setTimeout(onClose, 300);
           }}
-          className="text-zinc-600 hover:text-white transition-colors p-1"
+          className="text-zinc-600 hover:text-white transition-colors"
         >
-          <X className="w-3.5 h-3.5" />
+          <X size={14} />
         </button>
       </div>
     </div>
@@ -135,7 +125,7 @@ export const useToast = () => {
   return { toast, showToast, hideToast };
 };
 
-// Global toast context for app-wide access
+// Global toast context
 import { createContext, useContext } from 'react';
 
 interface ToastContextValue {
