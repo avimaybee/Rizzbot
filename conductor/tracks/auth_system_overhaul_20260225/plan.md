@@ -1,8 +1,8 @@
 # Implementation Plan: Auth & System Overhaul
 
 ## Phase 1: Glassmorphic Auth
-- [ ] Task: Set up the glassmorphic styling and utility classes for the AuthModal.
-- [ ] Task: Write tests for the redesigned Auth form and its validation states.
+- [x] Task: Set up the glassmorphic styling and utility classes for the AuthModal. (168c941)
+- [~] Task: Write tests for the redesigned Auth form and its validation states.
 - [ ] Task: Implement the organic AuthModal with monospaced accents and haptic feedback.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Glassmorphic Auth' (Protocol in workflow.md)
 
