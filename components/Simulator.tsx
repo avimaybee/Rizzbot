@@ -506,12 +506,12 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
         <div className="px-6 pt-8 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
           <ModuleHeader 
             title="STRATEGIC_DEBRIEF" 
-            mode="ANALYSIS_REPORT" 
+            mode="MISSION_REPORT" 
             id={activePersona?.name.toUpperCase()}
             onBack={() => handleAction(() => setView('chat'))}
             accentColor="blue"
             statusLabel="SESSION_STATUS"
-            statusValue="TERMINATED"
+            statusValue="DATA_FINALIZED"
             statusColor="red"
           />
         </div>
@@ -520,7 +520,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
           <div className="max-w-5xl mx-auto space-y-12 pb-32">
             {/* Hero Section */}
             <div className="flex flex-col items-center text-center space-y-8">
-              <h3 className="text-4xl md:text-7xl font-impact text-white uppercase tracking-tighter leading-[0.9] max-w-3xl filter drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+              <h3 className="text-4xl md:text-7xl font-mono font-black text-white uppercase tracking-tighter leading-[0.9] max-w-3xl filter drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]">
                 {analysisResult.headline}
               </h3>
               
@@ -529,14 +529,14 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                 const ActionIcon = style.icon;
                 return (
                   <div className={`glass-dark p-8 md:p-12 border-2 ${style.border} relative group soft-edge shadow-2xl`}>
-                    <div className={`absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 glass-zinc border border-white/5 text-[9px] font-bold text-zinc-500 uppercase tracking-[0.4em]`}>RECOMMENDED_DIRECTIVE</div>
+                    <div className={`absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 glass-zinc border border-white/5 text-[9px] font-bold text-zinc-500 uppercase tracking-[0.4em]`}>STRATEGIC_DIRECTIVE</div>
                     <ActionIcon className={`w-12 h-12 ${style.text} mb-6 mx-auto animate-pulse`} />
-                    <span className={`font-impact text-4xl md:text-6xl ${style.text} tracking-tight uppercase`}>
+                    <span className={`font-mono font-black text-4xl md:text-6xl ${style.text} tracking-tighter uppercase`}>
                       {analysisResult.recommendedNextMove.replace('_', ' ')}
                     </span>
                     {analysisResult.conversationFlow && (
                       <div className="mt-8 pt-6 border-t border-white/5 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                        Operational Flow: <span className="text-white ml-2">{analysisResult.conversationFlow}</span>
+                        Signal_Flow: <span className="text-white ml-2 font-mono">{analysisResult.conversationFlow}</span>
                       </div>
                     )}
                   </div>
@@ -547,21 +547,21 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
             {/* Metrics Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
-                { label: 'GHOST_RISK_FACTOR', value: analysisResult.ghostRisk, color: riskColors, info: 'Probability of disengagement' },
-                { label: 'VIBE_COEFFICIENT', value: analysisResult.vibeMatch, color: { text: 'text-hard-blue', bar: 'bg-hard-blue' }, info: 'Linguistic energy alignment' },
-                { label: 'EFFORT_EQUILIBRIUM', value: analysisResult.effortBalance, color: { text: 'text-hard-gold', bar: 'bg-hard-gold' }, info: 'Transmission volume parity' }
+                { label: 'GHOST_RISK_FACTOR', value: analysisResult.ghostRisk, color: riskColors, info: 'Disengagement_Probability' },
+                { label: 'VIBE_COEFFICIENT', value: analysisResult.vMatch || analysisResult.vibeMatch || 0, color: { text: 'text-hard-blue', bar: 'bg-hard-blue' }, info: 'Linguistic_Energy_Alignment' },
+                { label: 'EFFORT_EQUILIBRIUM', value: analysisResult.effortBalance, color: { text: 'text-hard-gold', bar: 'bg-hard-gold' }, info: 'Transmission_Volume_Parity' }
               ].map((stat, i) => (
                 <div key={i} className="glass-dark border-white/5 p-8 soft-edge relative overflow-hidden group shadow-xl">
                   <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
                   <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em] block mb-6">{stat.label}</span>
                   <div className="flex items-baseline gap-2 mb-6 justify-center">
-                    <span className={`font-impact text-6xl ${stat.color.text} tracking-tighter`}>{stat.value}</span>
+                    <span className={`font-mono font-black text-6xl ${stat.color.text} tracking-tighter`}>{stat.value}</span>
                     <span className="text-xl text-zinc-700">%</span>
                   </div>
                   <div className="w-full h-1 bg-black/60 rounded-full overflow-hidden mb-4">
                     <div className={`h-full ${stat.color.bar} transition-all duration-1000 delay-300 shadow-[0_0_10px_rgba(0,0,0,0.5)]`} style={{ width: `${stat.value}%` }}></div>
                   </div>
-                  <p className="text-[9px] font-bold text-zinc-600 text-center uppercase tracking-widest opacity-60">{stat.info}</p>
+                  <p className="text-[9px] font-bold text-zinc-600 text-center uppercase tracking-widest opacity-60 font-mono">{stat.info}</p>
                 </div>
               ))}
             </div>
@@ -571,14 +571,14 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
               <div className="glass-dark border-white/5 p-8 md:p-10 soft-edge relative shadow-2xl">
                 <div className="absolute top-0 left-0 w-1 h-full bg-hard-gold opacity-30"></div>
                 <div className="flex items-center gap-4 mb-8 border-b border-white/5 pb-6">
-                  <Activity className="w-5 h-5 text-hard-gold" />
-                  <h4 className="font-impact text-2xl uppercase tracking-widest text-white leading-none">KEY_OBSERVATIONS</h4>
+                  <Activity className="w-5 h-5 text-hard-gold animate-pulse" />
+                  <h4 className="font-mono font-black text-2xl uppercase tracking-tighter text-white leading-none">KEY_OBSERVATIONS</h4>
                 </div>
                 <ul className="space-y-6">
                   {analysisResult.insights.map((insight, i) => (
                     <li key={i} className="flex items-start gap-4 group">
                       <div className="w-1.5 h-1.5 rounded-full bg-hard-gold mt-1.5 shrink-0 animate-pulse"></div>
-                      <p className="text-[11px] font-bold text-zinc-400 leading-relaxed uppercase tracking-wide group-hover:text-zinc-200 transition-colors">{insight}</p>
+                      <p className="text-[11px] font-bold text-zinc-400 leading-relaxed uppercase tracking-wide group-hover:text-zinc-200 transition-colors font-mono">{insight}</p>
                     </li>
                   ))}
                 </ul>
@@ -588,9 +588,9 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                 <div className="absolute -top-10 -right-10 w-40 h-40 bg-black/[0.03] rounded-full rotate-45"></div>
                 <div className="flex items-center gap-4 mb-8 border-b border-black/10 pb-6">
                   <Target className="w-5 h-5 text-black" />
-                  <h4 className="font-impact text-2xl uppercase tracking-widest leading-none">STRATEGIC_DIRECTIVE</h4>
+                  <h4 className="font-mono font-black text-2xl uppercase tracking-tighter leading-none">OPERATIONAL_ADVICE</h4>
                 </div>
-                <p className="text-lg md:text-xl font-bold leading-relaxed uppercase tracking-tight italic">
+                <p className="text-lg md:text-xl font-black leading-relaxed uppercase tracking-tight italic font-mono">
                   "{analysisResult.advice}"
                 </p>
                 <div className="mt-12 flex justify-between items-end">
@@ -606,15 +606,15 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
         <div className="fixed bottom-0 left-0 right-0 p-6 md:p-8 bg-gradient-to-t from-matte-base via-matte-base to-transparent z-50 flex justify-center gap-4 md:gap-6">
           <button
             onClick={() => handleAction(() => setView('chat'), 10)}
-            className="px-8 py-4 glass-zinc border-white/5 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.3em] hover:text-white hover:border-white/10 transition-all soft-edge active:scale-[0.98] min-w-[180px]"
+            className="px-8 py-4 glass-zinc border-white/5 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.3em] hover:text-white hover:border-white/10 transition-all soft-edge active:scale-[0.98] min-w-[180px] font-mono"
           >
-            ← Resume Uplink
+            ← Resume_Transmission
           </button>
           <button
             onClick={() => handleAction(resetSim, 15)}
-            className="px-8 py-4 bg-white text-black font-impact text-xl uppercase tracking-widest hover:bg-zinc-200 transition-all soft-edge shadow-2xl active:scale-[0.98] min-w-[220px]"
+            className="px-8 py-4 bg-white text-black font-mono font-black text-xl uppercase tracking-widest hover:bg-zinc-200 transition-all soft-edge shadow-2xl active:scale-[0.98] min-w-[220px]"
           >
-            INIT_NEW_SESSION
+            REBOOT_UPLINK
           </button>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { expect, test, describe, vi, beforeEach } from "bun:test";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import React from "react";
 import { History } from "./History";
 import * as dbService from "../services/dbService";
@@ -70,11 +70,11 @@ describe("History Component Redesign", () => {
     });
 
     const quickCard = getByText("Quick Session 1").closest(".group");
-    expect(quickCard).toHaveTextContent("QUICK_MODE");
+    expect(quickCard).toHaveTextContent("SCAN_LOG");
     expect(quickCard).toHaveTextContent("RISK_45%");
 
     const practiceCard = getByText("Practice Session 1").closest(".group");
-    expect(practiceCard).toHaveTextContent("PRACTICE");
+    expect(practiceCard).toHaveTextContent("SIM_DATA");
     expect(practiceCard).toHaveTextContent("RISK_15%");
   });
 
@@ -92,10 +92,10 @@ describe("History Component Redesign", () => {
       pagination: { total: 1, limit: 20, offset: 0, hasMore: false }
     });
 
-    const { getByAltText } = render(<History firebaseUid="test-user" />);
+    const { getByRole } = render(<History firebaseUid="test-user" />);
 
     await waitFor(() => {
-      const previewImg = getByAltText("Preview");
+      const previewImg = getByRole("img");
       expect(previewImg).toBeInTheDocument();
       expect(previewImg).toHaveAttribute("src", "data:image/png;base64,mock-screenshot");
     });
@@ -131,14 +131,17 @@ describe("History Component Redesign", () => {
       expect(getByText("Practice Session 1")).toBeInTheDocument();
     });
 
-    const searchInput = getByPlaceholderText("SEARCH_LOGS...");
-    fireEvent.change(searchInput, { target: { value: "Emma" } });
-    fireEvent.input(searchInput); // Trigger input event too
+    const searchInput = getByPlaceholderText("ARCHIVE_SEARCH_QUERY...") as HTMLInputElement;
+    act(() => {
+      searchInput.value = "Emma";
+      searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      searchInput.dispatchEvent(new Event('change', { bubbles: true }));
+    });
 
     await waitFor(() => {
       expect(queryByText("Quick Session 1")).toBeNull();
       expect(getByText("Practice Session 1")).toBeInTheDocument();
-    }, { timeout: 2000 });
+    });
   });
 
   test("filters sessions by mode", async () => {
@@ -154,12 +157,12 @@ describe("History Component Redesign", () => {
       expect(getByText("Practice Session 1")).toBeInTheDocument();
     });
 
-    const quickFilter = getByText("QUICK");
+    const quickFilter = getByText("quick");
     fireEvent.click(quickFilter);
 
     await waitFor(() => {
       expect(getByText("Quick Session 1")).toBeInTheDocument();
       expect(queryByText("Practice Session 1")).toBeNull();
-    }, { timeout: 2000 });
+    });
   });
 });

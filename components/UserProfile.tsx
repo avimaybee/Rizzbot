@@ -246,12 +246,12 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
         {/* Header */}
         <div className="px-6 pt-8 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
           <ModuleHeader 
-            title="LINGUISTIC_SAMPLING" 
-            mode="DATA_COLLECTION" 
+            title="Communication Samples" 
+            mode="Voice Training" 
             onBack={() => handleAction(() => setCurrentStep('intro'))}
             accentColor="gold"
-            statusLabel="PROGRESS"
-            statusValue="PHASE_01"
+            statusLabel="Progress"
+            statusValue="Step 1 of 2"
             statusColor="gold"
             rightElement={
               initialProfile && (
@@ -259,7 +259,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                   onClick={() => handleAction(() => setCurrentStep('review'), 10)}
                   className="flex items-center gap-2 glass-zinc border border-white/5 px-4 py-2 soft-edge text-zinc-500 hover:text-white transition-all group"
                 >
-                  <span className="text-[10px] font-bold uppercase tracking-widest">SKIP</span>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-widest">Skip</span>
                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                 </button>
               )
@@ -273,28 +273,27 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
 
             <div className="text-center space-y-4">
               <div className="flex items-center gap-3 justify-center">
-                 <Terminal size={14} className="text-hard-gold" />
-                 <span className="text-[10px] font-bold text-hard-gold uppercase tracking-[0.4em]">Input_Signal_Requested</span>
+                 <span className="text-[10px] font-mono font-bold text-hard-gold uppercase tracking-[0.4em]">Setup Sequence</span>
               </div>
-              <h2 className="text-3xl md:text-5xl font-impact text-white uppercase tracking-tighter leading-none">STYLE_PROFILING_SEQUENCE</h2>
-              <p className="text-zinc-500 text-[11px] font-bold uppercase tracking-widest leading-relaxed">Transmit interaction patterns. Response engine will deconstruct your voice.</p>
+              <h2 className="text-3xl md:text-5xl font-impact text-white uppercase tracking-tighter leading-none">Voice Training</h2>
+              <p className="text-zinc-500 text-[11px] font-bold uppercase tracking-widest leading-relaxed">Provide examples of how you typically respond to messages.</p>
             </div>
 
             {/* Quiz Questions */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
               {[
-                { scenario: "DYNAMIC_INIT", text: "so... what's your story? give me the lore." },
-                { scenario: "CONTROVERSIAL_INPUT", text: "unpopular opinion: pineapple belongs on pizza." },
-                { scenario: "NEGATIVE_EMOTIONAL_DATA", text: "honestly having the worst day rn." },
-                { scenario: "INTERACTION_LOOP", text: "lol that's actually hilarious 💀" },
-                { scenario: "LOGISTICS_SYNC", text: "so... wyd this weekend?" },
-                { scenario: "UNDEFINED_QUERY", text: "wait i have a random question for u" }
+                { scenario: "Introduction", text: "so... what's your story? give me the lore." },
+                { scenario: "Casual Opinion", text: "unpopular opinion: pineapple belongs on pizza." },
+                { scenario: "Sharing a Vibe", text: "honestly having the worst day rn." },
+                { scenario: "Reaction", text: "lol that's actually hilarious 💀" },
+                { scenario: "Making Plans", text: "so... wyd this weekend?" },
+                { scenario: "Open Question", text: "wait i have a random question for u" }
               ].map((item, index) => (
                 <div key={index} className="space-y-4 group">
                   <div className="flex items-center justify-between border-b border-white/5 pb-2">
                     <div className="flex items-center gap-3">
-                      <span className="text-[10px] font-bold text-hard-gold opacity-50">NODE_0{index+1}</span>
-                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">{item.scenario}</span>
+                      <span className="text-[10px] font-mono font-bold text-hard-gold opacity-50">{index+1}</span>
+                      <span className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-widest">{item.scenario}</span>
                     </div>
                     <div className="w-12 h-[1px] bg-zinc-900 group-focus-within:bg-hard-gold/30 transition-all"></div>
                   </div>
@@ -304,8 +303,8 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                       <User className="w-5 h-5" />
                     </div>
                     <div className="glass-dark border border-white/5 p-4 soft-edge relative flex-1 shadow-xl">
-                      <div className="text-[8px] font-bold text-zinc-600 mb-2 uppercase tracking-[0.3em]">INCOMING_TRANSMISSION:</div>
-                      <p className="text-sm font-bold text-zinc-300 italic uppercase tracking-tight">"{item.text}"</p>
+                      <div className="text-[8px] font-mono font-bold text-zinc-600 mb-2 uppercase tracking-widest">Incoming Message:</div>
+                      <p className="text-sm font-medium text-zinc-300 italic tracking-tight">"{item.text}"</p>
                     </div>
                   </div>
 
@@ -313,10 +312,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                     <textarea
                       value={sampleTexts[index]}
                       onChange={(e) => handleSampleChange(index, e.target.value)}
-                      className="w-full glass-zinc border-white/5 p-5 text-white text-sm font-bold focus:border-hard-gold/30 focus:outline-none min-h-[100px] resize-none placeholder:text-zinc-800 soft-edge transition-all uppercase tracking-wide leading-relaxed shadow-lg"
-                      placeholder="Input natural response draft..."
+                      className="w-full glass-zinc border-white/5 p-5 text-white text-sm font-medium focus:border-hard-gold/30 focus:outline-none min-h-[100px] resize-none placeholder:text-zinc-800 soft-edge transition-all leading-relaxed shadow-lg font-sans"
+                      placeholder="Type your natural response..."
                     />
-                    <div className="absolute bottom-0 right-0 w-2 h-2 border-r-2 border-b-2 border-white/5"></div>
                   </div>
                 </div>
               ))}
@@ -332,7 +330,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
             </div>
 
             {/* Screenshot Upload */}
-            <div className="glass-dark border border-white/5 p-8 soft-edge relative overflow-hidden group shadow-2xl">
+            <div className="glass-dark border-white/5 p-8 soft-edge relative overflow-hidden group shadow-2xl">
               <div className="absolute inset-0 bg-gradient-to-b from-hard-gold/[0.02] to-transparent pointer-events-none"></div>
               <div className="flex flex-col md:flex-row items-center justify-between gap-10 relative z-10">
                 <div className="flex items-center gap-6">
@@ -340,8 +338,8 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                     <Image className="w-7 h-7 text-zinc-500 group-hover:text-hard-gold transition-all" />
                   </div>
                   <div className="space-y-1">
-                    <h4 className="text-white font-impact text-2xl uppercase tracking-wider">INGEST_RECEIPTS</h4>
-                    <p className="text-zinc-600 text-[10px] font-bold uppercase tracking-[0.2em] leading-none">Deep_Linguistic_Scanning_Optional</p>
+                    <h4 className="text-white font-impact text-2xl uppercase tracking-wider">Analyze Screenshots</h4>
+                    <p className="text-zinc-600 text-[10px] font-mono font-bold uppercase tracking-widest leading-none">Upload images for style extraction</p>
                   </div>
                 </div>
 
@@ -356,14 +354,13 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                   />
                   <button
                     onClick={() => handleAction(() => fileInputRef.current?.click(), 10)}
-                    className="w-full md:w-auto px-10 py-3 glass-zinc border border-white/10 text-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-white/5 hover:border-white/20 transition-all soft-edge shadow-xl"
+                    className="w-full md:w-auto px-10 py-3 glass-zinc border border-white/10 text-white text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-white/5 hover:border-white/20 transition-all soft-edge shadow-xl"
                   >
-                    SELECT_FILES
+                    Select Images
                   </button>
                   {screenshots.length > 0 && (
-                    <div className="text-[10px] font-bold text-hard-gold flex items-center gap-2 animate-pulse">
-                      <Activity size={12} />
-                      {screenshots.length} BUFFER_NODES_ACTIVE
+                    <div className="text-[10px] font-mono font-bold text-hard-gold flex items-center gap-2">
+                      {screenshots.length} Images Selected
                     </div>
                   )}
                 </div>
@@ -406,12 +403,12 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                      <div className="w-2 h-2 bg-zinc-600 animate-bounce"></div>
                      <div className="w-2 h-2 bg-zinc-600 animate-bounce delay-75"></div>
                      <div className="w-2 h-2 bg-zinc-600 animate-bounce delay-150"></div>
-                     <span className="ml-2">Synthesizing_Voice</span>
+                     <span className="ml-2 font-mono font-bold text-sm tracking-widest uppercase">Processing...</span>
                    </div>
                  ) : (
                    <>
                      <Sparkles className="w-6 h-6 text-hard-gold group-hover:rotate-12 transition-transform" /> 
-                     <span>EXECUTE_AI_ANALYSIS</span>
+                     <span>Generate Style Profile</span>
                      <div className="absolute inset-0 bg-hard-gold opacity-0 group-hover:opacity-5 transition-opacity"></div>
                    </>
                  )}
@@ -421,9 +418,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                  <button
                    onClick={() => handleAction(analyzeTexts, 10)}
                    disabled={isAnalyzing}
-                   className="w-full py-4 glass-zinc border-white/5 text-zinc-600 hover:text-white text-[10px] font-bold uppercase tracking-[0.3em] transition-all soft-edge"
+                   className="w-full py-4 glass-zinc border-white/5 text-zinc-600 hover:text-white text-[10px] font-mono font-bold uppercase tracking-widest transition-all soft-edge"
                  >
-                   FALLBACK_MANUAL_CALIBRATION (NO_AI)
+                   Manual Calibration (Local Only)
                  </button>
                )}
             </div>
@@ -442,12 +439,12 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
       {/* Header */}
       <div className="px-6 pt-8 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
         <ModuleHeader 
-          title="IDENTITY_REVIEW" 
-          mode="DOSSIER_FINALIZATION" 
+          title="Style Review" 
+          mode="Profile Summary" 
           onBack={() => handleAction(() => setCurrentStep('samples'))}
           accentColor="gold"
-          statusLabel="VALIDATION"
-          statusValue="PHASE_02"
+          statusLabel="Validation"
+          statusValue="Step 2 of 2"
           statusColor="gold"
         />
       </div>
@@ -461,25 +458,23 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 relative z-10">
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-hard-gold animate-pulse shadow-[0_0_8px_rgba(251,191,36,0.5)]"></div>
-                  <span className="text-[10px] font-bold text-hard-gold uppercase tracking-[0.4em]">TACTICAL_DOSSIER_ID: {userId || 'GHOST_ROOT'}</span>
+                  <span className="text-[10px] font-mono font-bold text-hard-gold uppercase tracking-[0.4em]">User Profile | {authUser?.uid.slice(0, 8) || 'Guest'}</span>
                 </div>
                 <h2 className="text-4xl md:text-6xl font-impact text-white uppercase tracking-tighter leading-none mt-1">
-                  {authUser?.displayName?.toUpperCase() || 'AUTHORIZED_OPERATOR'}
+                  {authUser?.displayName || 'User Profile'}
                 </h2>
               </div>
               <div className="flex items-center gap-6">
                 <div className="hidden md:block text-right">
-                  <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-[0.3em] mb-1">ANALYSIS_TIMESTAMP</div>
-                  <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{new Date().toLocaleDateString().replace(/\//g, '_')}</div>
+                  <div className="text-[9px] font-mono font-bold text-zinc-600 uppercase tracking-widest mb-1">Last Analysis</div>
+                  <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{new Date().toLocaleDateString()}</div>
                 </div>
-                <div className="px-6 py-3 glass border border-white/5 text-left shadow-xl relative group">
-                  <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-[0.3em] mb-1.5">VOICE_INTEGRITY</div>
+                <div className="px-6 py-3 glass border border-white/5 text-left shadow-xl relative group soft-edge">
+                  <div className="text-[9px] font-mono font-bold text-zinc-500 uppercase tracking-widest mb-1.5">Voice Status</div>
                   <div className="text-xs font-bold text-emerald-400 flex items-center gap-2">
                      <Shield size={12} />
-                     <span>SECURE_MATCH</span>
+                     <span>Verified</span>
                   </div>
-                  <div className="absolute top-0 right-0 w-1 h-full bg-emerald-500 opacity-30"></div>
                 </div>
               </div>
             </div>
@@ -502,14 +497,14 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                           {analysisResult.confidence === 0 ? <AlertTriangle className="w-6 h-6 text-hard-red animate-pulse" /> : <Cpu className="w-6 h-6 text-hard-gold" />}
                         </div>
                         <div>
-                          <div className={`text-[10px] font-bold ${analysisResult.confidence === 0 ? 'text-hard-red' : 'text-hard-gold'} uppercase tracking-[0.3em] mb-1`}>
-                            {analysisResult.confidence === 0 ? 'CORE_SCAN_FAILURE' : 'NEURAL_VOICE_ANALYSIS'}
+                          <div className={`text-[10px] font-mono font-bold ${analysisResult.confidence === 0 ? 'text-hard-red' : 'text-hard-gold'} uppercase tracking-widest mb-1`}>
+                            {analysisResult.confidence === 0 ? 'Analysis Failed' : 'AI Analysis Results'}
                           </div>
-                          <div className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.4em]">Engine: Gemini_Ultra_V2.1</div>
+                          <div className="text-[8px] font-mono font-bold text-zinc-600 uppercase tracking-widest">Source: Linguistic Engine</div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.2em] mb-1">PROBABILITY</div>
+                        <div className="text-[8px] font-mono font-bold text-zinc-600 uppercase tracking-widest mb-1">Confidence</div>
                         <div className={`text-3xl font-impact tracking-widest ${analysisResult.confidence >= 70 ? 'text-emerald-400' :
                           analysisResult.confidence >= 40 ? 'text-hard-gold' :
                             'text-hard-red'
@@ -521,21 +516,21 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
 
                     <div className="bg-black/40 border border-white/5 p-6 soft-edge relative">
                       <div className="absolute top-0 left-0 w-1 h-full bg-hard-gold opacity-20"></div>
-                      <div className="text-[9px] font-bold text-zinc-600 mb-4 uppercase tracking-[0.3em] flex items-center gap-2">
-                         <Terminal size={12} className="text-zinc-800" /> IDENTITY_MAPPING_SUMMARY
+                      <div className="text-[9px] font-mono font-bold text-zinc-600 mb-4 uppercase tracking-widest flex items-center gap-2">
+                         Personality Summary
                       </div>
-                      <p className={`text-sm font-bold italic leading-relaxed uppercase tracking-tight ${analysisResult.confidence === 0 ? 'text-hard-red opacity-60' : 'text-zinc-400'}`}>
+                      <p className={`text-sm font-medium italic leading-relaxed text-zinc-400`}>
                         "{analysisResult.summary}"
                       </p>
                     </div>
 
                     {analysisResult.extractedPatterns.length > 0 && (
                       <div className="space-y-4">
-                        <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-[0.3em] px-1">EXTRACTED_LINGUISTIC_VECTORS</div>
+                        <div className="text-[9px] font-mono font-bold text-zinc-600 uppercase tracking-widest px-1">Detected Patterns</div>
                         <div className="flex flex-wrap gap-3">
                           {analysisResult.extractedPatterns.map((pattern, i) => (
-                            <span key={i} className="px-3 py-1.5 glass-zinc border-white/5 text-zinc-500 text-[9px] font-bold uppercase tracking-widest soft-edge group hover:text-hard-gold hover:border-hard-gold/20 transition-all cursor-default">
-                              &gt; {pattern}
+                            <span key={i} className="px-3 py-1.5 glass-zinc border-white/5 text-zinc-500 text-[9px] font-mono font-bold uppercase tracking-widest soft-edge">
+                              {pattern}
                             </span>
                           ))}
                         </div>
@@ -547,15 +542,14 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
 
               {profile.signaturePatterns.length > 0 && (
                 <div className="glass-dark border-white/5 p-8 soft-edge relative shadow-2xl">
-                  <div className="text-[9px] font-bold text-zinc-600 mb-6 uppercase tracking-[0.3em] flex items-center gap-3">
+                  <div className="text-[9px] font-mono font-bold text-zinc-600 mb-6 uppercase tracking-widest flex items-center gap-3">
                     <div className="w-1 h-4 bg-zinc-800"></div>
-                    PERSISTENT_MODAL_MARKERS
+                    Signature Phrases
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     {profile.signaturePatterns.map((pattern, i) => (
                       <div key={i} className="p-4 glass-zinc border-white/5 flex items-center justify-between group soft-edge hover:border-hard-gold/20 transition-all shadow-lg">
                         <span className="text-hard-gold font-impact text-sm uppercase tracking-wider">{pattern}</span>
-                        <span className="text-[9px] font-bold text-zinc-800 group-hover:text-zinc-600 transition-colors tracking-widest">IDX_{i+1}</span>
                       </div>
                     ))}
                   </div>
@@ -564,9 +558,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
 
               {authUser && (
                 <div className="glass-dark border-white/5 p-8 soft-edge relative shadow-2xl">
-                  <div className="text-[9px] font-bold text-zinc-600 mb-8 uppercase tracking-[0.3em] flex items-center gap-3">
+                  <div className="text-[9px] font-mono font-bold text-zinc-600 mb-8 uppercase tracking-widest flex items-center gap-3">
                     <div className="w-1 h-4 bg-zinc-800"></div>
-                    SYSTEM_HUB_CONTROLS
+                    Account Settings
                   </div>
                   
                   <div className="space-y-6">
@@ -579,18 +573,18 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                         </div>
                       )}
                       <div className="min-w-0">
-                        <div className="text-sm font-bold text-white uppercase tracking-tight truncate">{authUser.displayName || 'OPERATOR'}</div>
-                        <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest truncate">{authUser.email}</div>
+                        <div className="text-sm font-bold text-white uppercase tracking-tight truncate">{authUser.displayName || 'User'}</div>
+                        <div className="text-[9px] font-mono font-bold text-zinc-600 uppercase tracking-widest truncate">{authUser.email}</div>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-3">
                       <div className="flex items-center justify-between p-4 glass-zinc border-white/5 soft-edge group">
                         <div className="flex items-center gap-3">
-                          <div className="w-1.5 h-1.5 bg-emerald-500 animate-pulse"></div>
-                          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">DATA_CLOUD_SYNC</span>
+                          <div className="w-1.5 h-1.5 bg-emerald-500"></div>
+                          <span className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-widest">Data Synchronization</span>
                         </div>
-                        <span className="text-[10px] font-bold text-emerald-500 tracking-widest">ENCRYPTED</span>
+                        <span className="text-[10px] font-mono font-bold text-emerald-500 tracking-widest uppercase">Active</span>
                       </div>
 
                       <button
@@ -599,7 +593,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                       >
                         <div className="flex items-center gap-3">
                           <LogOut className="w-4 h-4 text-hard-red" />
-                          <span className="text-[10px] font-bold text-hard-red uppercase tracking-widest">TERMINATE_SESSION</span>
+                          <span className="text-[10px] font-mono font-bold text-hard-red uppercase tracking-widest">Sign Out</span>
                         </div>
                         <ArrowRight className="w-4 h-4 text-hard-red opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
                       </button>
@@ -612,45 +606,44 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
             {/* RIGHT COLUMN */}
             <div className="space-y-6">
               <div className="glass-dark border-white/5 p-8 soft-edge relative flex flex-col items-center shadow-2xl">
-                <div className="text-[9px] font-bold text-zinc-600 mb-8 w-full uppercase tracking-[0.3em] flex items-center gap-3">
+                <div className="text-[9px] font-mono font-bold text-zinc-600 mb-8 w-full uppercase tracking-widest flex items-center gap-3">
                   <div className="w-1 h-4 bg-zinc-800"></div>
-                  IDENTITY_RADAR_MAPPING
+                  Style Profile Visualization
                 </div>
                 <div className="relative group">
                    <div className="absolute inset-0 bg-hard-gold/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                    <StyleRadar profile={profile} size={280} className="my-4 relative z-10" />
                 </div>
                 <div className="w-full mt-10 pt-6 border-t border-white/5 flex justify-between items-end opacity-40">
-                  <div className="text-[8px] font-bold text-zinc-700 uppercase tracking-[0.4em]">SCAN_COMPLETE_V2.0</div>
-                  <div className="text-[8px] font-bold text-hard-gold uppercase tracking-[0.4em] animate-pulse">OPTIMIZING_IDENTITY...</div>
+                  <div className="text-[8px] font-mono font-bold text-zinc-700 uppercase tracking-widest">Profile Configuration v3.0</div>
                 </div>
               </div>
 
               {/* Parameter Settings */}
               {[
-                { label: 'EMOJI_DENSITY', param: 'emojiUsage', options: ['none', 'minimal', 'moderate', 'heavy'], icon: Sparkles },
-                { label: 'CASE_SENSITIVITY', param: 'capitalization', options: ['lowercase', 'mixed', 'normal'], icon: Terminal },
-                { label: 'PUNCT_THRESHOLD', param: 'punctuation', options: ['none', 'minimal', 'full'], icon: Activity },
-                { label: 'BUFFER_CAPACITY', param: 'averageLength', options: ['short', 'medium', 'long'], icon: Cpu },
-                { label: 'COLLOQUIAL_DEPTH', param: 'slangLevel', options: ['formal', 'casual', 'heavy-slang'], icon: Shield },
-                { label: 'EMOTIONAL_OUTPUT', param: 'preferredTone', options: ['playful', 'chill', 'direct', 'sweet'], icon: Activity }
+                { label: 'Emoji Density', param: 'emojiUsage', options: ['none', 'minimal', 'moderate', 'heavy'], icon: Sparkles },
+                { label: 'Capitalization', param: 'capitalization', options: ['lowercase', 'mixed', 'normal'], icon: Terminal },
+                { label: 'Punctuation', param: 'punctuation', options: ['none', 'minimal', 'full'], icon: Activity },
+                { label: 'Message Length', param: 'averageLength', options: ['short', 'medium', 'long'], icon: Cpu },
+                { label: 'Colloquialism', param: 'slangLevel', options: ['formal', 'casual', 'heavy-slang'], icon: Shield },
+                { label: 'Overall Tone', param: 'preferredTone', options: ['playful', 'chill', 'direct', 'sweet'], icon: Activity }
               ].map((item, i) => (
                 <div key={i} className="glass-dark border-white/5 p-6 md:p-8 soft-edge shadow-xl group hover:border-white/10 transition-all">
-                  <div className="text-[9px] font-bold text-zinc-600 mb-6 uppercase tracking-[0.3em] flex items-center gap-3">
+                  <div className="text-[9px] font-mono font-bold text-zinc-600 mb-6 uppercase tracking-widest flex items-center gap-3">
                     <item.icon className="w-3 h-3 text-zinc-800 group-hover:text-hard-gold transition-colors" />
-                    PARAMETER: {item.label}
+                    {item.label}
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {item.options.map((level) => (
                       <button
                         key={level}
                         onClick={() => handleAction(() => setProfile({ ...profile, [item.param]: level }), 2)}
-                        className={`py-3 px-2 border text-[10px] font-bold uppercase tracking-widest transition-all soft-edge shadow-lg min-h-[48px] ${profile[item.param as keyof UserStyleProfile] === level
+                        className={`py-3 px-2 border text-[10px] font-mono font-bold uppercase tracking-widest transition-all soft-edge shadow-lg min-h-[48px] ${profile[item.param as keyof UserStyleProfile] === level
                           ? 'bg-white text-black border-white shadow-white/5 scale-105 z-10'
                           : 'glass-zinc text-zinc-600 border-white/5 hover:border-white/10 hover:text-zinc-400'
                           }`}
                       >
-                        {level.replace('-', '_')}
+                        {level.replace('-', ' ')}
                       </button>
                     ))}
                   </div>
@@ -663,10 +656,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
           <div className="fixed bottom-0 left-0 right-0 p-6 md:p-10 bg-gradient-to-t from-matte-base via-matte-base to-transparent z-50">
             <button
               onClick={() => handleAction(handleSave, 20)}
-              className="max-w-4xl mx-auto w-full py-6 bg-white text-black font-impact text-3xl uppercase tracking-[0.1em] hover:bg-zinc-200 transition-all soft-edge shadow-[0_30px_100px_rgba(255,255,255,0.15)] active:scale-[0.98] group relative overflow-hidden"
+              className="max-w-4xl mx-auto w-full py-6 bg-white text-black font-impact text-3xl uppercase tracking-widest hover:bg-zinc-200 transition-all soft-edge shadow-[0_30px_100px_rgba(255,255,255,0.15)] active:scale-[0.98] group relative overflow-hidden"
             >
-              <span className="relative z-10">Commit_Identity_Profile</span>
-              <div className="absolute inset-0 bg-hard-gold opacity-0 group-hover:opacity-5 transition-opacity"></div>
+              Save Profile Changes
             </button>
           </div>
         </div>

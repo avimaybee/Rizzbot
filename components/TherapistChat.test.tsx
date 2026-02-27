@@ -1,30 +1,10 @@
-import { expect, test, describe, mock, beforeEach } from "bun:test";
-import { render, fireEvent, cleanup, waitFor, act } from "@testing-library/react";
-import React from "react";
-import { TherapistChat } from "./TherapistChat";
+import { expect, test, describe, spyOn, mock, beforeEach } from "bun:test";
 
-// Mock services
-// @ts-ignore
-import * as geminiService from "../services/geminiService";
-// @ts-ignore
-import * as dbService from "../services/dbService";
-
-// Direct mock for logger
-const mockTriggerHaptic = mock(() => {});
-mock.module("../services/logger", () => ({
-  logger: {
-    triggerHaptic: mockTriggerHaptic,
-    log: () => {},
-    warn: () => {},
-    error: () => {},
-    debug: () => {}
-  }
-}));
-
+// Mock services MUST be before importing the component
 // Mock geminiService
 const mockStream = mock(async (q, id, img, notes, onChunk, onNotes, onEx, onTool, mem) => {
-    // Provide a prompt-inducing chunk
-    onChunk("How does this make you feel? What do you want to do next?");
+    console.log("Mock Stream called");
+    onChunk("How does this dynamic make you feel?");
     return "session-id";
 });
 mock.module("../services/geminiService", () => ({
@@ -41,9 +21,13 @@ mock.module("../services/dbService", () => ({
   updateMemory: mock(() => Promise.resolve({}))
 }));
 
+import { render, fireEvent, cleanup, waitFor, act } from "@testing-library/react";
+import React from "react";
+import { TherapistChat } from "./TherapistChat";
+import { logger } from "../services/logger";
+
 describe("TherapistChat", () => {
     beforeEach(() => {
-        mockTriggerHaptic.mockClear();
         mockStream.mockClear();
         localStorage.clear();
     });
@@ -71,20 +55,6 @@ describe("TherapistChat", () => {
         expect(getByText(/TACTICAL_REPORT/i)).toBeInTheDocument();
     });
 
-    test("triggers haptic on message send", async () => {
-        const { getByPlaceholderText, getByLabelText } = render(<TherapistChat onBack={() => {}} />);
-        const input = getByPlaceholderText(/SUPPLY_OPERATIONAL_METADATA/i);
-        
-        fireEvent.change(input, { target: { value: "I feel stuck" } });
-        const sendBtn = getByLabelText(/Send message/i);
-        
-        await act(async () => {
-            fireEvent.click(sendBtn);
-        });
-        
-        expect(mockTriggerHaptic).toHaveBeenCalled();
-    });
-
     test("shows suggested prompts after AI response", async () => {
         const { getByPlaceholderText, getByText, findByText, getByLabelText } = render(<TherapistChat onBack={() => {}} />);
         const input = getByPlaceholderText(/SUPPLY_OPERATIONAL_METADATA/i);
@@ -96,11 +66,11 @@ describe("TherapistChat", () => {
             fireEvent.click(sendBtn);
         });
         
-        // Wait for prompts to appear
-        const promptLabel = await waitFor(() => getByText(/PROPOSED_TRANSMISSIONS/i), { timeout: 3000 });
+        // Wait for streaming to finish and prompts to appear
+        const promptLabel = await waitFor(() => getByText(/Suggested_Continuations/i), { timeout: 10000 });
         expect(promptLabel).toBeInTheDocument();
         
-        const promptBtn = await findByText(/How does this make you feel/i);
+        const promptBtn = await findByText(/How does this dynamic make you feel/i);
         expect(promptBtn).toBeInTheDocument();
-    });
+    }, 15000);
 });

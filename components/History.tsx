@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, MessageSquare, Zap, ChevronRight, Trash2, AlertCircle, RefreshCw, Ghost, X, Image, ArrowLeft, Archive, Search, Filter, Shield } from 'lucide-react';
+import { Clock, MessageSquare, Zap, ChevronRight, Trash2, AlertCircle, RefreshCw, Ghost, X, Image, ArrowLeft, Archive, Search, Filter, Shield, Target } from 'lucide-react';
 import { getSessions, deleteSession, Session, SessionsResponse } from '../services/dbService';
 import { ModuleHeader } from './ModuleHeader';
 import { CornerNodes } from './CornerNodes';

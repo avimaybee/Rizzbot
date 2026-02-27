@@ -11,10 +11,9 @@
 - [x] Task: Implement the redesigned Chat View with the persistent Risk HUD. (d071fd0)
 - [x] Task: Update message bubbles to match the "Fluid & Organic" style. (d071fd0)
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Tactical Chat & Risk HUD' (Protocol in workflow.md) (181fc30)
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Tactical Chat & Risk HUD' (Protocol in workflow.md)
 
 ## Phase 3: Mission Debrief & Polish
-- [~] Task: Write tests for the "Mission Debrief" (Analysis) report view.
-- [ ] Task: Implement the monospaced Mission Debrief report.
-- [ ] Task: Integrate Haptic Feedback for high-risk moments and strategic copies.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Mission Debrief & Polish' (Protocol in workflow.md)
+- [x] Task: Write tests for the "Mission Debrief" (Analysis) report view. (552a2f1)
+- [x] Task: Implement the monospaced Mission Debrief report. (552a2f1)
+- [x] Task: Integrate Haptic Feedback for high-risk moments and strategic copies. (552a2f1)
+- [~] Task: Conductor - User Manual Verification 'Phase 3: Mission Debrief & Polish' (Protocol in workflow.md)

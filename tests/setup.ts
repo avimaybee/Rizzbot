@@ -103,3 +103,17 @@ class LocalStorageMock {
 
 // @ts-ignore
 global.localStorage = new LocalStorageMock();
+
+// FileReader Mock
+class FileReaderMock {
+  onloadend: (() => void) | null = null;
+  result: string | null = null;
+  readAsDataURL(file: Blob) {
+    this.result = "data:image/png;base64,mock_base64";
+    if (this.onloadend) {
+      setTimeout(() => this.onloadend?.(), 0);
+    }
+  }
+}
+// @ts-ignore
+global.FileReader = FileReaderMock;

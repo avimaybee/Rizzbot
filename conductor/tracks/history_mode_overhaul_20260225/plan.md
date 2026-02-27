@@ -7,13 +7,13 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Gallery & Cards' (Protocol in workflow.md) (c9bcb9d)
 
 ## Phase 2: Search & Filter
-- [~] Task: Write tests for the History filtering and search logic.
-- [ ] Task: Implement the monospaced search bar and tactical filter chips.
-- [ ] Task: Optimize session fetching to support real-time filtering.
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Search & Filter' (Protocol in workflow.md)
+- [x] Task: Write tests for the History filtering and search logic. (552a2f1)
+- [x] Task: Implement the monospaced search bar and tactical filter chips. (552a2f1)
+- [x] Task: Optimize session fetching to support real-time filtering. (552a2f1)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Search & Filter' (Protocol in workflow.md) (552a2f1)
 
 ## Phase 3: Resumption & Polish
-- [ ] Task: Implement the "Resume Session" logic for Practice and Therapist modes.
-- [ ] Task: Redesign the Session Detail view as a "Tactical Report" consistent with other modes.
-- [ ] Task: Integrate Haptic Feedback for scrolling and interaction.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Resumption & Polish' (Protocol in workflow.md)
+- [~] Task: Implement the "Resume Session" logic for Practice and Therapist modes.
+- [x] Task: Redesign the Session Detail view as a "Tactical Report" consistent with other modes. (552a2f1)
+- [x] Task: Integrate Haptic Feedback for scrolling and interaction. (552a2f1)
+- [~] Task: Conductor - User Manual Verification 'Phase 3: Resumption & Polish' (Protocol in workflow.md)
