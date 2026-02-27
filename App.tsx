@@ -33,6 +33,7 @@ function App() {
   // User Session State (from D1)
   const [userId, setUserId] = useState<number | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [isBooting, setIsBooting] = useState(true);
 
   // User Profile State
   const [userProfile, setUserProfile] = useState<UserStyleProfile | null>(null);
@@ -51,6 +52,7 @@ function App() {
         setUserId(null);
         setUserProfile(null);
         setIsLoadingUser(false);
+        setIsBooting(false);
       }
     });
 
@@ -115,6 +117,8 @@ function App() {
         // Don't set userId, features requiring DB will show appropriate messages
       } finally {
         setIsLoadingUser(false);
+        // Delay boot completion for smooth transition
+        setTimeout(() => setIsBooting(false), 800);
       }
     };
 
@@ -198,35 +202,25 @@ function App() {
       console.error('Failed to save user profile:', error);
     }
   };
+
+  // 1. Initial Boot (Firebase loading)
   if (authLoading) {
-    return (
-      <div className="flex h-[100dvh] w-screen bg-matte-base items-center justify-center">
-        <div className="flex flex-col items-center justify-center">
-          <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider mb-4">AUTHENTICATING...</div>
-          <div className="w-8 h-8 border-2 border-zinc-700 border-t-white rounded-full animate-spin"></div>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
-  // Show auth modal if not signed in
+  // 2. Auth Required
   if (!authUser) {
     return <AuthModal onAuthSuccess={() => setActiveModule('standby')} />;
+  }
+
+  // 3. User Data Syncing
+  if (isBooting) {
+    return <LoadingScreen />;
   }
 
   return (
     <ToastProvider>
       <div className="flex h-[100dvh] w-screen bg-matte-base text-zinc-100 overflow-hidden font-sans selection:bg-white selection:text-black">
-
-        {/* Show loading state while syncing user with database */}
-        {isLoadingUser && (
-          <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
-            <div className="flex flex-col items-center justify-center">
-              <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider mb-4">SYNCING...</div>
-              <div className="w-8 h-8 border-2 border-zinc-700 border-t-white rounded-full animate-spin"></div>
-            </div>
-          </div>
-        )}
 
         {/* Wellbeing Check-in Modal */}
         {wellbeingCheckIn?.triggered && wellbeingCheckIn.reason && (

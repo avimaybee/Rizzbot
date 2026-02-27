@@ -58,10 +58,8 @@ button,
 
 /* Refined label sizing for mobile */
 .label-sm {
+  @apply font-mono uppercase tracking-[0.2em];
   font-size: clamp(8px, 2vw, 10px);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
   color: #71717a;
 }
 
@@ -154,22 +152,51 @@ button,
 
 .glass {
   @apply backdrop-blur-md border border-white/10 bg-white/5;
+  will-change: backdrop-filter;
 }
 
 .glass-dark {
   @apply backdrop-blur-lg border border-zinc-800/50 bg-black/40;
+  will-change: backdrop-filter;
 }
 
 .glass-zinc {
   @apply backdrop-blur-lg border border-zinc-800/80 bg-zinc-900/60;
+  will-change: backdrop-filter;
 }
 
 .glass-blue {
   @apply backdrop-blur-md border border-hard-blue/20 bg-hard-blue/5;
+  will-change: backdrop-filter;
 }
 
 .glass-gold {
   @apply backdrop-blur-md border border-hard-gold/20 bg-hard-gold/5;
+  will-change: backdrop-filter;
+}
+
+.glass-red {
+  @apply backdrop-blur-md border border-red-500/20 bg-red-500/5;
+  will-change: backdrop-filter;
+}
+
+/* Optimization for low-end mobile devices */
+@media (max-width: 640px) {
+  .glass, .glass-dark, .glass-zinc, .glass-blue, .glass-gold, .glass-red {
+    @apply backdrop-blur-sm;
+  }
+}
+
+.tactical-glow-gold {
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.15);
+}
+
+.tactical-glow-blue {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+}
+
+.tactical-glow-red {
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
 }
 
 /* ========================================
