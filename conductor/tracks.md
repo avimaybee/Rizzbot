@@ -4,6 +4,11 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
+- [ ] **Track: UI/UX Cohesion & Tactical Design System**
+  *Link: [./tracks/ui_cohesion_tactical_design_20260227/](./tracks/ui_cohesion_tactical_design_20260227/)*
+
+---
+
 - [ ] **Track: Therapist Mode Overhaul**
   *Link: [./tracks/therapist_mode_overhaul_20260225/](./tracks/therapist_mode_overhaul_20260225/)*
 
@@ -24,7 +29,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Home Screen Overhaul**
+- [x] **Track: Home Screen Overhaul**
   *Link: [./tracks/home_screen_overhaul_20260225/](./tracks/home_screen_overhaul_20260225/)*
 
 ---

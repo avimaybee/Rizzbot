@@ -1,5 +1,3 @@
-
-
 export interface Persona {
   id: string;
   name: string;
@@ -264,13 +262,18 @@ export interface SessionLog {
 }
 
 /**
+ * Wellbeing check-in reason.
+ */
+export type WellbeingReason = 'late_night' | 'same_person' | 'high_frequency' | 'high_risk';
+
+/**
  * Wellbeing check-in state.
  */
 export interface WellbeingState {
   lastCheckIn?: number; // When we last showed a check-in
   dismissedUntil?: number; // User dismissed, don't show until this time
   triggered: boolean; // Should we show check-in
-  reason?: 'late_night' | 'same_person' | 'high_frequency' | 'high_risk';
+  reason: WellbeingReason | null;
 }
 
 // ============================================
@@ -393,15 +396,3 @@ export interface TherapistResponse {
   clinicalNotes?: Partial<ClinicalNotes>; // Updated clinical notes from this turn
   exercise?: TherapistExercise; // Optional interactive exercise assigned
 }
-
-export interface TherapistMessage {
-  role: 'user' | 'therapist';
-  content: string;
-  timestamp: number;
-  images?: string[]; // Optional attached images (base64)
-  exercise?: TherapistExercise; // Optional interactive exercise
-  perspective?: PerspectiveInsight; // Perspective Bridge result
-  pattern?: PatternInsight; // Masterclass insight
-  projection?: ProjectionInsight; // Shadow persona detection
-}
-

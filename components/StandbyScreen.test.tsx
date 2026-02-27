@@ -1,8 +1,14 @@
-import { expect, test, describe, mock } from "bun:test";
+import { expect, test, describe, mock, beforeEach } from "bun:test";
 import { render, fireEvent, screen } from "@testing-library/react";
 import React from "react";
 import { StandbyScreen } from "./StandbyScreen";
 import { AuthUser } from "../services/firebaseService";
+
+// Mock dbService
+mock.module("../services/dbService", () => ({
+  getSessions: mock(() => Promise.resolve({ sessions: [], pagination: { total: 0 } })),
+  getPersonas: mock(() => Promise.resolve([])),
+}));
 
 describe("StandbyScreen", () => {
   const mockOnActivate = mock(() => {});
@@ -14,17 +20,23 @@ describe("StandbyScreen", () => {
     providerId: "google.com",
   };
 
+  beforeEach(() => {
+    mockOnActivate.mockClear();
+  });
+
   test("renders the RIZZBOT header and Zen background elements", () => {
     const { getByText, container } = render(
       <StandbyScreen 
         onActivate={mockOnActivate} 
         hasProfile={false} 
         authUser={null} 
+        wellbeingReason={null}
       />
     );
 
     expect(getByText("RIZZ")).toBeInTheDocument();
     expect(getByText("BOT")).toBeInTheDocument();
+    expect(getByText(/SYSTEM_OPTIMAL/i)).toBeInTheDocument();
     
     // Check for background elements
     const auroraBg = container.querySelector(".animate-aurora");
@@ -78,6 +90,7 @@ describe("StandbyScreen", () => {
         onActivate={mockOnActivate} 
         hasProfile={true} 
         authUser={mockAuthUser} 
+        wellbeingReason={null}
       />
     );
 
@@ -86,16 +99,41 @@ describe("StandbyScreen", () => {
     expect(getByText(/VOICE: CALIBRATED/i)).toBeInTheDocument();
   });
 
-  test("shows UNINITIALIZED status when hasProfile is false", () => {
-    const { getByText } = render(
+  test("shows UNINITIALIZED status and checklist when hasProfile is false", () => {
+    const { getByText, getAllByText } = render(
       <StandbyScreen 
         onActivate={mockOnActivate} 
         hasProfile={false} 
         authUser={mockAuthUser} 
+        wellbeingReason={null}
       />
     );
 
     expect(getByText(/VOICE: UNTRAINED/i)).toBeInTheDocument();
+    expect(getAllByText(/SYSTEM_INITIALIZATION/i).length).toBeGreaterThan(0);
+    expect(getAllByText(/VOICE_CALIBRATION/i).length).toBeGreaterThan(0);
+  });
+
+  test("renders specific wellbeing alerts", () => {
+    const { getByText, rerender } = render(
+      <StandbyScreen 
+        onActivate={mockOnActivate} 
+        hasProfile={true} 
+        authUser={mockAuthUser} 
+        wellbeingReason="late_night"
+      />
+    );
+    expect(getByText(/SLEEP_DEPRIVED/i)).toBeInTheDocument();
+
+    rerender(
+      <StandbyScreen 
+        onActivate={mockOnActivate} 
+        hasProfile={true} 
+        authUser={mockAuthUser} 
+        wellbeingReason="same_person"
+      />
+    );
+    expect(getByText(/TARGET_OBSESSION/i)).toBeInTheDocument();
   });
 
   test("renders abstract grid visual", () => {

@@ -253,7 +253,13 @@ function App() {
 
             {/* STANDBY MODULE */}
             {activeModule === 'standby' && (
-              <StandbyScreen onActivate={setActiveModule} hasProfile={!!(userProfile && userProfile.preferredTone)} authUser={authUser} userProfile={userProfile} />
+              <StandbyScreen 
+                onActivate={setActiveModule} 
+                hasProfile={!!(userProfile && userProfile.preferredTone)} 
+                authUser={authUser} 
+                userProfile={userProfile} 
+                wellbeingReason={wellbeingCheckIn?.reason || null}
+              />
             )}
 
             {/* PRACTICE MODE MODULE */}

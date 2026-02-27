@@ -2,8 +2,8 @@
 
 ## Phase 1: Setup & Persona UI
 - [x] Task: Update the Simulator setup view with organic layout and tactical labels. (cdf04da)
-- [x] Task: Write tests for the redesigned Persona Selection sidebar. (e9f1a2b)
-- [x] Task: Implement the redesigned Practice Partners sidebar with difficulty indicators. (f7e3a2c)
+- [x] Task: Write tests for the redesigned Persona Selection sidebar. (f81d491)
+- [x] Task: Implement the redesigned Practice Partners sidebar with difficulty indicators. (f81d491)
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Setup & Persona UI' (Protocol in workflow.md)
 
 ## Phase 2: Tactical Chat & Risk HUD

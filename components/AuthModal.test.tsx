@@ -1,15 +1,10 @@
-import { expect, test, describe, mock, beforeEach, afterEach, spyOn } from "bun:test";
-import { render, fireEvent, cleanup, waitFor, act } from "@testing-library/react";
-import React from "react";
-// @ts-ignore
-import { AuthModal } from "./AuthModal";
-import "../tests/setup";
+import { mock } from "bun:test";
 
-// Mock firebaseService
-const mockSignInWithEmail = mock(() => Promise.resolve({ uid: '123' }));
-const mockSignUpWithEmail = mock(() => Promise.resolve({ uid: '123' }));
-const mockSignInWithGoogle = mock(() => Promise.resolve({ uid: '123' }));
-const mockResetPassword = mock(() => Promise.resolve());
+// Mock firebaseService MUST be before other imports
+const mockSignInWithEmail = mock((email, password) => Promise.resolve({ uid: '123', email, displayName: 'Test User' }));
+const mockSignUpWithEmail = mock((email, password, displayName) => Promise.resolve({ uid: '123', email, displayName }));
+const mockSignInWithGoogle = mock(() => Promise.resolve({ uid: '123', email: 'google@test.com', displayName: 'Google User' }));
+const mockResetPassword = mock((email) => Promise.resolve());
 
 mock.module("../services/firebaseService", () => ({
   signInWithEmail: mockSignInWithEmail,
@@ -17,6 +12,13 @@ mock.module("../services/firebaseService", () => ({
   signInWithGoogle: mockSignInWithGoogle,
   resetPassword: mockResetPassword,
 }));
+
+import { expect, test, describe, beforeEach, afterEach } from "bun:test";
+import { render, fireEvent, cleanup, waitFor, act } from "@testing-library/react";
+import React from "react";
+// @ts-ignore
+import { AuthModal } from "./AuthModal";
+import "../tests/setup";
 
 describe("AuthModal", () => {
   beforeEach(() => {
@@ -39,9 +41,7 @@ describe("AuthModal", () => {
     const { getByText, getByPlaceholderText, queryByPlaceholderText } = render(<AuthModal onAuthSuccess={() => {}} />);
     
     const initializeBtn = getByText("Initialize");
-    act(() => {
-      fireEvent.click(initializeBtn);
-    });
+    fireEvent.click(initializeBtn);
     
     expect(getByPlaceholderText("ENTER DISPLAY NAME")).toBeTruthy();
     expect(getByText("INITIALIZE")).toBeTruthy();
@@ -52,9 +52,7 @@ describe("AuthModal", () => {
     const { getByText, getByPlaceholderText, queryByPlaceholderText } = render(<AuthModal onAuthSuccess={() => {}} />);
     
     const forgotBtn = getByText("Forgot password?");
-    act(() => {
-      fireEvent.click(forgotBtn);
-    });
+    fireEvent.click(forgotBtn);
     
     expect(getByText("Reset Credentials")).toBeTruthy();
     expect(queryByPlaceholderText("••••••••")).toBeNull();
@@ -69,17 +67,30 @@ describe("AuthModal", () => {
     const passwordInput = getByLabelText(/PASSWORD/i) as HTMLInputElement;
     
     act(() => {
-      fireEvent.change(emailInput, { target: { value: "test@example.com" } });
-      fireEvent.change(passwordInput, { target: { value: "password123" } });
+      emailInput.value = "test@example.com";
+      emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+      emailInput.dispatchEvent(new Event('change', { bubbles: true }));
+      
+      passwordInput.value = "password123";
+      passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
+      passwordInput.dispatchEvent(new Event('change', { bubbles: true }));
     });
     
+    // Check if value updated in DOM
+    expect(emailInput.value).toBe("test@example.com");
+    
+    const submitBtn = getByText("ACCESS SYSTEM");
     act(() => {
-      fireEvent.click(getByText("ACCESS SYSTEM"));
+      fireEvent.click(submitBtn);
     });
     
     await waitFor(() => {
-      expect(mockSignInWithEmail).toHaveBeenCalledWith("test@example.com", "password123");
+      expect(mockSignInWithEmail).toHaveBeenCalled();
     });
+
+    const calls = mockSignInWithEmail.mock.calls;
+    expect(calls[0][0]).toBe("test@example.com");
+    expect(calls[0][1]).toBe("password123");
     
     await waitFor(() => {
       expect(onAuthSuccess).toHaveBeenCalled();
@@ -100,9 +111,9 @@ describe("AuthModal", () => {
     const passwordInput = getByLabelText(/PASSWORD/i) as HTMLInputElement;
     
     act(() => {
-      fireEvent.change(nameInput, { target: { value: "Agent Smith" } });
-      fireEvent.change(emailInput, { target: { value: "smith@example.com" } });
-      fireEvent.change(passwordInput, { target: { value: "password123" } });
+      fireEvent.input(nameInput, { target: { value: "Agent Smith" } });
+      fireEvent.input(emailInput, { target: { value: "smith@example.com" } });
+      fireEvent.input(passwordInput, { target: { value: "password123" } });
     });
     
     act(() => {
@@ -110,8 +121,13 @@ describe("AuthModal", () => {
     });
     
     await waitFor(() => {
-      expect(mockSignUpWithEmail).toHaveBeenCalledWith("smith@example.com", "password123", "Agent Smith");
+      expect(mockSignUpWithEmail).toHaveBeenCalled();
     });
+
+    const calls = mockSignUpWithEmail.mock.calls;
+    expect(calls[0][0]).toBe("smith@example.com");
+    expect(calls[0][1]).toBe("password123");
+    expect(calls[0][2]).toBe("Agent Smith");
     
     await waitFor(() => {
       expect(onAuthSuccess).toHaveBeenCalled();
@@ -129,7 +145,7 @@ describe("AuthModal", () => {
     
     const emailInput = getByLabelText(/EMAIL ADDRESS/i) as HTMLInputElement;
     act(() => {
-      fireEvent.change(emailInput, { target: { value: "reset@example.com" } });
+      fireEvent.input(emailInput, { target: { value: "reset@example.com" } });
     });
     
     act(() => {
@@ -154,8 +170,8 @@ describe("AuthModal", () => {
     const passwordInput = getByLabelText(/PASSWORD/i) as HTMLInputElement;
     
     act(() => {
-      fireEvent.change(emailInput, { target: { value: "test@example.com" } });
-      fireEvent.change(passwordInput, { target: { value: "wrong" } });
+      fireEvent.input(emailInput, { target: { value: "test@example.com" } });
+      fireEvent.input(passwordInput, { target: { value: "wrong" } });
     });
     
     act(() => {
@@ -170,9 +186,7 @@ describe("AuthModal", () => {
     const onAuthSuccess = mock(() => {});
     const { getByText } = render(<AuthModal onAuthSuccess={onAuthSuccess} />);
     
-    act(() => {
-      fireEvent.click(getByText("Continue with Google"));
-    });
+    fireEvent.click(getByText("Continue with Google"));
     
     await waitFor(() => {
       expect(mockSignInWithGoogle).toHaveBeenCalled();
