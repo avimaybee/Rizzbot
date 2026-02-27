@@ -144,8 +144,11 @@ describe("Simulator Setup View Redesign", () => {
       fireEvent.click(sophieButton);
     }
     
-    // Check that we're now in chat view (EXIT button should be there)
-    expect(getByText(/EXIT/i)).toBeInTheDocument();
+    // Check that we're now in chat view (CHAT_ENGAGEMENT header should be there)
+    expect(getByText(/CHAT_ENGAGEMENT/i)).toBeInTheDocument();
+    const backButton = getByText(/BACK/i).closest('button');
+    expect(backButton).toBeInTheDocument();
+    
     // And "Who's got you in your head?" should be gone
     expect(queryByText(/WHO'S GOT YOU IN YOUR HEAD/i)).not.toBeInTheDocument();
   });
@@ -162,8 +165,50 @@ describe("Simulator Setup View Redesign", () => {
       </ToastProvider>
     );
     
-    // This is expected to fail initially as difficulty indicators aren't implemented yet
     const difficultyBadge = container.querySelector('.difficulty-indicator');
     expect(difficultyBadge).toBeInTheDocument();
+  });
+
+  test("shows Ghost Risk HUD in chat view when history exists", () => {
+    const mockPersonas = [
+      { name: 'SOPHIE', relationshipContext: 'DATING', harshnessLevel: 3 }
+    ];
+    localStorage.setItem('unsend_personas', JSON.stringify(mockPersonas));
+
+    // Seed history so HUD shows up
+    const mockHistory = [
+      { 
+        draft: 'Hey', 
+        result: { 
+          predictedReply: 'Hi', 
+          verdict: 'Good', 
+          regretLevel: 20, 
+          rewrites: { safe: 'Hello' } 
+        } 
+      }
+    ];
+    localStorage.setItem('unsend_sim_history_SOPHIE', JSON.stringify(mockHistory));
+
+    const { getAllByText, container, getByText } = render(
+      <ToastProvider>
+        <Simulator onBack={mockOnBack} />
+      </ToastProvider>
+    );
+    
+    const sophieButton = getAllByText('SOPHIE')[0].closest('button');
+    if (sophieButton) {
+      fireEvent.click(sophieButton);
+    }
+
+    // Verify we are in chat view
+    expect(getByText(/CHAT_ENGAGEMENT/i)).toBeInTheDocument();
+    
+    // Check for HUD container
+    const hud = container.querySelector('.ghost-risk-hud');
+    expect(hud).toBeInTheDocument();
+    
+    // Check for meters
+    expect(container.querySelector('.risk-meter')).toBeInTheDocument();
+    expect(container.querySelector('.vibe-meter')).toBeInTheDocument();
   });
 });

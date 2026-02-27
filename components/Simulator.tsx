@@ -6,6 +6,7 @@ import { createPersona, createSession } from '../services/dbService';
 import { SimResult, Persona, SimAnalysisResult, UserStyleProfile } from '../types';
 import { useGlobalToast } from './Toast';
 import { CornerNodes } from './CornerNodes';
+import { ModuleHeader } from './ModuleHeader';
 
 interface SimulatorProps {  // User's style profile for personalized suggestions
   userProfile?: UserStyleProfile | null;
@@ -255,22 +256,20 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
   // --- SETUP VIEW ---
   if (view === 'setup') {
     return (
-      <div className="w-full h-full max-w-full mx-auto glass-zinc soft-edge flex flex-col shadow-2xl relative overflow-hidden pb-32 md:pb-0">
+      <div className="w-full h-full max-w-full mx-auto glass-zinc flex flex-col shadow-2xl relative overflow-hidden pb-32 md:pb-0">
         <CornerNodes />
 
-        {/* TACTICAL HUD HEADER */}
-        <div className="border-b border-zinc-800 px-4 py-3 flex items-center justify-between relative z-30 sticky top-0 bg-matte-base/95 backdrop-blur-sm">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2 min-w-[44px]"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-xs font-mono uppercase tracking-widest group-hover:text-hard-blue transition-colors">BACK</span>
-          </button>
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 bg-hard-blue animate-pulse"></div>
-            <span className="text-xs font-mono uppercase tracking-widest text-zinc-500">PRACTICE_MODE</span>
-          </div>
+        {/* MODULE HEADER */}
+        <div className="px-4 pt-4">
+          <ModuleHeader 
+            title="PRACTICE_PARTNER_SETUP" 
+            mode="PRACTICE_MODE" 
+            onBack={onBack}
+            accentColor="blue"
+            statusLabel="SYSTEM_STATUS"
+            statusValue="CALIBRATING"
+            statusColor="blue"
+          />
         </div>
 
         {/* MOBILE: Show header first, then archive inline */}
@@ -559,28 +558,24 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
     };
 
     return (
-      <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative scrollbar-hide pb-24 md:pb-0">
+      <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel md:border border-zinc-800 flex flex-col relative scrollbar-hide pb-24 md:pb-0 overflow-y-auto">
         <CornerNodes />
 
-        {/* Header - More compact */}
-        <div className="bg-zinc-900 px-3 sm:px-5 py-3 sm:py-4 border-b border-zinc-800 flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 border border-zinc-600 bg-zinc-800 flex items-center justify-center">
-              <span className="text-lg sm:text-xl">📊</span>
-            </div>
-            <div>
-              <h2 className="font-impact text-base sm:text-lg text-white tracking-wide uppercase">Analysis</h2>
-              <p className="text-xs text-zinc-500 font-mono">
-                {simHistory.length} exchange{simHistory.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-          </div>
-          <button onClick={() => setView('chat')} className="label-sm text-zinc-400 hover:text-white border border-zinc-700 px-4 py-2 hover:bg-zinc-800 transition-colors min-h-[44px]">
-            ← BACK
-          </button>
+        {/* MODULE HEADER */}
+        <div className="px-4 pt-4 sticky top-0 z-40 bg-matte-panel/95 backdrop-blur-sm">
+          <ModuleHeader 
+            title="STRATEGIC_DEBRIEF" 
+            mode="PRACTICE_MODE" 
+            id={activePersona?.name.toUpperCase()}
+            onBack={() => setView('chat')}
+            accentColor="blue"
+            statusLabel="SESSION_STATUS"
+            statusValue="ANALYSIS_COMPLETE"
+            statusColor="emerald"
+          />
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-matte-base">
+        <div className="flex-1 bg-matte-base">
           <div className="p-3 sm:p-5 lg:p-8">
             <div className="max-w-5xl mx-auto">
               {/* Hero Section - Headline + Action */}
@@ -728,49 +723,80 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
   // --- CHAT VIEW ---
   return (
-    <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel border border-zinc-800 flex flex-col relative shadow-2xl scrollbar-hide pb-24 md:pb-0">
+    <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel md:border border-zinc-800 flex flex-col relative shadow-2xl scrollbar-hide pb-24 md:pb-0 overflow-y-auto">
       <CornerNodes />
 
-      {/* CHAT HEADER - More compact */}
-      <div className="bg-zinc-900 px-3 py-2.5 sm:p-3 border-b border-zinc-800 flex justify-between items-center z-20 shrink-0">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-zinc-700 to-zinc-800 border border-zinc-600 flex items-center justify-center text-white font-bold text-sm sm:text-base font-impact">
-            {activePersona?.name.charAt(0)}
-          </div>
-          <div>
-            <h2 className="font-impact text-white text-xs sm:text-sm uppercase tracking-wider">{activePersona?.name}</h2>
-            <span className="text-xs text-zinc-500 font-mono">
-              {simHistory.length} msg{simHistory.length !== 1 ? 's' : ''}
-            </span>
-          </div>
-        </div>
-        <div className="flex gap-2 sm:gap-3 items-center">
-          {simHistory.length > 0 && (
-            <button onClick={handleEndSim} className="label-sm text-red-400 hover:text-red-300 border border-red-800/50 px-2 sm:px-3 py-1.5 bg-red-950/30 hover:bg-red-900/40 transition-colors min-h-[44px]">
-              END
-            </button>
-          )}
-          <button onClick={() => setView('setup')} className="label-sm text-zinc-500 hover:text-white transition-colors px-2 py-1.5 min-h-[44px]">
-            EXIT
-          </button>
-        </div>
+      {/* MODULE HEADER */}
+      <div className="px-4 pt-4 sticky top-0 z-40 bg-matte-panel/95 backdrop-blur-sm">
+        <ModuleHeader 
+          title={`CHAT_ENGAGEMENT: ${activePersona?.name.toUpperCase()}`} 
+          mode="PRACTICE_MODE" 
+          onBack={() => setView('setup')}
+          accentColor="blue"
+          statusLabel="ENCRYPTION"
+          statusValue="SECURE"
+          statusColor="emerald"
+        />
       </div>
 
       {/* CHAT AREA - 2 Column on Desktop */}
       <div className="flex-1 overflow-y-auto bg-matte-base custom-scrollbar relative scrollbar-hide">
         <div className="absolute inset-0 bg-scan-lines opacity-5 pointer-events-none"></div>
 
+        {/* GHOST RISK HUD - Real-time metrics */}
+        {(simHistory.length > 0 || chatLoading) && (
+          <div className="ghost-risk-hud sticky top-0 z-30 px-3 sm:px-6 py-3 glass-dark border-b border-zinc-800/50 backdrop-blur-md animate-slide-up flex justify-between items-center gap-4">
+            <div className="flex-1 space-y-1.5">
+              <div className="flex justify-between items-end">
+                <span className="label-sm text-zinc-500 uppercase tracking-widest">GHOST_RISK</span>
+                <span className={`text-[10px] font-mono font-bold ${
+                  (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 70 ? 'text-hard-red' : 
+                  (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 40 ? 'text-hard-gold' : 
+                  'text-emerald-400'
+                }`}>
+                  {chatLoading ? 'CALCULATING...' : `${simHistory[simHistory.length - 1]?.result.regretLevel || 0}%`}
+                </span>
+              </div>
+              <div className="risk-meter h-1 bg-zinc-800 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full transition-all duration-1000 ease-out ${
+                    (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 70 ? 'bg-hard-red shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 
+                    (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 40 ? 'bg-hard-gold' : 
+                    'bg-emerald-500'
+                  }`}
+                  style={{ width: `${chatLoading ? 100 : (simHistory[simHistory.length - 1]?.result.regretLevel || 0)}%` }}
+                ></div>
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-1.5 border-l border-zinc-800/50 pl-4">
+              <div className="flex justify-between items-end">
+                <span className="label-sm text-zinc-500 uppercase tracking-widest">VIBE_COEFFICIENT</span>
+                <span className="text-[10px] font-mono font-bold text-hard-blue">
+                  {chatLoading ? 'ANALYZING...' : '84%'}
+                </span>
+              </div>
+              <div className="vibe-meter h-1 bg-zinc-800 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-hard-blue transition-all duration-1000 ease-out"
+                  style={{ width: `${chatLoading ? 100 : 84}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="p-3 sm:p-5 lg:p-6 space-y-4 lg:space-y-6 relative z-10">
           {simHistory.length === 0 && !chatLoading && (
             <div className="h-[50vh] flex flex-col items-center justify-center text-center px-4">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-zinc-700 flex items-center justify-center mb-4 bg-zinc-900/50">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-zinc-700 flex items-center justify-center mb-4 bg-zinc-900/50 soft-edge">
                 <MessageSquare className="w-7 h-7 sm:w-8 sm:h-8 text-zinc-600" />
               </div>
               <p className="label-sm text-hard-blue mb-2">PRACTICE CONVERSATION</p>
-              <p className="text-zinc-400 text-xs sm:text-sm max-w-xs mb-1.5">
+              <p className="text-zinc-400 text-xs sm:text-sm max-w-xs mb-1.5 mono-accent">
                 Test how <span className="text-white font-semibold">{activePersona?.name || 'they'}</span> might respond to your messages
               </p>
-              <p className="text-zinc-600 text-xs font-mono">↓ type below and hit send ↓</p>
+              <p className="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.2em]">↓ input_signal_required ↓</p>
             </div>
           )}
 
@@ -782,12 +808,12 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                 <div className="space-y-4">
                   {/* USER MESSAGE */}
                   <div className="flex justify-end lg:justify-start">
-                    <div className="max-w-[90%] lg:max-w-full bg-white text-black px-5 py-4 text-sm font-medium leading-relaxed border border-zinc-200 shadow-[4px_4px_0px_rgba(0,0,0,0.4)] relative group">
-                      <div className="label-sm text-zinc-500 mb-2">YOU SENT</div>
-                      <p className="text-black">{entry.draft}</p>
+                    <div className="max-w-[90%] lg:max-w-full bg-white text-black px-5 py-4 text-sm font-medium leading-relaxed border border-zinc-200 soft-edge shadow-[4px_4px_20px_rgba(255,255,255,0.1)] relative group">
+                      <div className="label-sm text-zinc-500 mb-2">ORIGINAL_DRAFT</div>
+                      <p className="text-black font-sans">{entry.draft}</p>
                       <button
                         onClick={() => copyToClipboard(entry.draft)}
-                        className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-700 border border-zinc-300 min-w-[28px] min-h-[28px]"
+                        className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-700 border border-zinc-300 rounded-full min-w-[28px] min-h-[28px]"
                         title="Copy to clipboard"
                       >
                         {copiedText === entry.draft ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
@@ -798,15 +824,15 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                   {/* PREDICTED REPLY */}
                   <div className="flex justify-start">
                     <div className="flex items-start gap-3 max-w-[90%] lg:max-w-full group">
-                      <div className="w-9 h-9 bg-gradient-to-br from-zinc-700 to-zinc-800 flex-shrink-0 flex items-center justify-center text-sm text-white font-impact border border-zinc-600">
+                      <div className="w-9 h-9 bg-gradient-to-br from-zinc-700 to-zinc-800 flex-shrink-0 flex items-center justify-center text-sm text-white font-impact border border-zinc-600 rounded-full">
                         {activePersona?.name.charAt(0)}
                       </div>
-                      <div className="flex-1 bg-zinc-800/80 text-zinc-200 px-5 py-4 text-sm leading-relaxed border border-zinc-700 relative">
-                        <div className="label-sm text-zinc-500 mb-2">PREDICTED REPLY</div>
-                        <p>{entry.result.predictedReply}</p>
+                      <div className="flex-1 glass-dark text-zinc-200 px-5 py-4 text-sm leading-relaxed border border-zinc-700/50 relative soft-edge">
+                        <div className="label-sm text-zinc-500 mb-2">PREDICTED_RESPONSE</div>
+                        <p className="font-sans italic text-zinc-300">"{entry.result.predictedReply}"</p>
                         <button
                           onClick={() => copyToClipboard(entry.result.predictedReply || '')}
-                          className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 flex items-center justify-center bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 text-zinc-400 hover:text-white min-w-[28px] min-h-[28px]"
+                          className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 flex items-center justify-center bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 text-zinc-400 hover:text-white rounded-full min-w-[28px] min-h-[28px]"
                           title="Copy reply"
                         >
                           {copiedText === entry.result.predictedReply ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
@@ -817,21 +843,21 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                 </div>
 
                 {/* RIGHT: Analysis Panel */}
-                <div className="bg-zinc-900/80 border border-zinc-800 p-4 sm:p-5">
+                <div className="glass-dark border border-zinc-800/50 p-4 sm:p-5 soft-edge shadow-xl">
                   {/* Analysis Header */}
-                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-zinc-800">
-                    <span className="label-sm text-zinc-400">MESSAGE ANALYSIS</span>
-                    <div className={`px-3 py-1 border text-xs font-bold uppercase tracking-wider ${entry.result.regretLevel > 70 ? 'bg-red-950/50 border-red-800/50 text-red-400' :
+                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-zinc-800/50">
+                    <span className="label-sm text-zinc-400">LINGUISTIC_ANALYSIS</span>
+                    <div className={`px-3 py-1 border text-[10px] font-bold uppercase tracking-widest ${entry.result.regretLevel > 70 ? 'bg-red-950/50 border-red-800/50 text-red-400' :
                       entry.result.regretLevel > 40 ? 'bg-yellow-950/50 border-yellow-800/50 text-yellow-400' :
                         'bg-emerald-950/50 border-emerald-800/50 text-emerald-400'
                       }`}>
-                      {entry.result.regretLevel > 70 ? '⚠ HIGH RISK' : entry.result.regretLevel > 40 ? '◐ MODERATE' : '✓ LOW RISK'} • {entry.result.regretLevel}%
+                      {entry.result.regretLevel > 70 ? '⚠ HIGH_RISK' : entry.result.regretLevel > 40 ? '◐ MODERATE' : '✓ LOW_RISK'}
                     </div>
                   </div>
 
                   {/* Verdict */}
-                  <p className="text-sm text-zinc-300 mb-5 leading-relaxed">
-                    {entry.result.verdict}
+                  <p className="text-xs sm:text-sm text-zinc-400 mb-5 leading-relaxed font-mono italic uppercase">
+                    → {entry.result.verdict}
                   </p>
 
                   {/* Suggestions Grid - Clean 2x2 */}
@@ -840,30 +866,22 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                       <button
                         key={key}
                         onClick={() => copyToDraft(text as string)}
-                        className={`group relative p-3 border text-left transition-all hover:scale-[1.02] min-h-[60px] ${key === 'safe' ? 'border-zinc-700 hover:border-zinc-500 bg-zinc-800/30' :
+                        className={`group relative p-3 border text-left transition-all hover:scale-[1.02] min-h-[60px] soft-edge ${key === 'safe' ? 'border-zinc-700/50 hover:border-zinc-500 bg-zinc-800/30' :
                           key === 'bold' ? 'border-blue-900/50 hover:border-blue-700/70 bg-blue-950/20' :
                             key === 'spicy' ? 'border-red-900/50 hover:border-red-700/70 bg-red-950/20' :
                               'border-hard-gold/40 hover:border-hard-gold/70 bg-amber-950/20'
                           }`}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1 ${key === 'safe' ? 'text-zinc-400' :
+                          <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${key === 'safe' ? 'text-zinc-400' :
                             key === 'bold' ? 'text-blue-400' :
                               key === 'spicy' ? 'text-red-400' :
                                 'text-hard-gold'
                             }`}>
-                            {key === 'you' ? <><Sparkles className="w-3 h-3" /> YOUR STYLE</> : key}
+                            {key === 'you' ? <><Sparkles className="w-3 h-3" /> YOUR_STYLE</> : key}
                           </span>
-                          <span className="text-[10px] text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity">TAP TO USE</span>
                         </div>
                         <p className="text-xs text-zinc-300 leading-relaxed line-clamp-2">"{text as string}"</p>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); copyToClipboard(text as string); }}
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 flex items-center justify-center bg-zinc-700 hover:bg-zinc-600 text-[10px] min-w-[24px] min-h-[24px]"
-                          title="Copy"
-                        >
-                          {copiedText === text ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                        </button>
                       </button>
                     ))}
                   </div>
@@ -874,9 +892,9 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
               {
                 idx < simHistory.length - 1 && (
                   <div className="flex items-center gap-4 py-4">
-                    <div className="flex-1 h-px bg-zinc-800"></div>
-                    <span className="text-xs text-zinc-600 font-mono">EXCHANGE {idx + 2}</span>
-                    <div className="flex-1 h-px bg-zinc-800"></div>
+                    <div className="flex-1 h-px bg-zinc-800/50"></div>
+                    <span className="text-[10px] text-zinc-600 font-mono uppercase tracking-widest">End_Exchange_{idx + 1}</span>
+                    <div className="flex-1 h-px bg-zinc-800/50"></div>
                   </div>
                 )
               }
@@ -886,15 +904,15 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
           {/* Show pending message immediately */}
           {
             pendingMessage && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 animate-pulse">
                 <div className="flex justify-end lg:justify-start">
-                  <div className="max-w-[90%] lg:max-w-full bg-white text-black px-5 py-4 text-sm font-medium leading-relaxed border border-zinc-200 shadow-[4px_4px_0px_rgba(0,0,0,0.4)] opacity-70">
-                    <div className="label-sm text-zinc-500 mb-2">SENDING...</div>
+                  <div className="max-w-[90%] lg:max-w-full bg-white text-black px-5 py-4 text-sm font-medium leading-relaxed border border-zinc-200 soft-edge opacity-70">
+                    <div className="label-sm text-zinc-500 mb-2">UPLOADING_SIGNAL...</div>
                     <p>{pendingMessage}</p>
                   </div>
                 </div>
-                <div className="bg-zinc-900/50 border border-zinc-800 p-5 flex items-center justify-center">
-                  <span className="label-sm text-zinc-600 animate-pulse">ANALYZING...</span>
+                <div className="glass-dark border border-zinc-800/50 soft-edge p-5 flex items-center justify-center">
+                  <span className="label-sm text-zinc-600 animate-pulse mono-accent uppercase tracking-widest">Decoding_Response...</span>
                 </div>
               </div>
             )
@@ -903,8 +921,8 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
           {
             chatLoading && !pendingMessage && (
               <div className="flex justify-start">
-                <div className="bg-zinc-900 px-5 py-4 border border-zinc-800">
-                  <span className="label-sm text-hard-blue animate-pulse">AI IS THINKING...</span>
+                <div className="glass-dark px-5 py-4 border border-hard-blue/30 soft-edge">
+                  <span className="label-sm text-hard-blue animate-pulse mono-accent uppercase tracking-widest">AI_IS_THINKING...</span>
                 </div>
               </div>
             )
