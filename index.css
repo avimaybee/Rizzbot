@@ -149,6 +149,30 @@ button,
 }
 
 /* ========================================
+   GLASSMORPHIC UTILITIES
+   ======================================== */
+
+.glass {
+  @apply backdrop-blur-md border border-white/10 bg-white/5;
+}
+
+.glass-dark {
+  @apply backdrop-blur-lg border border-zinc-800/50 bg-black/40;
+}
+
+.glass-zinc {
+  @apply backdrop-blur-lg border border-zinc-800/80 bg-zinc-900/60;
+}
+
+.glass-blue {
+  @apply backdrop-blur-md border border-hard-blue/20 bg-hard-blue/5;
+}
+
+.glass-gold {
+  @apply backdrop-blur-md border border-hard-gold/20 bg-hard-gold/5;
+}
+
+/* ========================================
    SCROLLBAR HIDING
    ======================================== */
 

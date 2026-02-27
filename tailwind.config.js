@@ -23,7 +23,15 @@ export default {
                     base: '#050505',
                     panel: '#09090b',
                     border: '#27272a',
+                },
+                glass: {
+                    white: 'rgba(255, 255, 255, 0.05)',
+                    black: 'rgba(0, 0, 0, 0.5)',
+                    border: 'rgba(255, 255, 255, 0.1)',
                 }
+            },
+            backdropBlur: {
+                xs: '2px',
             },
             borderRadius: {
                 'organic': '2rem',
