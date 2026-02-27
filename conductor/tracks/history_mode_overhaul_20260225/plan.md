@@ -1,10 +1,10 @@
 # Implementation Plan: History Mode Overhaul
 
 ## Phase 1: Gallery & Cards
-- [ ] Task: Set up the visual gallery grid layout for the History view.
-- [ ] Task: Write tests for the redesigned History Card component.
-- [ ] Task: Implement the rich History Card with monospaced metrics and mode badges.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Gallery & Cards' (Protocol in workflow.md)
+- [x] Task: Set up the visual gallery grid layout for the History view. (c9bcb9d)
+- [x] Task: Write tests for the redesigned History Card component. (c9bcb9d)
+- [x] Task: Implement the rich History Card with monospaced metrics and mode badges. (c9bcb9d)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Gallery & Cards' (Protocol in workflow.md) (c9bcb9d)
 
 ## Phase 2: Search & Filter
 - [ ] Task: Write tests for the History filtering and search logic.

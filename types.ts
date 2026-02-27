@@ -46,6 +46,8 @@ export interface SimAnalysisResult {
 
 export type AppState = 'landing' | 'loading' | 'results' | 'error';
 
+export type Module = 'standby' | 'simulator' | 'quick' | 'profile' | 'history' | 'therapist';
+
 // ============================================
 // PHASE 1: Quick Advisor Types (MVP Wingman)
 // ============================================

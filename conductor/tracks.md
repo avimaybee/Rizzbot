@@ -4,11 +4,6 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [x] **Track: Quick Mode Mobile UI Overhaul**
-  *Link: [./tracks/quick_mode_mobile_ui_overhaul_20260225/](./tracks/quick_mode_mobile_ui_overhaul_20260225/)*
-
----
-
 - [ ] **Track: Therapist Mode Overhaul**
   *Link: [./tracks/therapist_mode_overhaul_20260225/](./tracks/therapist_mode_overhaul_20260225/)*
 
@@ -19,12 +14,12 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: History Mode Overhaul**
+- [~] **Track: History Mode Overhaul**
   *Link: [./tracks/history_mode_overhaul_20260225/](./tracks/history_mode_overhaul_20260225/)*
 
 ---
 
-- [ ] **Track: User Profile Overhaul**
+- [x] **Track: User Profile Overhaul**
   *Link: [./tracks/user_profile_overhaul_20260225/](./tracks/user_profile_overhaul_20260225/)*
 
 ---
@@ -36,3 +31,10 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [ ] **Track: Auth & System Overhaul**
   *Link: [./tracks/auth_system_overhaul_20260225/](./tracks/auth_system_overhaul_20260225/)*
+
+---
+
+## Archived Tracks
+
+- [x] **Track: Quick Mode Mobile UI Overhaul**
+  *Link: [./archives/quick_mode_mobile_ui_overhaul_20260225/](./archives/quick_mode_mobile_ui_overhaul_20260225/)*

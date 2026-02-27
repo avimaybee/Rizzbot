@@ -322,3 +322,27 @@ select {
 .font-courier {
   font-family: 'Courier Prime', 'Courier New', Courier, monospace;
 }
+
+/* ========================================
+   THERAPIST MODE - FLUID & ORGANIC LAYOUTS
+   ======================================== */
+
+.organic-panel {
+  @apply bg-matte-panel rounded-organic border border-matte-border/50 shadow-2xl;
+}
+
+.tactical-report {
+  @apply organic-panel p-6 sm:p-8 space-y-6 overflow-hidden relative;
+}
+
+.monospaced-accent {
+  @apply font-mono uppercase tracking-[0.2em] text-[10px] sm:text-xs font-bold text-zinc-500;
+}
+
+.tactical-label {
+  @apply monospaced-accent flex items-center gap-2 mb-2;
+}
+
+.soft-border {
+  @apply border border-matte-border/30;
+}

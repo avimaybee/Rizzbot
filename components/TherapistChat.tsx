@@ -5,6 +5,7 @@ import { saveTherapistSession, getTherapistSession, getTherapistSessions, Therap
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { TherapistMessage, ClinicalNotes, TherapistExercise, ExerciseType } from '../types';
+import { TherapistSidebar } from './TherapistSidebar';
 
 interface TherapistChatProps {
     onBack: () => void;
@@ -642,154 +643,29 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                         className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-fade-in"
                         onClick={() => setShowSessionDrawer(false)}
                     />
-                    <div className="md:hidden fixed top-0 left-0 bottom-0 w-full bg-zinc-900 z-50 border-r border-zinc-800 flex flex-col animate-slide-up">
-                        {/* Header */}
-                        <div className="h-14 flex items-center justify-between px-4 border-b border-zinc-800">
-                            <div className="flex items-center gap-2">
-                                <History className="w-4 h-4 text-zinc-500" />
-                                <span className="text-sm font-medium text-zinc-300">Sessions</span>
-                            </div>
-                            <button
-                                onClick={() => setShowSessionDrawer(false)}
-                                className="p-2 -mr-2 text-zinc-500 hover:text-white"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* New Session Button */}
-                        <div className="p-3">
-                            <button
-                                onClick={handleNewSession}
-                                className="w-full flex items-center justify-center gap-2 py-3.5 border border-dashed border-zinc-700 hover:border-rose-500/50 hover:bg-rose-500/5 text-zinc-400 hover:text-rose-400 transition-all rounded-xl group min-h-[48px]"
-                            >
-                                <Plus className="w-4 h-4" />
-                                <span className="text-sm font-medium">New Session</span>
-                            </button>
-                        </div>
-
-                        {/* Session List */}
-                        <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-1.5 scrollbar-hide">
-                            {sessions.length === 0 ? (
-                                <div className="text-center py-8">
-                                    <MessageCircle className="w-8 h-8 text-zinc-700 mx-auto mb-3" />
-                                    <p className="text-sm text-zinc-600">No sessions yet</p>
-                                </div>
-                            ) : (
-                                sessions.map((s, i) => (
-                                    <button
-                                        key={i}
-                                        onClick={() => handleLoadSession(s)}
-                                        className={`w-full text-left p-3.5 rounded-xl transition-all min-h-[56px] ${s.interaction_id === interactionId
-                                            ? 'bg-rose-500/10 border border-rose-500/30'
-                                            : 'bg-zinc-800/30 border border-transparent hover:bg-zinc-800/50'
-                                            }`}
-                                    >
-                                        <div className="flex items-center justify-between mb-1">
-                                            <span className={`text-xs font-mono ${s.interaction_id === interactionId ? 'text-rose-400' : 'text-zinc-500'
-                                                }`}>
-                                                {new Date(s.created_at || Date.now()).toLocaleDateString(undefined, {
-                                                    month: 'short',
-                                                    day: 'numeric'
-                                                })}
-                                            </span>
-                                            {s.interaction_id === interactionId && (
-                                                <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                                            )}
-                                        </div>
-                                        <p className="text-sm text-zinc-400 truncate">
-                                            {s.clinical_notes?.keyThemes?.[0] || 'Session notes'}
-                                        </p>
-                                    </button>
-                                ))
-                            )}
-                        </div>
-
-                        {/* Back Button */}
-                        <div className="p-3 border-t border-zinc-800 pb-safe">
-                            <button
-                                onClick={onBack}
-                                className="w-full flex items-center justify-center gap-2 py-3 text-sm text-zinc-500 hover:text-white transition-colors min-h-[48px]"
-                            >
-                                <ArrowLeft className="w-4 h-4" />
-                                <span>Back to Home</span>
-                            </button>
-                        </div>
+                    <div className="md:hidden fixed top-0 left-0 bottom-0 w-full z-50 animate-slide-up">
+                        <TherapistSidebar 
+                            sessions={sessions}
+                            currentInteractionId={interactionId}
+                            onNewSession={handleNewSession}
+                            onLoadSession={handleLoadSession}
+                            onBack={onBack}
+                            onClose={() => setShowSessionDrawer(false)}
+                            isMobile={true}
+                        />
                     </div>
                 </>
             )}
 
             {/* DESKTOP LEFT SIDEBAR: SESSION HISTORY */}
-            <div className="hidden md:flex flex-col w-72 border-r border-zinc-800 bg-zinc-950 z-30">
-                {/* Header */}
-                <div className="h-14 flex items-center justify-between px-4 border-b border-zinc-800">
-                    <div className="flex items-center gap-2">
-                        <History className="w-4 h-4 text-zinc-500" />
-                        <span className="text-sm font-medium text-zinc-400">Sessions</span>
-                    </div>
-                </div>
-
-                {/* New Session Button */}
-                <div className="p-3">
-                    <button
-                        onClick={handleNewSession}
-                        className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-zinc-700 hover:border-rose-500/50 hover:bg-rose-500/5 text-zinc-400 hover:text-rose-400 transition-all rounded-lg group"
-                    >
-                        <Plus className="w-4 h-4" />
-                        <span className="text-sm font-medium">New Session</span>
-                    </button>
-                </div>
-
-                {/* Session List */}
-                <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-1 scrollbar-hide">
-                    {sessions.length === 0 ? (
-                        <div className="text-center py-8">
-                            <MessageCircle className="w-8 h-8 text-zinc-700 mx-auto mb-3" />
-                            <p className="text-sm text-zinc-600">No sessions yet</p>
-                            <p className="text-xs text-zinc-700 mt-1">Start a conversation above</p>
-                        </div>
-                    ) : (
-                        sessions.map((s, i) => (
-                            <button
-                                key={i}
-                                onClick={() => handleLoadSession(s)}
-                                className={`w-full text-left p-3 rounded-lg transition-all group ${s.interaction_id === interactionId
-                                    ? 'bg-rose-500/10 border border-rose-500/30'
-                                    : 'hover:bg-zinc-800/50 border border-transparent'
-                                    }`}
-                            >
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className={`text-xs font-mono ${s.interaction_id === interactionId ? 'text-rose-400' : 'text-zinc-500'
-                                        }`}>
-                                        {new Date(s.created_at || Date.now()).toLocaleDateString(undefined, {
-                                            month: 'short',
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        })}
-                                    </span>
-                                    {s.interaction_id === interactionId && (
-                                        <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                                    )}
-                                </div>
-                                <p className="text-sm text-zinc-400 truncate group-hover:text-zinc-300">
-                                    {s.clinical_notes?.keyThemes?.[0] || 'Session notes'}
-                                </p>
-                            </button>
-                        ))
-                    )}
-                </div>
-
-                {/* Back Button */}
-                <div className="p-3 border-t border-zinc-800">
-                    <button
-                        onClick={onBack}
-                        className="w-full flex items-center justify-center gap-2 py-2.5 text-sm text-zinc-500 hover:text-white transition-colors"
-                    >
-                        <ArrowLeft className="w-4 h-4" />
-                        <span>Back to Home</span>
-                    </button>
-                </div>
+            <div className="hidden md:block w-72 h-full">
+                <TherapistSidebar 
+                    sessions={sessions}
+                    currentInteractionId={interactionId}
+                    onNewSession={handleNewSession}
+                    onLoadSession={handleLoadSession}
+                    onBack={onBack}
+                />
             </div>
 
             {/* MAIN CHAT AREA */}
