@@ -1,5 +1,5 @@
 import React from 'react';
-import { Zap, History, User, MessageSquare, Home, HeartHandshake } from 'lucide-react';
+import { Zap, History, User, MessageSquare, Home, HeartHandshake, LayoutDashboard, Target, Shield } from 'lucide-react';
 
 interface BottomTabBarProps {
   activeTab: string;
@@ -8,50 +8,54 @@ interface BottomTabBarProps {
 
 const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeTab, onTabChange }) => {
   const tabs = [
-    { id: 'standby', label: 'Home', icon: Home },
-    { id: 'quick', label: 'Quick', icon: Zap },
-    { id: 'simulator', label: 'Sim', icon: MessageSquare },
-    { id: 'therapist', label: 'Talk', icon: HeartHandshake },
-    { id: 'history', label: 'Log', icon: History },
-    { id: 'profile', label: 'You', icon: User },
+    { id: 'standby', label: 'SYS', icon: LayoutDashboard },
+    { id: 'quick', label: 'SCAN', icon: Zap },
+    { id: 'simulator', label: 'SIM', icon: Target },
+    { id: 'therapist', label: 'MED', icon: HeartHandshake },
+    { id: 'history', label: 'ARC', icon: Shield },
+    { id: 'profile', label: 'USR', icon: User },
   ];
 
+  const handleAction = (id: string) => {
+    if ('vibrate' in navigator) navigator.vibrate(5);
+    onTabChange(id);
+  };
+
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-2 pb-4 safe-area-inset-bottom pointer-events-none">
-      <div className="mx-auto max-w-[95%] bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 soft-edge shadow-[0_20px_50px_rgba(0,0,0,0.5)] pointer-events-auto">
-        <div className="flex justify-around items-center h-16 px-1">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 safe-area-inset-bottom pointer-events-none font-mono">
+      <div className="mx-auto max-w-lg glass-dark border-white/5 soft-edge shadow-[0_30px_100px_rgba(0,0,0,0.8)] pointer-events-auto overflow-hidden relative group">
+        <div className="absolute inset-0 bg-scan-lines opacity-[0.03] pointer-events-none"></div>
+        
+        <div className="flex justify-around items-center h-16 px-2 relative z-10">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => {
-                  if (window.navigator.vibrate) window.navigator.vibrate(8);
-                  onTabChange(tab.id);
-                }}
-                className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all duration-300 relative group ${
-                  isActive ? 'text-white' : 'text-zinc-500'
+                onClick={() => handleAction(tab.id)}
+                className={`flex flex-col items-center justify-center gap-1.5 flex-1 h-full transition-all duration-500 relative group/btn ${
+                  isActive ? 'text-white' : 'text-zinc-600'
                 }`}
                 aria-label={tab.label}
               >
                 {isActive && (
-                  <div className="absolute inset-0 bg-white/[0.03] animate-fade-in" />
+                  <div className="absolute inset-0 bg-white/[0.02] animate-fade-in" />
                 )}
                 
-                <div className={`relative flex items-center justify-center transition-transform duration-300 ${isActive ? 'scale-110 -translate-y-0.5' : 'group-active:scale-95'}`}>
+                <div className={`relative flex items-center justify-center transition-all duration-500 ${isActive ? 'scale-110 -translate-y-1 text-hard-gold' : 'group-hover/btn:text-zinc-400 group-active/btn:scale-90'}`}>
                   {isActive && (
-                    <div className="absolute inset-0 bg-white/20 blur-lg rounded-full animate-pulse-glow" />
+                    <div className="absolute inset-0 bg-hard-gold/20 blur-md rounded-full animate-pulse" />
                   )}
-                  <Icon size={isActive ? 22 : 18} strokeWidth={isActive ? 2.5 : 2} />
+                  <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
                 </div>
                 
-                <span className={`text-[9px] font-mono uppercase tracking-tighter transition-all duration-300 ${isActive ? 'opacity-100 font-bold' : 'opacity-40'}`}>
+                <span className={`text-[8px] font-bold uppercase tracking-[0.2em] transition-all duration-500 ${isActive ? 'opacity-100 text-white' : 'opacity-40'}`}>
                   {tab.label}
                 </span>
 
                 {isActive && (
-                  <div className="absolute bottom-1 w-1 h-1 bg-white rounded-full" />
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-hard-gold shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
                 )}
               </button>
             );

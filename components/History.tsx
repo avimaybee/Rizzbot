@@ -1,17 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, MessageSquare, Zap, ChevronRight, Trash2, AlertCircle, RefreshCw, Ghost, X, Image, ArrowLeft } from 'lucide-react';
+import { Clock, MessageSquare, Zap, ChevronRight, Trash2, AlertCircle, RefreshCw, Ghost, X, Image, ArrowLeft, Archive, Search, Filter, Shield } from 'lucide-react';
 import { getSessions, deleteSession, Session, SessionsResponse } from '../services/dbService';
 import { ModuleHeader } from './ModuleHeader';
-
-// Corner decorative nodes
-const CornerNodes = () => (
-  <>
-    <div className="absolute -top-px -left-px w-3 h-3 border-t-2 border-l-2 border-zinc-600"></div>
-    <div className="absolute -top-px -right-px w-3 h-3 border-t-2 border-r-2 border-zinc-600"></div>
-    <div className="absolute -bottom-px -left-px w-3 h-3 border-b-2 border-l-2 border-zinc-600"></div>
-    <div className="absolute -bottom-px -right-px w-3 h-3 border-b-2 border-r-2 border-zinc-600"></div>
-  </>
-);
+import { CornerNodes } from './CornerNodes';
 
 interface HistoryProps {
   firebaseUid?: string;
@@ -30,15 +21,21 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
   const analysis = parsedResult?.analysis;
   const theirMessage = parsedResult?.request?.theirMessage;
 
+  const handleAction = (action: () => void, vibration = 5) => {
+    if ('vibrate' in navigator) navigator.vibrate(vibration);
+    action();
+  };
+
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col font-mono select-none">
+      <div className="bg-matte-grain"></div>
       {/* MODULE HEADER - DETAIL */}
-      <div className="px-4 pt-4">
+      <div className="px-6 pt-8 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
         <ModuleHeader 
-          title={session.headline || session.persona_name || 'ARCHIVED_SESSION'} 
-          mode={session.mode === 'quick' ? 'QUICK_ARCHIVE' : 'PRACTICE_ARCHIVE'} 
-          id={session.id}
-          onBack={onBack}
+          title={session.headline || session.persona_name || 'ARCHIVED_DATA_NODE'} 
+          mode={session.mode === 'quick' ? 'SCAN_REPORT' : 'SIM_DEBRIEF'} 
+          id={session.id.toString().toUpperCase()}
+          onBack={() => handleAction(onBack)}
           accentColor={session.mode === 'quick' ? 'blue' : 'gold'}
           statusLabel="RECORD_STATUS"
           statusValue="READ_ONLY"
@@ -47,21 +44,22 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-10 scrollbar-hide relative z-10 custom-scrollbar">
         {/* Screenshots Section */}
         {screenshots.length > 0 && (
-          <div className="bg-zinc-900 border border-zinc-800 p-4 sm:p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Image className="w-4 h-4 text-zinc-400" />
-              <span className="label-sm text-zinc-400">UPLOADED SCREENSHOTS</span>
+          <div className="glass-dark border-white/5 p-6 md:p-8 soft-edge shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-hard-blue opacity-30"></div>
+            <div className="flex items-center gap-3 mb-6 px-1">
+              <Image className="w-4 h-4 text-zinc-500" />
+              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em]">Visual_Evidence_Buffer</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {screenshots.map((screenshot: string, idx: number) => (
-                <div key={idx} className="aspect-[9/16] bg-zinc-800 border border-zinc-700 overflow-hidden">
+                <div key={idx} className="aspect-[9/16] glass-zinc border-white/5 overflow-hidden soft-edge group shadow-lg">
                   <img
                     src={screenshot.startsWith('data:') ? screenshot : `data:image/png;base64,${screenshot}`}
-                    alt={`Screenshot ${idx + 1}`}
-                    className="w-full h-full object-cover"
+                    alt=""
+                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                   />
                 </div>
               ))}
@@ -69,130 +67,142 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
           </div>
         )}
 
-        {/* Their Message (for Quick Mode) */}
+        {/* Their Message */}
         {theirMessage && (
-          <div className="bg-zinc-900 border border-zinc-800 p-4 sm:p-6">
-            <div className="label-sm text-zinc-400 mb-3">THEIR MESSAGE</div>
-            <p className="text-white bg-zinc-800 p-4 rounded-lg border border-zinc-700">{theirMessage}</p>
+          <div className="glass-dark border-white/5 p-6 md:p-8 soft-edge shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-zinc-700 opacity-30"></div>
+            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em] mb-4 px-1">Incoming_Transmission</div>
+            <div className="bg-white text-black p-6 soft-edge font-bold text-sm uppercase tracking-tight shadow-inner">
+               "{theirMessage}"
+            </div>
           </div>
         )}
 
         {/* Vibe Check Analysis */}
         {vibeCheck && (
-          <div className="bg-zinc-900 border border-zinc-800 p-4 sm:p-6">
-            <div className="label-sm text-zinc-400 mb-4">VIBE CHECK ANALYSIS</div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-              <div className="text-center p-3 bg-zinc-800 border border-zinc-700">
-                <div className="text-xs text-zinc-500 mb-1">ENERGY</div>
-                <div className="text-white font-bold uppercase">{vibeCheck.theirEnergy || 'N/A'}</div>
+          <div className="glass-dark border-white/5 p-6 md:p-8 soft-edge shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-hard-blue opacity-30"></div>
+            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em] mb-8 px-1">Linguistic_Deconstruction</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-8">
+              <div className="p-5 glass-zinc border-white/5 soft-edge text-center shadow-lg">
+                <div className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest mb-2">ENERGY_LEVEL</div>
+                <div className="text-white font-impact text-xl tracking-wider">{vibeCheck.theirEnergy || 'UNKNOWN'}</div>
               </div>
-              <div className="text-center p-3 bg-zinc-800 border border-zinc-700">
-                <div className="text-xs text-zinc-500 mb-1">INTEREST</div>
-                <div className="text-white font-bold">{vibeCheck.interestLevel ?? 'N/A'}%</div>
+              <div className="p-5 glass-zinc border-white/5 soft-edge text-center shadow-lg">
+                <div className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest mb-2">INTEREST_COEFF</div>
+                <div className="text-hard-blue font-impact text-xl tracking-wider">{vibeCheck.interestLevel ?? '0'}%</div>
               </div>
             </div>
-            {vibeCheck.greenFlags?.length > 0 && (
-              <div className="mb-3">
-                <div className="text-xs text-emerald-400 mb-2">GREEN FLAGS</div>
-                <div className="flex flex-wrap gap-2">
-                  {vibeCheck.greenFlags.map((flag: string, i: number) => (
-                    <span key={i} className="px-2 py-1 bg-emerald-950/30 border border-emerald-800/50 text-emerald-400 text-xs">{flag}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-            {vibeCheck.redFlags?.length > 0 && (
-              <div>
-                <div className="text-xs text-red-400 mb-2">RED FLAGS</div>
-                <div className="flex flex-wrap gap-2">
-                  {vibeCheck.redFlags.map((flag: string, i: number) => (
-                    <span key={i} className="px-2 py-1 bg-red-950/30 border border-red-800/50 text-red-400 text-xs">{flag}</span>
-                  ))}
-                </div>
-              </div>
-            )}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               {vibeCheck.greenFlags?.length > 0 && (
+                 <div className="space-y-4">
+                   <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest px-1">POS_MARKERS [+]</div>
+                   <div className="flex flex-wrap gap-2">
+                     {vibeCheck.greenFlags.map((flag: string, i: number) => (
+                       <span key={i} className="px-3 py-1.5 glass-zinc border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider soft-edge">{flag}</span>
+                     ))}
+                   </div>
+                 </div>
+               )}
+               {vibeCheck.redFlags?.length > 0 && (
+                 <div className="space-y-4">
+                   <div className="text-[10px] font-bold text-hard-red uppercase tracking-widest px-1">NEG_MARKERS [-]</div>
+                   <div className="flex flex-wrap gap-2">
+                     {vibeCheck.redFlags.map((flag: string, i: number) => (
+                       <span key={i} className="px-3 py-1.5 glass-zinc border-hard-red/20 text-hard-red text-[10px] font-bold uppercase tracking-wider soft-edge">{flag}</span>
+                     ))}
+                   </div>
+                 </div>
+               )}
+            </div>
           </div>
         )}
 
         {/* Suggestions */}
         {suggestions && (
-          <div className="bg-zinc-900 border border-zinc-800 p-4 sm:p-6">
-            <div className="label-sm text-zinc-400 mb-4">SUGGESTED REPLIES</div>
-            <div className="space-y-3">
-              {suggestions.smooth && (
-                <div className="p-3 bg-zinc-800 border border-zinc-700">
-                  <div className="text-xs text-zinc-500 mb-1">SMOOTH</div>
-                  <p className="text-white text-sm">{Array.isArray(suggestions.smooth) ? suggestions.smooth[0] : suggestions.smooth}</p>
-                </div>
-              )}
-              {suggestions.bold && (
-                <div className="p-3 bg-zinc-800 border border-hard-blue/30">
-                  <div className="text-xs text-hard-blue mb-1">BOLD</div>
-                  <p className="text-white text-sm">{Array.isArray(suggestions.bold) ? suggestions.bold[0] : suggestions.bold}</p>
-                </div>
-              )}
-              {suggestions.authentic && (
-                <div className="p-3 bg-zinc-800 border border-hard-gold/30">
-                  <div className="text-xs text-hard-gold mb-1">YOUR STYLE</div>
-                  <p className="text-white text-sm">{Array.isArray(suggestions.authentic) ? suggestions.authentic[0] : suggestions.authentic}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Practice Mode Conversation History */}
-        {history.length > 0 && (
-          <div className="bg-zinc-900 border border-zinc-800 p-4 sm:p-6">
-            <div className="label-sm text-zinc-400 mb-4">CONVERSATION HISTORY</div>
-            <div className="space-y-4">
-              {history.map((turn: any, idx: number) => (
-                <div key={idx} className="space-y-2">
-                  <div className="flex justify-end">
-                    <div className="bg-hard-gold/20 border border-hard-gold/30 p-3 max-w-[80%]">
-                      <div className="text-xs text-hard-gold mb-1">YOU SENT</div>
-                      <p className="text-white text-sm">{turn.draft}</p>
-                    </div>
-                  </div>
-                  <div className="flex justify-start">
-                    <div className="bg-zinc-800 border border-zinc-700 p-3 max-w-[80%]">
-                      <div className="text-xs text-zinc-500 mb-1">PREDICTED REPLY</div>
-                      <p className="text-white text-sm">{turn.result?.predictedReply}</p>
-                    </div>
-                  </div>
+          <div className="glass-dark border-white/5 p-6 md:p-8 soft-edge shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-hard-gold opacity-30"></div>
+            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em] mb-8 px-1">Tactical_Options_Archive</div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { label: 'SAFE_PATH', color: 'text-zinc-400', border: 'border-white/10', content: suggestions.smooth },
+                { label: 'BOLD_DIRECTIVE', color: 'text-hard-blue', border: 'border-hard-blue/20', content: suggestions.bold },
+                { label: 'AUTO_PROFILE', color: 'text-hard-gold', border: 'border-hard-gold/20', content: suggestions.authentic }
+              ].filter(s => s.content).map((s, i) => (
+                <div key={i} className={`p-6 glass-zinc border ${s.border} soft-edge shadow-lg group`}>
+                  <div className={`text-[9px] font-bold ${s.color} uppercase tracking-widest mb-4 border-b border-white/5 pb-2`}>{s.label}</div>
+                  <p className="text-xs font-bold text-white leading-relaxed uppercase tracking-tight italic">
+                    "{Array.isArray(s.content) ? s.content[0] : s.content}"
+                  </p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Session Analysis (Practice Mode) */}
-        {analysis && (
-          <div className="bg-zinc-900 border border-zinc-800 p-4 sm:p-6">
-            <div className="label-sm text-zinc-400 mb-4">SESSION ANALYSIS</div>
-            <div className="grid grid-cols-3 gap-4 mb-4">
-              <div className="text-center p-3 bg-zinc-800 border border-zinc-700">
-                <div className="text-xs text-zinc-500 mb-1">GHOST RISK</div>
-                <div className={`font-bold text-lg ${analysis.ghostRisk > 70 ? 'text-red-400' : analysis.ghostRisk > 40 ? 'text-yellow-400' : 'text-emerald-400'}`}>
-                  {analysis.ghostRisk}%
+        {/* History / Simulation Logs */}
+        {history.length > 0 && (
+          <div className="glass-dark border-white/5 p-6 md:p-8 soft-edge shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-hard-blue opacity-30"></div>
+            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em] mb-8 px-1">Simulation_Interaction_Logs</div>
+            <div className="space-y-10">
+              {history.map((turn: any, idx: number) => (
+                <div key={idx} className="space-y-6">
+                  <div className="flex flex-col items-end">
+                    <div className="max-w-[90%] bg-white text-black p-5 soft-edge shadow-xl font-bold uppercase tracking-tight text-xs">
+                      <div className="text-[8px] font-bold text-zinc-400 mb-2 border-b border-black/5 pb-1">UPLINK_ORIGIN</div>
+                      {turn.draft}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <div className="max-w-[90%] glass-zinc border-white/5 p-5 soft-edge shadow-xl font-bold uppercase tracking-tight text-xs italic text-zinc-300">
+                      <div className="text-[8px] font-bold text-zinc-600 mb-2 border-b border-white/5 pb-1">PREDICTED_ECHO</div>
+                      {turn.result?.predictedReply}
+                    </div>
+                  </div>
+                  {idx < history.length - 1 && <div className="h-px w-full bg-zinc-900 mx-auto"></div>}
                 </div>
-              </div>
-              <div className="text-center p-3 bg-zinc-800 border border-zinc-700">
-                <div className="text-xs text-zinc-500 mb-1">VIBE MATCH</div>
-                <div className="text-white font-bold text-lg">{analysis.vibeMatch}%</div>
-              </div>
-              <div className="text-center p-3 bg-zinc-800 border border-zinc-700">
-                <div className="text-xs text-zinc-500 mb-1">EFFORT</div>
-                <div className="text-white font-bold text-lg">{analysis.effortBalance}%</div>
-              </div>
+              ))}
             </div>
+          </div>
+        )}
+
+        {/* Session Analysis */}
+        {analysis && (
+          <div className="glass-dark border-white/5 p-6 md:p-8 soft-edge shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-hard-red opacity-30"></div>
+            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em] mb-10 px-1">Final_Operational_Metrics</div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+              {[
+                { label: 'GHOST_RISK', value: analysis.ghostRisk, color: analysis.ghostRisk > 70 ? 'text-hard-red' : analysis.ghostRisk > 40 ? 'text-hard-gold' : 'text-emerald-400' },
+                { label: 'VIBE_COEFF', value: analysis.vibeMatch, color: 'text-hard-blue' },
+                { label: 'EFFORT_EQUIL', value: analysis.effortBalance, color: 'text-hard-gold' }
+              ].map((m, i) => (
+                <div key={i} className="p-6 glass-zinc border-white/5 soft-edge text-center shadow-lg">
+                  <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-4">{m.label}</div>
+                  <div className={`font-impact text-5xl ${m.color} tracking-tighter`}>{m.value}%</div>
+                </div>
+              ))}
+            </div>
+
             {analysis.headline && (
-              <p className="text-white bg-zinc-800 p-4 border border-zinc-700 mb-4">{analysis.headline}</p>
+              <div className="bg-black/40 border border-white/5 p-8 mb-8 soft-edge relative overflow-hidden text-center group">
+                 <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none"></div>
+                 <h4 className="font-impact text-2xl md:text-4xl text-white uppercase tracking-tighter leading-none group-hover:scale-105 transition-transform duration-700">
+                   {analysis.headline}
+                 </h4>
+              </div>
             )}
+
             {analysis.insights?.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-4 px-2">
                 {analysis.insights.map((insight: string, i: number) => (
-                  <p key={i} className="text-sm text-zinc-400">• {insight}</p>
+                  <div key={i} className="flex items-start gap-4 group">
+                    <div className="w-1.5 h-1.5 rounded-full bg-hard-gold mt-1.5 animate-pulse"></div>
+                    <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest group-hover:text-white transition-colors">{insight}</p>
+                  </div>
                 ))}
               </div>
             )}
@@ -232,7 +242,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
       });
     } catch (err) {
       console.error('Failed to fetch sessions:', err);
-      setError('Failed to load history. Try again later.');
+      setError('DATA_NODE_FETCH_FAILURE: ACCESS_DENIED');
     } finally {
       setLoading(false);
     }
@@ -242,11 +252,16 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
     fetchSessions(0);
   }, [firebaseUid]);
 
+  const handleAction = (action: () => void, vibration = 5) => {
+    if ('vibrate' in navigator) navigator.vibrate(vibration);
+    action();
+  };
+
   const handleDelete = async (sessionId: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('Delete this session?')) return;
+    if (!confirm('TERMINATE_DATA_RECORD? This action is non-recoverable.')) return;
 
-    setDeletingId(sessionId);
+    handleAction(() => setDeletingId(sessionId), 20);
     try {
       await deleteSession(sessionId);
       setSessions(prev => prev.filter(s => s.id !== sessionId));
@@ -265,34 +280,22 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
     const diffHours = diffMs / (1000 * 60 * 60);
     const diffDays = diffMs / (1000 * 60 * 60 * 24);
 
-    if (diffHours < 1) return 'Just now';
-    if (diffHours < 24) return `${Math.floor(diffHours)}h ago`;
-    if (diffDays < 7) return `${Math.floor(diffDays)}d ago`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  const getRiskColor = (risk: number | undefined) => {
-    if (!risk) return 'text-zinc-500';
-    if (risk > 70) return 'text-red-400';
-    if (risk > 40) return 'text-yellow-400';
-    return 'text-emerald-400';
-  };
-
-  const getRiskBg = (risk: number | undefined) => {
-    if (!risk) return 'bg-zinc-800/50';
-    if (risk > 70) return 'bg-red-950/30';
-    if (risk > 40) return 'bg-yellow-950/30';
-    return 'bg-emerald-950/30';
+    if (diffHours < 1) return 'JUST_NOW';
+    if (diffHours < 24) return `${Math.floor(diffHours)}H_AGO`;
+    if (diffDays < 7) return `${Math.floor(diffDays)}D_AGO`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase().replace(' ', '_');
   };
 
   if (!firebaseUid) {
     return (
-      <div className="w-full h-full max-w-4xl mx-auto bg-matte-panel md:border md:border-zinc-800 flex flex-col relative">
-        <div className="flex-1 flex items-center justify-center p-8 text-center">
-          <div>
-            <Ghost className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
-            <h3 className="font-impact text-xl text-white mb-2">SIGN IN TO VIEW HISTORY</h3>
-            <p className="text-sm text-zinc-500">Your past sessions will appear here once you're logged in</p>
+      <div className="w-full h-full flex flex-col bg-matte-base relative font-mono overflow-hidden">
+        <div className="bg-matte-grain"></div>
+        <div className="flex-1 flex items-center justify-center p-8 text-center relative z-10">
+          <div className="glass-dark border-white/5 p-12 soft-edge shadow-2xl relative">
+            <CornerNodes className="opacity-20" />
+            <Shield className="w-20 h-20 text-zinc-800 mx-auto mb-8 animate-pulse" />
+            <h3 className="font-impact text-3xl text-white mb-4 uppercase tracking-tighter">Identity_Verification_Required</h3>
+            <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.3em]">Access restricted to authorized operators.</p>
           </div>
         </div>
       </div>
@@ -302,87 +305,90 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
   // Show session detail view if a session is selected
   if (selectedSession) {
     return (
-      <div className="w-full h-full max-w-5xl mx-auto bg-matte-panel md:border md:border-zinc-800 flex flex-col relative pb-20 md:pb-0">
-        <SessionDetail session={selectedSession} onBack={() => setSelectedSession(null)} />
+      <div className="w-full h-full flex flex-col relative pb-20 md:pb-0 bg-matte-base overflow-hidden">
+        <SessionDetail session={selectedSession} onBack={() => handleAction(() => setSelectedSession(null))} />
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full max-w-5xl mx-auto bg-matte-panel md:border md:border-zinc-800 flex flex-col relative pb-16 md:pb-0 overflow-y-auto">
+    <div className="w-full h-full flex flex-col relative pb-16 md:pb-0 overflow-hidden bg-matte-base font-mono select-none">
+      <div className="bg-matte-grain"></div>
+      <CornerNodes className="opacity-[0.02]" />
+
       {/* MODULE HEADER - LIST */}
-      <div className="px-4 pt-4 sticky top-0 z-40 bg-matte-panel/95 backdrop-blur-sm">
+      <div className="px-6 pt-8 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
         <ModuleHeader 
-          title="CENTRAL_HISTORY_LOG" 
-          mode="ARCHIVE_MODE" 
-          onBack={onBack || (() => {})}
+          title="CENTRAL_DATA_ARCHIVE" 
+          mode="QUERY_MODE" 
+          onBack={() => handleAction(onBack || (() => {}))}
           accentColor="gold"
-          statusLabel="TOTAL_RECORDS"
-          statusValue={`${pagination.total} SESSIONS`}
+          statusLabel="NODE_COUNT"
+          statusValue={`${pagination.total} RECORDS`}
           statusColor="gold"
         />
       </div>
 
       {/* SEARCH & FILTERS */}
-      <div className="border-b border-zinc-800 p-4 space-y-4 shrink-0 bg-matte-panel">
+      <div className="px-6 py-6 space-y-6 shrink-0 relative z-10 border-b border-white/5 bg-black/20">
         <div className="relative group">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            <div className="w-1.5 h-1.5 bg-zinc-600 group-focus-within:bg-hard-gold animate-pulse"></div>
+          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+            <Search className="w-3.5 h-3.5 text-zinc-700 group-focus-within:text-hard-gold transition-colors" />
           </div>
           <input
             type="text"
-            placeholder="SEARCH_LOGS..."
+            placeholder="ARCHIVE_SEARCH_QUERY..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-matte-base border border-zinc-800 py-2.5 pl-8 pr-4 text-xs font-mono uppercase tracking-widest text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
+            className="w-full glass-zinc border-white/5 py-4 pl-12 pr-6 text-[11px] font-bold uppercase tracking-widest text-white placeholder:text-zinc-800 focus:outline-none focus:border-white/10 transition-all soft-edge shadow-xl"
           />
         </div>
         
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           {(['all', 'quick', 'simulator'] as const).map((filter) => (
             <button
               key={filter}
-              onClick={() => setActiveFilter(filter)}
-              className={`px-3 py-1.5 text-[10px] font-mono border transition-all ${
+              onClick={() => handleAction(() => setActiveFilter(filter), 2)}
+              className={`px-5 py-2 text-[9px] font-bold uppercase tracking-[0.2em] border transition-all soft-edge shadow-lg ${
                 activeFilter === filter
-                ? 'border-hard-gold/50 bg-hard-gold/10 text-hard-gold'
-                : 'border-zinc-800 bg-matte-base text-zinc-500 hover:border-zinc-600 hover:text-zinc-300'
+                ? 'border-hard-gold/30 bg-hard-gold/10 text-white'
+                : 'glass-zinc border-white/5 text-zinc-600 hover:text-zinc-400 hover:border-white/10'
               }`}
             >
-              {filter.toUpperCase()}
+              {filter}
             </button>
           ))}
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto bg-matte-base">
+      <div className="flex-1 overflow-y-auto bg-transparent relative z-10 custom-scrollbar p-6 md:p-10">
         {error && (
-          <div className="m-3 p-3 bg-red-950/30 border border-red-800/50 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-            <span className="text-xs text-red-400">{error}</span>
+          <div className="mb-8 p-5 glass-red border-hard-red/20 flex items-center gap-4 soft-edge animate-shake">
+            <AlertCircle className="w-5 h-5 text-hard-red flex-shrink-0" />
+            <span className="text-[10px] font-bold text-hard-red uppercase tracking-widest">{error}</span>
           </div>
         )}
 
         {loading && sessions.length === 0 ? (
-          <div className="flex items-center justify-center p-12">
-            <div className="text-center">
-              <RefreshCw className="w-8 h-8 text-zinc-600 mx-auto mb-3 animate-spin" />
-              <p className="text-sm text-zinc-500">Loading your sessions...</p>
+          <div className="flex items-center justify-center p-20">
+            <div className="text-center space-y-6">
+              <RefreshCw className="w-12 h-12 text-zinc-800 mx-auto animate-spin" />
+              <p className="text-[10px] font-bold text-zinc-700 uppercase tracking-[0.4em] animate-pulse">Syncing_Records...</p>
             </div>
           </div>
         ) : sessions.length === 0 ? (
-          <div className="flex items-center justify-center p-12">
-            <div className="text-center">
-              <MessageSquare className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
-              <h3 className="font-impact text-lg text-white mb-2">NO SESSIONS YET</h3>
-              <p className="text-sm text-zinc-500 max-w-xs">
-                Start a conversation in Quick Mode or Practice Mode to see your history here
-              </p>
+          <div className="flex items-center justify-center p-20 opacity-30">
+            <div className="text-center space-y-8">
+              <Archive className="w-20 h-20 text-zinc-800 mx-auto" />
+              <div className="space-y-2">
+                 <h3 className="font-impact text-2xl text-white uppercase tracking-tighter">Archive_Empty</h3>
+                 <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.2em]">No interaction nodes detected in central database.</p>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
             {sessions
               .filter(s => {
                 const matchesFilter = activeFilter === 'all' || s.mode === activeFilter;
@@ -395,7 +401,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
               .map((session) => {
                 const parsedResult = session.parsedResult;
 
-              const headline = session.headline || parsedResult?.headline || parsedResult?.vibeCheck?.theirEnergy || 'Session';
+              const headline = session.headline || parsedResult?.headline || parsedResult?.vibeCheck?.theirEnergy || 'NODE_DATA';
               const ghostRisk = session.ghost_risk || parsedResult?.ghostRisk || parsedResult?.vibeCheck?.interestLevel;
               const messageCount = session.message_count || parsedResult?.history?.length || 0;
               const screenshots = parsedResult?.request?.screenshots || parsedResult?.screenshots || [];
@@ -403,80 +409,83 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
               return (
                 <div
                   key={session.id}
-                  onClick={() => {
+                  onClick={() => handleAction(() => {
                     setSelectedSession(session);
                     onSelectSession?.(session);
-                  }}
-                  className={`group relative border border-zinc-800 hover:border-zinc-700 transition-all cursor-pointer flex flex-col h-full bg-matte-panel overflow-hidden`}
+                  }, 10)}
+                  className={`group relative glass-dark border-white/5 hover:border-white/10 transition-all cursor-pointer flex flex-col h-full soft-edge shadow-2xl overflow-hidden active:scale-[0.98]`}
                 >
                   {/* Visual Preview */}
-                  <div className="aspect-[16/9] bg-zinc-900 overflow-hidden relative border-b border-zinc-800">
+                  <div className="aspect-[16/9] bg-black overflow-hidden relative border-b border-white/5">
                     {screenshots.length > 0 ? (
                       <img
                         src={screenshots[0].startsWith('data:') ? screenshots[0] : `data:image/png;base64,${screenshots[0]}`}
-                        alt="Preview"
-                        className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity grayscale group-hover:grayscale-0"
+                        alt=""
+                        className="w-full h-full object-cover opacity-40 group-hover:opacity-70 transition-all duration-700 grayscale group-hover:grayscale-0 scale-100 group-hover:scale-110"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center opacity-20">
+                      <div className="w-full h-full flex items-center justify-center opacity-[0.05] group-hover:opacity-[0.1] transition-opacity">
                         {session.mode === 'quick' ? (
-                          <Zap className="w-12 h-12 text-hard-blue" />
+                          <Zap className="w-16 h-16 text-white" />
                         ) : (
-                          <MessageSquare className="w-12 h-12 text-hard-gold" />
+                          <MessageSquare className="w-16 h-16 text-white" />
                         )}
                       </div>
                     )}
                     
                     {/* Status Overlays */}
-                    <div className="absolute top-3 left-3 flex gap-2">
-                      <div className={`px-2 py-0.5 text-[10px] font-mono border ${
+                    <div className="absolute top-4 left-4">
+                      <div className={`px-2.5 py-1 text-[8px] font-bold border soft-edge shadow-lg ${
                         session.mode === 'quick' 
-                        ? 'border-hard-blue/50 bg-hard-blue/10 text-hard-blue' 
-                        : 'border-hard-gold/50 bg-hard-gold/10 text-hard-gold'
+                        ? 'glass-blue border-hard-blue/30 text-hard-blue' 
+                        : 'glass-gold border-hard-gold/30 text-hard-gold'
                       }`}>
-                        {session.mode === 'quick' ? 'QUICK_MODE' : 'PRACTICE'}
+                        {session.mode === 'quick' ? 'SCAN_LOG' : 'SIM_DATA'}
                       </div>
                     </div>
                     
                     {ghostRisk !== undefined && (
-                      <div className={`absolute top-3 right-3 px-2 py-0.5 text-[10px] font-mono border ${
-                        ghostRisk > 70 ? 'border-red-500/50 bg-red-500/10 text-red-400' :
-                        ghostRisk > 40 ? 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400' :
-                        'border-emerald-500/50 bg-emerald-500/10 text-emerald-400'
+                      <div className={`absolute top-4 right-4 px-2.5 py-1 text-[8px] font-bold border soft-edge shadow-lg ${
+                        ghostRisk > 70 ? 'glass-red border-hard-red/30 text-hard-red' :
+                        ghostRisk > 40 ? 'glass-gold border-hard-gold/30 text-hard-gold' :
+                        'glass-zinc border-white/10 text-emerald-400'
                       }`}>
                         RISK_{ghostRisk}%
                       </div>
                     )}
+                    
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none"></div>
                   </div>
 
                   {/* Content */}
-                  <div className="p-4 flex flex-col flex-1">
-                    <h3 className="font-impact text-lg text-white uppercase tracking-wide mb-2 line-clamp-1">
+                  <div className="p-6 flex flex-col flex-1 relative">
+                    <h3 className="font-impact text-xl text-white uppercase tracking-wider mb-2 line-clamp-1 group-hover:text-hard-gold transition-colors">
                       {headline}
                     </h3>
                     
-                    <div className="flex-1">
+                    <div className="flex-1 mt-2">
                       {session.persona_name && (
-                        <div className="text-[10px] font-mono text-zinc-500 mb-2 uppercase">
-                          PARTNER: {session.persona_name}
+                        <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-[0.2em] flex items-center gap-2">
+                          <Target className="w-3 h-3 text-zinc-700" />
+                          <span>Target: {session.persona_name}</span>
                         </div>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-zinc-800/50">
-                      <div className="text-[10px] font-mono text-zinc-600 uppercase">
+                    <div className="flex items-center justify-between mt-8 pt-5 border-t border-white/5">
+                      <div className="text-[9px] font-bold text-zinc-700 uppercase tracking-widest">
                         {formatDate(session.created_at)}
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-4">
                         {messageCount > 0 && (
-                          <div className="text-[10px] font-mono text-zinc-500 uppercase">
+                          <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest bg-zinc-900 px-2 py-0.5 rounded border border-white/5">
                             {messageCount} MSG
                           </div>
                         )}
                         <button
                           onClick={(e) => handleDelete(session.id, e)}
                           disabled={deletingId === session.id}
-                          className="text-zinc-600 hover:text-red-400 transition-colors"
+                          className="text-zinc-700 hover:text-hard-red transition-all p-1.5 glass-zinc rounded-full border-white/5 shadow-lg active:scale-90"
                           title="Delete session"
                         >
                           {deletingId === session.id ? (
@@ -494,20 +503,25 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
 
             {/* Load More */}
             {pagination.hasMore && (
-              <button
-                onClick={() => fetchSessions(pagination.offset)}
-                disabled={loading}
-                className="w-full py-4 border border-zinc-800 hover:border-zinc-700 text-sm text-zinc-400 hover:text-white transition-colors flex items-center justify-center gap-2 min-h-[44px]"
-              >
-                {loading ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    Loading...
-                  </>
-                ) : (
-                  <>Load More Sessions</>
-                )}
-              </button>
+              <div className="col-span-full pt-10 pb-20 flex justify-center">
+                <button
+                  onClick={() => handleAction(() => fetchSessions(pagination.offset), 10)}
+                  disabled={loading}
+                  className="px-12 py-4 glass-dark border-white/5 hover:border-white/10 text-[10px] font-bold text-zinc-500 hover:text-white transition-all soft-edge shadow-2xl active:scale-[0.98] min-w-[240px] group"
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-3">
+                      <RefreshCw className="w-4 h-4 animate-spin text-hard-gold" />
+                      <span>SYNCING_NEXT_PAGE...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center gap-3">
+                       <ChevronRight className="w-4 h-4 text-zinc-700 group-hover:translate-x-1 transition-transform" />
+                       <span>FETCH_EXTENDED_LOGS</span>
+                    </div>
+                  )}
+                </button>
+              </div>
             )}
           </div>
         )}

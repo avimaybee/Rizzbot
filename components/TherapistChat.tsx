@@ -110,7 +110,7 @@ const ExerciseCard: React.FC<{
         if (exercise.type === 'boundary_builder') result = { boundaries: boundaryInputs.filter(b => b.trim()) };
         else if (exercise.type === 'needs_assessment') result = needsValues;
         else result = {};
-        if ('vibrate' in navigator) navigator.vibrate([20, 50, 20]);
+        logger.triggerHaptic('success');
         onComplete(result);
     };
 
@@ -251,8 +251,8 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, streamingContent]);
 
-    const handleAction = (action: () => void, vibration = 5) => {
-        if ('vibrate' in navigator) navigator.vibrate(vibration);
+    const handleAction = (action: () => void, vibration: any = 'light') => {
+        logger.triggerHaptic(vibration);
         action();
     };
 
@@ -344,7 +344,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                 memories
             );
 
-            if ('vibrate' in navigator) navigator.vibrate(15);
+            logger.triggerHaptic('medium');
             const extractedPrompts = extractSuggestedPrompts(fullResponse);
             setSuggestedPrompts(extractedPrompts);
 
@@ -362,7 +362,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
             setInteractionId(newId || interactionId);
         } catch (e) {
             console.error(e);
-            if ('vibrate' in navigator) navigator.vibrate(50);
+            logger.triggerHaptic('error');
             setMessages(prev => [...prev, {
                 role: 'therapist',
                 content: "SIGNAL_INTERFERENCE: UNABLE_TO_PROCESS_INPUT. PLEASE_RETRY_TRANSMISSION.",

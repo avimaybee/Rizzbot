@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Upload, MessageSquare, Copy, Check, Sparkles, ThumbsUp, Minus, ThumbsDown, ArrowLeft, Target, Shield, Activity, Cpu, Zap, Terminal } from 'lucide-react';
+import { ChevronDown, ChevronUp, Upload, MessageSquare, Copy, Check, Sparkles, ThumbsUp, Minus, ThumbsDown, ArrowLeft, Target, Shield, Activity, Cpu, Zap, Terminal, Clock, AlertTriangle } from 'lucide-react';
 import { generatePersona, simulateDraft, analyzeSimulation } from '../services/geminiService';
 import { saveFeedback, logSession } from '../services/feedbackService';
 import { createPersona, createSession } from '../services/dbService';
@@ -13,12 +13,14 @@ interface SimulatorProps {
   firebaseUid?: string | null;
   userId?: number | null;
   onBack: () => void;
+  initialView?: View;
+  initialAnalysisResult?: SimAnalysisResult | null;
 }
 
 type View = 'setup' | 'chat' | 'analysis';
 
-export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, userId, onBack }) => {
-  const [view, setView] = useState<View>('setup');
+export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, userId, onBack, initialView = 'setup', initialAnalysisResult = null }) => {
+  const [view, setView] = useState<View>(initialView);
   const { showToast } = useGlobalToast();
 
   const [copiedText, setCopiedText] = useState<string | null>(null);
@@ -41,7 +43,8 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
   const [showContextDropdown, setShowContextDropdown] = useState(false);
   const [showPracticePartners, setShowPracticePartners] = useState(false);
 
-  const [analysisResult, setAnalysisResult] = useState<SimAnalysisResult | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<SimAnalysisResult | null>(initialAnalysisResult);
+
   const [feedbackGiven, setFeedbackGiven] = useState<Record<string, 'helpful' | 'mid' | 'off'>>({});
 
   const [savedPersonas, setSavedPersonas] = useState<Persona[]>(() => {
@@ -496,7 +499,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
     };
 
     return (
-      <div className="w-full h-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide font-mono select-none">
+      <div className="mission-debrief-report w-full h-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide font-mono select-none">
         <div className="bg-matte-grain"></div>
 
         {/* MODULE HEADER */}
