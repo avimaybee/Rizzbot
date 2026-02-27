@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle, XCircle, AlertCircle, X, Copy } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, X, Copy, Bell } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info' | 'copied';
 
@@ -11,35 +11,30 @@ interface ToastProps {
   visible: boolean;
 }
 
-const toastConfig: Record<ToastType, { icon: React.ReactNode; bgColor: string; borderColor: string; textColor: string }> = {
+const toastConfig: Record<ToastType, { icon: React.ReactNode; accentColor: string; textColor: string }> = {
   success: {
-    icon: <CheckCircle className="w-5 h-5" />,
-    bgColor: 'bg-emerald-950/90',
-    borderColor: 'border-emerald-500/50',
+    icon: <CheckCircle className="w-4 h-4" />,
+    accentColor: 'bg-emerald-500',
     textColor: 'text-emerald-400',
   },
   error: {
-    icon: <XCircle className="w-5 h-5" />,
-    bgColor: 'bg-red-950/90',
-    borderColor: 'border-red-500/50',
+    icon: <XCircle className="w-4 h-4" />,
+    accentColor: 'bg-red-500',
     textColor: 'text-red-400',
   },
   warning: {
-    icon: <AlertCircle className="w-5 h-5" />,
-    bgColor: 'bg-amber-950/90',
-    borderColor: 'border-amber-500/50',
+    icon: <AlertCircle className="w-4 h-4" />,
+    accentColor: 'bg-amber-500',
     textColor: 'text-amber-400',
   },
   info: {
-    icon: <AlertCircle className="w-5 h-5" />,
-    bgColor: 'bg-blue-950/90',
-    borderColor: 'border-blue-500/50',
+    icon: <Bell className="w-4 h-4" />,
+    accentColor: 'bg-hard-blue',
     textColor: 'text-blue-400',
   },
   copied: {
-    icon: <Copy className="w-5 h-5" />,
-    bgColor: 'bg-zinc-900/95',
-    borderColor: 'border-hard-gold/50',
+    icon: <Copy className="w-4 h-4" />,
+    accentColor: 'bg-hard-gold',
     textColor: 'text-hard-gold',
   },
 };
@@ -57,6 +52,12 @@ export const Toast: React.FC<ToastProps> = ({
   useEffect(() => {
     if (!visible) return;
 
+    // Haptic feedback for system notification
+    if ('vibrate' in navigator) {
+      if (type === 'error') navigator.vibrate([30, 50, 30]);
+      else navigator.vibrate(10);
+    }
+
     const exitTimer = setTimeout(() => {
       setIsExiting(true);
     }, duration - 300);
@@ -70,31 +71,39 @@ export const Toast: React.FC<ToastProps> = ({
       clearTimeout(exitTimer);
       clearTimeout(closeTimer);
     };
-  }, [visible, duration, onClose]);
+  }, [visible, duration, onClose, type]);
 
   if (!visible) return null;
 
   return (
     <div 
-      className={`fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-[200] transition-all duration-300 ${
-        isExiting ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'
+      className={`fixed bottom-24 md:bottom-10 left-1/2 -translate-x-1/2 z-[200] transition-all duration-500 ease-out ${
+        isExiting ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100'
       }`}
     >
       <div 
-        className={`${config.bgColor} ${config.borderColor} border backdrop-blur-md px-4 py-3 flex items-center gap-3 shadow-2xl min-w-[200px] max-w-[90vw]`}
+        className="glass-dark border-white/5 px-5 py-3.5 flex items-center gap-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] min-w-[280px] max-w-[90vw] relative overflow-hidden"
       >
+        {/* Leading accent bar */}
+        <div className={`absolute top-0 left-0 w-1 h-full ${config.accentColor} opacity-60`}></div>
+        
         <span className={config.textColor}>{config.icon}</span>
-        <span className={`${config.textColor} text-sm font-mono uppercase tracking-wider flex-1`}>
-          {message}
-        </span>
+        
+        <div className="flex flex-col gap-0.5 flex-1">
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">System Alert</span>
+          <span className="text-white text-xs font-mono uppercase tracking-wide">
+            {message}
+          </span>
+        </div>
+
         <button 
           onClick={() => {
             setIsExiting(true);
             setTimeout(onClose, 300);
           }}
-          className={`${config.textColor} hover:opacity-70 transition-opacity p-1`}
+          className="text-zinc-600 hover:text-white transition-colors p-1"
         >
-          <X className="w-4 h-4" />
+          <X className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>
