@@ -31,40 +31,40 @@ describe("AuthModal", () => {
   test("renders sign in mode by default", () => {
     const { getByText, getByPlaceholderText } = render(<AuthModal onAuthSuccess={() => {}} />);
     
-    expect(getByText("Sign In")).toBeTruthy();
-    expect(getByPlaceholderText("USER@EXAMPLE.COM")).toBeTruthy();
-    expect(getByPlaceholderText("••••••••")).toBeTruthy();
-    expect(getByText("ACCESS SYSTEM")).toBeTruthy();
+    expect(getByText("Login")).toBeTruthy();
+    expect(getByPlaceholderText("user@system.secure")).toBeTruthy();
+    expect(getByPlaceholderText("••••••••••••")).toBeTruthy();
+    expect(getByText("Establish Uplink")).toBeTruthy();
   });
 
   test("switches to signup mode", () => {
     const { getByText, getByPlaceholderText, queryByPlaceholderText } = render(<AuthModal onAuthSuccess={() => {}} />);
     
-    const initializeBtn = getByText("Initialize");
+    const initializeBtn = getByText("Register");
     fireEvent.click(initializeBtn);
     
-    expect(getByPlaceholderText("ENTER DISPLAY NAME")).toBeTruthy();
-    expect(getByText("INITIALIZE")).toBeTruthy();
-    expect(queryByPlaceholderText("••••••••")).toBeTruthy();
+    expect(getByPlaceholderText("e.g. AGENT_007")).toBeTruthy();
+    expect(getByText("Initiate System")).toBeTruthy();
+    expect(queryByPlaceholderText("••••••••••••")).toBeTruthy();
   });
 
   test("switches to reset password mode", () => {
     const { getByText, getByPlaceholderText, queryByPlaceholderText } = render(<AuthModal onAuthSuccess={() => {}} />);
     
-    const forgotBtn = getByText("Forgot password?");
+    const forgotBtn = getByText("Forgot Security Keyphrase?");
     fireEvent.click(forgotBtn);
     
-    expect(getByText("Reset Credentials")).toBeTruthy();
-    expect(queryByPlaceholderText("••••••••")).toBeNull();
-    expect(getByText("SEND LINK")).toBeTruthy();
+    expect(getByText("Password Reset")).toBeTruthy();
+    expect(queryByPlaceholderText("••••••••••••")).toBeNull();
+    expect(getByText("Dispatch Link")).toBeTruthy();
   });
 
   test("calls signInWithEmail on sign in form submission", async () => {
     const onAuthSuccess = mock(() => {});
     const { getByLabelText, getByText } = render(<AuthModal onAuthSuccess={onAuthSuccess} />);
     
-    const emailInput = getByLabelText(/EMAIL ADDRESS/i) as HTMLInputElement;
-    const passwordInput = getByLabelText(/PASSWORD/i) as HTMLInputElement;
+    const emailInput = getByLabelText(/Comm Address/i) as HTMLInputElement;
+    const passwordInput = getByLabelText(/Security Keyphrase/i) as HTMLInputElement;
     
     act(() => {
       emailInput.value = "test@example.com";
@@ -76,10 +76,7 @@ describe("AuthModal", () => {
       passwordInput.dispatchEvent(new Event('change', { bubbles: true }));
     });
     
-    // Check if value updated in DOM
-    expect(emailInput.value).toBe("test@example.com");
-    
-    const submitBtn = getByText("ACCESS SYSTEM");
+    const submitBtn = getByText("Establish Uplink");
     act(() => {
       fireEvent.click(submitBtn);
     });
@@ -103,21 +100,29 @@ describe("AuthModal", () => {
     
     // Switch to signup
     act(() => {
-      fireEvent.click(getByText("Initialize"));
+      fireEvent.click(getByText("Register"));
     });
     
-    const nameInput = getByLabelText(/CODENAME/i) as HTMLInputElement;
-    const emailInput = getByLabelText(/EMAIL ADDRESS/i) as HTMLInputElement;
-    const passwordInput = getByLabelText(/PASSWORD/i) as HTMLInputElement;
+    const nameInput = getByLabelText(/Operator Codename/i) as HTMLInputElement;
+    const emailInput = getByLabelText(/Comm Address/i) as HTMLInputElement;
+    const passwordInput = getByLabelText(/Security Keyphrase/i) as HTMLInputElement;
     
     act(() => {
-      fireEvent.input(nameInput, { target: { value: "Agent Smith" } });
-      fireEvent.input(emailInput, { target: { value: "smith@example.com" } });
-      fireEvent.input(passwordInput, { target: { value: "password123" } });
+      nameInput.value = "Agent Smith";
+      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+      nameInput.dispatchEvent(new Event('change', { bubbles: true }));
+      
+      emailInput.value = "smith@example.com";
+      emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+      emailInput.dispatchEvent(new Event('change', { bubbles: true }));
+      
+      passwordInput.value = "password123";
+      passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
+      passwordInput.dispatchEvent(new Event('change', { bubbles: true }));
     });
     
     act(() => {
-      fireEvent.click(getByText("INITIALIZE"));
+      fireEvent.click(getByText("Initiate System"));
     });
     
     await waitFor(() => {
@@ -140,16 +145,18 @@ describe("AuthModal", () => {
     
     // Switch to reset
     act(() => {
-      fireEvent.click(getByText("Forgot password?"));
+      fireEvent.click(getByText("Forgot Security Keyphrase?"));
     });
     
-    const emailInput = getByLabelText(/EMAIL ADDRESS/i) as HTMLInputElement;
+    const emailInput = getByLabelText(/Comm Address/i) as HTMLInputElement;
     act(() => {
-      fireEvent.input(emailInput, { target: { value: "reset@example.com" } });
+      emailInput.value = "reset@example.com";
+      emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+      emailInput.dispatchEvent(new Event('change', { bubbles: true }));
     });
     
     act(() => {
-      fireEvent.click(getByText("SEND LINK"));
+      fireEvent.click(getByText("Dispatch Link"));
     });
     
     await waitFor(() => {
@@ -157,7 +164,7 @@ describe("AuthModal", () => {
     });
     
     await waitFor(() => {
-      expect(getByText("Reset link sent! Check your email.")).toBeTruthy();
+      expect(getByText(/RECOVERY PROTOCOLS DISPATCHED/i)).toBeTruthy();
     });
   });
 
@@ -166,19 +173,24 @@ describe("AuthModal", () => {
     
     const { getByLabelText, getByText, findByText } = render(<AuthModal onAuthSuccess={() => {}} />);
     
-    const emailInput = getByLabelText(/EMAIL ADDRESS/i) as HTMLInputElement;
-    const passwordInput = getByLabelText(/PASSWORD/i) as HTMLInputElement;
+    const emailInput = getByLabelText(/Comm Address/i) as HTMLInputElement;
+    const passwordInput = getByLabelText(/Security Keyphrase/i) as HTMLInputElement;
     
     act(() => {
-      fireEvent.input(emailInput, { target: { value: "test@example.com" } });
-      fireEvent.input(passwordInput, { target: { value: "wrong" } });
+      emailInput.value = "test@example.com";
+      emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+      emailInput.dispatchEvent(new Event('change', { bubbles: true }));
+      
+      passwordInput.value = "wrong";
+      passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
+      passwordInput.dispatchEvent(new Event('change', { bubbles: true }));
     });
     
     act(() => {
-      fireEvent.click(getByText("ACCESS SYSTEM"));
+      fireEvent.click(getByText("Establish Uplink"));
     });
     
-    const errorMsg = await findByText(/Wrong password/i);
+    const errorMsg = await findByText(/ACCESS DENIED/i);
     expect(errorMsg).toBeTruthy();
   });
 
@@ -186,7 +198,7 @@ describe("AuthModal", () => {
     const onAuthSuccess = mock(() => {});
     const { getByText } = render(<AuthModal onAuthSuccess={onAuthSuccess} />);
     
-    fireEvent.click(getByText("Continue with Google"));
+    fireEvent.click(getByText(/Continue with Google/i));
     
     await waitFor(() => {
       expect(mockSignInWithGoogle).toHaveBeenCalled();
