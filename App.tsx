@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Zap, MessageSquare, User, ArrowRight, LogOut, Clock, HeartHandshake } from 'lucide-react';
 import { checkWellbeing, triggerWellbeingCheckIn, dismissWellbeingCheckIn, clearWellbeingTrigger } from './services/feedbackService';
 import { getOrCreateUser, getStyleProfile, saveStyleProfile } from './services/dbService';
 import { onAuthChange, signOutUser, AuthUser, logScreenView } from './services/firebaseService';
 import { LoadingScreen } from './components/LoadingScreen';
 import { Simulator as PracticeMode } from './components/Simulator';
-import { QuickAdvisor as ResponseEngine } from './components/QuickAdvisor';
+import { ResponseEngineWrapper } from './components/ResponseEngineWrapper';
 import { UserProfile } from './components/UserProfile';
 import { History } from './components/History';
 import { AuthModal } from './components/AuthModal';
@@ -13,7 +12,6 @@ import { AdvisoryChat } from './components/AdvisoryChat';
 import { ToastProvider } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppState, UserStyleProfile, WellbeingState, Module } from './types';
-import { Logo } from './components/Logo';
 import { BottomTabBar } from './components/BottomTabBar';
 import { WellbeingCheckIn } from './components/WellbeingCheckIn';
 import { SideDock } from './components/SideDock';
@@ -236,7 +234,7 @@ function App() {
         <div className="flex-1 relative h-full flex flex-col md:p-3 lg:p-4 overflow-hidden pb-0 md:pb-3 lg:pb-4 scrollbar-hide">
 
           {/* VIEWPORT FRAME */}
-          <div className="relative w-full flex-1 min-h-0 bg-white/[0.02] md:rounded-[2rem] md:border md:border-white/5 overflow-hidden flex flex-col md:shadow-2xl">
+          <div className="relative w-full flex-1 min-h-0 bg-white/[0.01] md:rounded-[2rem] md:border md:border-white/5 overflow-hidden flex flex-col md:shadow-2xl">
             {state === 'loading' && <LoadingScreen />}
 
             {/* DASHBOARD */}
@@ -268,7 +266,7 @@ function App() {
             {activeModule === 'quick' && (
               <div className="h-full w-full flex flex-col animate-fade-in bg-matte-base">
                 <ErrorBoundary>
-                  <ResponseEngine
+                  <ResponseEngineWrapper
                     onBack={() => setActiveModule('standby')}
                     userProfile={userProfile}
                     firebaseUid={authUser.uid}
