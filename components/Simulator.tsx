@@ -264,7 +264,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
           {/* LEFT: SAVED PROFILES */}
           <div className={`order-2 md:order-1 w-full md:w-80 border-t md:border-t-0 md:border-r border-white/5 bg-black/40 flex flex-col md:h-full overflow-hidden ${savedPersonas.length === 0 ? 'hidden md:flex' : ''}`}>
             <button
-              className="md:hidden w-full p-5 flex items-center justify-between glass-zinc border-b border-white/5"
+              className="md:hidden w-full p-5 flex items-center justify-between bg-zinc-900/40 border-b border-white/5"
               onClick={() => handleAction(() => setShowPracticePartners(!showPracticePartners))}
             >
               <div className="flex items-center gap-3">
@@ -296,7 +296,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                     <button
                       key={idx}
                       onClick={() => loadPersona(p)}
-                      className="w-full text-left p-4 glass-zinc border-white/5 hover:border-hard-blue/30 hover:bg-hard-blue/[0.02] transition-all group rounded-xl relative overflow-hidden active:scale-[0.98]"
+                      className="w-full text-left p-4 bg-zinc-900/40 border-white/5 hover:border-hard-blue/30 hover:bg-hard-blue/[0.02] transition-all group rounded-xl relative overflow-hidden active:scale-[0.98]"
                     >
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 shrink-0 glass flex items-center justify-center text-hard-blue border-white/5 shadow-xl group-hover:border-hard-blue/20 transition-all rounded-full font-bold text-lg">
@@ -333,7 +333,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                 <p className="text-zinc-500 text-[11px] font-bold uppercase tracking-widest leading-relaxed">Model behavioral patterns for conversation testing.</p>
               </div>
 
-              <div className="space-y-8 glass-dark border-white/5 p-8 soft-edge relative shadow-2xl">
+              <div className="space-y-8 bg-black/40 border-white/5 p-8 rounded-xl relative shadow-2xl">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
@@ -341,7 +341,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                     </label>
                     <input
                       type="text"
-                      className="w-full glass-zinc border-white/5 p-4 text-white text-sm font-bold focus:border-hard-blue/30 focus:outline-none uppercase placeholder:text-zinc-800 soft-edge transition-all"
+                      className="w-full bg-zinc-900/40 border-white/5 p-4 text-white text-sm font-bold focus:border-hard-blue/30 focus:outline-none uppercase placeholder:text-zinc-800 rounded-xl transition-all"
                       placeholder="Enter name"
                       value={customName}
                       onChange={(e) => setCustomName(e.target.value)}
@@ -354,13 +354,13 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                     <button
                       type="button"
                       onClick={() => handleAction(() => setShowContextDropdown(!showContextDropdown))}
-                      className="w-full glass-zinc border-white/5 p-4 text-white text-sm font-bold focus:border-hard-blue/30 focus:outline-none uppercase text-left flex justify-between items-center soft-edge transition-all group"
+                      className="w-full bg-zinc-900/40 border-white/5 p-4 text-white text-sm font-bold focus:border-hard-blue/30 focus:outline-none uppercase text-left flex justify-between items-center rounded-xl transition-all group"
                     >
                       <span>{relationshipContext.replace('_', ' ')}</span>
                       <ChevronDown className={`w-4 h-4 text-zinc-600 transition-transform ${showContextDropdown ? 'rotate-180' : ''}`} />
                     </button>
                     {showContextDropdown && (
-                      <div className="absolute top-full left-0 right-0 z-50 mt-2 glass-dark border-white/10 shadow-2xl soft-edge overflow-hidden animate-slide-up">
+                      <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-black/40 border-white/10 shadow-2xl rounded-xl overflow-hidden animate-slide-up">
                         {(['NEW_MATCH', 'TALKING_STAGE', 'DATING', 'SITUATIONSHIP', 'EX', 'FRIEND'] as const).map((option) => (
                           <button
                             key={option}
@@ -387,7 +387,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Feedback Harshness</label>
-                    <span className={`text-[10px] font-bold px-3 py-1 glass-zinc soft-edge border-white/5 ${
+                    <span className={`text-[10px] font-bold px-3 py-1 bg-zinc-900/40 rounded-xl border-white/5 ${
                       harshnessLevel === 5 ? 'text-hard-red border-hard-red/20' : 
                       harshnessLevel >= 3 ? 'text-hard-gold border-hard-gold/20' : 
                       'text-emerald-400 border-emerald-400/20'
@@ -399,7 +399,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                       {harshnessLevel === 5 && 'BRUTAL'}
                     </span>
                   </div>
-                  <div className="flex items-center gap-4 glass-zinc border-white/5 p-5 soft-edge">
+                  <div className="flex items-center gap-4 bg-zinc-900/40 border-white/5 p-5 rounded-xl">
                     <span className="text-[10px] font-bold text-zinc-700">LOW</span>
                     <input
                       type="range"
@@ -417,7 +417,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                 <div className="space-y-3">
                   <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Persona Details</label>
                   <textarea
-                    className="w-full glass-zinc border-white/5 p-5 text-white text-sm font-bold focus:border-hard-blue/30 focus:outline-none h-32 resize-none leading-relaxed placeholder:text-zinc-800 soft-edge uppercase"
+                    className="w-full bg-zinc-900/40 border-white/5 p-5 text-white text-sm font-bold focus:border-hard-blue/30 focus:outline-none h-32 resize-none leading-relaxed placeholder:text-zinc-800 rounded-xl uppercase"
                     placeholder="Describe their communication style, red flags, or specific traits."
                     value={personaDescription}
                     onChange={(e) => setPersonaDescription(e.target.value)}
@@ -428,7 +428,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                   <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Interaction Screenshots (Optional)</label>
                   <div
                     onClick={() => handleAction(() => fileInputRef.current?.click())}
-                    className="border-dashed border-2 border-white/5 glass-zinc p-6 flex items-center justify-between cursor-pointer hover:border-hard-blue/20 hover:bg-hard-blue/[0.01] transition-all group soft-edge relative overflow-hidden"
+                    className="border-dashed border-2 border-white/5 bg-zinc-900/40 p-6 flex items-center justify-between cursor-pointer hover:border-hard-blue/20 hover:bg-hard-blue/[0.01] transition-all group rounded-xl relative overflow-hidden"
                   >
                     <div className="flex items-center gap-5 relative z-10">
                       <Upload className="w-5 h-5 text-zinc-600 group-hover:text-hard-blue transition-colors" />
@@ -441,7 +441,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                   {previewUrls.length > 0 && (
                     <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 mt-4">
                       {previewUrls.map((url, index) => (
-                        <div key={index} className="relative group aspect-[9/16] glass-zinc border-white/5 overflow-hidden soft-edge shadow-lg">
+                        <div key={index} className="relative group aspect-[9/16] bg-zinc-900/40 border-white/5 overflow-hidden rounded-xl shadow-lg">
                           <img src={url} alt="" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
                           <button
                             type="button"
@@ -465,7 +465,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                 <button
                   onClick={buildPersona}
                   disabled={!customName.trim() || (!personaDescription && screenshots.length === 0)}
-                  className="w-full bg-white text-black font-bold text-2xl py-5 hover:bg-zinc-200 transition-all disabled:opacity-30 disabled:grayscale tracking-tight uppercase soft-edge shadow-[0_20px_50px_rgba(255,255,255,0.1)] group relative overflow-hidden"
+                  className="w-full bg-white text-black font-bold text-2xl py-5 hover:bg-zinc-200 transition-all disabled:opacity-30 disabled:grayscale tracking-tight uppercase rounded-xl shadow-[0_20px_50px_rgba(255,255,255,0.1)] group relative overflow-hidden"
                 >
                   <span className="relative z-10">Start Simulation</span>
                   <div className="absolute inset-0 bg-hard-blue opacity-0 group-hover:opacity-5 transition-opacity"></div>
@@ -498,7 +498,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
     };
 
     return (
-      <div className="mission-debrief-report w-full h-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide font-mono select-none">
+      <div className="mission-debrief-report w-full h-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide font-sans select-none">
         <div className="bg-matte-grain"></div>
 
         {/* MODULE HEADER */}
@@ -527,8 +527,8 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                 const style = getActionStyle(analysisResult.recommendedNextMove);
                 const ActionIcon = style.icon;
                 return (
-                  <div className={`glass-dark p-8 md:p-12 border-2 ${style.border} relative group soft-edge shadow-2xl`}>
-                    <div className={`absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 glass-zinc border border-white/5 text-[9px] font-bold text-zinc-500 uppercase tracking-[0.4em]`}>Recommended Action</div>
+                  <div className={`bg-black/40 p-8 md:p-12 border-2 ${style.border} relative group rounded-xl shadow-2xl`}>
+                    <div className={`absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-zinc-900/40 border border-white/5 text-[9px] font-bold text-zinc-500 uppercase tracking-[0.4em]`}>Recommended Action</div>
                     <ActionIcon className={`w-12 h-12 ${style.text} mb-6 mx-auto animate-pulse`} />
                     <span className={`font-black text-4xl md:text-6xl ${style.text} tracking-tighter uppercase`}>
                       {analysisResult.recommendedNextMove.replace('_', ' ')}
@@ -550,7 +550,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                 { label: 'VIBE MATCH', value: analysisResult.vMatch || analysisResult.vibeMatch || 0, color: { text: 'text-hard-blue', bar: 'bg-hard-blue' }, info: 'Linguistic energy alignment' },
                 { label: 'EFFORT BALANCE', value: analysisResult.effortBalance, color: { text: 'text-hard-gold', bar: 'bg-hard-gold' }, info: 'Message volume parity' }
               ].map((stat, i) => (
-                <div key={i} className="glass-dark border-white/5 p-8 soft-edge relative overflow-hidden group shadow-xl">
+                <div key={i} className="bg-black/40 border-white/5 p-8 rounded-xl relative overflow-hidden group shadow-xl">
                   <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
                   <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em] block mb-6">{stat.label}</span>
                   <div className="flex items-baseline gap-2 mb-6 justify-center">
@@ -567,7 +567,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
             {/* Deep Analysis Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="glass-dark border-white/5 p-8 md:p-10 rounded-2xl relative shadow-2xl">
+              <div className="bg-black/40 border-white/5 p-8 md:p-10 rounded-2xl relative shadow-2xl">
                 <div className="absolute top-0 left-0 w-1 h-full bg-hard-gold opacity-30"></div>
                 <div className="flex items-center gap-4 mb-8 border-b border-white/5 pb-6">
                   <Activity className="w-5 h-5 text-hard-gold animate-pulse" />
@@ -605,13 +605,13 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
         <div className="fixed bottom-0 left-0 right-0 p-6 md:p-8 bg-gradient-to-t from-matte-base via-matte-base to-transparent z-50 flex justify-center gap-4 md:gap-6">
           <button
             onClick={() => handleAction(() => setView('chat'), 10)}
-            className="px-8 py-4 glass-zinc border-white/5 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.3em] hover:text-white hover:border-white/10 transition-all soft-edge active:scale-[0.98] min-w-[180px]"
+            className="px-8 py-4 bg-zinc-900/40 border-white/5 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.3em] hover:text-white hover:border-white/10 transition-all rounded-xl active:scale-[0.98] min-w-[180px]"
           >
             ← Resume Simulation
           </button>
           <button
             onClick={() => handleAction(resetSim, 15)}
-            className="px-8 py-4 bg-white text-black font-black text-xl uppercase tracking-widest hover:bg-zinc-200 transition-all soft-edge shadow-2xl active:scale-[0.98] min-w-[220px]"
+            className="px-8 py-4 bg-white text-black font-black text-xl uppercase tracking-widest hover:bg-zinc-200 transition-all rounded-xl shadow-2xl active:scale-[0.98] min-w-[220px]"
           >
             Start New Session
           </button>
@@ -622,7 +622,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
   // --- CHAT VIEW ---
   return (
-    <div className="w-full h-full flex flex-col bg-matte-base relative overflow-hidden font-mono select-none">
+    <div className="w-full h-full flex flex-col bg-matte-base relative overflow-hidden font-sans select-none">
       <div className="bg-matte-grain opacity-[0.03]"></div>
 
       {/* MODULE HEADER */}
@@ -640,7 +640,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
       {/* GHOST RISK HUD */}
       {(simHistory.length > 0 || chatLoading) && (
-        <div className="px-6 py-4 glass-dark border-b border-white/5 backdrop-blur-md animate-slide-up relative z-30 flex items-center gap-8">
+        <div className="px-6 py-4 bg-black/40 border-b border-white/5 backdrop-blur-md animate-slide-up relative z-30 flex items-center gap-8">
           <div className="flex-1 space-y-2">
             <div className="flex justify-between items-center px-1">
               <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Ghosting Risk</span>
@@ -725,7 +725,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                     <div className="w-10 h-10 glass shrink-0 flex items-center justify-center text-xs font-bold border-white/10 rounded-full text-zinc-400 shadow-xl">
                       {activePersona?.name.charAt(0)}
                     </div>
-                    <div className="flex-1 glass-dark border-white/5 p-6 relative soft-edge shadow-xl transition-all hover:translate-x-[4px]">
+                    <div className="flex-1 bg-black/40 border-white/5 p-6 relative rounded-xl shadow-xl transition-all hover:translate-x-[4px]">
                       <div className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.3em] mb-3 border-b border-white/5 pb-2">Predicted Response</div>
                       <p className="text-sm font-bold italic text-zinc-200 leading-relaxed uppercase tracking-tight">"{entry.result.predictedReply}"</p>
                       <button
@@ -740,7 +740,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
               </div>
 
               {/* Real-time Analysis */}
-              <div className="glass-dark border-white/5 p-6 md:p-8 rounded-2xl shadow-2xl relative overflow-hidden group">
+              <div className="bg-black/40 border-white/5 p-6 md:p-8 rounded-2xl shadow-2xl relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-hard-blue/20 to-transparent"></div>
                 <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/5">
                   <div className="flex items-center gap-3">
@@ -765,8 +765,8 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                     <button
                       key={key}
                       onClick={() => handleAction(() => setDraft(text as string), 10)}
-                      className={`p-4 border text-left transition-all hover:scale-[1.02] soft-edge group/btn relative overflow-hidden ${
-                        key === 'safe' ? 'glass-zinc border-white/5 hover:border-white/20' :
+                      className={`p-4 border text-left transition-all hover:scale-[1.02] rounded-xl group/btn relative overflow-hidden ${
+                        key === 'safe' ? 'bg-zinc-900/40 border-white/5 hover:border-white/20' :
                         key === 'bold' ? 'glass-blue border-hard-blue/10 hover:border-hard-blue/30' :
                         key === 'spicy' ? 'glass-red border-hard-red/10 hover:border-hard-red/30' :
                         'glass-gold border-hard-gold/10 hover:border-hard-gold/30'
@@ -803,12 +803,12 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
         {pendingMessage && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-pulse grayscale opacity-50">
             <div className="flex flex-col items-end">
-              <div className="max-w-[95%] bg-white text-black p-6 soft-edge">
+              <div className="max-w-[95%] bg-white text-black p-6 rounded-xl">
                 <div className="text-[8px] font-bold text-zinc-400 uppercase tracking-[0.3em] mb-3">Sending...</div>
                 <p className="text-sm font-bold uppercase tracking-tight">{pendingMessage}</p>
               </div>
             </div>
-            <div className="glass-dark border-white/5 soft-edge p-8 flex items-center justify-center">
+            <div className="bg-black/40 border-white/5 rounded-xl p-8 flex items-center justify-center">
               <div className="flex items-center gap-3">
                  <div className="w-1.5 h-1.5 bg-zinc-600 rounded-full animate-ping"></div>
                  <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.4em]">Analyzing Response</span>
@@ -819,7 +819,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
         {chatLoading && !pendingMessage && (
           <div className="flex justify-start animate-fade-in">
-            <div className="glass-dark px-6 py-4 border border-hard-blue/20 soft-edge flex items-center gap-4">
+            <div className="bg-black/40 px-6 py-4 border border-hard-blue/20 rounded-xl flex items-center gap-4">
               <div className="w-1.5 h-1.5 bg-hard-blue rounded-full animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
               <span className="text-[10px] font-bold text-hard-blue uppercase tracking-[0.4em]">AI is thinking</span>
             </div>
@@ -829,20 +829,20 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
       </div>
 
       {/* INPUT AREA */}
-      <div className="p-6 md:p-8 glass-dark border-t border-white/5 relative z-40 shrink-0 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
-        <form onSubmit={runSimulation} className="max-w-4xl mx-auto flex gap-4 p-1 glass-zinc border-white/10 soft-edge focus-within:border-hard-blue/30 transition-all shadow-2xl">
+      <div className="p-6 md:p-8 bg-black/40 border-t border-white/5 relative z-40 shrink-0 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
+        <form onSubmit={runSimulation} className="max-w-4xl mx-auto flex gap-4 p-1 bg-zinc-900/40 border-white/10 rounded-2xl focus-within:border-hard-blue/30 transition-all shadow-2xl">
           <input
             type="text"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Type your message..."
             disabled={chatLoading}
-            className="flex-1 bg-transparent px-6 py-4 text-white focus:outline-none placeholder:text-zinc-800 text-sm font-bold uppercase tracking-wider"
+            className="flex-1 bg-transparent px-6 py-4 text-white focus:outline-none placeholder:text-zinc-800 text-sm font-bold uppercase tracking-widest"
           />
           <button
             type="submit"
             disabled={!draft.trim() || chatLoading}
-            className="bg-white text-black font-bold px-10 hover:bg-zinc-200 transition-all disabled:opacity-30 disabled:grayscale uppercase tracking-tight text-lg min-h-[56px] soft-edge shadow-xl active:scale-[0.98]"
+            className="bg-white text-black font-bold px-10 hover:bg-zinc-200 transition-all disabled:opacity-30 disabled:grayscale uppercase tracking-widest text-lg min-h-[56px] rounded-xl shadow-xl active:scale-[0.98]"
           >
             Send
           </button>

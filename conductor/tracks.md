@@ -4,12 +4,10 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [~] **Track: Professional Modern Refinement**
-  *Link: [./tracks/professional_modern_refinement_20260227/](./tracks/professional_modern_refinement_20260227/)*
-
----
-
 ## Archived Tracks
+
+- [x] **Track: Professional Modern Refinement**
+  *Link: [./archives/professional_modern_refinement_20260227/](./archives/professional_modern_refinement_20260227/)*
 
 - [x] **Track: UI/UX Cohesion & Tactical Design System**
   *Link: [./archives/ui_cohesion_tactical_design_20260227/](./archives/ui_cohesion_tactical_design_20260227/)*

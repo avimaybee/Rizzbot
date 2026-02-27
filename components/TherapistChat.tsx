@@ -7,7 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { TherapistMessage, ClinicalNotes, TherapistExercise, ExerciseType } from '../types';
 import { TherapistSidebar } from './TherapistSidebar';
-import { TherapistTacticalReport } from './TherapistTacticalReport';
+import { TherapistSummary } from './TherapistSummary';
 import { ModuleHeader } from './ModuleHeader';
 
 interface TherapistChatProps {
@@ -672,7 +672,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
             {/* DESKTOP RIGHT SIDEBAR */}
             {showRightPanel && (
                 <div className="hidden lg:flex flex-col w-96 shrink-0 border-l border-white/5 relative z-20 bg-black/20">
-                    <TherapistTacticalReport 
+                    <TherapistSummary 
                         clinicalNotes={clinicalNotes}
                         memories={memories}
                         onUpdateMemory={(id, c, t) => {
@@ -688,7 +688,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
             {/* MOBILE TACTICAL OVERLAY */}
             {showTacticalOverlay && (
                 <div className="fixed inset-0 z-50 lg:hidden flex flex-col animate-fade-in bg-matte-base">
-                    <TherapistTacticalReport 
+                    <TherapistSummary 
                         clinicalNotes={clinicalNotes}
                         memories={memories}
                         onUpdateMemory={(id, c, t) => {

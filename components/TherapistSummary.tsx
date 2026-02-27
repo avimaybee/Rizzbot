@@ -1,5 +1,5 @@
 import React from 'react';
-import { Brain, HeartHandshake, Sparkles, Lightbulb, ChevronRight, Bookmark, ShieldAlert, History, Activity, Target, X, Edit3, MessageCircle, BarChart3 } from 'lucide-react';
+import { Brain, HeartHandshake, Sparkles, Lightbulb, ChevronRight, Bookmark, ShieldAlert, Clock, Activity, FileText, X, Edit3, MessageCircle, BarChart3 } from 'lucide-react';
 import { ClinicalNotes, TherapistMemory } from '../types';
 
 interface TherapistSummaryProps {
@@ -29,7 +29,7 @@ const StatNode = ({ label, value, icon: Icon }: { label: string, value: string, 
       <Icon className="w-3.5 h-3.5 text-zinc-400" />
       <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">{label}</span>
     </div>
-    <div className="text-xs font-bold text-white uppercase tracking-tight">{value || 'Pending...'}</div>
+    <div className="text-xs font-bold text-white uppercase tracking-tight">{value || 'Pending'}</div>
   </div>
 );
 
@@ -58,7 +58,7 @@ const MemoryNode = ({
                 <textarea
                     value={content}
                     onChange={e => setContent(e.target.value)}
-                    className="w-full bg-black/40 text-xs text-white p-3 border border-white/10 rounded-xl focus:outline-none focus:border-blue-500/50 resize-none"
+                    className="w-full bg-black/40 text-xs text-white p-3 border border-white/10 rounded-xl focus:outline-none focus:border-blue-500/50 resize-none font-sans"
                     rows={3}
                 />
                 <div className="flex justify-end gap-4 mt-3">
@@ -119,7 +119,7 @@ export const TherapistSummary: React.FC<TherapistSummaryProps> = ({
             <div className="flex-1 overflow-y-auto p-8 space-y-2 scrollbar-hide">
                 
                 {/* 1. Status */}
-                <ReportSection title="Analysis Status" icon={Activity} color="text-emerald-400">
+                <ReportSection title="Session Insights" icon={Activity} color="text-emerald-400">
                     <div className="grid grid-cols-2 gap-4">
                         <StatNode 
                             icon={Brain} 
@@ -141,11 +141,11 @@ export const TherapistSummary: React.FC<TherapistSummaryProps> = ({
                 </ReportSection>
 
                 {/* 2. Insights */}
-                <ReportSection title="Key Insights" icon={Target} color="text-amber-400">
+                <ReportSection title="Clinical Observations" icon={Lightbulb} color="text-amber-400">
                     <div className="space-y-8">
                         {/* Themes */}
                         <div>
-                            <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-4 px-1">Recurring Themes</div>
+                            <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-4 px-1">Linguistic Themes</div>
                             <div className="flex flex-wrap gap-2.5">
                                 {clinicalNotes.keyThemes.length > 0 ? (
                                     clinicalNotes.keyThemes.map((theme, i) => (
@@ -155,7 +155,7 @@ export const TherapistSummary: React.FC<TherapistSummaryProps> = ({
                                     ))
                                 ) : (
                                     <div className="w-full py-6 border border-dashed border-white/5 rounded-3xl text-center">
-                                        <span className="text-xs text-zinc-600 font-medium italic">Establishing data points...</span>
+                                        <span className="text-xs text-zinc-600 font-medium italic">Processing data points</span>
                                     </div>
                                 )}
                             </div>
@@ -163,7 +163,7 @@ export const TherapistSummary: React.FC<TherapistSummaryProps> = ({
 
                         {/* Observations */}
                         <div>
-                            <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-4 px-1">Observations</div>
+                            <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-4 px-1">Key Findings</div>
                             <div className="space-y-3">
                                 {clinicalNotes.actionItems.length > 0 ? (
                                     clinicalNotes.actionItems.map((item, i) => (
@@ -174,7 +174,7 @@ export const TherapistSummary: React.FC<TherapistSummaryProps> = ({
                                     ))
                                 ) : (
                                     <div className="text-center py-8 border border-dashed border-white/5 rounded-3xl px-6">
-                                        <p className="text-xs text-zinc-600 font-medium italic leading-relaxed">Insights will materialize as the conversation develops.</p>
+                                        <p className="text-xs text-zinc-600 font-medium italic leading-relaxed">Observations will appear as the session progresses.</p>
                                     </div>
                                 )}
                             </div>
@@ -183,13 +183,13 @@ export const TherapistSummary: React.FC<TherapistSummaryProps> = ({
                 </ReportSection>
 
                 {/* 3. Memory */}
-                <ReportSection title="Persistent Data" icon={History} color="text-purple-400">
+                <ReportSection title="Clinical History" icon={Clock} color="text-purple-400">
                     <div className="space-y-8">
                         {/* Global */}
                         {globalMemories.length > 0 && (
                             <div className="space-y-4">
                                 <div className="text-[9px] font-bold text-emerald-500/60 uppercase tracking-widest px-1">
-                                    Core Identity
+                                    Long-term Patterns
                                 </div>
                                 <div className="space-y-3">
                                     {globalMemories.map((m) => (
@@ -220,8 +220,8 @@ export const TherapistSummary: React.FC<TherapistSummaryProps> = ({
                                     ))
                                 ) : (
                                     <div className="text-center py-10 border border-dashed border-white/5 rounded-[32px] px-8">
-                                        <MessageCircle className="w-6 h-6 text-zinc-800 mx-auto mb-4 opacity-40" />
-                                        <p className="text-[10px] text-zinc-700 font-black uppercase tracking-[0.2em]">Capturing interaction metadata</p>
+                                        <FileText className="w-6 h-6 text-zinc-800 mx-auto mb-4 opacity-40" />
+                                        <p className="text-[10px] text-zinc-700 font-black uppercase tracking-[0.2em]">Awaiting interaction data</p>
                                     </div>
                                 )}
                             </div>
