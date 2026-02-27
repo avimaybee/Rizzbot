@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, HeartHandshake, Zap, Shield, Target, User, CheckCircle2, Circle, Activity, AlertTriangle } from 'lucide-react';
+import { ArrowRight, HeartHandshake, Zap, Shield, Target, User, CheckCircle2, Circle, Activity, AlertTriangle, Terminal, LayoutDashboard } from 'lucide-react';
 import { AuthUser } from '../services/firebaseService';
 import { getSessions, getPersonas } from '../services/dbService';
 import { Module, UserStyleProfile, WellbeingReason } from '../types';
@@ -17,23 +17,23 @@ const AbstractGrid = ({ className }: { className?: string }) => (
 
 const RadarScan = () => (
   <div className="absolute inset-0 pointer-events-none">
-    <div className="absolute inset-0 border border-zinc-800/50 rounded-full scale-[0.6] opacity-20"></div>
-    <div className="absolute inset-0 border border-zinc-800/50 rounded-full scale-[0.8] opacity-10"></div>
-    <div className="absolute inset-0 bg-gradient-to-t from-transparent via-hard-gold/5 to-transparent h-full w-[2px] left-1/2 -translate-x-1/2 animate-spin-slow origin-bottom opacity-20"></div>
+    <div className="absolute inset-0 border border-white/5 rounded-full scale-[0.6] opacity-20"></div>
+    <div className="absolute inset-0 border border-white/5 rounded-full scale-[0.8] opacity-10"></div>
+    <div className="absolute inset-0 bg-gradient-to-t from-transparent via-hard-gold/10 to-transparent h-full w-[2px] left-1/2 -translate-x-1/2 animate-spin-slow origin-bottom opacity-30"></div>
   </div>
 );
 
 // --- SUB-COMPONENTS ---
 
 const DossierStats = ({ sessions, personas }: { sessions: number, personas: number }) => (
-  <div className="grid grid-cols-2 gap-2 w-full max-w-[200px] mt-2 group/stats cursor-default">
-    <div className="bg-zinc-900/40 border border-zinc-800/50 p-2 rounded-lg group-hover/stats:border-zinc-700 transition-colors">
-      <div className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter mb-0.5">SESSIONS</div>
-      <div className="text-sm font-bold text-white font-mono">{sessions.toString().padStart(2, '0')}</div>
+  <div className="grid grid-cols-2 gap-2 w-full max-w-[220px] mt-3 group/stats cursor-default">
+    <div className="glass-zinc p-2.5 soft-edge group-hover/stats:border-white/10 transition-colors">
+      <div className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest mb-1 leading-none">SESSIONS</div>
+      <div className="text-sm font-impact text-white tracking-wider">{sessions.toString().padStart(2, '0')}</div>
     </div>
-    <div className="bg-zinc-900/40 border border-zinc-800/50 p-2 rounded-lg group-hover/stats:border-zinc-700 transition-colors">
-      <div className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter mb-0.5">TARGETS</div>
-      <div className="text-sm font-bold text-white font-mono">{personas.toString().padStart(2, '0')}</div>
+    <div className="glass-zinc p-2.5 soft-edge group-hover/stats:border-white/10 transition-colors">
+      <div className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest mb-1 leading-none">TARGETS</div>
+      <div className="text-sm font-impact text-white tracking-wider">{personas.toString().padStart(2, '0')}</div>
     </div>
   </div>
 );
@@ -41,11 +41,11 @@ const DossierStats = ({ sessions, personas }: { sessions: number, personas: numb
 const TacticalStatus = ({ wellbeingReason }: { wellbeingReason: WellbeingReason | null }) => {
   const getStatus = () => {
     switch (wellbeingReason) {
-      case 'late_night': return { label: 'SLEEP_DEPRIVED', color: 'text-amber-500', icon: AlertTriangle };
-      case 'high_frequency': return { label: 'OVER_ANALYZING', color: 'text-orange-500', icon: Activity };
-      case 'same_person': return { label: 'TARGET_OBSESSION', color: 'text-rose-500', icon: Target };
-      case 'high_risk': return { label: 'CRITICAL_VIBE', color: 'text-red-500', icon: AlertTriangle };
-      default: return { label: 'SYSTEM_OPTIMAL', color: 'text-emerald-500', icon: Activity };
+      case 'late_night': return { label: 'SLEEP_DEPRIVED', color: 'text-hard-gold', icon: AlertTriangle };
+      case 'high_frequency': return { label: 'OVER_ANALYZING', color: 'text-hard-blue', icon: Activity };
+      case 'same_person': return { label: 'TARGET_OBSESSION', color: 'text-hard-red', icon: Target };
+      case 'high_risk': return { label: 'CRITICAL_VIBE', color: 'text-hard-red', icon: AlertTriangle };
+      default: return { label: 'SYSTEM_OPTIMAL', color: 'text-emerald-400', icon: Activity };
     }
   };
 
@@ -53,9 +53,9 @@ const TacticalStatus = ({ wellbeingReason }: { wellbeingReason: WellbeingReason 
   const StatusIcon = status.icon;
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900/60 border border-zinc-800 rounded-full">
+    <div className="flex items-center gap-2.5 px-4 py-2 glass-dark rounded-full border-white/5">
       <StatusIcon className={`w-3 h-3 ${status.color} animate-pulse`} />
-      <span className={`text-[9px] font-mono font-bold uppercase tracking-widest ${status.color}`}>
+      <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${status.color}`}>
         {status.label}
       </span>
     </div>
@@ -70,30 +70,33 @@ const TacticalChecklist = ({ hasProfile, sessionCount, onActivate }: { hasProfil
   ];
 
   return (
-    <div className="mt-8 space-y-2 w-full max-w-xs">
-      <div className="text-[9px] font-mono text-zinc-600 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
-        <div className="w-1 h-1 bg-zinc-700"></div>
-        SYSTEM_INITIALIZATION
+    <div className="mt-10 space-y-2.5 w-full max-w-xs">
+      <div className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.3em] mb-4 flex items-center gap-3">
+        <div className="w-1.5 h-[1px] bg-zinc-700"></div>
+        System Initialization
       </div>
       {items.map((item, i) => (
         <button
           key={i}
           disabled={item.complete}
-          onClick={item.action}
+          onClick={() => {
+            if ('vibrate' in navigator) navigator.vibrate(5);
+            item.action?.();
+          }}
           style={{ animationDelay: `${i * 100}ms` }}
-          className={`w-full flex items-center justify-between p-2.5 border rounded-lg transition-all animate-fade-in ${
+          className={`w-full flex items-center justify-between p-3.5 glass-zinc border-white/5 transition-all animate-fade-in soft-edge ${
             item.complete 
-              ? 'bg-zinc-900/20 border-zinc-800/30 opacity-40 grayscale' 
-              : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-600 cursor-pointer active:scale-95'
+              ? 'opacity-30 grayscale' 
+              : 'hover:bg-white/5 hover:border-white/10 cursor-pointer active:scale-[0.98]'
           }`}
         >
-          <div className="flex items-center gap-3">
-            {item.complete ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> : <Circle className="w-3.5 h-3.5 text-zinc-700" />}
-            <span className={`text-[10px] font-mono tracking-wider ${item.complete ? 'text-zinc-600' : 'text-zinc-400 uppercase'}`}>
+          <div className="flex items-center gap-4">
+            {item.complete ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Circle className="w-4 h-4 text-zinc-700" />}
+            <span className={`text-[10px] font-bold tracking-widest uppercase ${item.complete ? 'text-zinc-500' : 'text-zinc-300'}`}>
               {item.label}
             </span>
           </div>
-          {!item.complete && <ArrowRight className="w-3 h-3 text-zinc-700" />}
+          {!item.complete && <ArrowRight className="w-3.5 h-3.5 text-zinc-600 group-hover:text-white transition-colors" />}
         </button>
       ))}
     </div>
@@ -125,7 +128,7 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
       try {
         const [sessionsData, personasData] = await Promise.all([
           getSessions(authUser.uid, 1, 0),
-          getPersonas(0) // Need user_id, but the API might handle firebase_uid check too or we can just show local count
+          getPersonas(0)
         ]);
         setStats({
           sessions: sessionsData.pagination.total || 0,
@@ -138,53 +141,63 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
     fetchStats();
   }, [authUser]);
 
+  const handleModeActivate = (module: Module) => {
+    if ('vibrate' in navigator) navigator.vibrate(10);
+    onActivate(module);
+  };
+
   return (
-    <div className="h-full w-full flex flex-col relative overflow-hidden bg-matte-base animate-fade-in">
-      {/* Zen Background */}
-      <div className="absolute inset-0 bg-dot-pattern opacity-[0.15] pointer-events-none"></div>
-      <div className="absolute inset-0 bg-gradient-to-br from-hard-gold/5 via-transparent to-hard-blue/5 animate-aurora opacity-30 pointer-events-none"></div>
+    <div className="h-full w-full flex flex-col relative overflow-hidden bg-matte-base animate-fade-in font-mono select-none">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 bg-dot-pattern opacity-[0.05] pointer-events-none"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-hard-gold/5 via-transparent to-hard-blue/5 animate-aurora opacity-20 pointer-events-none"></div>
+      <div className="bg-matte-grain"></div>
       
       {/* Floating Abstract Element */}
-      <AbstractGrid className="absolute -top-20 -right-20 w-[60vw] h-[60vw] text-zinc-800 opacity-10 pointer-events-none animate-spin-slow" />
+      <AbstractGrid className="absolute -top-40 -right-40 w-[80vw] h-[80vw] text-white opacity-[0.02] pointer-events-none animate-spin-slow" />
 
       {/* 1. TOP BAR: IDENTITY NODE */}
-      <div className="pt-8 px-6 md:px-10 flex justify-between items-start relative z-10">
+      <div className="pt-10 px-6 md:px-12 flex flex-col md:flex-row justify-between items-start gap-8 relative z-10">
         <div className="flex flex-col">
-          <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em] mb-1">// SYSTEM_STANDBY</span>
-          <h1 className="font-impact text-3xl md:text-5xl text-white uppercase tracking-tighter">
-            RIZZ<span className="text-zinc-700">BOT</span>
-          </h1>
-          <div className="mt-4">
-            <TacticalStatus wellbeingReason={wellbeingReason} />
+          <div className="flex items-center gap-3 mb-2">
+            <Terminal className="w-3 h-3 text-zinc-600" />
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.4em]">SYSTEM_STANDBY_MODE</span>
           </div>
+          <h1 className="font-impact text-5xl md:text-7xl text-white uppercase tracking-tighter leading-none mb-6">
+            RIZZ<span className="text-transparent bg-clip-text bg-gradient-to-b from-white/20 to-transparent">BOT</span>
+          </h1>
+          <TacticalStatus wellbeingReason={wellbeingReason} />
         </div>
 
         {authUser && (
-          <div className="flex flex-col items-end gap-3">
-            <div className="flex items-center gap-4 bg-glass-white backdrop-blur-md border border-glass-border p-2 md:p-3 rounded-xl shadow-2xl group cursor-pointer hover:border-hard-gold/50 transition-all">
+          <div className="flex flex-col items-end w-full md:w-auto">
+            <div 
+              onClick={() => handleModeActivate('profile')}
+              className="w-full md:w-auto flex items-center gap-5 glass-dark border-white/5 p-3.5 soft-edge shadow-2xl group cursor-pointer hover:border-white/10 transition-all active:scale-[0.98]"
+            >
               <div className="relative">
                 {authUser.photoURL ? (
-                  <img src={authUser.photoURL} alt="" className="w-8 h-8 md:w-10 md:h-10 rounded-lg grayscale group-hover:grayscale-0 transition-all border border-zinc-800" />
+                  <img src={authUser.photoURL} alt="" className="w-10 h-10 md:w-12 md:h-12 soft-edge grayscale group-hover:grayscale-0 transition-all border border-white/5" />
                 ) : (
-                  <div className="w-8 h-8 md:w-10 md:h-10 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-500 border border-zinc-700">
-                    <User className="w-5 h-5" />
+                  <div className="w-10 h-10 md:w-12 md:h-12 glass-zinc soft-edge flex items-center justify-center text-zinc-500 border-white/5">
+                    <User className="w-6 h-6" />
                   </div>
                 )}
-                <div className="absolute -bottom-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-matte-base shadow-sm"></div>
+                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#0a0a0a] shadow-sm"></div>
               </div>
-              <div className="flex flex-col pr-2 font-mono">
-                <span className="text-[8px] text-zinc-500 uppercase tracking-widest leading-none mb-1">// ID: {authUser.uid.slice(0, 8)}</span>
-                <span className="text-[11px] font-bold text-white uppercase truncate max-w-[100px]">{authUser.displayName?.split(' ')[0] || 'GHOST'}</span>
-                <div className="flex items-center gap-1.5 mt-1">
+              <div className="flex flex-col pr-4 font-mono">
+                <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest leading-none mb-1.5 opacity-60">// ID: {authUser.uid.slice(0, 8)}</span>
+                <span className="text-[13px] font-bold text-white uppercase truncate max-w-[140px] tracking-tight">{authUser.displayName?.split(' ')[0] || 'OPERATOR'}</span>
+                <div className="flex items-center gap-2 mt-1.5">
                   {hasProfile ? (
                     <>
-                      <div className="w-1.5 h-1.5 bg-emerald-500/80 rounded-full shadow-[0_0_5px_rgba(16,185,129,0.5)]"></div>
-                      <span className="text-[7px] text-emerald-500 uppercase tracking-tighter">VOICE: CALIBRATED</span>
+                      <div className="w-1.5 h-1.5 bg-emerald-500/80 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.4)]"></div>
+                      <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-tighter">VOICE: CALIBRATED</span>
                     </>
                   ) : (
                     <>
-                      <div className="w-1.5 h-1.5 bg-hard-gold/80 rounded-full animate-pulse shadow-[0_0_5px_rgba(251,191,36,0.5)]"></div>
-                      <span className="text-[7px] text-hard-gold uppercase tracking-tighter">VOICE: UNTRAINED</span>
+                      <div className="w-1.5 h-1.5 bg-hard-gold/80 rounded-full animate-pulse shadow-[0_0_8px_rgba(251,191,36,0.4)]"></div>
+                      <span className="text-[8px] font-bold text-hard-gold uppercase tracking-tighter">VOICE: UNTRAINED</span>
                     </>
                   )}
                 </div>
@@ -197,35 +210,35 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
 
       {/* 2. MAIN CENTER: INSTANT SCAN NODE */}
       <div className="flex-1 flex flex-col items-center justify-center relative z-10 px-6 py-12">
-        <div className="w-full max-w-4xl flex flex-col md:flex-row items-center justify-center gap-12 lg:gap-24">
+        <div className="w-full max-w-5xl flex flex-col md:flex-row items-center justify-center gap-16 lg:gap-32">
           {/* Onboarding Checklist - Desktop (shown on left) */}
           {(!hasProfile || stats.sessions === 0) && (
-            <div className="hidden lg:block animate-fade-in md:w-72">
-              <TacticalChecklist hasProfile={hasProfile} sessionCount={stats.sessions} onActivate={onActivate} />
+            <div className="hidden lg:block animate-fade-in md:w-80">
+              <TacticalChecklist hasProfile={hasProfile} sessionCount={stats.sessions} onActivate={handleModeActivate} />
             </div>
           )}
 
           <div className="relative group">
             {/* Pulsing Glow Background */}
-            <div className="absolute inset-0 bg-hard-gold/20 rounded-full blur-[40px] animate-pulse-glow opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="absolute inset-0 bg-hard-gold/10 rounded-full blur-[60px] animate-pulse-glow opacity-40 group-hover:opacity-100 transition-opacity"></div>
             
             {/* Outer Ring */}
-            <div className="absolute inset-[-40px] border border-dashed border-zinc-800 rounded-full animate-spin-slow opacity-20 group-hover:opacity-40 transition-opacity"></div>
+            <div className="absolute inset-[-50px] border border-dashed border-white/5 rounded-full animate-spin-slow opacity-20 group-hover:opacity-40 transition-opacity"></div>
             
             {/* Main Node */}
             <button
-              onClick={() => onActivate('quick')}
-              className="w-48 h-48 md:w-64 md:h-64 rounded-full bg-zinc-900/50 backdrop-blur-xl border-2 border-zinc-800 flex flex-col items-center justify-center relative overflow-hidden transition-all duration-500 group-hover:border-hard-gold group-hover:shadow-[0_0_50px_rgba(251,191,36,0.15)] active:scale-95"
+              onClick={() => handleModeActivate('quick')}
+              className="w-56 h-56 md:w-72 md:h-72 rounded-full glass-dark border-white/5 flex flex-col items-center justify-center relative overflow-hidden transition-all duration-700 group-hover:border-hard-gold/30 tactical-glow-gold active:scale-95"
             >
               <RadarScan />
-              <Zap className="w-10 h-10 md:w-14 md:h-14 text-hard-gold mb-3 group-hover:scale-110 transition-transform duration-500" />
-              <div className="flex flex-col items-center">
-                <span className="text-[10px] md:text-xs font-mono text-zinc-400 uppercase tracking-[0.2em] group-hover:text-hard-gold transition-colors">INSTANT SCAN</span>
-                <span className="text-[8px] font-mono text-zinc-600 mt-1 opacity-60 group-hover:opacity-100 transition-opacity">// DEPLOY_NOW</span>
+              <Zap className="w-12 h-12 md:w-16 md:h-16 text-hard-gold mb-4 group-hover:scale-110 transition-transform duration-700 drop-shadow-[0_0_15px_rgba(251,191,36,0.3)]" />
+              <div className="flex flex-col items-center relative z-10">
+                <span className="text-[11px] md:text-sm font-bold text-white uppercase tracking-[0.3em] group-hover:text-hard-gold transition-colors">Deploy Scan</span>
+                <span className="text-[9px] font-bold text-zinc-600 mt-2 opacity-60 group-hover:opacity-100 transition-opacity tracking-[0.1em] uppercase">// Analysis_Request</span>
               </div>
               
               {/* Glossy Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent pointer-events-none"></div>
+              <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.02] to-transparent pointer-events-none"></div>
             </button>
           </div>
 
@@ -233,17 +246,21 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
           <div className="text-center lg:text-left max-w-xs">
             {(!hasProfile || stats.sessions === 0) ? (
               <div className="lg:hidden animate-fade-in w-full">
-                <TacticalChecklist hasProfile={hasProfile} sessionCount={stats.sessions} onActivate={onActivate} />
+                <TacticalChecklist hasProfile={hasProfile} sessionCount={stats.sessions} onActivate={handleModeActivate} />
               </div>
             ) : (
-              <div className="animate-fade-in">
-                <p className="text-zinc-500 text-sm font-mono leading-relaxed opacity-60">
+              <div className="animate-fade-in glass-dark border-white/5 p-6 soft-edge shadow-xl">
+                <div className="flex items-center gap-3 mb-4 justify-center lg:justify-start">
+                   <LayoutDashboard className="w-4 h-4 text-hard-blue" />
+                   <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Tactical Brief</span>
+                </div>
+                <p className="text-zinc-400 text-xs font-bold leading-relaxed tracking-wide opacity-80 uppercase">
                   AI-POWERED TACTICAL ADVISOR READY. <br />
-                  UPLOAD SCREENSHOT TO BEGIN ANALYSIS.
+                  UPLOAD SCREENSHOT TO BEGIN DEEP LINGUISTIC ANALYSIS.
                 </p>
-                <div className="mt-4 flex justify-center lg:justify-start gap-2">
-                  <span className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse"></span>
-                  <span className="text-[8px] font-mono text-zinc-600 uppercase tracking-widest leading-none">SYSTEM_READY</span>
+                <div className="mt-6 flex justify-center lg:justify-start gap-3 items-center">
+                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></div>
+                  <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-[0.2em] leading-none">SYSTEM_READY</span>
                 </div>
               </div>
             )}
@@ -252,55 +269,55 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
       </div>
 
       {/* 3. BOTTOM: TACTILE MODE SWITCHERS */}
-      <div className="p-6 md:p-10 grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 relative z-10">
+      <div className="p-6 md:p-12 grid grid-cols-2 md:grid-cols-3 gap-5 md:gap-8 relative z-10">
         {/* Practice Mode */}
         <button
-          onClick={() => onActivate('simulator')}
-          className="group flex flex-col bg-zinc-900/40 hover:bg-zinc-900/60 border border-zinc-800 hover:border-hard-blue/50 p-4 transition-all rounded-2xl relative overflow-hidden"
+          onClick={() => handleModeActivate('simulator')}
+          className="group flex flex-col glass-dark border-white/5 hover:border-hard-blue/30 p-5 transition-all soft-edge relative overflow-hidden active:scale-[0.98] tactical-glow-blue"
         >
-          <div className="flex justify-between items-start mb-6">
-            <div className="w-8 h-8 rounded-lg bg-hard-blue/10 flex items-center justify-center text-hard-blue group-hover:scale-110 transition-transform">
-              <Target className="w-4 h-4" />
+          <div className="flex justify-between items-start mb-8">
+            <div className="w-10 h-10 soft-edge glass-blue border-white/5 flex items-center justify-center text-hard-blue group-hover:scale-110 transition-transform">
+              <Target className="w-5 h-5" />
             </div>
             <ArrowRight className="w-4 h-4 text-zinc-700 group-hover:text-hard-blue -rotate-45 transition-all" />
           </div>
-          <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mb-1 group-hover:text-hard-blue transition-colors">// SIMULATION</span>
-          <span className="text-sm font-bold text-white uppercase">Practice</span>
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5 group-hover:text-hard-blue transition-colors tracking-[0.2em]">// SIMULATION</span>
+          <span className="text-lg font-impact text-white uppercase tracking-wider">Practice</span>
         </button>
 
         {/* Therapist Mode */}
         <button
-          onClick={() => onActivate('therapist')}
-          className="group flex flex-col bg-zinc-900/40 hover:bg-zinc-900/60 border border-zinc-800 hover:border-rose-500/50 p-4 transition-all rounded-2xl relative overflow-hidden"
+          onClick={() => handleModeActivate('therapist')}
+          className="group flex flex-col glass-dark border-white/5 hover:border-hard-red/30 p-5 transition-all soft-edge relative overflow-hidden active:scale-[0.98] tactical-glow-red"
         >
-          <div className="flex justify-between items-start mb-6">
-            <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform">
-              <HeartHandshake className="w-4 h-4" />
+          <div className="flex justify-between items-start mb-8">
+            <div className="w-10 h-10 soft-edge glass-red border-white/5 flex items-center justify-center text-hard-red group-hover:scale-110 transition-transform">
+              <HeartHandshake className="w-5 h-5" />
             </div>
-            <ArrowRight className="w-4 h-4 text-zinc-700 group-hover:text-rose-500 -rotate-45 transition-all" />
+            <ArrowRight className="w-4 h-4 text-zinc-700 group-hover:text-hard-red -rotate-45 transition-all" />
           </div>
-          <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mb-1 group-hover:text-rose-500 transition-colors">// DEEP_DIVE</span>
-          <span className="text-sm font-bold text-white uppercase">Therapy</span>
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5 group-hover:text-hard-red transition-colors tracking-[0.2em]">// DEEP_DIVE</span>
+          <span className="text-lg font-impact text-white uppercase tracking-wider">Therapy</span>
         </button>
 
         {/* History / Profile (Desktop Only) */}
         <button
-          onClick={() => onActivate('history')}
-          className="hidden md:flex group flex flex-col bg-zinc-900/40 hover:bg-zinc-900/60 border border-zinc-800 hover:border-zinc-400 p-4 transition-all rounded-2xl relative overflow-hidden"
+          onClick={() => handleModeActivate('history')}
+          className="hidden md:flex group flex flex-col glass-dark border-white/5 hover:border-white/20 p-5 transition-all soft-edge relative overflow-hidden active:scale-[0.98]"
         >
-          <div className="flex justify-between items-start mb-6">
-            <div className="w-8 h-8 rounded-lg bg-zinc-500/10 flex items-center justify-center text-zinc-400 group-hover:scale-110 transition-transform">
-              <Shield className="w-4 h-4" />
+          <div className="flex justify-between items-start mb-8">
+            <div className="w-10 h-10 soft-edge glass-zinc border-white/5 flex items-center justify-center text-zinc-400 group-hover:scale-110 transition-transform">
+              <Shield className="w-5 h-5" />
             </div>
             <ArrowRight className="w-4 h-4 text-zinc-700 group-hover:text-zinc-200 -rotate-45 transition-all" />
           </div>
-          <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mb-1 group-hover:text-zinc-200 transition-colors">// ARCHIVE</span>
-          <span className="text-sm font-bold text-white uppercase">History</span>
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5 group-hover:text-zinc-200 transition-colors tracking-[0.2em]">// ARCHIVE</span>
+          <span className="text-lg font-impact text-white uppercase tracking-wider">History</span>
         </button>
       </div>
       
       {/* HUD Elements */}
-      <CornerNodes className="opacity-10" />
+      <CornerNodes className="opacity-[0.05]" />
     </div>
   );
 };

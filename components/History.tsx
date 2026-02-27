@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, MessageSquare, Zap, ChevronRight, Trash2, AlertCircle, RefreshCw, Ghost, X, Image, ArrowLeft } from 'lucide-react';
 import { getSessions, deleteSession, Session, SessionsResponse } from '../services/dbService';
+import { ModuleHeader } from './ModuleHeader';
 
 // Corner decorative nodes
 const CornerNodes = () => (
@@ -31,24 +32,18 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
 
   return (
     <div className="h-full flex flex-col">
-      {/* TACTICAL HUD HEADER - DETAIL */}
-      <div className="border-b border-zinc-800 px-4 py-3 flex items-center gap-4 shrink-0 sticky top-0 bg-matte-base/95 backdrop-blur-sm z-30">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2 min-w-[44px]"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="text-xs font-mono uppercase tracking-widest group-hover:text-white transition-colors">BACK</span>
-        </button>
-        <div className="flex-1 min-w-0">
-          <div className={`text-xs font-mono uppercase tracking-widest mb-0.5 ${session.mode === 'quick' ? 'text-hard-blue' : 'text-hard-gold'
-            }`}>
-            {session.mode === 'quick' ? 'QUICK_MODE' : 'PRACTICE_MODE'}
-          </div>
-          <h2 className="font-impact text-lg text-white tracking-wide uppercase truncate">
-            {session.headline || session.persona_name || 'Session Details'}
-          </h2>
-        </div>
+      {/* MODULE HEADER - DETAIL */}
+      <div className="px-4 pt-4">
+        <ModuleHeader 
+          title={session.headline || session.persona_name || 'ARCHIVED_SESSION'} 
+          mode={session.mode === 'quick' ? 'QUICK_ARCHIVE' : 'PRACTICE_ARCHIVE'} 
+          id={session.id}
+          onBack={onBack}
+          accentColor={session.mode === 'quick' ? 'blue' : 'gold'}
+          statusLabel="RECORD_STATUS"
+          statusValue="READ_ONLY"
+          statusColor="gold"
+        />
       </div>
 
       {/* Content */}
@@ -215,6 +210,8 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
   const [pagination, setPagination] = useState({ total: 0, hasMore: false, offset: 0 });
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'quick' | 'simulator'>('all');
 
   const fetchSessions = async (offset = 0) => {
     if (!firebaseUid) return;
@@ -314,28 +311,52 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
   }
 
   return (
-    <div className="w-full h-full max-w-5xl mx-auto bg-matte-panel md:border md:border-zinc-800 flex flex-col relative pb-16 md:pb-0">
+    <div className="w-full h-full max-w-5xl mx-auto bg-matte-panel md:border md:border-zinc-800 flex flex-col relative pb-16 md:pb-0 overflow-y-auto">
       <CornerNodes />
 
-      {/* TACTICAL HUD HEADER - LIST */}
-      <div className="border-b border-zinc-800 px-4 py-3 flex justify-between items-center shrink-0 sticky top-0 bg-matte-base/95 backdrop-blur-sm z-30">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className={`w-1.5 h-1.5 animate-pulse ${loading ? 'bg-zinc-500' : 'bg-zinc-400'}`}></div>
-            <span className="text-xs font-mono uppercase tracking-widest text-zinc-400">HISTORY_LOG</span>
+      {/* MODULE HEADER - LIST */}
+      <div className="px-4 pt-4 sticky top-0 z-40 bg-matte-panel/95 backdrop-blur-sm">
+        <ModuleHeader 
+          title="CENTRAL_HISTORY_LOG" 
+          mode="ARCHIVE_MODE" 
+          onBack={onBack || (() => {})}
+          accentColor="gold"
+          statusLabel="TOTAL_RECORDS"
+          statusValue={`${pagination.total} SESSIONS`}
+          statusColor="gold"
+        />
+      </div>
+
+      {/* SEARCH & FILTERS */}
+      <div className="border-b border-zinc-800 p-4 space-y-4 shrink-0 bg-matte-panel">
+        <div className="relative group">
+          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+            <div className="w-1.5 h-1.5 bg-zinc-600 group-focus-within:bg-hard-gold animate-pulse"></div>
           </div>
-          <p className="text-xs text-zinc-600 font-mono border-l border-zinc-800 pl-3">
-            {pagination.total} SESSION{pagination.total !== 1 ? 'S' : ''}
-          </p>
+          <input
+            type="text"
+            placeholder="SEARCH_LOGS..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-matte-base border border-zinc-800 py-2.5 pl-8 pr-4 text-xs font-mono uppercase tracking-widest text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
+          />
         </div>
-        <button
-          onClick={() => fetchSessions(0)}
-          disabled={loading}
-          className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group min-w-[44px]"
-        >
-          <span className="text-xs font-mono uppercase tracking-widest hidden sm:inline group-hover:text-zinc-300 transition-colors">REFRESH</span>
-          <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        
+        <div className="flex flex-wrap gap-2">
+          {(['all', 'quick', 'simulator'] as const).map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setActiveFilter(filter)}
+              className={`px-3 py-1.5 text-[10px] font-mono border transition-all ${
+                activeFilter === filter
+                ? 'border-hard-gold/50 bg-hard-gold/10 text-hard-gold'
+                : 'border-zinc-800 bg-matte-base text-zinc-500 hover:border-zinc-600 hover:text-zinc-300'
+              }`}
+            >
+              {filter.toUpperCase()}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Content */}
@@ -366,8 +387,17 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
           </div>
         ) : (
           <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sessions.map((session) => {
-              const parsedResult = session.parsedResult;
+            {sessions
+              .filter(s => {
+                const matchesFilter = activeFilter === 'all' || s.mode === activeFilter;
+                const matchesSearch = !searchQuery || 
+                  (s.headline?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+                  (s.persona_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+                  (s.parsedResult?.headline?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+                return matchesFilter && matchesSearch;
+              })
+              .map((session) => {
+                const parsedResult = session.parsedResult;
 
               const headline = session.headline || parsedResult?.headline || parsedResult?.vibeCheck?.theirEnergy || 'Session';
               const ghostRisk = session.ghost_risk || parsedResult?.ghostRisk || parsedResult?.vibeCheck?.interestLevel;

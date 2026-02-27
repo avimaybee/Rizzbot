@@ -167,8 +167,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
             {/* Inner accent gradient */}
             <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
             
-            <CornerNodes className="opacity-30 scale-75" />
-
             <div className="p-6 sm:p-10">
               {/* Tactical Mode Selector */}
               {mode !== 'reset' && (

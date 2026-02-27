@@ -4,7 +4,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: UI/UX Cohesion & Tactical Design System**
+- [x] **Track: UI/UX Cohesion & Tactical Design System**
   *Link: [./tracks/ui_cohesion_tactical_design_20260227/](./tracks/ui_cohesion_tactical_design_20260227/)*
 
 ---
@@ -34,7 +34,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Auth & System Overhaul**
+- [~] **Track: Auth & System Overhaul**
   *Link: [./tracks/auth_system_overhaul_20260225/](./tracks/auth_system_overhaul_20260225/)*
 
 ---

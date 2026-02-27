@@ -7,9 +7,9 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Redesign & Navigation' (Protocol in workflow.md) (e30f38e)
 
 ## Phase 2: Tactical Report & Insights
-- [ ] Task: Write tests for the "Tactical Report" panel component.
-- [ ] Task: Implement the Tactical Report panel (rebranding Analysis/Memories) using Monospaced Accents.
-- [ ] Task: Redesign Insight Cards (Pattern Detected, Closure Script, etc.) to match the new visual language.
+- [x] Task: Write tests for the "Tactical Report" panel component.
+- [x] Task: Implement the Tactical Report panel (rebranding Analysis/Memories) using Monospaced Accents.
+- [x] Task: Redesign Insight Cards (Pattern Detected, Closure Script, etc.) to match the new visual language.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Tactical Report & Insights' (Protocol in workflow.md)
 
 ## Phase 3: Interactions & Stabilization

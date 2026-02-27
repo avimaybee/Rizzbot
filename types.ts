@@ -323,6 +323,7 @@ export interface TherapistMessage {
   pattern?: PatternInsight;
   projection?: ProjectionInsight;
   exercise?: TherapistExercise;
+  suggestedPrompts?: string[]; // Tactical follow-up questions
 
   // Psychological Depth Elements
   closureScript?: ClosureScript;

@@ -18,7 +18,7 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeTab, onTabChange }) =
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-2 pb-4 safe-area-inset-bottom pointer-events-none">
-      <div className="mx-auto max-w-[95%] bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 rounded-organic shadow-[0_20px_50px_rgba(0,0,0,0.5)] pointer-events-auto">
+      <div className="mx-auto max-w-[95%] bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 soft-edge shadow-[0_20px_50px_rgba(0,0,0,0.5)] pointer-events-auto">
         <div className="flex justify-around items-center h-16 px-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;

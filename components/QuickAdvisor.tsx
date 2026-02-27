@@ -135,6 +135,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
         result={result} 
         onNewScan={resetForm} 
         onFeedback={handleFeedback} 
+        onBack={onBack}
       />
     );
   }
@@ -159,6 +160,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
         onContextChange={setTheirMessage}
         yourDraft={yourDraft}
         onDraftChange={setYourDraft}
+        onBack={onBack}
       />
     </>
   );

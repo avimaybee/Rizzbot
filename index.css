@@ -56,10 +56,10 @@ button,
   font-weight: 600;
 }
 
-/* Refined label sizing for mobile */
+/* Refined label sizing for modern UI */
 .label-sm {
-  @apply font-mono uppercase tracking-[0.2em];
-  font-size: clamp(8px, 2vw, 10px);
+  @apply font-mono uppercase tracking-[0.1em] font-medium;
+  font-size: 10px;
   color: #71717a;
 }
 
@@ -372,4 +372,16 @@ select {
 
 .soft-border {
   @apply border border-matte-border/30;
+}
+
+.organic-panel {
+  @apply bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/50 rounded-2xl relative overflow-hidden;
+}
+
+.tactical-report-label {
+  @apply text-[9px] font-mono uppercase tracking-[0.2em] text-zinc-500 font-bold mb-1;
+}
+
+.tactical-report-value {
+  @apply text-sm font-bold text-white uppercase font-mono tracking-tight;
 }

@@ -43,7 +43,7 @@ export const TherapistSidebar: React.FC<TherapistSidebarProps> = ({
             <div className="p-4 sm:p-6">
                 <button
                     onClick={onNewSession}
-                    className="w-full flex items-center justify-center gap-3 py-4 bg-zinc-900/50 border border-dashed border-zinc-800 hover:border-rose-500/50 hover:bg-rose-500/5 text-zinc-500 hover:text-rose-400 transition-all rounded-organic group active:scale-[0.98]"
+                    className="w-full flex items-center justify-center gap-3 py-4 bg-zinc-900/50 border border-dashed border-zinc-800 hover:border-rose-500/50 hover:bg-rose-500/5 text-zinc-500 hover:text-rose-400 transition-all soft-edge group active:scale-[0.98]"
                 >
                     <Plus className="w-4 h-4" />
                     <span className="text-sm font-medium">New Analysis</span>
@@ -55,7 +55,7 @@ export const TherapistSidebar: React.FC<TherapistSidebarProps> = ({
                 <div className="tactical-label">Previous Logs</div>
                 
                 {sessions.length === 0 ? (
-                    <div className="text-center py-12 px-4 border border-dashed border-zinc-900 rounded-organic">
+                    <div className="text-center py-12 px-4 border border-dashed border-zinc-900 soft-edge">
                         <MessageCircle className="w-8 h-8 text-zinc-800 mx-auto mb-4" />
                         <p className="text-xs monospaced-accent text-zinc-700">No logs found</p>
                     </div>

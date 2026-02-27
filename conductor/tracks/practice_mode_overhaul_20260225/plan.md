@@ -7,9 +7,9 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Setup & Persona UI' (Protocol in workflow.md) (8ad8b33)
 
 ## Phase 2: Tactical Chat & Risk HUD
-- [x] Task: Write tests for the Real-time Ghost Risk HUD component. (d65d43e)
-- [x] Task: Implement the redesigned Chat View with the persistent Risk HUD. (f3e2a1d)
-- [x] Task: Update message bubbles to match the "Fluid & Organic" style. (f3e2a1d)
+- [x] Task: Write tests for the Real-time Ghost Risk HUD component. (d071fd0)
+- [x] Task: Implement the redesigned Chat View with the persistent Risk HUD. (d071fd0)
+- [x] Task: Update message bubbles to match the "Fluid & Organic" style. (d071fd0)
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Tactical Chat & Risk HUD' (Protocol in workflow.md)
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Tactical Chat & Risk HUD' (Protocol in workflow.md)
 

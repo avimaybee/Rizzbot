@@ -1,6 +1,7 @@
 import React from 'react';
 import { WellbeingState } from '../types';
 import { CornerNodes } from './CornerNodes';
+import { AlertTriangle, Clock, Target, Activity, HeartPulse, ShieldAlert } from 'lucide-react';
 
 interface WellbeingCheckInProps {
   reason: WellbeingState['reason'];
@@ -9,71 +10,102 @@ interface WellbeingCheckInProps {
 }
 
 export const WellbeingCheckIn: React.FC<WellbeingCheckInProps> = ({ reason, onDismiss, onDismissForDay }) => {
-  const messages: Record<NonNullable<WellbeingState['reason']>, { emoji: string; title: string; message: string }> = {
+  const messages: Record<NonNullable<WellbeingState['reason']>, { icon: React.ElementType; color: string; title: string; subtitle: string; message: string }> = {
     late_night: {
-      emoji: '☾',
-      title: "it's late bestie",
-      message: "nothing good happens after 2am. maybe sleep on it? ur texts will still be there tomorrow and ull prob send something way better when ur not half asleep"
+      icon: Clock,
+      color: 'text-hard-gold',
+      title: "CIRCADIAN_DRIFT_DETECTED",
+      subtitle: "Low Cognitive Precision Threshold",
+      message: "Analytical accuracy decreases significantly after 0200 hours. Strategic communication is optimized following a complete sleep cycle. Defer high-stakes transmission?"
     },
     same_person: {
-      emoji: '↺',
-      title: "quick vibe check",
-      message: "noticed ur spending a lot of energy on one person. thats valid but also... are they matching ur effort? sometimes stepping back is the power move"
+      icon: Target,
+      color: 'text-hard-red',
+      title: "TARGET_HYPER_FOCUS",
+      subtitle: "Unbalanced Resource Allocation",
+      message: "Engagement metrics indicate excessive cognitive load directed at a single entity. Data suggests diminishing returns on persistent output. Recalibrate social bandwidth?"
     },
     high_frequency: {
-      emoji: '◈',
-      title: "taking a sec",
-      message: "uve been grinding hard on this. maybe take a breather? go touch some grass, hydrate, or just vibe for a min. the app will be here when u get back"
+      icon: Activity,
+      color: 'text-hard-blue',
+      title: "OPERATIONAL_FATIGUE",
+      subtitle: "Cognitive Processing Overload",
+      message: "System has logged sustained high-intensity analysis. Continued processing without cooling period may lead to tactical errors. Initiate manual stand-down?"
     },
     high_risk: {
-      emoji: '♡',
-      title: "real talk",
-      message: "seeing some consistent red flags in ur convos. not judging at all, but wanted to check in - u good? sometimes the move is to focus on u for a bit"
+      icon: ShieldAlert,
+      color: 'text-hard-red',
+      title: "PROTOCOL_THREAT_WARNING",
+      subtitle: "Critical Relationship Instability",
+      message: "Pattern recognition identifies high-risk interaction sequences. Detected red flags correlate with sub-optimal outcomes. Focus internal resources on self-maintenance?"
     }
   };
 
   const content = reason ? messages[reason] : messages.high_frequency;
+  const Icon = content.icon;
+
+  const handleAction = (action: () => void) => {
+    if ('vibrate' in navigator) navigator.vibrate(5);
+    action();
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-zinc-900 border border-zinc-700 max-w-md w-full relative">
-        <CornerNodes className="opacity-50" />
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[1000] flex items-center justify-center p-6 animate-fade-in font-mono select-none">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 bg-scan-lines opacity-[0.05] pointer-events-none"></div>
+      
+      <div className="glass-dark border-white/5 max-w-lg w-full relative soft-edge shadow-[0_50px_100px_rgba(0,0,0,0.8)] overflow-hidden">
+        <CornerNodes className="opacity-20 scale-75" />
 
-        {/* Header */}
-        <div className="bg-zinc-800 border-b border-zinc-700 px-6 py-4 flex items-center gap-3">
-          <span className="text-3xl">{content.emoji}</span>
-          <div>
-            <div className="text-xs font-mono text-zinc-500 uppercase tracking-wider">WELLBEING CHECK</div>
-            <h3 className="font-impact text-xl text-white uppercase">{content.title}</h3>
+        {/* Header Section */}
+        <div className="p-8 pb-4">
+          <div className="flex items-center gap-5 mb-8">
+            <div className={`w-16 h-16 glass flex items-center justify-center border-white/5 rounded-full relative shadow-[0_0_30px_rgba(0,0,0,0.3)]`}>
+              <Icon className={`w-8 h-8 ${content.color} animate-pulse`} />
+              <div className={`absolute inset-0 rounded-full border ${content.color.replace('text-', 'border-')}/20 animate-ping opacity-20`}></div>
+            </div>
+            <div>
+              <div className={`text-[10px] font-bold ${content.color} uppercase tracking-[0.4em] mb-2`}>BIOMETRIC_FEEDBACK_LOOP</div>
+              <h3 className="font-impact text-3xl text-white uppercase tracking-tighter leading-none">{content.title}</h3>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="bg-black/40 border border-white/5 p-5 relative">
+               <div className="absolute top-0 left-0 w-1 h-full bg-zinc-800 opacity-50"></div>
+               <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 border-b border-white/5 pb-2">
+                  System Diagnostics: {content.subtitle}
+               </div>
+               <p className="text-zinc-300 text-xs leading-relaxed uppercase tracking-wide">
+                  {content.message}
+               </p>
+            </div>
+
+            {/* Actions */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <button
+                onClick={() => handleAction(onDismiss)}
+                className="py-4 bg-white text-black font-impact text-xl uppercase tracking-widest hover:bg-zinc-200 transition-all active:scale-[0.98] shadow-xl"
+              >
+                PROCEED
+              </button>
+              <button
+                onClick={() => handleAction(onDismissForDay)}
+                className="py-4 glass-zinc border-white/5 text-zinc-500 font-bold text-[10px] uppercase tracking-[0.2em] hover:text-white hover:border-white/10 transition-all active:scale-[0.98]"
+              >
+                DEACTIVATE_24H
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
-          <p className="text-zinc-300 text-sm leading-relaxed mb-6">
-            {content.message}
-          </p>
-
-          {/* Actions */}
-          <div className="space-y-3">
-            <button
-              onClick={onDismiss}
-              className="w-full py-3 bg-white text-black font-bold text-sm uppercase tracking-wider hover:bg-zinc-200 transition-colors min-h-[44px]"
-            >
-              im good, keep going
-            </button>
-            <button
-              onClick={onDismissForDay}
-              className="w-full py-3 border border-zinc-700 text-zinc-400 text-sm uppercase tracking-wider hover:border-zinc-500 hover:text-zinc-200 transition-colors min-h-[44px]"
-            >
-              dont remind me today
-            </button>
+        {/* Footer */}
+        <div className="px-8 py-6 bg-black/40 border-t border-white/5 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+             <HeartPulse className="w-3 h-3 text-zinc-700" />
+             <div className="text-[8px] font-bold text-zinc-700 uppercase tracking-[0.3em]">RIZZBOT_BIOMETRICS_V2</div>
           </div>
-
-          {/* Footer note */}
-          <p className="text-xs text-zinc-600 text-center mt-4 font-mono">
-            we just want u to win →
-          </p>
+          <div className="text-[8px] font-bold text-hard-gold uppercase tracking-[0.3em] animate-pulse">OPTIMIZING_OPERATOR_INTEGRITY</div>
         </div>
       </div>
     </div>

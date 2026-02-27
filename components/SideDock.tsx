@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut } from 'lucide-react';
+import { LogOut, LayoutDashboard, Zap, Target, Shield, HeartHandshake, User, Settings } from 'lucide-react';
 import { AuthUser } from '../services/firebaseService';
 import { Module } from '../types';
 import { Logo } from './Logo';
@@ -9,18 +9,27 @@ interface DockItemProps {
   onClick: () => void;
   label: string;
   index: string;
+  icon: React.ElementType;
 }
 
-const DockItem: React.FC<DockItemProps> = ({ active, onClick, label, index }) => (
+const DockItem: React.FC<DockItemProps> = ({ active, onClick, label, index, icon: Icon }) => (
   <button
     onClick={onClick}
-    className="w-full flex flex-col items-center justify-center gap-1 group relative"
+    className="w-full flex flex-col items-center justify-center gap-2 group relative py-2"
   >
-    <div className={`w-1 h-1 rounded-full mb-2 transition-all duration-300 ${active ? 'bg-hard-gold w-1.5 h-1.5' : 'bg-zinc-800 group-hover:bg-zinc-600'}`}></div>
-    <span className={`text-[10px] font-bold tracking-widest relative z-10 writing-vertical-lr py-2 transition-colors ${active ? 'text-white' : 'text-zinc-600 group-hover:text-zinc-400'}`}>
+    {/* Active Indicator Frame */}
+    <div className={`absolute left-0 w-1 h-8 bg-hard-gold transition-all duration-500 ${active ? 'opacity-100' : 'opacity-0 scale-y-0'}`}></div>
+    
+    <div className={`transition-all duration-300 ${active ? 'text-hard-gold scale-110' : 'text-zinc-600 group-hover:text-zinc-400'}`}>
+      <Icon className="w-5 h-5" />
+    </div>
+    
+    <span className={`text-[8px] font-bold tracking-[0.2em] uppercase transition-colors ${active ? 'text-white' : 'text-zinc-700 group-hover:text-zinc-500'}`}>
       {label}
     </span>
-    <span className="absolute -right-2 top-0 text-[8px] text-zinc-800 font-mono opacity-0 group-hover:opacity-100 transition-opacity">{index}</span>
+    
+    {/* Index Marker */}
+    <span className="absolute -right-1 top-1 text-[7px] text-zinc-800 font-mono opacity-0 group-hover:opacity-100 transition-opacity">[{index}]</span>
   </button>
 );
 
@@ -32,83 +41,108 @@ interface SideDockProps {
 }
 
 export const SideDock: React.FC<SideDockProps> = ({ activeModule, setModule, authUser, onSignOut }) => {
+  const handleAction = (module: Module) => {
+    if ('vibrate' in navigator) navigator.vibrate(5);
+    setModule(module);
+  };
+
   return (
-    <div className="hidden md:flex w-20 border-r border-zinc-800 bg-matte-base flex-col items-center py-6 z-50 h-full relative">
-      <div className="mb-10">
-        <Logo size={40} className="animate-pulse" />
+    <div className="hidden md:flex w-20 border-r border-white/5 bg-black flex-col items-center py-8 z-50 h-full relative font-mono">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 bg-scan-lines opacity-[0.03] pointer-events-none"></div>
+      
+      <div className="mb-12 relative group cursor-pointer" onClick={() => handleAction('standby')}>
+        <div className="absolute inset-0 bg-hard-gold/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <Logo size={36} className="relative z-10 opacity-80 group-hover:opacity-100 transition-opacity grayscale group-hover:grayscale-0" />
       </div>
 
-      <div className="flex-1 flex flex-col gap-8 w-full px-2">
+      <div className="flex-1 flex flex-col gap-6 w-full">
         <DockItem
           active={activeModule === 'standby'}
-          onClick={() => setModule('standby')}
+          onClick={() => handleAction('standby')}
           label="SYS"
           index="01"
+          icon={LayoutDashboard}
         />
         <DockItem
           active={activeModule === 'quick'}
-          onClick={() => setModule('quick')}
-          label="QUICK"
+          onClick={() => handleAction('quick')}
+          label="SCAN"
           index="02"
+          icon={Zap}
         />
         <DockItem
           active={activeModule === 'simulator'}
-          onClick={() => setModule('simulator')}
-          label="PRACTICE"
+          onClick={() => handleAction('simulator')}
+          label="SIM"
           index="03"
+          icon={Target}
         />
         <DockItem
           active={activeModule === 'history'}
-          onClick={() => setModule('history')}
-          label="HISTORY"
+          onClick={() => handleAction('history')}
+          label="ARC"
           index="04"
+          icon={Shield}
         />
         <DockItem
           active={activeModule === 'therapist'}
-          onClick={() => setModule('therapist')}
-          label="THERAPY"
+          onClick={() => handleAction('therapist')}
+          label="MED"
           index="05"
+          icon={HeartHandshake}
         />
         <DockItem
           active={activeModule === 'profile'}
-          onClick={() => setModule('profile')}
-          label="PROFILE"
+          onClick={() => handleAction('profile')}
+          label="USR"
           index="06"
+          icon={User}
         />
       </div>
 
-      <div className="mt-auto flex flex-col items-center gap-4">
-        {/* User Avatar & Sign Out */}
+      <div className="mt-auto flex flex-col items-center gap-6 w-full">
+        {/* User Node */}
         {authUser && (
-          <div className="flex flex-col items-center gap-3 mb-4 group">
-            <div className="relative">
+          <div className="flex flex-col items-center gap-4 w-full">
+            <div 
+              onClick={() => handleAction('profile')}
+              className="relative cursor-pointer group"
+            >
+              <div className="absolute inset-[-4px] border border-white/5 group-hover:border-white/10 transition-colors"></div>
               {authUser.photoURL ? (
                 <img
                   src={authUser.photoURL}
-                  alt={authUser.displayName || 'User'}
-                  className="w-10 h-10 rounded-full border-2 border-zinc-700 group-hover:border-zinc-500 transition-all shadow-lg"
+                  alt=""
+                  className="w-10 h-10 border border-white/5 grayscale group-hover:grayscale-0 transition-all shadow-xl"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-hard-gold/80 via-amber-500 to-orange-500 flex items-center justify-center text-white text-sm font-bold shadow-lg ring-2 ring-zinc-800 group-hover:ring-zinc-600 transition-all">
-                  {(authUser.displayName || authUser.email || 'U')[0].toUpperCase()}
+                <div className="w-10 h-10 bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-600 text-xs font-bold uppercase group-hover:text-zinc-400 transition-all">
+                  {authUser.displayName?.[0] || 'U'}
                 </div>
               )}
-              {/* Online indicator dot */}
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-matte-base"></div>
+              {/* Status indicator */}
+              <div className="absolute -bottom-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-black shadow-sm"></div>
             </div>
+            
             {onSignOut && (
               <button
-                onClick={onSignOut}
-                className="flex items-center gap-1.5 px-2 py-1 text-zinc-600 hover:text-red-400 hover:bg-red-900/20 rounded transition-all text-[9px] font-mono uppercase tracking-wider"
+                onClick={() => {
+                  if ('vibrate' in navigator) navigator.vibrate(10);
+                  onSignOut();
+                }}
+                className="text-zinc-700 hover:text-hard-red transition-colors p-2"
                 title="Sign out"
               >
-                <LogOut className="w-3 h-3" />
+                <LogOut className="w-4 h-4" />
               </button>
             )}
           </div>
         )}
-        <div className="text-[9px] font-mono text-zinc-600 writing-vertical-lr tracking-widest uppercase opacity-30 hover:opacity-100 transition-opacity cursor-default">
-          RIZZBOT V3.1
+        
+        {/* Hardware Identifier */}
+        <div className="text-[7px] font-bold text-zinc-800 writing-vertical-lr tracking-[0.4em] uppercase py-4 border-t border-white/5 w-full flex items-center">
+          RB_UNIT_77_NODE_01
         </div>
       </div>
     </div>

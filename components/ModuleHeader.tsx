@@ -58,8 +58,7 @@ export const ModuleHeader: React.FC<ModuleHeaderProps> = ({
           </button>
           <div>
             <div className={`label-sm ${statusClasses[accentColor]} flex items-center gap-2`}>
-              <span className={`w-1.5 h-1.5 ${accentColor === 'gold' ? 'bg-hard-gold' : accentColor === 'blue' ? 'bg-hard-blue' : accentColor === 'red' ? 'bg-hard-red' : 'bg-emerald-400'} animate-pulse`}></span>
-              {mode} {id ? `// ID: ${id}` : ''}
+              {mode} {id ? `| ${id}` : ''}
             </div>
             <h2 className="text-xl sm:text-3xl font-impact text-white uppercase tracking-tight mt-1">
               {title}
@@ -70,11 +69,11 @@ export const ModuleHeader: React.FC<ModuleHeaderProps> = ({
         <div className="flex items-center gap-4 text-right">
           {lastAnalyzed && (
             <div className="hidden md:block">
-              <div className="label-sm text-zinc-500 text-right uppercase">LAST_ANALYZED</div>
+              <div className="label-sm text-zinc-500 text-right uppercase">LAST ANALYZED</div>
               <div className="text-[10px] font-mono text-zinc-400">{lastAnalyzed}</div>
             </div>
           )}
-          <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-zinc-800 border border-zinc-700 text-left min-w-[120px]">
+          <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-zinc-900 border border-zinc-800 text-left min-w-[120px] soft-edge">
             <div className="label-sm text-zinc-500 uppercase">{statusLabel}</div>
             <div className={`text-[10px] font-mono ${statusClasses[statusColor]}`}>{statusValue}</div>
           </div>

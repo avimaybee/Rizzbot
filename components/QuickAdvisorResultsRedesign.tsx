@@ -2,11 +2,13 @@ import React, { useState, useCallback } from 'react';
 import { QuickAdviceResponse } from '../types';
 import { ThumbsUp, Minus, ThumbsDown, Copy, Check, Sparkles, ArrowLeft } from 'lucide-react';
 import { useGlobalToast } from './Toast';
+import { ModuleHeader } from './ModuleHeader';
 
 interface QuickAdvisorResultsRedesignProps {
   result: QuickAdviceResponse;
   onNewScan: () => void;
   onFeedback: (suggestionType: 'smooth' | 'bold' | 'witty' | 'authentic', rating: 'helpful' | 'mid' | 'off') => void;
+  onBack: () => void;
 }
 
 const SuggestionSection = ({ 
@@ -59,7 +61,7 @@ const SuggestionSection = ({
                 <button
                   key={j}
                   onClick={() => onCopy(reply.reply, id)}
-                  className="w-full text-left p-5 rounded-organic bg-zinc-900/40 border border-zinc-800/50 hover:border-zinc-600 transition-all group active:scale-[0.99] relative overflow-hidden"
+                  className="w-full text-left p-5 soft-edge bg-zinc-900/40 border border-zinc-800/50 hover:border-zinc-600 transition-all group active:scale-[0.99] relative overflow-hidden"
                 >
                   <p className="text-white text-base leading-relaxed mb-2 pr-8">{reply.reply}</p>
                   <div className="flex items-center justify-between">
@@ -81,7 +83,8 @@ const SuggestionSection = ({
 const QuickAdvisorResultsRedesign: React.FC<QuickAdvisorResultsRedesignProps> = ({ 
   result, 
   onNewScan, 
-  onFeedback 
+  onFeedback,
+  onBack
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [feedbackState, setFeedbackState] = useState<Record<string, 'helpful' | 'mid' | 'off'>>({});
@@ -103,24 +106,20 @@ const QuickAdvisorResultsRedesign: React.FC<QuickAdvisorResultsRedesignProps> = 
 
   return (
     <div className="h-full w-full flex flex-col bg-matte-base animate-fade-in overflow-y-auto scrollbar-hide">
-      <div className="p-6 max-w-sm mx-auto w-full space-y-10 pb-32">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <button 
-            onClick={() => {
-              if (window.navigator.vibrate) window.navigator.vibrate(5);
-              onNewScan();
-            }} 
-            className="text-zinc-500 hover:text-white transition-colors p-2 -ml-2"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-mono text-hard-gold uppercase tracking-widest flex items-center gap-1.5 shadow-[0_0_15px_rgba(251,191,36,0.1)]">
-            <span className="w-1.5 h-1.5 rounded-full bg-hard-gold animate-pulse"></span>
-            Analysis Live
-          </div>
-        </div>
+      {/* MODULE HEADER */}
+      <div className="px-6 pt-6 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-sm">
+        <ModuleHeader 
+          title="LINGUISTIC_DECRYPTION_LIVE" 
+          mode="QUICK_MODE" 
+          onBack={onBack}
+          accentColor="gold"
+          statusLabel="SCAN_STATUS"
+          statusValue="COMPLETE"
+          statusColor="emerald"
+        />
+      </div>
 
+      <div className="p-6 max-w-sm mx-auto w-full space-y-10 pb-32">
         {/* Vibe Check Header */}
         <div className="text-center space-y-2">
           <p className="text-[10px] font-mono text-hard-gold uppercase tracking-[0.3em]">Vibe Check</p>
@@ -136,7 +135,7 @@ const QuickAdvisorResultsRedesign: React.FC<QuickAdvisorResultsRedesignProps> = 
         </div>
 
         {/* Recommended Action Card */}
-        <div className="p-6 rounded-organic bg-white text-black text-center space-y-1 shadow-[0_20px_40px_rgba(255,255,255,0.05)]">
+        <div className="p-6 soft-edge bg-white text-black text-center space-y-1 shadow-[0_20px_40px_rgba(255,255,255,0.05)]">
           <p className="text-[10px] font-mono uppercase tracking-[0.2em] opacity-60">Strategic Move</p>
           <h3 className="text-3xl font-impact uppercase">{result.recommendedAction.replace('_', ' ')}</h3>
         </div>
@@ -196,7 +195,7 @@ const QuickAdvisorResultsRedesign: React.FC<QuickAdvisorResultsRedesignProps> = 
         </div>
 
         {/* Pro Tip */}
-        <div className="p-6 rounded-organic bg-zinc-900/50 border border-zinc-800 space-y-3">
+        <div className="p-6 soft-edge bg-zinc-900/50 border border-zinc-800 space-y-3">
           <div className="flex items-center gap-2">
             <Sparkles size={16} className="text-hard-gold" />
             <span className="text-[10px] font-mono text-hard-gold uppercase tracking-widest">Pro Tip</span>
@@ -212,7 +211,7 @@ const QuickAdvisorResultsRedesign: React.FC<QuickAdvisorResultsRedesignProps> = 
             if (window.navigator.vibrate) window.navigator.vibrate(5);
             onNewScan();
           }}
-          className="w-full py-4 rounded-organic border border-zinc-800 text-zinc-500 font-mono text-[10px] uppercase tracking-widest hover:bg-zinc-900 hover:text-white transition-all"
+          className="w-full py-4 soft-edge border border-zinc-800 text-zinc-500 font-mono text-[10px] uppercase tracking-widest hover:bg-zinc-900 hover:text-white transition-all"
         >
           New Diagnostic
         </button>

@@ -1,5 +1,5 @@
 import { expect, test, describe, vi, beforeEach } from "bun:test";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import React from "react";
 import { History } from "./History";
 import * as dbService from "../services/dbService";
@@ -116,5 +116,50 @@ describe("History Component Redesign", () => {
     // Check for Zap icon (Lucide icon renders as an SVG)
     const svg = container.querySelector("svg.lucide-zap");
     expect(svg).toBeInTheDocument();
+  });
+
+  test("filters sessions by search query", async () => {
+    (dbService.getSessions as any).mockResolvedValue({
+      sessions: mockSessions,
+      pagination: { total: 2, limit: 20, offset: 0, hasMore: false }
+    });
+
+    const { getByPlaceholderText, queryByText, getByText } = render(<History firebaseUid="test-user" />);
+
+    await waitFor(() => {
+      expect(getByText("Quick Session 1")).toBeInTheDocument();
+      expect(getByText("Practice Session 1")).toBeInTheDocument();
+    });
+
+    const searchInput = getByPlaceholderText("SEARCH_LOGS...");
+    fireEvent.change(searchInput, { target: { value: "Emma" } });
+    fireEvent.input(searchInput); // Trigger input event too
+
+    await waitFor(() => {
+      expect(queryByText("Quick Session 1")).toBeNull();
+      expect(getByText("Practice Session 1")).toBeInTheDocument();
+    }, { timeout: 2000 });
+  });
+
+  test("filters sessions by mode", async () => {
+    (dbService.getSessions as any).mockResolvedValue({
+      sessions: mockSessions,
+      pagination: { total: 2, limit: 20, offset: 0, hasMore: false }
+    });
+
+    const { getByText, queryByText } = render(<History firebaseUid="test-user" />);
+
+    await waitFor(() => {
+      expect(getByText("Quick Session 1")).toBeInTheDocument();
+      expect(getByText("Practice Session 1")).toBeInTheDocument();
+    });
+
+    const quickFilter = getByText("QUICK");
+    fireEvent.click(quickFilter);
+
+    await waitFor(() => {
+      expect(getByText("Quick Session 1")).toBeInTheDocument();
+      expect(queryByText("Practice Session 1")).toBeNull();
+    }, { timeout: 2000 });
   });
 });

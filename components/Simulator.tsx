@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Upload, MessageSquare, Copy, Check, Sparkles, ThumbsUp, Minus, ThumbsDown, ArrowLeft } from 'lucide-react';
+import { ChevronDown, ChevronUp, Upload, MessageSquare, Copy, Check, Sparkles, ThumbsUp, Minus, ThumbsDown, ArrowLeft, Target, Shield, Activity, Cpu, Zap, Terminal } from 'lucide-react';
 import { generatePersona, simulateDraft, analyzeSimulation } from '../services/geminiService';
 import { saveFeedback, logSession } from '../services/feedbackService';
 import { createPersona, createSession } from '../services/dbService';
@@ -8,11 +8,9 @@ import { useGlobalToast } from './Toast';
 import { CornerNodes } from './CornerNodes';
 import { ModuleHeader } from './ModuleHeader';
 
-interface SimulatorProps {  // User's style profile for personalized suggestions
+interface SimulatorProps {
   userProfile?: UserStyleProfile | null;
-  // User's Firebase UID for storing sessions
   firebaseUid?: string | null;
-  // User's numeric ID for storing personas
   userId?: number | null;
   onBack: () => void;
 }
@@ -23,15 +21,11 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
   const [view, setView] = useState<View>('setup');
   const { showToast } = useGlobalToast();
 
-  // Copy to clipboard state
   const [copiedText, setCopiedText] = useState<string | null>(null);
-
-  // Loading States
   const [setupLoading, setSetupLoading] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
 
-  // Setup State
   const [personaDescription, setPersonaDescription] = useState('');
   const [customName, setCustomName] = useState('');
   const [relationshipContext, setRelationshipContext] = useState<'NEW_MATCH' | 'TALKING_STAGE' | 'DATING' | 'SITUATIONSHIP' | 'EX' | 'FRIEND'>('TALKING_STAGE');
@@ -40,21 +34,16 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Chat State
   const [activePersona, setActivePersona] = useState<Persona | null>(null);
   const [draft, setDraft] = useState('');
   const [simHistory, setSimHistory] = useState<{ draft: string, result: SimResult }[]>([]);
-  const [pendingMessage, setPendingMessage] = useState<string | null>(null);  // Custom dropdown state
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [showContextDropdown, setShowContextDropdown] = useState(false);
-  const [showPracticePartners, setShowPracticePartners] = useState(false); // Mobile collapsible
+  const [showPracticePartners, setShowPracticePartners] = useState(false);
 
-  // Analysis State
   const [analysisResult, setAnalysisResult] = useState<SimAnalysisResult | null>(null);
-
-  // Feedback State
   const [feedbackGiven, setFeedbackGiven] = useState<Record<string, 'helpful' | 'mid' | 'off'>>({});
 
-  // Saved Personas (Local Storage Mock)
   const [savedPersonas, setSavedPersonas] = useState<Persona[]>(() => {
     const saved = localStorage.getItem('unsend_personas');
     return saved ? JSON.parse(saved) : [];
@@ -62,7 +51,6 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Load chat history from localStorage when persona changes
   useEffect(() => {
     if (activePersona?.name) {
       const storageKey = `unsend_sim_history_${activePersona.name.replace(/\s+/g, '_')}`;
@@ -80,7 +68,6 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
     }
   }, [activePersona?.name]);
 
-  // Save chat history to localStorage when it changes
   useEffect(() => {
     if (activePersona?.name && simHistory.length > 0) {
       const storageKey = `unsend_sim_history_${activePersona.name.replace(/\s+/g, '_')}`;
@@ -94,27 +81,19 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
     }
   }, [simHistory, view, chatLoading]);
 
-  // Copy to clipboard with visual feedback
-  const copyToClipboard = useCallback((text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedText(text);
-    showToast('Copied to clipboard!', 'copied');
-    setTimeout(() => setCopiedText(null), 1500);
-  }, [showToast]);
+  const handleAction = (action: () => void, vibration = 5) => {
+    if ('vibrate' in navigator) navigator.vibrate(vibration);
+    action();
+  };
 
-  // Handle feedback on rewrite suggestions
-  const handleFeedback = useCallback((suggestionType: 'safe' | 'bold' | 'spicy' | 'you', rating: 'helpful' | 'mid' | 'off', entryIndex: number) => {
-    const key = `${entryIndex}-${suggestionType}`;
-    if (firebaseUid) {
-      saveFeedback(firebaseUid, {
-        source: 'practice',
-        suggestionType,
-        rating,
-        context: relationshipContext.toLowerCase(),
-      });
-    }
-    setFeedbackGiven(prev => ({ ...prev, [key]: rating }));
-  }, [relationshipContext, firebaseUid]);
+  const copyToClipboard = useCallback((text: string) => {
+    handleAction(() => {
+      navigator.clipboard.writeText(text);
+      setCopiedText(text);
+      showToast('DATA_COPIED_TO_BUFFER', 'copied');
+      setTimeout(() => setCopiedText(null), 1500);
+    }, 10);
+  }, [showToast]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -133,13 +112,12 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
   const buildPersona = async () => {
     if (!personaDescription && screenshots.length === 0) return;
-    setSetupLoading(true);
+    handleAction(() => setSetupLoading(true), 15);
     try {
       const persona = await generatePersona(personaDescription, screenshots, relationshipContext, harshnessLevel);
       if (customName.trim()) persona.name = customName.trim();
       setActivePersona(persona);
 
-      // Save persona to D1 if userId is available
       if (userId) {
         try {
           await createPersona({
@@ -153,11 +131,9 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
           });
         } catch (dbError) {
           console.error('Failed to save persona to DB:', dbError);
-          // Continue anyway, feature still works locally
         }
       }
 
-      // Also save locally
       setSavedPersonas(prev => [...prev, persona]);
       localStorage.setItem('unsend_personas', JSON.stringify([...savedPersonas, persona]));
     } finally {
@@ -167,17 +143,21 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
   };
 
   const loadPersona = (p: Persona) => {
-    setActivePersona(p);
-    setView('chat');
+    handleAction(() => {
+      setActivePersona(p);
+      setView('chat');
+    }, 10);
   };
 
   const runSimulation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!draft.trim() || !activePersona) return;
     const sentMessage = draft;
-    setPendingMessage(sentMessage);
-    setDraft('');
-    setChatLoading(true);
+    handleAction(() => {
+      setPendingMessage(sentMessage);
+      setDraft('');
+      setChatLoading(true);
+    }, 15);
     const result = await simulateDraft(firebaseUid ?? undefined, sentMessage, activePersona, userProfile);
     setSimHistory(prev => [...prev, { draft: sentMessage, result }]);
     setPendingMessage(null);
@@ -186,17 +166,15 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
   const handleEndSim = async () => {
     if (!activePersona || simHistory.length === 0) return;
-    setAnalyzing(true);
+    handleAction(() => setAnalyzing(true), 20);
     try {
       const result = await analyzeSimulation(simHistory, activePersona, userProfile);
       setAnalysisResult(result);
 
-      // Log session for wellbeing tracking
       if (firebaseUid) {
         logSession(firebaseUid, 'practice', activePersona.name, result.ghostRisk);
       }
 
-      // Save session to D1 with enhanced metadata
       if (firebaseUid) {
         try {
           await createSession(firebaseUid, {
@@ -214,7 +192,6 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
           });
         } catch (dbError) {
           console.error('Failed to save session to DB:', dbError);
-          // Continue anyway
         }
       }
     } finally {
@@ -223,32 +200,42 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
     }
   };
 
-  const copyToDraft = (text: string) => {
-    setDraft(text);
-  };
-
   const resetSim = () => {
-    setSimHistory([]);
-    setAnalysisResult(null);
-    setFeedbackGiven({});
-    setView('chat');
+    handleAction(() => {
+      setSimHistory([]);
+      setAnalysisResult(null);
+      setFeedbackGiven({});
+      setView('chat');
+    }, 10);
   };
 
   // --- LOADING STATES ---
   if (setupLoading || analyzing) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center glass-zinc soft-edge max-w-2xl mx-auto p-12 relative">
-        <CornerNodes />
-        <div className="relative mb-8">
-          <div className="w-16 h-16 border-4 border-zinc-800/50 border-t-hard-blue animate-spin rounded-full"></div>
-          <div className="absolute inset-0 w-16 h-16 border-4 border-hard-blue/20 rounded-full animate-pulse"></div>
+      <div className="w-full h-full flex flex-col items-center justify-center bg-matte-base p-12 relative overflow-hidden font-mono select-none">
+        <div className="bg-matte-grain"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] bg-hard-blue/5 rounded-full blur-[100px] animate-pulse-slow"></div>
+        
+        <CornerNodes className="opacity-20" />
+        <div className="relative mb-12">
+          <div className="w-24 h-24 glass flex items-center justify-center border-white/10 rounded-full relative shadow-[0_0_40px_rgba(59,130,246,0.1)]">
+             <Cpu className="w-10 h-10 text-hard-blue animate-pulse" />
+             <div className="absolute inset-0 rounded-full border border-hard-blue/30 animate-ping opacity-20"></div>
+          </div>
         </div>
-        <h2 className="text-fluid-subtitle text-white mb-2">
-          {analyzing ? "Running Diagnostics" : "Building Profile"}
+        <h2 className="text-3xl font-impact text-white uppercase tracking-tighter mb-4 filter drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]">
+          {analyzing ? "Running Diagnostics" : "Synthesizing Node"}
         </h2>
-        <p className="label-sm text-zinc-500 animate-pulse mono-accent uppercase tracking-[0.2em]">
-          {analyzing ? "CALCULATING SIMP COEFFICIENT..." : "DECODING BEHAVIORAL PATTERNS..."}
-        </p>
+        <div className="flex flex-col items-center gap-3">
+           <div className="flex gap-1.5">
+              <div className="w-1 h-1 bg-hard-blue animate-bounce"></div>
+              <div className="w-1 h-1 bg-hard-blue animate-bounce delay-75"></div>
+              <div className="w-1 h-1 bg-hard-blue animate-bounce delay-150"></div>
+           </div>
+           <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.4em]">
+             {analyzing ? "CALCULATING_INTERACTION_METRICS..." : "DECODING_LINGUISTIC_VECTORS..."}
+           </p>
+        </div>
       </div>
     );
   }
@@ -256,176 +243,130 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
   // --- SETUP VIEW ---
   if (view === 'setup') {
     return (
-      <div className="w-full h-full max-w-full mx-auto glass-zinc flex flex-col shadow-2xl relative overflow-hidden pb-32 md:pb-0">
-        <CornerNodes />
-
+      <div className="w-full h-full flex flex-col bg-matte-base relative overflow-hidden font-mono select-none">
+        <div className="bg-matte-grain"></div>
+        
         {/* MODULE HEADER */}
-        <div className="px-4 pt-4">
+        <div className="px-6 pt-8 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
           <ModuleHeader 
-            title="PRACTICE_PARTNER_SETUP" 
-            mode="PRACTICE_MODE" 
-            onBack={onBack}
+            title="PRACTICE_NODE_INIT" 
+            mode="SIMULATION_ENV" 
+            onBack={() => handleAction(onBack)}
             accentColor="blue"
-            statusLabel="SYSTEM_STATUS"
-            statusValue="CALIBRATING"
-            statusColor="blue"
+            statusLabel="SYSTEM_READY"
+            statusValue="WAITING_FOR_INPUT"
+            statusColor="emerald"
           />
         </div>
 
-        {/* MOBILE: Show header first, then archive inline */}
-        <div className="flex flex-col md:flex-row h-full overflow-hidden">
-
-          {/* LEFT: SAVED PROFILES - Collapsible on mobile, sidebar on desktop */}
-          <div className={`order-2 md:order-1 w-full md:w-1/3 border-t md:border-t-0 md:border-r border-zinc-800/50 glass-dark flex flex-col md:h-full ${savedPersonas.length === 0 ? 'hidden md:flex' : ''}`}>
-            {/* Mobile: Collapsible dropdown header - More compact */}
+        <div className="flex-1 flex flex-col md:flex-row h-full overflow-hidden relative z-10">
+          {/* LEFT: SAVED PROFILES */}
+          <div className={`order-2 md:order-1 w-full md:w-80 border-t md:border-t-0 md:border-r border-white/5 bg-black/40 flex flex-col md:h-full overflow-hidden ${savedPersonas.length === 0 ? 'hidden md:flex' : ''}`}>
             <button
-              className="md:hidden w-full p-3 flex items-center justify-between min-h-[44px]"
-              onClick={() => setShowPracticePartners(!showPracticePartners)}
+              className="md:hidden w-full p-5 flex items-center justify-between glass-zinc border-b border-white/5"
+              onClick={() => handleAction(() => setShowPracticePartners(!showPracticePartners))}
             >
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-hard-blue rounded-sm"></div>
-                <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider mono-accent">Practice Partners</h4>
+              <div className="flex items-center gap-3">
+                <Target className="w-4 h-4 text-hard-blue" />
+                <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em]">Active Simulations</h4>
                 {savedPersonas.length > 0 && (
-                  <span className="text-xs font-mono text-zinc-500 bg-zinc-800/80 px-2 py-0.5 rounded-sm">{savedPersonas.length}</span>
+                  <span className="text-[9px] font-bold text-hard-blue bg-hard-blue/10 px-2 py-0.5 rounded-full border border-hard-blue/20">{savedPersonas.length}</span>
                 )}
               </div>
-              <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${showPracticePartners ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 text-zinc-600 transition-transform ${showPracticePartners ? 'rotate-180' : ''}`} />
             </button>
 
-            {/* Mobile: Collapsible content */}
-            <div className={`md:hidden overflow-hidden transition-all duration-200 ${showPracticePartners ? 'max-h-64' : 'max-h-0'}`}>
-              <div className="px-4 pb-4 space-y-2 overflow-y-auto max-h-56 scrollbar-hide">
+            <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${showPracticePartners || window.innerWidth >= 768 ? 'opacity-100' : 'max-h-0 opacity-0 md:opacity-100 md:max-h-full'}`}>
+              <div className="hidden md:flex items-center justify-between p-6 shrink-0 border-b border-white/5 bg-black/20">
+                <div className="flex items-center gap-3">
+                  <Target className="w-4 h-4 text-hard-blue" />
+                  <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em]">Active Simulations</h4>
+                </div>
+                <div className="text-[9px] font-bold text-zinc-700 bg-zinc-900 px-2 py-0.5 rounded border border-white/5">DB_V3</div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 scrollbar-hide">
                 {savedPersonas.map((p, idx) => (
                   <button
                     key={idx}
                     onClick={() => loadPersona(p)}
-                    className="w-full text-left p-4 glass-dark border border-zinc-800/50 hover:border-hard-blue hover:bg-zinc-800/40 transition-all group soft-edge min-h-[44px]"
+                    className="w-full text-left p-4 glass-zinc border-white/5 hover:border-hard-blue/30 hover:bg-hard-blue/[0.02] transition-all group soft-edge relative overflow-hidden active:scale-[0.98]"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 shrink-0 bg-gradient-to-br from-hard-blue/20 to-hard-blue/5 border border-hard-blue/30 rounded-full flex items-center justify-center text-hard-blue text-sm font-bold">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 shrink-0 glass flex items-center justify-center text-hard-blue border-white/5 shadow-xl group-hover:border-hard-blue/20 transition-all rounded-full font-impact text-lg">
                         {p.name.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <div className="font-bold text-sm text-zinc-200 truncate mono-accent">{p.name}</div>
-                          <div className={`difficulty-indicator w-2 h-2 rounded-full ${p.harshnessLevel && p.harshnessLevel >= 5 ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
-                              p.harshnessLevel && p.harshnessLevel >= 4 ? 'bg-orange-500' :
-                                p.harshnessLevel && p.harshnessLevel >= 3 ? 'bg-yellow-500' :
-                                  p.harshnessLevel && p.harshnessLevel >= 2 ? 'bg-emerald-500' :
-                                    'bg-blue-500'
-                            }`} title={`Difficulty: ${p.harshnessLevel || 3}/5`}></div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="font-bold text-xs text-white uppercase tracking-wider truncate">{p.name}</div>
+                          <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)] ${
+                            p.harshnessLevel && p.harshnessLevel >= 5 ? 'bg-hard-red animate-pulse' :
+                            p.harshnessLevel && p.harshnessLevel >= 3 ? 'bg-hard-gold' :
+                            'bg-emerald-500'
+                          }`}></div>
                         </div>
-                        <div className="text-[10px] text-zinc-500 truncate mono-accent uppercase tracking-wider">{p.relationshipContext?.replace('_', ' ')}</div>
+                        <div className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">{p.relationshipContext?.replace('_', ' ')}</div>
                       </div>
                     </div>
                   </button>
                 ))}
               </div>
             </div>
-
-            {/* Desktop: Full sidebar */}
-            <div className="hidden md:flex md:flex-col md:h-full md:p-6">
-              <div className="flex items-center justify-between mb-6 shrink-0">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-hard-blue rounded-sm"></div>
-                  <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider mono-accent">Practice Partners</h4>
-                </div>
-                {savedPersonas.length > 0 && (
-                  <span className="text-xs font-mono text-zinc-500 bg-zinc-800/80 px-2 py-0.5 rounded-sm">{savedPersonas.length}</span>
-                )}
-              </div>
-
-              <div className={`space-y-2 overflow-y-auto flex-1 scrollbar-hide ${savedPersonas.length === 0 ? 'flex items-center justify-center' : ''}`}>
-                {savedPersonas.length === 0 ? (
-                  <div className="text-center py-8">
-                    <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-zinc-800/50 flex items-center justify-center">
-                      <MessageSquare className="w-5 h-5 text-zinc-600" />
-                    </div>
-                    <p className="text-sm font-medium text-zinc-400 mb-1">No saved personas yet</p>
-                    <p className="text-xs text-zinc-600 mono-accent">create your first practice partner →</p>
-                  </div>
-                ) : (
-                  savedPersonas.map((p, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => loadPersona(p)}
-                      className="w-full text-left p-4 glass-dark border border-zinc-800/50 hover:border-hard-blue hover:bg-zinc-800/40 transition-all group soft-edge"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="w-9 h-9 shrink-0 bg-gradient-to-br from-hard-blue/20 to-hard-blue/5 border border-hard-blue/30 rounded-full flex items-center justify-center text-hard-blue text-sm font-bold group-hover:from-hard-blue/30 group-hover:to-hard-blue/10 transition-all">
-                          {p.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div className="font-bold text-sm text-zinc-200 group-hover:text-white truncate mono-accent">{p.name}</div>
-                              <div className={`difficulty-indicator w-1.5 h-1.5 rounded-full shrink-0 ${p.harshnessLevel && p.harshnessLevel >= 5 ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
-                                  p.harshnessLevel && p.harshnessLevel >= 4 ? 'bg-orange-500' :
-                                    p.harshnessLevel && p.harshnessLevel >= 3 ? 'bg-yellow-500' :
-                                      p.harshnessLevel && p.harshnessLevel >= 2 ? 'bg-emerald-500' :
-                                        'bg-blue-500'
-                                }`} title={`Difficulty: ${p.harshnessLevel || 3}/5`}></div>
-                            </div>
-                            {p.relationshipContext && (
-                              <span className="text-[10px] font-mono text-zinc-500 bg-zinc-800/80 px-1.5 py-0.5 uppercase shrink-0 rounded-sm">
-                                {p.relationshipContext.replace('_', ' ')}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs text-zinc-500 truncate mono-accent italic">{p.tone}</div>
-                        </div>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
           </div>
 
-          {/* RIGHT: BUILDER - Shown first on mobile */}
-          <div className="order-1 md:order-2 w-full md:w-2/3 p-3 sm:p-6 md:p-10 relative flex flex-col glass-zinc overflow-y-auto scrollbar-hide h-full">
-            <div className="max-w-2xl mx-auto w-full">
-              <div className="mb-4 sm:mb-6">
-                <div className="label-sm text-hard-blue mb-1">PRACTICE MODE</div>
-                <h3 className="text-fluid-title text-white mb-2">WHO'S GOT YOU IN YOUR HEAD?</h3>
-                <p className="text-zinc-500 font-editorial text-xs sm:text-sm">Spill the tea so we can help you cook the right response.</p>
+          {/* RIGHT: BUILDER */}
+          <div className="order-1 md:order-2 flex-1 p-6 md:p-12 overflow-y-auto scrollbar-hide relative">
+            <div className="max-w-2xl mx-auto w-full space-y-10">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                   <Zap className="w-4 h-4 text-hard-blue" />
+                   <span className="text-[10px] font-bold text-hard-blue uppercase tracking-[0.4em]">INITIATE_PROTCOL_03</span>
+                </div>
+                <h3 className="text-4xl md:text-6xl font-impact text-white uppercase tracking-tighter leading-none">DEFINE_SIM_TARGET</h3>
+                <p className="text-zinc-500 text-[11px] font-bold uppercase tracking-widest leading-relaxed">Synthesize behavioral patterns for tactical stress-testing.</p>
               </div>
 
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="label-sm text-zinc-400">Their Name <span className="text-hard-gold">*</span></label>
+              <div className="space-y-8 glass-dark border-white/5 p-8 soft-edge relative shadow-2xl">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                       <Terminal size={12} className="text-zinc-700" /> Identifier
+                    </label>
                     <input
                       type="text"
-                      className="w-full glass-dark border border-zinc-700/50 p-3 text-white text-base sm:text-sm font-mono focus:border-white focus:outline-none uppercase placeholder:text-zinc-500/60 soft-edge"
-                      placeholder="ALEX"
+                      className="w-full glass-zinc border-white/5 p-4 text-white text-sm font-bold focus:border-hard-blue/30 focus:outline-none uppercase placeholder:text-zinc-800 soft-edge transition-all"
+                      placeholder="ENTER_CODENAME"
                       value={customName}
                       onChange={(e) => setCustomName(e.target.value)}
                     />
                   </div>
-                  <div className="space-y-2 relative">
-                    <label className="label-sm text-zinc-400">The Situationship</label>
+                  <div className="space-y-3 relative">
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                       <Shield size={12} className="text-zinc-700" /> Operational Dynamic
+                    </label>
                     <button
                       type="button"
-                      onClick={() => setShowContextDropdown(!showContextDropdown)}
-                      className="w-full glass-dark border border-zinc-700/50 p-3 text-white text-base sm:text-sm font-mono focus:border-white focus:outline-none uppercase cursor-pointer text-left flex justify-between items-center min-h-[44px] soft-edge"
+                      onClick={() => handleAction(() => setShowContextDropdown(!showContextDropdown))}
+                      className="w-full glass-zinc border-white/5 p-4 text-white text-sm font-bold focus:border-hard-blue/30 focus:outline-none uppercase text-left flex justify-between items-center soft-edge transition-all group"
                     >
                       <span>{relationshipContext.replace('_', ' ')}</span>
-                      <span className="text-zinc-500">{showContextDropdown ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}</span>
+                      <ChevronDown className={`w-4 h-4 text-zinc-600 transition-transform ${showContextDropdown ? 'rotate-180' : ''}`} />
                     </button>
                     {showContextDropdown && (
-                      <div className="absolute top-full left-0 right-0 z-50 mt-1 glass-zinc border border-zinc-700/50 shadow-xl soft-edge overflow-hidden">
+                      <div className="absolute top-full left-0 right-0 z-50 mt-2 glass-dark border-white/10 shadow-2xl soft-edge overflow-hidden animate-slide-up">
                         {(['NEW_MATCH', 'TALKING_STAGE', 'DATING', 'SITUATIONSHIP', 'EX', 'FRIEND'] as const).map((option) => (
                           <button
                             key={option}
                             type="button"
                             onClick={() => {
-                              setRelationshipContext(option);
-                              setShowContextDropdown(false);
+                              handleAction(() => {
+                                setRelationshipContext(option);
+                                setShowContextDropdown(false);
+                              });
                             }}
-                            className={`w-full p-3 text-left text-[10px] font-mono uppercase transition-colors min-h-[44px] ${relationshipContext === option
+                            className={`w-full p-4 text-left text-[10px] font-bold uppercase tracking-widest transition-all ${relationshipContext === option
                               ? 'bg-white text-black'
-                              : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-white'
+                              : 'text-zinc-500 hover:bg-white/5 hover:text-white'
                               }`}
                           >
                             {option.replace('_', ' ')}
@@ -436,86 +377,77 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="label-sm text-zinc-400 flex items-center justify-between">
-                    <span>Feedback Style</span>
-                    <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Target Sensitivity Threshold</label>
+                    <span className={`text-[10px] font-bold px-3 py-1 glass-zinc soft-edge border-white/5 ${
+                      harshnessLevel === 5 ? 'text-hard-red border-hard-red/20' : 
+                      harshnessLevel >= 3 ? 'text-hard-gold border-hard-gold/20' : 
+                      'text-emerald-400 border-emerald-400/20'
+                    }`}>
                       {harshnessLevel === 1 && 'GENTLE'}
                       {harshnessLevel === 2 && 'SUPPORTIVE'}
-                      {harshnessLevel === 3 && 'HONEST'}
-                      {harshnessLevel === 4 && 'DIRECT'}
-                      {harshnessLevel === 5 && 'BRUTAL'}
+                      {harshnessLevel === 3 && 'BALANCED'}
+                      {harshnessLevel === 4 && 'CRITICAL'}
+                      {harshnessLevel === 5 && 'HOSTILE'}
                     </span>
-                  </label>
-                  <div className="flex items-center gap-2 glass-dark border border-zinc-700/50 p-4 min-h-[44px] soft-edge">
-                    <span className="text-[10px] text-zinc-500 font-mono">1</span>
+                  </div>
+                  <div className="flex items-center gap-4 glass-zinc border-white/5 p-5 soft-edge">
+                    <span className="text-[10px] font-bold text-zinc-700">MIN</span>
                     <input
                       type="range"
                       min="1"
                       max="5"
                       step="1"
                       value={harshnessLevel}
-                      onChange={(e) => setHarshnessLevel(parseInt(e.target.value) as 1 | 2 | 3 | 4 | 5)}
-                      className="flex-1 h-1 bg-zinc-700 appearance-none cursor-pointer rounded-full"
-                      style={{
-                        background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((harshnessLevel - 1) / 4) * 100}%, #3f3f46 ${((harshnessLevel - 1) / 4) * 100}%, #3f3f46 100%)`
-                      }}
+                      onChange={(e) => handleAction(() => setHarshnessLevel(parseInt(e.target.value) as 1 | 2 | 3 | 4 | 5), 2)}
+                      className="flex-1 h-1.5 bg-zinc-900 appearance-none cursor-pointer rounded-full accent-white"
                     />
-                    <span className="text-[10px] text-zinc-500 font-mono">5</span>
+                    <span className="text-[10px] font-bold text-zinc-700">MAX</span>
                   </div>
-                  <p className="text-[10px] text-zinc-600 font-mono mt-1 uppercase tracking-tight">
-                    {harshnessLevel === 1 && '→ Gentle encouragement, positive framing'}
-                    {harshnessLevel === 2 && '→ Supportive feedback with soft corrections'}
-                    {harshnessLevel === 3 && '→ Honest reality checks, balanced approach'}
-                    {harshnessLevel === 4 && '→ Direct truth, no sugar coating'}
-                    {harshnessLevel === 5 && '→ Brutal honesty, maximum roast mode'}
-                  </p>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="label-sm text-zinc-400">Their Red Flags</label>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Behavioral Metadata</label>
                   <textarea
-                    className="w-full glass-dark border border-zinc-700/50 p-4 text-white text-base sm:text-sm focus:border-white focus:outline-none h-32 resize-none leading-relaxed placeholder:text-zinc-500/60 soft-edge"
-                    placeholder="Describe their vibe. Dry texter? Love bomber? Emoji abuser? The devil's in the details."
+                    className="w-full glass-zinc border-white/5 p-5 text-white text-sm font-bold focus:border-hard-blue/30 focus:outline-none h-32 resize-none leading-relaxed placeholder:text-zinc-800 soft-edge uppercase"
+                    placeholder="DESCRIBE_TARGET_VIBE... DRY_TEXTER? LOVE_BOMBER? DEFINE_DEVIATIONS."
                     value={personaDescription}
                     onChange={(e) => setPersonaDescription(e.target.value)}
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="label-sm text-zinc-400">Receipts (Optional)</label>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Interaction Logs (Receipts)</label>
                   <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="border border-dashed border-zinc-700/50 glass-dark p-4 flex items-center justify-between cursor-pointer hover:bg-zinc-800/40 transition-all group min-h-[44px] soft-edge"
+                    onClick={() => handleAction(() => fileInputRef.current?.click())}
+                    className="border-dashed border-2 border-white/5 glass-zinc p-6 flex items-center justify-between cursor-pointer hover:border-hard-blue/20 hover:bg-hard-blue/[0.01] transition-all group soft-edge relative overflow-hidden"
                   >
-                    <div className="flex items-center gap-4">
-                      <span className="text-zinc-500 text-lg group-hover:text-white"><Upload className="w-4 h-4" /></span>
-                      <span className="text-xs font-bold text-zinc-400 group-hover:text-white uppercase tracking-wider mono-accent">Upload Screenshots</span>
+                    <div className="flex items-center gap-5 relative z-10">
+                      <Upload className="w-5 h-5 text-zinc-600 group-hover:text-hard-blue transition-colors" />
+                      <span className="text-xs font-bold text-zinc-500 group-hover:text-white uppercase tracking-widest transition-colors">Ingest Interaction Files</span>
                     </div>
                     <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
-                    {previewUrls.length > 0 && <span className="text-[10px] font-bold text-hard-blue border border-hard-blue/30 px-2 py-0.5 rounded-sm bg-hard-blue/5 mono-accent">{previewUrls.length} FILES</span>}
+                    {previewUrls.length > 0 && <span className="text-[9px] font-bold text-hard-blue bg-hard-blue/10 border border-hard-blue/20 px-3 py-1 rounded-full relative z-10">{previewUrls.length} LOGS_INGESTED</span>}
                   </div>
 
-                  {/* Screenshot Previews with Remove */}
                   {previewUrls.length > 0 && (
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mt-3">
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 mt-4">
                       {previewUrls.map((url, index) => (
-                        <div key={index} className="relative group aspect-[9/16] glass-dark border border-zinc-700/50 overflow-hidden soft-edge">
-                          <img
-                            src={url}
-                            alt={`Screenshot ${index + 1}`}
-                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                          />
+                        <div key={index} className="relative group aspect-[9/16] glass-zinc border-white/5 overflow-hidden soft-edge shadow-lg">
+                          <img src={url} alt="" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setPreviewUrls(prev => prev.filter((_, i) => i !== index));
-                              setScreenshots(prev => prev.filter((_, i) => i !== index));
+                              handleAction(() => {
+                                setPreviewUrls(prev => prev.filter((_, i) => i !== index));
+                                setScreenshots(prev => prev.filter((_, i) => i !== index));
+                              }, 10);
                             }}
-                            className="absolute top-1 right-1 w-6 h-6 bg-red-600/80 hover:bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full min-w-[24px] min-h-[24px] backdrop-blur-sm"
+                            className="absolute inset-0 bg-hard-red/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all"
                           >
-                            <span className="text-xs font-bold">×</span>
+                            <X className="w-6 h-6 text-white" />
                           </button>
                         </div>
                       ))}
@@ -526,14 +458,22 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                 <button
                   onClick={buildPersona}
                   disabled={!customName.trim() || (!personaDescription && screenshots.length === 0)}
-                  className="w-full bg-white text-black font-impact text-xl py-4 hover:bg-zinc-200 transition-all disabled:opacity-50 mt-6 border border-white tracking-wide uppercase min-h-[50px] soft-edge shadow-[0_10px_30px_rgba(255,255,255,0.1)]"
+                  className="w-full bg-white text-black font-impact text-2xl py-5 hover:bg-zinc-200 transition-all disabled:opacity-30 disabled:grayscale tracking-[0.1em] uppercase soft-edge shadow-[0_20px_50px_rgba(255,255,255,0.1)] group relative overflow-hidden"
                 >
-                  Lock & Load
+                  <span className="relative z-10">Generate Environment</span>
+                  <div className="absolute inset-0 bg-hard-blue opacity-0 group-hover:opacity-5 transition-opacity"></div>
                 </button>
+              </div>
+              
+              <div className="flex items-center gap-4 opacity-20 justify-center">
+                 <div className="h-[1px] w-12 bg-zinc-800"></div>
+                 <div className="text-[8px] font-bold text-zinc-700 uppercase tracking-[0.5em]">Simulation_Protocol_Active</div>
+                 <div className="h-[1px] w-12 bg-zinc-800"></div>
               </div>
             </div>
           </div>
         </div>
+        <CornerNodes className="opacity-[0.02]" />
       </div>
     );
   }
@@ -541,180 +481,140 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
   // --- ANALYSIS VIEW ---
   if (view === 'analysis' && analysisResult) {
     const getRiskColor = (risk: number) => {
-      if (risk > 70) return { text: 'text-red-400', bg: 'bg-red-950/40', border: 'border-red-800/60', bar: 'bg-red-500' };
-      if (risk > 40) return { text: 'text-yellow-400', bg: 'bg-yellow-950/40', border: 'border-yellow-800/60', bar: 'bg-yellow-500' };
-      return { text: 'text-emerald-400', bg: 'bg-emerald-950/40', border: 'border-emerald-800/60', bar: 'bg-emerald-500' };
+      if (risk > 70) return { text: 'text-hard-red', bg: 'bg-hard-red/5', border: 'border-hard-red/20', bar: 'bg-hard-red' };
+      if (risk > 40) return { text: 'text-hard-gold', bg: 'bg-hard-gold/5', border: 'border-hard-gold/20', bar: 'bg-hard-gold' };
+      return { text: 'text-emerald-400', bg: 'bg-emerald-400/5', border: 'border-emerald-400/20', bar: 'bg-emerald-400' };
     };
     const riskColors = getRiskColor(analysisResult.ghostRisk);
 
     const getActionStyle = (action: string) => {
       switch (action) {
-        case 'HARD_STOP': return { icon: '🛑', text: 'text-red-400', bg: 'bg-red-950/50', border: 'border-red-700' };
-        case 'PULL_BACK': return { icon: '⚠️', text: 'text-yellow-400', bg: 'bg-yellow-950/50', border: 'border-yellow-700' };
-        case 'WAIT': return { icon: '⏸️', text: 'text-orange-400', bg: 'bg-orange-950/50', border: 'border-orange-700' };
-        case 'FULL_SEND': return { icon: '🚀', text: 'text-emerald-400', bg: 'bg-emerald-950/50', border: 'border-emerald-700' };
-        default: return { icon: '💬', text: 'text-blue-400', bg: 'bg-blue-950/50', border: 'border-blue-700' };
+        case 'HARD_STOP': return { icon: AlertTriangle, text: 'text-hard-red', bg: 'bg-hard-red/10', border: 'border-hard-red/30' };
+        case 'PULL_BACK': return { icon: Minus, text: 'text-hard-gold', bg: 'bg-hard-gold/10', border: 'border-hard-gold/30' };
+        case 'WAIT': return { icon: Clock, text: 'text-hard-blue', bg: 'bg-hard-blue/10', border: 'border-hard-blue/30' };
+        case 'FULL_SEND': return { icon: Zap, text: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/30' };
+        default: return { icon: MessageSquare, text: 'text-zinc-400', bg: 'bg-zinc-900/50', border: 'border-zinc-800' };
       }
     };
 
     return (
-      <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel md:border border-zinc-800 flex flex-col relative scrollbar-hide pb-24 md:pb-0 overflow-y-auto">
-        <CornerNodes />
+      <div className="w-full h-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide font-mono select-none">
+        <div className="bg-matte-grain"></div>
+        <CornerNodes className="opacity-[0.03]" />
 
         {/* MODULE HEADER */}
-        <div className="px-4 pt-4 sticky top-0 z-40 bg-matte-panel/95 backdrop-blur-sm">
+        <div className="px-6 pt-8 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
           <ModuleHeader 
             title="STRATEGIC_DEBRIEF" 
-            mode="PRACTICE_MODE" 
+            mode="ANALYSIS_REPORT" 
             id={activePersona?.name.toUpperCase()}
-            onBack={() => setView('chat')}
+            onBack={() => handleAction(() => setView('chat'))}
             accentColor="blue"
             statusLabel="SESSION_STATUS"
-            statusValue="ANALYSIS_COMPLETE"
-            statusColor="emerald"
+            statusValue="TERMINATED"
+            statusColor="red"
           />
         </div>
 
-        <div className="flex-1 bg-matte-base">
-          <div className="p-3 sm:p-5 lg:p-8">
-            <div className="max-w-5xl mx-auto">
-              {/* Hero Section - Headline + Action */}
-              <div className="text-center mb-6 sm:mb-10">
-                <h3 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-impact text-white mb-5 sm:mb-6 uppercase leading-tight tracking-wide">
-                  {analysisResult.headline}
-                </h3>
-                {/* Recommended Action - Prominent Card */}
-                {analysisResult.recommendedNextMove && (() => {
-                  const actionStyle = getActionStyle(analysisResult.recommendedNextMove);
-                  return (
-                    <div className={`inline-flex flex-col items-center ${actionStyle.bg} border-2 ${actionStyle.border} px-8 py-6 sm:px-12 sm:py-8`}>
-                      <span className="text-4xl mb-3">{actionStyle.icon}</span>
-                      <span className="label-sm text-zinc-400 mb-2">RECOMMENDED ACTION</span>
-                      <span className={`font-impact text-2xl sm:text-3xl ${actionStyle.text} tracking-wider`}>
-                        {analysisResult.recommendedNextMove.replace('_', ' ')}
-                      </span>
-                      {analysisResult.conversationFlow && (
-                        <span className="text-xs text-zinc-500 font-mono mt-3 border-t border-zinc-700 pt-3">
-                          Conversation Flow: <span className="text-zinc-300">{analysisResult.conversationFlow}</span>
-                        </span>
-                      )}
-                    </div>
-                  );
-                })()}
+        <div className="flex-1 p-6 md:p-12">
+          <div className="max-w-5xl mx-auto space-y-12 pb-32">
+            {/* Hero Section */}
+            <div className="flex flex-col items-center text-center space-y-8">
+              <h3 className="text-4xl md:text-7xl font-impact text-white uppercase tracking-tighter leading-[0.9] max-w-3xl filter drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+                {analysisResult.headline}
+              </h3>
+              
+              {analysisResult.recommendedNextMove && (() => {
+                const style = getActionStyle(analysisResult.recommendedNextMove);
+                const ActionIcon = style.icon;
+                return (
+                  <div className={`glass-dark p-8 md:p-12 border-2 ${style.border} relative group soft-edge shadow-2xl`}>
+                    <div className={`absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 glass-zinc border border-white/5 text-[9px] font-bold text-zinc-500 uppercase tracking-[0.4em]`}>RECOMMENDED_DIRECTIVE</div>
+                    <ActionIcon className={`w-12 h-12 ${style.text} mb-6 mx-auto animate-pulse`} />
+                    <span className={`font-impact text-4xl md:text-6xl ${style.text} tracking-tight uppercase`}>
+                      {analysisResult.recommendedNextMove.replace('_', ' ')}
+                    </span>
+                    {analysisResult.conversationFlow && (
+                      <div className="mt-8 pt-6 border-t border-white/5 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                        Operational Flow: <span className="text-white ml-2">{analysisResult.conversationFlow}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { label: 'GHOST_RISK_FACTOR', value: analysisResult.ghostRisk, color: riskColors, info: 'Probability of disengagement' },
+                { label: 'VIBE_COEFFICIENT', value: analysisResult.vibeMatch, color: { text: 'text-hard-blue', bar: 'bg-hard-blue' }, info: 'Linguistic energy alignment' },
+                { label: 'EFFORT_EQUILIBRIUM', value: analysisResult.effortBalance, color: { text: 'text-hard-gold', bar: 'bg-hard-gold' }, info: 'Transmission volume parity' }
+              ].map((stat, i) => (
+                <div key={i} className="glass-dark border-white/5 p-8 soft-edge relative overflow-hidden group shadow-xl">
+                  <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em] block mb-6">{stat.label}</span>
+                  <div className="flex items-baseline gap-2 mb-6 justify-center">
+                    <span className={`font-impact text-6xl ${stat.color.text} tracking-tighter`}>{stat.value}</span>
+                    <span className="text-xl text-zinc-700">%</span>
+                  </div>
+                  <div className="w-full h-1 bg-black/60 rounded-full overflow-hidden mb-4">
+                    <div className={`h-full ${stat.color.bar} transition-all duration-1000 delay-300 shadow-[0_0_10px_rgba(0,0,0,0.5)]`} style={{ width: `${stat.value}%` }}></div>
+                  </div>
+                  <p className="text-[9px] font-bold text-zinc-600 text-center uppercase tracking-widest opacity-60">{stat.info}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Deep Analysis Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="glass-dark border-white/5 p-8 md:p-10 soft-edge relative shadow-2xl">
+                <div className="absolute top-0 left-0 w-1 h-full bg-hard-gold opacity-30"></div>
+                <div className="flex items-center gap-4 mb-8 border-b border-white/5 pb-6">
+                  <Activity className="w-5 h-5 text-hard-gold" />
+                  <h4 className="font-impact text-2xl uppercase tracking-widest text-white leading-none">KEY_OBSERVATIONS</h4>
+                </div>
+                <ul className="space-y-6">
+                  {analysisResult.insights.map((insight, i) => (
+                    <li key={i} className="flex items-start gap-4 group">
+                      <div className="w-1.5 h-1.5 rounded-full bg-hard-gold mt-1.5 shrink-0 animate-pulse"></div>
+                      <p className="text-[11px] font-bold text-zinc-400 leading-relaxed uppercase tracking-wide group-hover:text-zinc-200 transition-colors">{insight}</p>
+                    </li>
+                  ))}
+                </ul>
               </div>
 
-              {/* Stats Grid - 3 Column */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-10 sm:mb-14">
-                {/* Ghost Risk - Main Stat */}
-                <div className={`${riskColors.bg} border ${riskColors.border} p-6 sm:p-8 text-center`}>
-                  <span className="label-sm text-zinc-400 block mb-4">GHOST RISK</span>
-                  <div className="relative inline-block">
-                    <span className={`font-mono font-bold text-5xl sm:text-6xl ${riskColors.text}`}>
-                      {analysisResult.ghostRisk}
-                    </span>
-                    <span className={`text-2xl ${riskColors.text} ml-1`}>%</span>
-                  </div>
-                  <div className="w-full h-2 bg-black/50 mt-6 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${riskColors.bar} transition-all duration-500`}
-                      style={{ width: `${analysisResult.ghostRisk}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-zinc-500 mt-3 font-mono">
-                    {analysisResult.ghostRisk > 70 ? '⚠ HIGH - Proceed with caution' :
-                      analysisResult.ghostRisk > 40 ? '◐ MODERATE - Could go either way' :
-                        '✓ LOW - Looking good'}
-                  </p>
+              <div className="bg-white text-black p-8 md:p-10 soft-edge relative shadow-[0_30px_60px_rgba(255,255,255,0.1)] overflow-hidden group">
+                <div className="absolute -top-10 -right-10 w-40 h-40 bg-black/[0.03] rounded-full rotate-45"></div>
+                <div className="flex items-center gap-4 mb-8 border-b border-black/10 pb-6">
+                  <Target className="w-5 h-5 text-black" />
+                  <h4 className="font-impact text-2xl uppercase tracking-widest leading-none">STRATEGIC_DIRECTIVE</h4>
                 </div>
-
-                {/* Vibe Match */}
-                <div className="bg-zinc-900/60 border border-zinc-800 p-6 sm:p-8 text-center">
-                  <span className="label-sm text-hard-blue block mb-4">VIBE MATCH</span>
-                  <div className="relative inline-block">
-                    <span className="font-mono font-bold text-5xl sm:text-6xl text-white">
-                      {analysisResult.vibeMatch}
-                    </span>
-                    <span className="text-2xl text-zinc-500 ml-1">%</span>
-                  </div>
-                  <div className="w-full h-2 bg-black/50 mt-6 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-hard-blue transition-all duration-500"
-                      style={{ width: `${analysisResult.vibeMatch}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-zinc-500 mt-3 font-mono">
-                    How well your energy matches theirs
-                  </p>
-                </div>
-
-                {/* Effort Balance */}
-                <div className="bg-zinc-900/60 border border-zinc-800 p-6 sm:p-8 text-center">
-                  <span className="label-sm text-hard-gold block mb-4">EFFORT BALANCE</span>
-                  <div className="relative inline-block">
-                    <span className="font-mono font-bold text-5xl sm:text-6xl text-white">
-                      {analysisResult.effortBalance}
-                    </span>
-                    <span className="text-2xl text-zinc-500 ml-1">%</span>
-                  </div>
-                  <div className="w-full h-2 bg-black/50 mt-6 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-hard-gold transition-all duration-500"
-                      style={{ width: `${analysisResult.effortBalance}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-zinc-500 mt-3 font-mono">
-                    Who's putting in more work
-                  </p>
+                <p className="text-lg md:text-xl font-bold leading-relaxed uppercase tracking-tight italic">
+                  "{analysisResult.advice}"
+                </p>
+                <div className="mt-12 flex justify-between items-end">
+                   <div className="text-[8px] font-bold uppercase tracking-[0.4em] opacity-40">Protocol_Finalized</div>
+                   <Shield className="w-8 h-8 opacity-10 group-hover:opacity-20 transition-opacity" />
                 </div>
               </div>
-
-              {/* Insights + Advice - 2 Column */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-                {/* Insights */}
-                <div className="bg-zinc-900/40 border border-zinc-800 p-6 sm:p-8">
-                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-800">
-                    <span className="text-xl">💡</span>
-                    <h4 className="font-impact text-lg uppercase tracking-wide text-white">Key Insights</h4>
-                  </div>
-                  <ul className="space-y-4">
-                    {analysisResult.insights.map((insight, i) => (
-                      <li key={i} className="flex items-start gap-3">
-                        <span className="text-hard-gold mt-1">→</span>
-                        <p className="text-sm text-zinc-300 leading-relaxed">{insight}</p>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Strategic Advice */}
-                <div className="bg-white text-black p-6 sm:p-8">
-                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-200">
-                    <span className="text-xl">🎯</span>
-                    <h4 className="font-impact text-lg uppercase tracking-wide">Strategic Advice</h4>
-                  </div>
-                  <p className="text-base sm:text-lg leading-relaxed">
-                    "{analysisResult.advice}"
-                  </p>
-                </div>
-              </div>
-
             </div>
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="p-4 sm:p-6 border-t border-zinc-800 bg-zinc-900 flex justify-center gap-4 shrink-0">
+        {/* Floating Actions */}
+        <div className="fixed bottom-0 left-0 right-0 p-6 md:p-8 bg-gradient-to-t from-matte-base via-matte-base to-transparent z-50 flex justify-center gap-4 md:gap-6">
           <button
-            onClick={() => setView('chat')}
-            className="label-sm text-zinc-400 hover:text-white border border-zinc-700 px-6 py-3 hover:bg-zinc-800 transition-colors min-h-[44px]"
+            onClick={() => handleAction(() => setView('chat'), 10)}
+            className="px-8 py-4 glass-zinc border-white/5 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.3em] hover:text-white hover:border-white/10 transition-all soft-edge active:scale-[0.98] min-w-[180px]"
           >
-            ← Continue Chat
+            ← Resume Uplink
           </button>
           <button
-            onClick={resetSim}
-            className="label-sm text-white bg-zinc-800 border border-zinc-600 px-6 py-3 hover:bg-zinc-700 transition-colors min-h-[44px]"
+            onClick={() => handleAction(resetSim, 15)}
+            className="px-8 py-4 bg-white text-black font-impact text-xl uppercase tracking-widest hover:bg-zinc-200 transition-all soft-edge shadow-2xl active:scale-[0.98] min-w-[220px]"
           >
-            Start New Session
+            INIT_NEW_SESSION
           </button>
         </div>
       </div>
@@ -723,235 +623,233 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
   // --- CHAT VIEW ---
   return (
-    <div className="w-full h-full max-w-6xl mx-auto bg-matte-panel md:border border-zinc-800 flex flex-col relative shadow-2xl scrollbar-hide pb-24 md:pb-0 overflow-y-auto">
-      <CornerNodes />
+    <div className="w-full h-full flex flex-col bg-matte-base relative overflow-hidden font-mono select-none">
+      <div className="bg-matte-grain opacity-[0.03]"></div>
+      <CornerNodes className="opacity-[0.02]" />
 
       {/* MODULE HEADER */}
-      <div className="px-4 pt-4 sticky top-0 z-40 bg-matte-panel/95 backdrop-blur-sm">
+      <div className="px-6 pt-8 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
         <ModuleHeader 
-          title={`CHAT_ENGAGEMENT: ${activePersona?.name.toUpperCase()}`} 
-          mode="PRACTICE_MODE" 
-          onBack={() => setView('setup')}
+          title={`UPLINK: ${activePersona?.name.toUpperCase()}`} 
+          mode="ENGAGEMENT_SIM" 
+          onBack={() => handleAction(() => setView('setup'))}
           accentColor="blue"
           statusLabel="ENCRYPTION"
-          statusValue="SECURE"
+          statusValue="AES_256_ACTIVE"
           statusColor="emerald"
         />
       </div>
 
-      {/* CHAT AREA - 2 Column on Desktop */}
-      <div className="flex-1 overflow-y-auto bg-matte-base custom-scrollbar relative scrollbar-hide">
-        <div className="absolute inset-0 bg-scan-lines opacity-5 pointer-events-none"></div>
+      {/* GHOST RISK HUD */}
+      {(simHistory.length > 0 || chatLoading) && (
+        <div className="px-6 py-4 glass-dark border-b border-white/5 backdrop-blur-md animate-slide-up relative z-30 flex items-center gap-8">
+          <div className="flex-1 space-y-2">
+            <div className="flex justify-between items-center px-1">
+              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-[0.3em]">NODE_RISK</span>
+              <span className={`text-xs font-impact ${
+                (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 70 ? 'text-hard-red' : 
+                (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 40 ? 'text-hard-gold' : 
+                'text-emerald-400'
+              }`}>
+                {chatLoading ? 'COMPUTING...' : `${simHistory[simHistory.length - 1]?.result.regretLevel || 0}%`}
+              </span>
+            </div>
+            <div className="h-1 bg-black/60 rounded-full overflow-hidden">
+              <div 
+                className={`h-full transition-all duration-1000 ease-out ${
+                  (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 70 ? 'bg-hard-red' : 
+                  (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 40 ? 'bg-hard-gold' : 
+                  'bg-emerald-500'
+                }`}
+                style={{ width: `${chatLoading ? 100 : (simHistory[simHistory.length - 1]?.result.regretLevel || 0)}%` }}
+              ></div>
+            </div>
+          </div>
 
-        {/* GHOST RISK HUD - Real-time metrics */}
-        {(simHistory.length > 0 || chatLoading) && (
-          <div className="ghost-risk-hud sticky top-0 z-30 px-3 sm:px-6 py-3 glass-dark border-b border-zinc-800/50 backdrop-blur-md animate-slide-up flex justify-between items-center gap-4">
-            <div className="flex-1 space-y-1.5">
-              <div className="flex justify-between items-end">
-                <span className="label-sm text-zinc-500 uppercase tracking-widest">GHOST_RISK</span>
-                <span className={`text-[10px] font-mono font-bold ${
-                  (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 70 ? 'text-hard-red' : 
-                  (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 40 ? 'text-hard-gold' : 
-                  'text-emerald-400'
-                }`}>
-                  {chatLoading ? 'CALCULATING...' : `${simHistory[simHistory.length - 1]?.result.regretLevel || 0}%`}
-                </span>
+          <div className="flex-1 space-y-2 border-l border-white/5 pl-8">
+            <div className="flex justify-between items-center px-1">
+              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-[0.3em]">VIBE_COEFF</span>
+              <span className="text-xs font-impact text-hard-blue">
+                {chatLoading ? 'SAMPLING...' : '84%'}
+              </span>
+            </div>
+            <div className="h-1 bg-black/60 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-hard-blue transition-all duration-1000 ease-out"
+                style={{ width: `${chatLoading ? 100 : 84}%` }}
+              ></div>
+            </div>
+          </div>
+          
+          <button 
+            onClick={() => handleAction(handleEndSim, 20)}
+            className="px-6 py-2 bg-hard-red text-white font-impact text-xs uppercase tracking-widest soft-edge hover:bg-red-600 transition-all active:scale-[0.98] shadow-lg"
+          >
+            END_SIM
+          </button>
+        </div>
+      )}
+
+      {/* CHAT AREA */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide relative z-10 custom-scrollbar pb-32">
+        {simHistory.length === 0 && !chatLoading && (
+          <div className="h-[50vh] flex flex-col items-center justify-center text-center opacity-40">
+            <div className="w-20 h-20 glass border-white/5 flex items-center justify-center mb-8 soft-edge">
+              <MessageSquare className="w-10 h-10 text-zinc-600" />
+            </div>
+            <p className="text-[10px] font-bold text-hard-blue uppercase tracking-[0.4em] mb-4">Awaiting Signal Input</p>
+            <p className="text-zinc-500 text-xs max-w-xs leading-relaxed uppercase font-bold tracking-widest">
+              Transmit candidate messages to test <br /> <span className="text-white">{activePersona?.name}</span>'s predictive response engine.
+            </p>
+          </div>
+        )}
+
+        {simHistory.map((entry, idx) => (
+          <div key={idx} className="space-y-8 animate-fade-in">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Messages */}
+              <div className="space-y-6">
+                <div className="flex flex-col items-end group">
+                  <div className="max-w-[95%] bg-white text-black p-6 relative soft-edge shadow-2xl transition-all hover:translate-x-[-4px]">
+                    <div className="text-[8px] font-bold text-zinc-400 uppercase tracking-[0.3em] mb-3 border-b border-black/5 pb-2">Transmission_Draft</div>
+                    <p className="text-sm font-bold leading-relaxed uppercase tracking-tight">{entry.draft}</p>
+                    <button
+                      onClick={() => copyToClipboard(entry.draft)}
+                      className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all w-8 h-8 flex items-center justify-center bg-black/5 hover:bg-black/10 text-zinc-500 hover:text-black rounded-full"
+                    >
+                      {copiedText === entry.draft ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-start group">
+                  <div className="flex items-start gap-4 max-w-[95%]">
+                    <div className="w-10 h-10 glass shrink-0 flex items-center justify-center text-xs font-impact border-white/10 rounded-full text-zinc-400 shadow-xl">
+                      {activePersona?.name.charAt(0)}
+                    </div>
+                    <div className="flex-1 glass-dark border-white/5 p-6 relative soft-edge shadow-xl transition-all hover:translate-x-[4px]">
+                      <div className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.3em] mb-3 border-b border-white/5 pb-2">Predicted_Echo</div>
+                      <p className="text-sm font-bold italic text-zinc-200 leading-relaxed uppercase tracking-tight">"{entry.result.predictedReply}"</p>
+                      <button
+                        onClick={() => copyToClipboard(entry.result.predictedReply || '')}
+                        className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all w-8 h-8 flex items-center justify-center bg-white/5 hover:bg-white/10 text-zinc-600 hover:text-white rounded-full"
+                      >
+                        {copiedText === entry.result.predictedReply ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="risk-meter h-1 bg-zinc-800 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full transition-all duration-1000 ease-out ${
-                    (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 70 ? 'bg-hard-red shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 
-                    (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 40 ? 'bg-hard-gold' : 
-                    'bg-emerald-500'
-                  }`}
-                  style={{ width: `${chatLoading ? 100 : (simHistory[simHistory.length - 1]?.result.regretLevel || 0)}%` }}
-                ></div>
+
+              {/* Real-time Analysis */}
+              <div className="glass-dark border-white/5 p-6 md:p-8 soft-edge shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-hard-blue/20 to-transparent"></div>
+                <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/5">
+                  <div className="flex items-center gap-3">
+                     <Cpu className="w-4 h-4 text-hard-blue" />
+                     <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em]">Linguistic_Parser</span>
+                  </div>
+                  <div className={`px-4 py-1.5 text-[9px] font-impact uppercase tracking-[0.2em] soft-edge ${
+                    entry.result.regretLevel > 70 ? 'bg-hard-red/10 text-hard-red border border-hard-red/20' :
+                    entry.result.regretLevel > 40 ? 'bg-hard-gold/10 text-hard-gold border border-hard-gold/20' :
+                    'bg-emerald-400/10 text-emerald-400 border border-emerald-400/20'
+                  }`}>
+                    {entry.result.regretLevel > 70 ? 'CRITICAL_RISK' : entry.result.regretLevel > 40 ? 'MODERATE_RISK' : 'OPTIMAL_STANCE'}
+                  </div>
+                </div>
+
+                <p className="text-xs font-bold text-zinc-400 mb-8 leading-relaxed uppercase tracking-wide border-l-2 border-hard-blue/30 pl-4 italic">
+                  → {entry.result.verdict}
+                </p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {Object.entries(entry.result.rewrites).filter(([_, text]) => text).map(([key, text]) => (
+                    <button
+                      key={key}
+                      onClick={() => handleAction(() => setDraft(text as string), 10)}
+                      className={`p-4 border text-left transition-all hover:scale-[1.02] soft-edge group/btn relative overflow-hidden ${
+                        key === 'safe' ? 'glass-zinc border-white/5 hover:border-white/20' :
+                        key === 'bold' ? 'glass-blue border-hard-blue/10 hover:border-hard-blue/30' :
+                        key === 'spicy' ? 'glass-red border-hard-red/10 hover:border-hard-red/30' :
+                        'glass-gold border-hard-gold/10 hover:border-hard-gold/30'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-3 relative z-10">
+                        <span className={`text-[9px] font-bold uppercase tracking-[0.2em] flex items-center gap-2 ${
+                          key === 'safe' ? 'text-zinc-500' :
+                          key === 'bold' ? 'text-hard-blue' :
+                          key === 'spicy' ? 'text-hard-red' :
+                          'text-hard-gold'
+                        }`}>
+                          {key === 'you' ? <Sparkles className="w-3 h-3" /> : null} {key === 'you' ? 'AUTO_PROFILE' : key}
+                        </span>
+                      </div>
+                      <p className="text-[10px] font-bold text-zinc-300 leading-relaxed uppercase tracking-tight line-clamp-2 relative z-10">"{text as string}"</p>
+                      <div className="absolute inset-0 bg-white opacity-0 group-hover/btn:opacity-[0.02] transition-opacity"></div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-
-            <div className="flex-1 space-y-1.5 border-l border-zinc-800/50 pl-4">
-              <div className="flex justify-between items-end">
-                <span className="label-sm text-zinc-500 uppercase tracking-widest">VIBE_COEFFICIENT</span>
-                <span className="text-[10px] font-mono font-bold text-hard-blue">
-                  {chatLoading ? 'ANALYZING...' : '84%'}
-                </span>
+            
+            {idx < simHistory.length - 1 && (
+              <div className="flex items-center gap-6 py-4 opacity-20">
+                <div className="flex-1 h-px bg-zinc-800"></div>
+                <div className="text-[8px] font-bold uppercase tracking-[0.5em]">SEGMENT_{idx + 1}_COMPLETE</div>
+                <div className="flex-1 h-px bg-zinc-800"></div>
               </div>
-              <div className="vibe-meter h-1 bg-zinc-800 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-hard-blue transition-all duration-1000 ease-out"
-                  style={{ width: `${chatLoading ? 100 : 84}%` }}
-                ></div>
+            )}
+          </div>
+        ))}
+
+        {pendingMessage && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-pulse grayscale opacity-50">
+            <div className="flex flex-col items-end">
+              <div className="max-w-[95%] bg-white text-black p-6 soft-edge">
+                <div className="text-[8px] font-bold text-zinc-400 uppercase tracking-[0.3em] mb-3">Syncing_Signal...</div>
+                <p className="text-sm font-bold uppercase tracking-tight">{pendingMessage}</p>
+              </div>
+            </div>
+            <div className="glass-dark border-white/5 soft-edge p-8 flex items-center justify-center">
+              <div className="flex items-center gap-3">
+                 <div className="w-1.5 h-1.5 bg-zinc-600 rounded-full animate-ping"></div>
+                 <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.4em]">DECODING_ECHO</span>
               </div>
             </div>
           </div>
         )}
 
-        <div className="p-3 sm:p-5 lg:p-6 space-y-4 lg:space-y-6 relative z-10">
-          {simHistory.length === 0 && !chatLoading && (
-            <div className="h-[50vh] flex flex-col items-center justify-center text-center px-4">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-zinc-700 flex items-center justify-center mb-4 bg-zinc-900/50 soft-edge">
-                <MessageSquare className="w-7 h-7 sm:w-8 sm:h-8 text-zinc-600" />
-              </div>
-              <p className="label-sm text-hard-blue mb-2">PRACTICE CONVERSATION</p>
-              <p className="text-zinc-400 text-xs sm:text-sm max-w-xs mb-1.5 mono-accent">
-                Test how <span className="text-white font-semibold">{activePersona?.name || 'they'}</span> might respond to your messages
-              </p>
-              <p className="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.2em]">↓ input_signal_required ↓</p>
+        {chatLoading && !pendingMessage && (
+          <div className="flex justify-start animate-fade-in">
+            <div className="glass-dark px-6 py-4 border border-hard-blue/20 soft-edge flex items-center gap-4">
+              <div className="w-1.5 h-1.5 bg-hard-blue rounded-full animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
+              <span className="text-[10px] font-bold text-hard-blue uppercase tracking-[0.4em]">AI_SYNTHESIZING</span>
             </div>
-          )}
-
-          {simHistory.map((entry, idx) => (
-            <div key={idx} className="space-y-4">
-              {/* Conversation Exchange - 2 Column Layout on Desktop */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-                {/* LEFT: Messages */}
-                <div className="space-y-4">
-                  {/* USER MESSAGE */}
-                  <div className="flex justify-end lg:justify-start">
-                    <div className="max-w-[90%] lg:max-w-full bg-white text-black px-5 py-4 text-sm font-medium leading-relaxed border border-zinc-200 soft-edge shadow-[4px_4px_20px_rgba(255,255,255,0.1)] relative group">
-                      <div className="label-sm text-zinc-500 mb-2">ORIGINAL_DRAFT</div>
-                      <p className="text-black font-sans">{entry.draft}</p>
-                      <button
-                        onClick={() => copyToClipboard(entry.draft)}
-                        className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-700 border border-zinc-300 rounded-full min-w-[28px] min-h-[28px]"
-                        title="Copy to clipboard"
-                      >
-                        {copiedText === entry.draft ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* PREDICTED REPLY */}
-                  <div className="flex justify-start">
-                    <div className="flex items-start gap-3 max-w-[90%] lg:max-w-full group">
-                      <div className="w-9 h-9 bg-gradient-to-br from-zinc-700 to-zinc-800 flex-shrink-0 flex items-center justify-center text-sm text-white font-impact border border-zinc-600 rounded-full">
-                        {activePersona?.name.charAt(0)}
-                      </div>
-                      <div className="flex-1 glass-dark text-zinc-200 px-5 py-4 text-sm leading-relaxed border border-zinc-700/50 relative soft-edge">
-                        <div className="label-sm text-zinc-500 mb-2">PREDICTED_RESPONSE</div>
-                        <p className="font-sans italic text-zinc-300">"{entry.result.predictedReply}"</p>
-                        <button
-                          onClick={() => copyToClipboard(entry.result.predictedReply || '')}
-                          className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 flex items-center justify-center bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 text-zinc-400 hover:text-white rounded-full min-w-[28px] min-h-[28px]"
-                          title="Copy reply"
-                        >
-                          {copiedText === entry.result.predictedReply ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* RIGHT: Analysis Panel */}
-                <div className="glass-dark border border-zinc-800/50 p-4 sm:p-5 soft-edge shadow-xl">
-                  {/* Analysis Header */}
-                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-zinc-800/50">
-                    <span className="label-sm text-zinc-400">LINGUISTIC_ANALYSIS</span>
-                    <div className={`px-3 py-1 border text-[10px] font-bold uppercase tracking-widest ${entry.result.regretLevel > 70 ? 'bg-red-950/50 border-red-800/50 text-red-400' :
-                      entry.result.regretLevel > 40 ? 'bg-yellow-950/50 border-yellow-800/50 text-yellow-400' :
-                        'bg-emerald-950/50 border-emerald-800/50 text-emerald-400'
-                      }`}>
-                      {entry.result.regretLevel > 70 ? '⚠ HIGH_RISK' : entry.result.regretLevel > 40 ? '◐ MODERATE' : '✓ LOW_RISK'}
-                    </div>
-                  </div>
-
-                  {/* Verdict */}
-                  <p className="text-xs sm:text-sm text-zinc-400 mb-5 leading-relaxed font-mono italic uppercase">
-                    → {entry.result.verdict}
-                  </p>
-
-                  {/* Suggestions Grid - Clean 2x2 */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {Object.entries(entry.result.rewrites).filter(([_, text]) => text).map(([key, text]) => (
-                      <button
-                        key={key}
-                        onClick={() => copyToDraft(text as string)}
-                        className={`group relative p-3 border text-left transition-all hover:scale-[1.02] min-h-[60px] soft-edge ${key === 'safe' ? 'border-zinc-700/50 hover:border-zinc-500 bg-zinc-800/30' :
-                          key === 'bold' ? 'border-blue-900/50 hover:border-blue-700/70 bg-blue-950/20' :
-                            key === 'spicy' ? 'border-red-900/50 hover:border-red-700/70 bg-red-950/20' :
-                              'border-hard-gold/40 hover:border-hard-gold/70 bg-amber-950/20'
-                          }`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${key === 'safe' ? 'text-zinc-400' :
-                            key === 'bold' ? 'text-blue-400' :
-                              key === 'spicy' ? 'text-red-400' :
-                                'text-hard-gold'
-                            }`}>
-                            {key === 'you' ? <><Sparkles className="w-3 h-3" /> YOUR_STYLE</> : key}
-                          </span>
-                        </div>
-                        <p className="text-xs text-zinc-300 leading-relaxed line-clamp-2">"{text as string}"</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Divider between exchanges */}
-              {
-                idx < simHistory.length - 1 && (
-                  <div className="flex items-center gap-4 py-4">
-                    <div className="flex-1 h-px bg-zinc-800/50"></div>
-                    <span className="text-[10px] text-zinc-600 font-mono uppercase tracking-widest">End_Exchange_{idx + 1}</span>
-                    <div className="flex-1 h-px bg-zinc-800/50"></div>
-                  </div>
-                )
-              }
-            </div>
-          ))}
-
-          {/* Show pending message immediately */}
-          {
-            pendingMessage && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 animate-pulse">
-                <div className="flex justify-end lg:justify-start">
-                  <div className="max-w-[90%] lg:max-w-full bg-white text-black px-5 py-4 text-sm font-medium leading-relaxed border border-zinc-200 soft-edge opacity-70">
-                    <div className="label-sm text-zinc-500 mb-2">UPLOADING_SIGNAL...</div>
-                    <p>{pendingMessage}</p>
-                  </div>
-                </div>
-                <div className="glass-dark border border-zinc-800/50 soft-edge p-5 flex items-center justify-center">
-                  <span className="label-sm text-zinc-600 animate-pulse mono-accent uppercase tracking-widest">Decoding_Response...</span>
-                </div>
-              </div>
-            )
-          }
-
-          {
-            chatLoading && !pendingMessage && (
-              <div className="flex justify-start">
-                <div className="glass-dark px-5 py-4 border border-hard-blue/30 soft-edge">
-                  <span className="label-sm text-hard-blue animate-pulse mono-accent uppercase tracking-widest">AI_IS_THINKING...</span>
-                </div>
-              </div>
-            )
-          }
-          <div ref={chatEndRef} />
-        </div>
+          </div>
+        )}
+        <div ref={chatEndRef} />
       </div>
 
-      {/* INPUT AREA - More prominent */}
-      <div className="p-3 sm:p-4 bg-zinc-900 border-t border-zinc-700 relative z-20 shrink-0">
-        <form onSubmit={runSimulation} className="flex gap-0 border-2 border-zinc-600 focus-within:border-hard-blue transition-colors bg-black">
+      {/* INPUT AREA */}
+      <div className="p-6 md:p-8 glass-dark border-t border-white/5 relative z-40 shrink-0 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
+        <form onSubmit={runSimulation} className="max-w-4xl mx-auto flex gap-4 p-1 glass-zinc border-white/10 soft-edge focus-within:border-hard-blue/30 transition-all shadow-2xl">
           <input
             type="text"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Type your message..."
+            placeholder="INPUT_COMM_SIGNAL..."
             disabled={chatLoading}
-            className="flex-1 bg-transparent px-4 sm:px-6 py-4 sm:py-5 text-white focus:outline-none placeholder:text-zinc-600 text-base sm:text-sm"
+            className="flex-1 bg-transparent px-6 py-4 text-white focus:outline-none placeholder:text-zinc-800 text-sm font-bold uppercase tracking-wider"
           />
           <button
             type="submit"
             disabled={!draft.trim() || chatLoading}
-            className="bg-white text-black font-impact px-6 sm:px-10 hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider text-sm min-h-[50px]"
+            className="bg-white text-black font-impact px-10 hover:bg-zinc-200 transition-all disabled:opacity-30 disabled:grayscale uppercase tracking-[0.1em] text-lg min-h-[56px] soft-edge shadow-xl active:scale-[0.98]"
           >
-            SEND
+            TRANSMIT
           </button>
         </form>
       </div>
-
     </div>
   );
 };
