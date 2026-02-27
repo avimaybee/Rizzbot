@@ -7,7 +7,7 @@
    ======================================== */
 
 .soft-edge {
-  border-radius: 2rem;
+  @apply rounded-organic;
 }
 
 /* Base body styles */

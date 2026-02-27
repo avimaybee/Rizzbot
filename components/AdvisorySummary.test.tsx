@@ -1,81 +1,60 @@
 import { expect, test, describe } from "bun:test";
 import { render, cleanup } from "@testing-library/react";
 import React from "react";
-import { TherapistTacticalReport } from "./TherapistTacticalReport";
-import { ClinicalNotes, TherapistMemory } from "../types";
+import { AdvisorySummary } from "./AdvisorySummary";
+import "../tests/setup";
 
-describe("TherapistTacticalReport", () => {
-    const mockNotes: ClinicalNotes = {
-        attachmentStyle: 'anxious',
-        keyThemes: ["Trust Issues", "Pattern Recognition"],
-        emotionalState: 'Reflective',
-        actionItems: ["Practice boundaries", "Notice projection"],
-        userInsights: []
+describe("AdvisorySummary", () => {
+    const mockNotes = {
+        keyThemes: ["Theme 1", "Theme 2"],
+        userInsights: ["Insight 1"],
+        actionItems: ["Action 1"],
+        attachmentStyle: "secure" as const,
+        emotionalState: "Calm",
+        relationshipDynamic: "Healthy"
     };
 
-    const mockMemories: TherapistMemory[] = [
-        { id: 1, type: 'GLOBAL', content: 'Core memory text', created_at: new Date().toISOString() },
-        { id: 2, type: 'SESSION', content: 'Session memory text', created_at: new Date().toISOString() }
+    const mockMemories = [
+        { id: 1, content: "Global memory", type: "GLOBAL" as const },
+        { id: 2, content: "Session memory", type: "SESSION" as const }
     ];
 
-    test("renders tactical report sections", () => {
+    test("renders correctly with data", () => {
         const { getByText } = render(
-            <TherapistTacticalReport 
-                clinicalNotes={mockNotes} 
+            <AdvisorySummary
+                clinicalNotes={mockNotes}
                 memories={mockMemories}
                 onUpdateMemory={() => {}}
                 onDeleteMemory={() => {}}
             />
         );
 
-        // Flexible matchers for frequently changing labels
-        expect(getByText(/Session Summary|TACTICAL_REPORT/i)).toBeInTheDocument();
-        expect(getByText(/Status|SYSTEM_STATUS/i)).toBeInTheDocument();
+        expect(getByText(/Session Summary/i)).toBeTruthy();
+        expect(getByText(/Theme 1/i)).toBeTruthy();
+        expect(getByText(/Action 1/i)).toBeTruthy();
+        expect(getByText(/Global memory/i)).toBeTruthy();
+        expect(getByText(/Session memory/i)).toBeTruthy();
     });
 
-    test("renders emotional state and attachment style", () => {
+    test("renders empty states correctly", () => {
+        const emptyNotes = {
+            keyThemes: [],
+            userInsights: [],
+            actionItems: [],
+            attachmentStyle: "unknown" as const,
+        };
+
         const { getByText } = render(
-            <TherapistTacticalReport 
-                clinicalNotes={mockNotes} 
-                memories={mockMemories}
+            <AdvisorySummary
+                clinicalNotes={emptyNotes}
+                memories={[]}
                 onUpdateMemory={() => {}}
                 onDeleteMemory={() => {}}
             />
         );
 
-        expect(getByText(/Emotional State|EMOTIONAL_STATE/i)).toBeInTheDocument();
-        expect(getByText("Reflective")).toBeInTheDocument();
-        expect(getByText(/Attachment Style|ATTACHMENT_STYLE/i)).toBeInTheDocument();
-        expect(getByText("anxious")).toBeInTheDocument();
-    });
-
-    test("renders themes and insights", () => {
-        const { getByText } = render(
-            <TherapistTacticalReport 
-                clinicalNotes={mockNotes} 
-                memories={mockMemories}
-                onUpdateMemory={() => {}}
-                onDeleteMemory={() => {}}
-            />
-        );
-
-        expect(getByText("Trust Issues")).toBeInTheDocument();
-        expect(getByText("Pattern Recognition")).toBeInTheDocument();
-        expect(getByText("Practice boundaries")).toBeInTheDocument();
-        expect(getByText("Notice projection")).toBeInTheDocument();
-    });
-
-    test("renders memories", () => {
-        const { getByText } = render(
-            <TherapistTacticalReport 
-                clinicalNotes={mockNotes} 
-                memories={mockMemories}
-                onUpdateMemory={() => {}}
-                onDeleteMemory={() => {}}
-            />
-        );
-
-        expect(getByText("Core memory text")).toBeInTheDocument();
-        expect(getByText("Session memory text")).toBeInTheDocument();
+        expect(getByText(/Establishing data points/i)).toBeTruthy();
+        expect(getByText(/Observations will appear/i)).toBeTruthy();
+        expect(getByText(/Awaiting session context/i)).toBeTruthy();
     });
 });
