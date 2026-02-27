@@ -25,6 +25,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    if ('vibrate' in navigator) navigator.vibrate(10);
     setError(null);
     setLoading(true);
 
@@ -39,8 +40,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
         setLoading(false);
         return;
       }
+      if ('vibrate' in navigator) navigator.vibrate([20, 50, 20]);
       onAuthSuccess();
     } catch (err: any) {
+      if ('vibrate' in navigator) navigator.vibrate(50);
       const errorCode = err.code || '';
       if (errorCode === 'auth/user-not-found') {
         setError("CREDENTIALS NOT RECOGNIZED. VERIFY IDENTITY.");
@@ -65,13 +68,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
   };
 
   const handleGoogleAuth = async () => {
+    if ('vibrate' in navigator) navigator.vibrate(10);
     setError(null);
     setLoading(true);
 
     try {
       await signInWithGoogle();
+      if ('vibrate' in navigator) navigator.vibrate([20, 50, 20]);
       onAuthSuccess();
     } catch (err: any) {
+      if ('vibrate' in navigator) navigator.vibrate(50);
       const errorCode = err.code || '';
       if (errorCode === 'auth/popup-closed-by-user') {
         setError("GOOGLE AUTHENTICATION ABORTED.");
@@ -86,6 +92,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
   };
 
   const switchMode = (newMode: AuthMode) => {
+    if ('vibrate' in navigator) navigator.vibrate(5);
     setMode(newMode);
     setError(null);
     setResetSent(false);
