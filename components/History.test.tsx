@@ -54,7 +54,7 @@ describe("History Component Redesign", () => {
     const sessionList = getByText("Quick Session 1").closest(".grid");
     expect(sessionList).toBeInTheDocument();
     expect(sessionList).toHaveClass("grid-cols-1");
-    expect(sessionList).toHaveClass("sm:grid-cols-2");
+    expect(sessionList).toHaveClass("md:grid-cols-2");
   });
 
   test("renders History Card with correct mode and risk badges", async () => {
@@ -92,10 +92,10 @@ describe("History Component Redesign", () => {
       pagination: { total: 1, limit: 20, offset: 0, hasMore: false }
     });
 
-    const { getByRole } = render(<History firebaseUid="test-user" />);
+    const { container } = render(<History firebaseUid="test-user" />);
 
     await waitFor(() => {
-      const previewImg = getByRole("img");
+      const previewImg = container.querySelector("img");
       expect(previewImg).toBeInTheDocument();
       expect(previewImg).toHaveAttribute("src", "data:image/png;base64,mock-screenshot");
     });
@@ -131,12 +131,8 @@ describe("History Component Redesign", () => {
       expect(getByText("Practice Session 1")).toBeInTheDocument();
     });
 
-    const searchInput = getByPlaceholderText("ARCHIVE_SEARCH_QUERY...") as HTMLInputElement;
-    act(() => {
-      searchInput.value = "Emma";
-      searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-      searchInput.dispatchEvent(new Event('change', { bubbles: true }));
-    });
+    const searchInput = getByPlaceholderText("ARCHIVE_SEARCH_QUERY...");
+    fireEvent.change(searchInput, { target: { value: "Emma" } });
 
     await waitFor(() => {
       expect(queryByText("Quick Session 1")).toBeNull();

@@ -1,10 +1,11 @@
 # Implementation Plan: Professional Modern Refinement
 
 ## Phase 1: Foundation & De-cluttering
-- [ ] Task: Audit and remove `CornerNodes` from all components and layouts.
-- [ ] Task: Remove all "hardware strings" (e.g., RB_UNIT_...) and fake system logs.
-- [ ] Task: Update `tailwind.config.js` to define a more professional typography scale (remove/de-emphasize Impact).
-- [ ] Task: Refactor `index.css` to remove purely decorative "tactical" utility classes.
+- [x] Task: Audit and remove `CornerNodes` from all components and layouts. (45def56)
+- [x] Task: Remove all "hardware strings" (e.g., RB_UNIT_...) and fake system logs. (45def56)
+- [x] Task: Update `tailwind.config.js` to define a more professional typography scale (remove/de-emphasize Impact). (45def56)
+- [x] Task: Refactor `index.css` to remove purely decorative "tactical" utility classes. (45def56)
+- [~] Task: Conductor - User Manual Verification 'Phase 1: Foundation & De-cluttering'
 
 ## Phase 2: Core Layout Refinement
 - [ ] Task: Redesign `ModuleHeader.tsx` for professional clarity (remove status pulses and fake IDs).

@@ -15,8 +15,6 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppState, UserStyleProfile, WellbeingState, Module } from './types';
 import { Logo } from './components/Logo';
 import BottomTabBar from './components/BottomTabBar';
-import { CornerNodes } from './components/CornerNodes';
-import { SystemTicker } from './components/SystemTicker';
 import { WellbeingCheckIn } from './components/WellbeingCheckIn';
 import { SideDock } from './components/SideDock';
 import { StandbyScreen } from './components/StandbyScreen';
@@ -313,11 +311,6 @@ function App() {
                 </ErrorBoundary>
               </div>
             )}
-          </div>
-
-          {/* SYSTEM TICKER - Desktop only */}
-          <div className="hidden md:block">
-            <SystemTicker />
           </div>
         </div>
 

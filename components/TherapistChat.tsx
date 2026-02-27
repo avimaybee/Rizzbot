@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, Send, ArrowLeft, HeartHandshake, ImagePlus, X, Edit3, Target, Heart, Users, Sparkles, Eye, BookOpen, ShieldAlert, History, Activity, Clipboard, AlertTriangle, Users2, Scale, Brain, Lightbulb, MessageCircle, ChevronRight, PanelRightOpen, PanelRightClose, Menu, BarChart3 } from 'lucide-react';
+import { Plus, Send, ArrowLeft, HeartHandshake, ImagePlus, X, Edit3, Target, Heart, Users, Sparkles, Eye, BookOpen, ShieldAlert, History, Activity, Clipboard, AlertTriangle, Users2, Scale, Brain, Lightbulb, MessageCircle, ChevronRight, PanelRightOpen, PanelRightClose, Menu, BarChart3, Terminal, Shield } from 'lucide-react';
 import { streamTherapistAdvice } from '../services/geminiService';
 import { saveTherapistSession, getTherapistSession, getTherapistSessions, TherapistSession, getMemories, saveMemory, deleteMemory, updateMemory, TherapistMemory } from '../services/dbService';
 import { logger } from '../services/logger';
@@ -8,7 +8,6 @@ import remarkGfm from 'remark-gfm';
 import { TherapistMessage, ClinicalNotes, TherapistExercise, ExerciseType } from '../types';
 import { TherapistSidebar } from './TherapistSidebar';
 import { TherapistTacticalReport } from './TherapistTacticalReport';
-import { SuggestedPrompts } from './SuggestedPrompts';
 import { ModuleHeader } from './ModuleHeader';
 
 interface TherapistChatProps {
@@ -27,20 +26,20 @@ const DEFAULT_NOTES: ClinicalNotes = {
 };
 
 const WELCOME_MESSAGE = `
-### Relationship Therapy
+### Welcome to Relationship Support
 
-Welcome. I'm here to help you process your experiences and gain clarity on your relationship dynamics.
+I'm here to help you process your experiences, recognize patterns, and gain clarity.
 
-**You can use this space to:**
-- Share your thoughts and feelings freely
-- Identify recurring patterns in your interactions
-- Work through confusing situations
-- Practice healthier communication skills
+**How we can work together:**
+- **Express freely** – Share your thoughts without judgment
+- **Identify patterns** – Spot recurring dynamics in your life
+- **Gain clarity** – Navigate confusing situations with perspective
+- **Develop skills** – Practice healthier, more effective communication
 
-Where would you like to start today?
+What's on your mind today?
 `;
 
-// Insight Card Component - Professional & Clean
+// Insight Card Component
 const InsightCard = ({
     title,
     content,
@@ -54,7 +53,7 @@ const InsightCard = ({
 }) => {
     const colors = {
         gold: 'border-amber-500/20 bg-amber-500/5',
-        red: 'border-rose-500/20 bg-rose-500/5',
+        red: 'border-red-500/20 bg-red-500/5',
         emerald: 'border-emerald-500/20 bg-emerald-500/5',
         blue: 'border-blue-500/20 bg-blue-500/5',
         purple: 'border-purple-500/20 bg-purple-500/5',
@@ -62,19 +61,21 @@ const InsightCard = ({
 
     const iconColors = {
         gold: 'text-amber-400',
-        red: 'text-rose-400',
+        red: 'text-red-400',
         emerald: 'text-emerald-400',
         blue: 'text-blue-400',
         purple: 'text-purple-400',
     };
 
     return (
-        <div className={`border ${colors[accentColor]} p-4 sm:p-5 my-4 rounded-xl animate-fade-in transition-all shadow-sm`}>
+        <div className={`bg-white/5 border ${colors[accentColor]} p-5 my-4 rounded-[24px] animate-fade-in group hover:bg-white/10 transition-all shadow-xl`}>
             <div className="flex items-center gap-3 mb-3">
-              <Icon className={`w-4 h-4 ${iconColors[accentColor]}`} />
-              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-300">{title}</span>
+              <div className={`p-2 bg-black/20 rounded-xl ${iconColors[accentColor]}`}>
+                <Icon className="w-4 h-4" />
+              </div>
+              <span className={`text-[10px] font-bold uppercase tracking-widest ${iconColors[accentColor]}`}>{title}</span>
             </div>
-            <div className="text-sm text-zinc-400 leading-relaxed pl-1">
+            <div className="text-sm text-zinc-300 leading-relaxed font-medium">
                 {content}
             </div>
         </div>
@@ -91,8 +92,8 @@ const ExerciseCard: React.FC<{
     const [needsValues, setNeedsValues] = useState({ safety: 50, connection: 50, autonomy: 50 });
 
     const exerciseConfig: Record<string, any> = {
-        boundary_builder: { icon: Target, title: 'Boundary Builder', description: 'Define your non-negotiables' },
-        needs_assessment: { icon: Heart, title: 'Needs Assessment', description: 'Identify your core needs' },
+        boundary_builder: { icon: Target, title: 'Boundary Setting', description: 'Define your personal standards' },
+        needs_assessment: { icon: Heart, title: 'Needs Assessment', description: 'Identify your core requirements' },
         attachment_quiz: { icon: Users, title: 'Attachment Style', description: 'Explore your relationship patterns' }
     };
 
@@ -104,32 +105,32 @@ const ExerciseCard: React.FC<{
         if (exercise.type === 'boundary_builder') result = { boundaries: boundaryInputs.filter(b => b.trim()) };
         else if (exercise.type === 'needs_assessment') result = needsValues;
         else result = {};
-        logger.triggerHaptic('success');
+        if ('vibrate' in navigator) navigator.vibrate([20, 50, 20]);
         onComplete(result);
     };
 
     return (
-        <div className="w-full max-w-2xl mx-auto my-8 bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden animate-fade-in shadow-xl">
+        <div className="w-full max-w-2xl mx-auto my-8 bg-white/5 border border-red-500/10 rounded-[40px] overflow-hidden animate-fade-in shadow-2xl">
             {/* Header */}
-            <div className="px-6 py-6 border-b border-zinc-800 bg-zinc-900/50">
-                <div className="flex items-center gap-5">
-                    <div className="w-12 h-12 flex items-center justify-center bg-rose-500/10 border border-rose-500/20 rounded-xl">
-                        <Icon className="w-6 h-6 text-rose-400" />
+            <div className="bg-black/20 px-8 py-8 border-b border-white/5">
+                <div className="flex items-center gap-6">
+                    <div className="w-16 h-16 rounded-[20px] bg-red-500/10 flex items-center justify-center">
+                        <Icon className="w-8 h-8 text-red-400" />
                     </div>
                     <div>
-                        <h3 className="text-base font-bold text-white tracking-tight">{config.title}</h3>
-                        <p className="text-xs text-zinc-500">{config.description}</p>
+                        <h3 className="text-xl font-bold text-white uppercase tracking-tight">{config.title}</h3>
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{config.description}</p>
                     </div>
                 </div>
             </div>
 
             {/* Context */}
-            <div className="px-6 py-8">
-                <p className="text-sm text-zinc-400 leading-relaxed mb-8 italic">"{exercise.context}"</p>
+            <div className="px-8 py-10">
+                <p className="text-sm text-zinc-400 italic mb-8 leading-relaxed font-medium">"{exercise.context}"</p>
 
                 {exercise.type === 'boundary_builder' && (
                     <div className="space-y-4">
-                        <label className="text-xs font-bold text-zinc-500 mb-2 block uppercase tracking-wide">Your Boundaries</label>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2 block px-1">Define your boundaries</label>
                         {boundaryInputs.map((input, i) => (
                             <input
                                 key={i}
@@ -140,8 +141,8 @@ const ExerciseCard: React.FC<{
                                     newInputs[i] = e.target.value;
                                     setBoundaryInputs(newInputs);
                                 }}
-                                placeholder={`Requirement ${i + 1}`}
-                                className="w-full bg-zinc-950 border border-zinc-800 px-4 py-3 text-sm text-white placeholder:text-zinc-700 focus:outline-none focus:border-rose-500/30 rounded-xl transition-all"
+                                placeholder={`Item 0${i + 1}`}
+                                className="w-full bg-black/40 border border-white/5 px-5 py-4 text-sm text-white focus:outline-none focus:border-red-500/30 rounded-2xl transition-all"
                             />
                         ))}
                     </div>
@@ -151,15 +152,15 @@ const ExerciseCard: React.FC<{
                     <div className="space-y-8">
                         {Object.entries(needsValues).map(([need, value]) => (
                             <div key={need}>
-                                <div className="flex justify-between text-xs font-bold uppercase tracking-wide mb-4">
+                                <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest mb-4 px-1">
                                     <span className="text-zinc-500">{need}</span>
-                                    <span className="text-rose-400">{value}%</span>
+                                    <span className="text-red-400">{value}%</span>
                                 </div>
                                 <input
                                     type="range"
                                     value={value}
                                     onChange={(e) => setNeedsValues({ ...needsValues, [need]: parseInt(e.target.value) })}
-                                    className="w-full h-1.5 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-rose-500"
+                                    className="w-full h-1 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-red-500"
                                 />
                             </div>
                         ))}
@@ -168,21 +169,18 @@ const ExerciseCard: React.FC<{
             </div>
 
             {/* Actions */}
-            <div className="px-6 py-6 bg-zinc-950 border-t border-zinc-800 flex gap-4 justify-end items-center">
+            <div className="px-8 py-6 bg-black/20 border-t border-white/5 flex gap-6 justify-end items-center">
                 <button
-                    onClick={() => {
-                        logger.triggerHaptic('light');
-                        onSkip();
-                    }}
-                    className="text-xs font-semibold text-zinc-500 hover:text-zinc-300 transition-colors uppercase tracking-wide"
+                    onClick={onSkip}
+                    className="text-[10px] font-bold text-zinc-600 hover:text-white transition-colors uppercase tracking-widest"
                 >
-                    Skip
+                    Skip Session
                 </button>
                 <button
                     onClick={handleSubmit}
-                    className="px-6 py-2.5 bg-rose-500 text-white font-bold text-sm rounded-xl hover:bg-rose-400 transition-all active:scale-95 shadow-lg shadow-rose-500/10"
+                    className="px-8 py-3 bg-white text-black font-bold text-sm rounded-xl hover:bg-zinc-200 transition-all shadow-xl"
                 >
-                    Complete Exercise
+                    Complete
                 </button>
             </div>
         </div>
@@ -239,8 +237,8 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, streamingContent]);
 
-    const handleAction = (action: () => void, vibration: any = 'light') => {
-        logger.triggerHaptic(vibration);
+    const handleAction = (action: () => void, vibration = 5) => {
+        if ('vibrate' in navigator) navigator.vibrate(vibration);
         action();
     };
 
@@ -257,7 +255,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
             if (firebaseUid) getMemories(firebaseUid, 'GLOBAL').then(setMemories);
             setTimeout(() => setMessages([{ role: 'therapist', content: WELCOME_MESSAGE.trim(), timestamp: Date.now() }]), 0);
             setShowSessionDrawer(false);
-        }, 'medium');
+        }, 15);
     };
 
     const handleLoadSession = (session: TherapistSession) => {
@@ -267,7 +265,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
             setClinicalNotes(session.clinical_notes || DEFAULT_NOTES);
             setSuggestedPrompts([]);
             setShowSessionDrawer(false);
-        }, 'light');
+        }, 10);
     };
 
     const extractSuggestedPrompts = (text: string): string[] => {
@@ -277,9 +275,9 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
         if (questions.length >= 2) return questions.slice(-3);
         
         return [
-            "Tell me more about this.",
-            "How does this make you feel?",
-            "What is your goal for this situation?"
+            "Share more context",
+            "Reflect on these feelings",
+            "What's your ideal outcome?"
         ];
     };
 
@@ -301,7 +299,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
             setSuggestedPrompts([]);
             setIsLoading(true);
             setStreamingContent('');
-        }, 'light');
+        }, 10);
 
         let insights: any = {};
 
@@ -332,7 +330,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                 memories
             );
 
-            logger.triggerHaptic('medium');
+            if ('vibrate' in navigator) navigator.vibrate(15);
             const extractedPrompts = extractSuggestedPrompts(fullResponse);
             setSuggestedPrompts(extractedPrompts);
 
@@ -350,10 +348,10 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
             setInteractionId(newId || interactionId);
         } catch (e) {
             console.error(e);
-            logger.triggerHaptic('error');
+            if ('vibrate' in navigator) navigator.vibrate(50);
             setMessages(prev => [...prev, {
                 role: 'therapist',
-                content: "I encountered an error processing your message. Please try again.",
+                content: "An error occurred while processing your message. Please try again.",
                 timestamp: Date.now()
             }]);
         } finally {
@@ -375,7 +373,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                 const r = new FileReader();
                 r.onload = () => {
                     setPendingImages(p => [...p, r.result as string]);
-                    logger.triggerHaptic('light');
+                    if ('vibrate' in navigator) navigator.vibrate(5);
                 };
                 r.readAsDataURL(f);
             });
@@ -384,15 +382,14 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
 
     // --- RENDER ---
     return (
-        <div className="flex h-[100dvh] w-full bg-matte-base text-zinc-300 overflow-hidden font-sans">
-            {/* Background grain / texture - Functional for depth */}
-            <div className="absolute inset-0 bg-dot-pattern opacity-[0.03] pointer-events-none"></div>
+        <div className="flex h-[100dvh] w-full bg-matte-base text-zinc-300 overflow-hidden font-sans select-none">
+            <div className="bg-matte-grain"></div>
 
             {/* MOBILE SESSION DRAWER */}
             {showSessionDrawer && (
                 <>
                     <div
-                        className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-fade-in"
+                        className="md:hidden fixed inset-0 bg-black/80 backdrop-blur-md z-40 animate-fade-in"
                         onClick={() => setShowSessionDrawer(false)}
                     />
                     <div className="md:hidden fixed top-0 left-0 bottom-0 w-full z-50 animate-slide-up">
@@ -410,7 +407,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
             )}
 
             {/* DESKTOP LEFT SIDEBAR */}
-            <div className="hidden md:block w-72 h-full border-r border-zinc-800 relative z-20">
+            <div className="hidden md:block w-80 h-full border-r border-white/5 relative z-20">
                 <TherapistSidebar 
                     sessions={sessions}
                     currentInteractionId={interactionId}
@@ -422,30 +419,27 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
 
             {/* MAIN CHAT AREA */}
             <div className="flex-1 flex flex-col relative bg-matte-base h-full overflow-hidden">
-
                 {/* MODULE HEADER */}
-                <div className="px-4 pt-4">
+                <div className="px-8 pt-10">
                   <ModuleHeader 
-                    title="Relationship Therapy" 
-                    mode="Personal Growth" 
+                    title="Support Session" 
+                    mode="Therapy" 
                     onBack={() => handleAction(onBack)}
                     accentColor="red"
                     statusLabel="Status"
-                    statusValue="Active"
+                    statusValue="Connected"
                     statusColor="red"
                     rightElement={
-                        <div className="flex gap-2">
+                        <div className="flex gap-3">
                             <button 
-                                onClick={() => handleAction(() => setShowTacticalOverlay(true), 'light')}
-                                className="lg:hidden p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-all"
-                                title="View Report"
+                                onClick={() => handleAction(() => setShowTacticalOverlay(true), 10)}
+                                className="lg:hidden p-3 bg-white/5 border border-white/5 text-zinc-400 hover:text-white rounded-2xl transition-all"
                             >
                                 <BarChart3 className="w-4 h-4" />
                             </button>
                             <button 
-                                onClick={() => handleAction(() => setShowSessionDrawer(true), 'light')}
-                                className="md:hidden p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-all"
-                                title="Sessions"
+                                onClick={() => handleAction(() => setShowSessionDrawer(true), 10)}
+                                className="md:hidden p-3 bg-white/5 border border-white/5 text-zinc-400 hover:text-white rounded-2xl transition-all"
                             >
                                 <Menu className="w-4 h-4" />
                             </button>
@@ -455,43 +449,43 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                 </div>
 
                 {/* MESSAGES */}
-                <div className="flex-1 overflow-y-auto px-4 py-6 space-y-8 scrollbar-hide relative z-10 custom-scrollbar pb-32">
-                    <div className="max-w-3xl mx-auto space-y-8">
+                <div className="flex-1 overflow-y-auto px-8 py-8 space-y-12 scrollbar-hide relative z-10 custom-scrollbar pb-40">
+                    <div className="max-w-4xl mx-auto space-y-12">
                         {messages.map((msg, idx) => (
-                            <div key={idx} className={`flex flex-col gap-2 animate-fade-in ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                            <div key={idx} className={`flex flex-col gap-3 animate-fade-in ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
 
                                 {/* Header Meta */}
-                                <div className="flex items-center gap-2 opacity-40 px-1">
-                                    <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
+                                <div className="flex items-center gap-3 opacity-40 px-1">
+                                    <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">
                                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        {' — '}
-                                        {msg.role === 'user' ? 'You' : 'Therapist'}
+                                        {' • '}
+                                        {msg.role === 'user' ? 'You' : 'Assistant'}
                                     </span>
                                 </div>
 
                                 {/* Message Content */}
-                                <div className={`relative max-w-[90%] sm:max-w-[85%] ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+                                <div className={`relative max-w-[95%] sm:max-w-[90%] md:max-w-[85%] ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
 
                                     {/* Attached Images */}
                                     {msg.images && (
-                                        <div className={`flex gap-3 mb-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`flex gap-3 mb-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                             {msg.images.map((img, i) => (
                                                 <img
                                                     key={i}
                                                     src={img}
-                                                    className="h-20 w-auto border border-zinc-800 rounded-xl opacity-90 hover:opacity-100 transition-opacity shadow-sm"
-                                                    alt="Attached context"
+                                                    className="h-20 w-auto border border-white/10 rounded-2xl opacity-90 hover:opacity-100 transition-all shadow-lg"
+                                                    alt="Attached"
                                                 />
                                             ))}
                                         </div>
                                     )}
 
                                     {/* Message Bubble */}
-                                    <div className={`inline-block px-5 py-4 rounded-2xl shadow-sm ${msg.role === 'user'
-                                        ? 'bg-rose-500/10 border border-rose-500/20 text-white'
-                                        : 'bg-zinc-900/60 border border-zinc-800/50 text-zinc-200'
+                                    <div className={`inline-block px-8 py-6 rounded-[32px] shadow-2xl relative overflow-hidden ${msg.role === 'user'
+                                        ? 'bg-white text-black font-bold border-white/5 rounded-br-none'
+                                        : 'bg-white/5 border border-white/5 text-zinc-200 rounded-bl-none'
                                         }`}>
-                                        <div className="prose prose-sm prose-invert prose-p:my-1.5 max-w-none text-sm leading-relaxed">
+                                        <div className={`prose prose-sm prose-invert prose-p:my-2 prose-headings:text-zinc-200 prose-headings:font-bold prose-headings:uppercase prose-headings:tracking-tight prose-strong:text-red-400 max-w-none text-sm sm:text-base leading-relaxed font-medium ${msg.role === 'user' ? 'text-black prose-p:text-black prose-headings:text-black' : ''}`}>
                                             <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                                         </div>
                                     </div>
@@ -499,10 +493,10 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
 
                                 {/* Inline Insights */}
                                 {msg.role === 'therapist' && (
-                                    <div className="w-full max-w-[90%] sm:max-w-[85%] space-y-3 mt-1">
+                                    <div className="w-full max-w-[95%] sm:max-w-[90%] md:max-w-[85%] space-y-4 mt-2">
                                         {msg.closureScript && (
                                             <InsightCard
-                                                title="Closure Script"
+                                                title="Suggested Response"
                                                 icon={Clipboard}
                                                 accentColor="purple"
                                                 content={<p className="whitespace-pre-wrap">{msg.closureScript.script}</p>}
@@ -510,7 +504,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                         )}
                                         {msg.safetyIntervention && (
                                             <InsightCard
-                                                title="Safety Alert"
+                                                title="Alert"
                                                 icon={ShieldAlert}
                                                 accentColor="red"
                                                 content={<p>{msg.safetyIntervention.reason}</p>}
@@ -518,7 +512,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                         )}
                                         {msg.parentalPattern && (
                                             <InsightCard
-                                                title="Relationship Pattern"
+                                                title="Pattern Identified"
                                                 icon={Users2}
                                                 accentColor="emerald"
                                                 content={<p className="italic">"{msg.parentalPattern.insight}"</p>}
@@ -526,7 +520,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                         )}
                                         {msg.valuesMatrix && (
                                             <InsightCard
-                                                title="Alignment Matrix"
+                                                title="Alignment Analysis"
                                                 icon={Scale}
                                                 accentColor="gold"
                                                 content={<p>{msg.valuesMatrix.alignmentScore}% value alignment detected</p>}
@@ -534,7 +528,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                         )}
                                         {(msg as any).perspective && (
                                             <InsightCard
-                                                title="Perspective"
+                                                title="Possible Perspective"
                                                 icon={Eye}
                                                 accentColor="blue"
                                                 content={<p className="italic">{(msg as any).perspective.suggestedMotive}</p>}
@@ -545,7 +539,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                                 title="Core Dynamic"
                                                 icon={BookOpen}
                                                 accentColor="gold"
-                                                content={<p className="font-bold text-rose-300">{(msg as any).pattern.patternName}</p>}
+                                                content={<p className="font-bold text-red-400">{(msg as any).pattern.patternName}</p>}
                                             />
                                         )}
                                     </div>
@@ -559,53 +553,67 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                 exercise={pendingExercise}
                                 onComplete={(res) => {
                                     setPendingExercise({ ...pendingExercise, completed: true });
-                                    handleSend(`[Completed Exercise: ${pendingExercise.type}] ${JSON.stringify(res)}`);
+                                    handleSend(`Completed exercise: ${pendingExercise.type}`);
                                 }}
                                 onSkip={() => {
-                                    handleAction(() => setPendingExercise(null), 'light');
+                                    handleAction(() => setPendingExercise(null), 5);
                                 }}
                             />
                         )}
 
-                        {/* Loading State */}
+                        {/* Streaming Response */}
                         {isLoading && (
-                            <div className="flex flex-col gap-2 items-start animate-fade-in">
-                                <div className="flex items-center gap-2 opacity-40 px-1">
-                                    <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest animate-pulse">Processing...</span>
+                            <div className="flex flex-col gap-3 items-start animate-fade-in">
+                                <div className="flex items-center gap-3 opacity-40 px-1">
+                                    <div className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse"></div>
+                                    <span className="text-[9px] font-bold text-red-400 uppercase tracking-widest">Processing...</span>
                                 </div>
-                                <div className="inline-block px-5 py-4 rounded-2xl bg-zinc-900/40 border border-zinc-800/50 max-w-[80%]">
-                                    <div className="text-sm text-zinc-500 whitespace-pre-wrap leading-relaxed">
+                                <div className="inline-block px-8 py-6 rounded-[32px] rounded-bl-none bg-white/5 border border-white/5 max-w-[90%] sm:max-w-[80%] shadow-xl">
+                                    <div className="text-sm font-medium text-zinc-500 whitespace-pre-wrap leading-relaxed">
                                         {streamingContent}
-                                        <span className="inline-block w-1 h-4 bg-rose-500 ml-1 animate-pulse rounded-sm" />
+                                        <span className="inline-block w-1.5 h-4 bg-red-500 ml-2 animate-pulse rounded-sm" />
                                     </div>
                                 </div>
                             </div>
                         )}
 
                         {/* Suggested Prompts */}
-                        <SuggestedPrompts
-                            prompts={suggestedPrompts}
-                            onSelect={(p) => handleAction(() => handleSend(p), 'light')}
-                            isVisible={!isLoading && suggestedPrompts.length > 0}
-                        />
+                        {!isLoading && suggestedPrompts.length > 0 && (
+                            <div className="flex flex-col gap-4 animate-fade-in py-6">
+                                <div className="flex items-center gap-3 px-1">
+                                    <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">Next Steps</span>
+                                </div>
+                                <div className="flex flex-wrap gap-3">
+                                    {suggestedPrompts.map((prompt, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => handleAction(() => handleSend(prompt), 10)}
+                                            className="px-6 py-3 bg-white/5 border border-white/5 hover:border-red-500/30 hover:bg-red-500/5 rounded-2xl text-xs font-bold text-zinc-500 hover:text-white transition-all text-left shadow-lg"
+                                        >
+                                            {prompt}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         <div ref={messagesEndRef} />
                     </div>
                 </div>
 
                 {/* INPUT AREA */}
-                <div className="p-4 md:p-6 bg-matte-base/80 backdrop-blur-md border-t border-zinc-800 relative z-40 shrink-0">
-                    <div className="max-w-3xl mx-auto">
+                <div className="p-8 md:p-12 bg-matte-base relative z-40 shrink-0">
+                    <div className="max-w-4xl mx-auto">
 
                         {/* Pending Images */}
                         {pendingImages.length > 0 && (
-                            <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+                            <div className="flex gap-4 mb-6 overflow-x-auto pb-3 scrollbar-hide">
                                 {pendingImages.map((img, i) => (
                                     <div key={i} className="relative group shrink-0">
-                                        <img src={img} className="h-16 w-auto rounded-lg border border-zinc-800 shadow-sm" alt="Context screenshot" />
+                                        <img src={img} className="h-20 w-auto rounded-2xl border border-white/10 shadow-2xl transition-all" alt="Upload" />
                                         <button
-                                            onClick={() => handleAction(() => setPendingImages(prev => prev.filter((_, idx) => idx !== i)), 'light')}
-                                            className="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 text-white rounded-full flex items-center justify-center text-sm shadow-md hover:bg-rose-400 transition-colors"
+                                            onClick={() => handleAction(() => setPendingImages(prev => prev.filter((_, idx) => idx !== i)), 10)}
+                                            className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center text-sm shadow-2xl hover:bg-red-600 transition-colors border border-white/10"
                                         >
                                             <X size={14} />
                                         </button>
@@ -615,13 +623,13 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                         )}
 
                         {/* Input Row */}
-                        <div className="flex items-center gap-2 p-1.5 bg-zinc-900 border border-zinc-800 rounded-2xl focus-within:border-rose-500/30 transition-all shadow-sm">
+                        <div className="flex items-center gap-4 p-1.5 bg-white/5 border border-white/10 rounded-3xl focus-within:border-red-500/30 transition-all shadow-2xl">
                             <button
-                                onClick={() => handleAction(() => fileInputRef.current?.click(), 'light')}
-                                className="p-2.5 text-zinc-500 hover:text-rose-400 transition-colors shrink-0"
-                                title="Attach context"
+                                onClick={() => handleAction(() => fileInputRef.current?.click(), 10)}
+                                className="p-4 text-zinc-600 hover:text-white transition-colors shrink-0 group"
+                                title="Attach screenshot"
                             >
-                                <ImagePlus className="w-5 h-5" />
+                                <ImagePlus className="w-6 h-6 group-hover:scale-110 transition-transform" />
                             </button>
 
                             <input
@@ -630,22 +638,22 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyDown={handleKeyDown}
                                 disabled={isLoading}
-                                placeholder="Share what's on your mind..."
-                                className="flex-1 bg-transparent text-white text-sm placeholder:text-zinc-700 focus:outline-none py-2 px-1"
+                                placeholder="Express your thoughts..."
+                                className="flex-1 bg-transparent text-white text-sm font-bold placeholder:text-zinc-800 focus:outline-none py-4"
                                 autoComplete="off"
                             />
 
                             <button
-                                onClick={() => handleAction(() => handleSend(), 'light')}
+                                onClick={() => handleAction(() => handleSend(), 15)}
                                 disabled={!inputValue.trim() || isLoading}
                                 aria-label="Send message"
-                                className={`p-2.5 rounded-xl transition-all shrink-0 ${
+                                className={`px-8 py-4 rounded-2xl transition-all shrink-0 font-bold uppercase tracking-widest ${
                                     !inputValue.trim() || isLoading 
                                     ? 'text-zinc-800' 
-                                    : 'text-rose-500 hover:bg-rose-500/10'
+                                    : 'text-red-500 hover:bg-red-500/5'
                                 }`}
                             >
-                                <Send className="w-5 h-5" />
+                                <Send className="w-6 h-6" />
                             </button>
 
                             <input
@@ -663,15 +671,15 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
 
             {/* DESKTOP RIGHT SIDEBAR */}
             {showRightPanel && (
-                <div className="hidden lg:flex flex-col w-80 shrink-0 border-l border-zinc-800 relative z-20">
+                <div className="hidden lg:flex flex-col w-96 shrink-0 border-l border-white/5 relative z-20 bg-black/20">
                     <TherapistTacticalReport 
                         clinicalNotes={clinicalNotes}
                         memories={memories}
                         onUpdateMemory={(id, c, t) => {
-                            handleAction(() => updateMemory(id, c, t), 'light');
+                            handleAction(() => updateMemory(id, c, t), 5);
                         }}
                         onDeleteMemory={(id) => {
-                            handleAction(() => deleteMemory(id), 'medium');
+                            handleAction(() => deleteMemory(id), 10);
                         }}
                     />
                 </div>
@@ -684,12 +692,12 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                         clinicalNotes={clinicalNotes}
                         memories={memories}
                         onUpdateMemory={(id, c, t) => {
-                            handleAction(() => updateMemory(id, c, t), 'light');
+                            handleAction(() => updateMemory(id, c, t), 5);
                         }}
                         onDeleteMemory={(id) => {
-                            handleAction(() => deleteMemory(id), 'medium');
+                            handleAction(() => deleteMemory(id), 10);
                         }}
-                        onClose={() => handleAction(() => setShowTacticalOverlay(false), 'light')}
+                        onClose={() => handleAction(() => setShowTacticalOverlay(false), 5)}
                         isMobile={true}
                     />
                 </div>

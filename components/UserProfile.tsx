@@ -4,7 +4,6 @@ import { UserStyleProfile, StyleExtractionResponse, AIExtractedStyleProfile } fr
 import { extractUserStyle } from '../services/geminiService';
 import { AuthUser } from '../services/firebaseService';
 import { StyleRadar } from './StyleRadar';
-import { CornerNodes } from './CornerNodes';
 import { ModuleHeader } from './ModuleHeader';
 
 interface UserProfileProps {
@@ -158,74 +157,66 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
   // Intro Screen
   if (currentStep === 'intro') {
     return (
-      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-hidden font-mono select-none">
+      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-hidden font-sans select-none">
         <div className="bg-matte-grain"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] bg-hard-gold/5 rounded-full blur-[100px] animate-pulse-slow"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] bg-white/[0.02] rounded-full blur-[120px]"></div>
 
         {/* Header */}
-        <div className="px-6 pt-8 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
+        <div className="px-8 pt-10 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
           <ModuleHeader 
-            title="Profile Settings" 
-            mode="User Account" 
+            title="Profile Calibration" 
+            mode="Voice Training" 
             onBack={() => handleAction(onBack)}
             accentColor="gold"
-            statusLabel="Status"
+            statusLabel="System Status"
             statusValue="Ready"
             statusColor="emerald"
           />
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-h-0 overflow-y-auto flex items-center justify-center p-6 relative z-10 custom-scrollbar pb-32">
+        <div className="flex-1 min-h-0 overflow-y-auto flex items-center justify-center p-8 relative z-10 custom-scrollbar pb-40">
           <div className="max-w-2xl w-full">
-            <div className="glass-dark border-white/5 p-8 md:p-12 soft-edge shadow-2xl relative overflow-hidden">
-              
-              <div className="text-center space-y-10 relative z-10">
-                <div className="w-20 h-20 mx-auto glass flex items-center justify-center border-white/10 rounded-full shadow-[0_0_30px_rgba(251,191,36,0.15)]">
-                  <User className="w-10 h-10 text-hard-gold" />
+            <div className="bg-white/5 border border-white/5 p-10 md:p-16 rounded-[40px] shadow-2xl relative overflow-hidden text-center">
+              <div className="space-y-12 relative z-10">
+                <div className="w-24 h-24 mx-auto bg-white/5 border border-white/10 rounded-[32px] flex items-center justify-center shadow-xl">
+                  <Fingerprint className="w-12 h-12 text-amber-400" />
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3 justify-center">
-                     <span className="text-[10px] font-mono font-bold text-hard-gold uppercase tracking-[0.4em]">Voice Calibration</span>
-                  </div>
-                  <h2 className="text-4xl md:text-6xl font-impact text-white uppercase tracking-tighter leading-none">Configure Profile</h2>
-                  <p className="text-zinc-500 text-[11px] font-bold uppercase tracking-widest leading-relaxed max-w-sm mx-auto">
-                    Train the AI to understand your unique communication style.
+                  <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter leading-none">Personalize AI</h2>
+                  <p className="text-zinc-500 text-sm font-medium leading-relaxed max-w-sm mx-auto">
+                    Teach the assistant your unique texting style to receive more authentic response suggestions.
                   </p>
                 </div>
 
-                {/* Onboarding Status Grid */}
-                <div className="space-y-3 text-left bg-black/40 border border-white/5 p-6 soft-edge">
-                  <div className="text-[10px] font-mono font-bold text-zinc-600 uppercase tracking-widest mb-4 border-b border-white/5 pb-2">Setup Progress</div>
+                {/* Status Grid */}
+                <div className="space-y-4 text-left bg-black/40 border border-white/5 p-8 rounded-3xl">
+                  <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4">Training Progress</div>
                   {[
-                    { label: 'Voice Samples', status: hasSamples ? 'Complete' : 'Pending', color: hasSamples ? 'text-emerald-400' : 'text-zinc-700' },
-                    { label: 'Style Preferences', status: hasProfileData ? 'Complete' : 'Pending', color: hasProfileData ? 'text-emerald-400' : 'text-zinc-700' },
-                    { label: 'Data Synchronization', status: 'Active', color: 'text-emerald-500' }
+                    { label: 'Voice Samples', status: hasSamples ? 'Complete' : 'Required', color: hasSamples ? 'text-emerald-400' : 'text-zinc-600' },
+                    { label: 'Style Calibration', status: hasProfileData ? 'Complete' : 'Required', color: hasProfileData ? 'text-emerald-400' : 'text-zinc-600' }
                   ].map((item, i) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-1.5 h-1.5 rounded-full ${item.status === 'Complete' || item.status === 'Active' ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]' : 'bg-zinc-800'}`}></div>
-                        <span className={`text-[10px] font-mono font-bold uppercase tracking-widest ${item.status === 'Complete' || item.status === 'Active' ? 'text-zinc-300' : 'text-zinc-600'}`}>{item.label}</span>
-                      </div>
-                      <span className={`text-[9px] font-mono font-bold ${item.color} tracking-[0.1em]`}>{item.status}</span>
+                    <div key={i} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-0 last:pb-0">
+                      <span className={`text-xs font-bold ${item.status === 'Complete' ? 'text-zinc-300' : 'text-zinc-500'}`}>{item.label}</span>
+                      <span className={`text-[10px] font-bold uppercase tracking-widest ${item.color}`}>{item.status}</span>
                     </div>
                   ))}
                 </div>
 
                 <button
                   onClick={() => handleAction(() => setCurrentStep('samples'), 10)}
-                  className="w-full py-5 bg-white text-black font-impact text-2xl uppercase tracking-widest hover:bg-zinc-200 transition-all soft-edge shadow-xl active:scale-[0.98]"
+                  className="w-full py-5 bg-white text-black font-black text-2xl uppercase tracking-tight rounded-3xl hover:bg-zinc-200 transition-all shadow-xl active:scale-[0.98]"
                 >
-                  {hasSamples ? 'Continue Calibration' : 'Get Started'}
+                  {hasSamples ? 'Continue Training' : 'Get Started'}
                 </button>
                 
                 {onSignOut && (
                   <button 
                     onClick={() => handleAction(onSignOut, 20)}
-                    className="flex items-center gap-2 text-zinc-700 hover:text-hard-red transition-all text-[9px] font-mono font-bold uppercase tracking-widest mx-auto py-2 px-4 glass-zinc border-white/5 soft-edge"
+                    className="flex items-center gap-2 text-zinc-600 hover:text-red-400 transition-all text-[10px] font-bold uppercase tracking-widest mx-auto py-3 px-6"
                   >
-                    <LogOut className="w-3 h-3" />
+                    <LogOut className="w-4 h-4" />
                     Sign Out
                   </button>
                 )}
@@ -240,27 +231,27 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
   // Samples Collection Screen
   if (currentStep === 'samples') {
     return (
-      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide font-mono select-none">
+      <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide font-sans select-none">
         <div className="bg-matte-grain"></div>
 
         {/* Header */}
-        <div className="px-6 pt-8 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
+        <div className="px-8 pt-10 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
           <ModuleHeader 
-            title="Communication Samples" 
-            mode="Voice Training" 
+            title="Style Assessment" 
+            mode="Step 1 of 2" 
             onBack={() => handleAction(() => setCurrentStep('intro'))}
             accentColor="gold"
-            statusLabel="Progress"
-            statusValue="Step 1 of 2"
+            statusLabel="Input Status"
+            statusValue="Sampling"
             statusColor="gold"
             rightElement={
               initialProfile && (
                 <button
                   onClick={() => handleAction(() => setCurrentStep('review'), 10)}
-                  className="flex items-center gap-2 glass-zinc border border-white/5 px-4 py-2 soft-edge text-zinc-500 hover:text-white transition-all group"
+                  className="flex items-center gap-2 bg-white/5 border border-white/5 px-6 py-2 rounded-xl text-zinc-500 hover:text-white transition-all group"
                 >
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-widest">Skip</span>
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Skip</span>
+                  <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </button>
               )
             }
@@ -268,78 +259,61 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-6 md:p-12 relative z-10 pb-32">
-          <div className="max-w-6xl mx-auto space-y-12">
+        <div className="flex-1 p-8 md:p-16 relative z-10 pb-40">
+          <div className="max-w-6xl mx-auto space-y-16">
 
             <div className="text-center space-y-4">
-              <div className="flex items-center gap-3 justify-center">
-                 <span className="text-[10px] font-mono font-bold text-hard-gold uppercase tracking-[0.4em]">Setup Sequence</span>
-              </div>
-              <h2 className="text-3xl md:text-5xl font-impact text-white uppercase tracking-tighter leading-none">Voice Training</h2>
-              <p className="text-zinc-500 text-[11px] font-bold uppercase tracking-widest leading-relaxed">Provide examples of how you typically respond to messages.</p>
+              <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter leading-none">Voice Training</h2>
+              <p className="text-zinc-500 text-sm font-medium max-w-md mx-auto">Draft responses to these scenarios in your most natural voice.</p>
             </div>
 
             {/* Quiz Questions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
               {[
-                { scenario: "Introduction", text: "so... what's your story? give me the lore." },
-                { scenario: "Casual Opinion", text: "unpopular opinion: pineapple belongs on pizza." },
-                { scenario: "Sharing a Vibe", text: "honestly having the worst day rn." },
-                { scenario: "Reaction", text: "lol that's actually hilarious 💀" },
-                { scenario: "Making Plans", text: "so... wyd this weekend?" },
-                { scenario: "Open Question", text: "wait i have a random question for u" }
+                { scenario: "The Introduction", text: "so... what's your story? give me the lore." },
+                { scenario: "Opinion Share", text: "unpopular opinion: pineapple belongs on pizza." },
+                { scenario: "Daily Check-in", text: "honestly having the worst day rn." },
+                { scenario: "Vibe Match", text: "lol that's actually hilarious 💀" },
+                { scenario: "Planning", text: "so... wyd this weekend?" },
+                { scenario: "Random Query", text: "wait i have a random question for u" }
               ].map((item, index) => (
-                <div key={index} className="space-y-4 group">
-                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] font-mono font-bold text-hard-gold opacity-50">{index+1}</span>
-                      <span className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-widest">{item.scenario}</span>
-                    </div>
-                    <div className="w-12 h-[1px] bg-zinc-900 group-focus-within:bg-hard-gold/30 transition-all"></div>
+                <div key={index} className="space-y-6 group">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{item.scenario}</span>
+                    <span className="text-[10px] font-bold text-amber-400 opacity-40">0{index+1}</span>
                   </div>
                   
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 glass shrink-0 flex items-center justify-center border-white/10 rounded-full text-zinc-600 group-hover:text-zinc-400 transition-all shadow-lg">
+                    <div className="w-10 h-10 bg-white/5 shrink-0 flex items-center justify-center rounded-2xl text-zinc-600">
                       <User className="w-5 h-5" />
                     </div>
-                    <div className="glass-dark border border-white/5 p-4 soft-edge relative flex-1 shadow-xl">
-                      <div className="text-[8px] font-mono font-bold text-zinc-600 mb-2 uppercase tracking-widest">Incoming Message:</div>
-                      <p className="text-sm font-medium text-zinc-300 italic tracking-tight">"{item.text}"</p>
+                    <div className="bg-white/5 border border-white/5 p-5 rounded-[24px] rounded-tl-none flex-1 shadow-xl">
+                      <p className="text-sm font-bold text-zinc-300 italic">"{item.text}"</p>
                     </div>
                   </div>
 
-                  <div className="pl-14 relative">
+                  <div className="pl-14">
                     <textarea
                       value={sampleTexts[index]}
                       onChange={(e) => handleSampleChange(index, e.target.value)}
-                      className="w-full glass-zinc border-white/5 p-5 text-white text-sm font-medium focus:border-hard-gold/30 focus:outline-none min-h-[100px] resize-none placeholder:text-zinc-800 soft-edge transition-all leading-relaxed shadow-lg font-sans"
-                      placeholder="Type your natural response..."
+                      className="w-full bg-black/40 border border-white/5 p-6 text-white text-sm font-medium focus:border-amber-500/30 focus:outline-none min-h-[120px] resize-none placeholder:text-zinc-800 rounded-3xl transition-all shadow-lg leading-relaxed"
+                      placeholder="How would you reply?"
                     />
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="relative py-10 opacity-20">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-zinc-800"></div>
-              </div>
-              <div className="relative flex justify-center">
-                <span className="bg-matte-base px-6 text-[9px] font-bold uppercase text-zinc-500 tracking-[0.5em]">SUPPLEMENTARY_DATA_BUFFER</span>
-              </div>
-            </div>
-
             {/* Screenshot Upload */}
-            <div className="glass-dark border-white/5 p-8 soft-edge relative overflow-hidden group shadow-2xl">
-              <div className="absolute inset-0 bg-gradient-to-b from-hard-gold/[0.02] to-transparent pointer-events-none"></div>
-              <div className="flex flex-col md:flex-row items-center justify-between gap-10 relative z-10">
+            <div className="bg-white/5 border border-white/5 p-10 rounded-[40px] relative overflow-hidden group shadow-2xl mt-20">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-10">
                 <div className="flex items-center gap-6">
-                  <div className="w-16 h-16 glass flex items-center justify-center border-white/10 rounded-full shadow-xl">
-                    <Image className="w-7 h-7 text-zinc-500 group-hover:text-hard-gold transition-all" />
+                  <div className="w-16 h-16 bg-white/5 flex items-center justify-center rounded-[20px] border border-white/10">
+                    <Image className="w-7 h-7 text-zinc-500 group-hover:text-amber-400 transition-all" />
                   </div>
-                  <div className="space-y-1">
-                    <h4 className="text-white font-impact text-2xl uppercase tracking-wider">Analyze Screenshots</h4>
-                    <p className="text-zinc-600 text-[10px] font-mono font-bold uppercase tracking-widest leading-none">Upload images for style extraction</p>
+                  <div>
+                    <h4 className="text-white font-bold text-xl uppercase tracking-tight">Upload Samples</h4>
+                    <p className="text-zinc-500 text-xs font-medium">Add screenshots for more accurate style matching</p>
                   </div>
                 </div>
 
@@ -354,13 +328,13 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                   />
                   <button
                     onClick={() => handleAction(() => fileInputRef.current?.click(), 10)}
-                    className="w-full md:w-auto px-10 py-3 glass-zinc border border-white/10 text-white text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-white/5 hover:border-white/20 transition-all soft-edge shadow-xl"
+                    className="w-full md:w-auto px-10 py-3 bg-white/5 border border-white/10 text-white text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all rounded-xl"
                   >
-                    Select Images
+                    Choose Files
                   </button>
                   {screenshots.length > 0 && (
-                    <div className="text-[10px] font-mono font-bold text-hard-gold flex items-center gap-2">
-                      {screenshots.length} Images Selected
+                    <div className="text-[10px] font-bold text-amber-400">
+                      {screenshots.length} Images Added
                     </div>
                   )}
                 </div>
@@ -370,15 +344,15 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
               {screenshots.length > 0 && (
                 <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-4 mt-10 pt-8 border-t border-white/5">
                   {screenshots.map((base64, index) => (
-                    <div key={index} className="relative group aspect-[9/16] glass-zinc border-white/5 overflow-hidden soft-edge shadow-lg">
+                    <div key={index} className="relative group aspect-[9/16] bg-black/20 rounded-xl overflow-hidden shadow-lg border border-white/5">
                       <img
                         src={`data:image/png;base64,${base64}`}
                         alt=""
-                        className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-500"
+                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all"
                       />
                       <button
                         onClick={() => removeScreenshot(index)}
-                        className="absolute inset-0 bg-hard-red/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all"
+                        className="absolute inset-0 bg-red-500/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all"
                       >
                         <X className="w-6 h-6 text-white" />
                       </button>
@@ -388,148 +362,119 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
               )}
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col gap-4">
-               <button
-                 onClick={analyzeWithAI}
-                 disabled={!canAnalyze || isAnalyzing}
-                 className={`w-full py-5 font-impact text-2xl uppercase tracking-[0.1em] border transition-all flex items-center justify-center gap-4 soft-edge shadow-[0_20px_50px_rgba(255,255,255,0.1)] group relative overflow-hidden ${!canAnalyze || isAnalyzing
-                   ? 'bg-zinc-900 text-zinc-700 border-zinc-800 cursor-not-allowed'
-                   : 'bg-white text-black hover:bg-zinc-200'
-                   }`}
-               >
-                 {isAnalyzing ? (
-                   <div className="flex items-center gap-3">
-                     <div className="w-2 h-2 bg-zinc-600 animate-bounce"></div>
-                     <div className="w-2 h-2 bg-zinc-600 animate-bounce delay-75"></div>
-                     <div className="w-2 h-2 bg-zinc-600 animate-bounce delay-150"></div>
-                     <span className="ml-2 font-mono font-bold text-sm tracking-widest uppercase">Processing...</span>
-                   </div>
-                 ) : (
-                   <>
-                     <Sparkles className="w-6 h-6 text-hard-gold group-hover:rotate-12 transition-transform" /> 
-                     <span>Generate Style Profile</span>
-                     <div className="absolute inset-0 bg-hard-gold opacity-0 group-hover:opacity-5 transition-opacity"></div>
-                   </>
-                 )}
-               </button>
-
-               {canAnalyze && (
-                 <button
-                   onClick={() => handleAction(analyzeTexts, 10)}
-                   disabled={isAnalyzing}
-                   className="w-full py-4 glass-zinc border-white/5 text-zinc-600 hover:text-white text-[10px] font-mono font-bold uppercase tracking-widest transition-all soft-edge"
-                 >
-                   Manual Calibration (Local Only)
-                 </button>
-               )}
-            </div>
+            {/* Action Button */}
+            <button
+              onClick={analyzeWithAI}
+              disabled={!canAnalyze || isAnalyzing}
+              className={`w-full py-6 rounded-3xl font-black text-2xl uppercase tracking-tight border transition-all flex items-center justify-center gap-4 shadow-2xl ${!canAnalyze || isAnalyzing
+                ? 'bg-zinc-900 text-zinc-700 border-zinc-800'
+                : 'bg-white text-black hover:bg-zinc-200 border-white'
+                }`}
+            >
+              {isAnalyzing ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-zinc-600 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-zinc-600 rounded-full animate-bounce delay-75"></div>
+                  <div className="w-2 h-2 bg-zinc-600 rounded-full animate-bounce delay-150"></div>
+                </div>
+              ) : (
+                <>
+                  <Sparkles size={24} /> 
+                  <span>Analyze My Style</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
     );
   }
 
-  // Review & Edit Screen
+  // Review Screen
   return (
-    <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide font-mono select-none">
+    <div className="h-full w-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide font-sans select-none">
       <div className="bg-matte-grain"></div>
-      <CornerNodes className="opacity-[0.03]" />
 
       {/* Header */}
-      <div className="px-6 pt-8 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
+      <div className="px-8 pt-10 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
         <ModuleHeader 
-          title="Style Review" 
-          mode="Profile Summary" 
+          title="Style Profile" 
+          mode="Step 2 of 2" 
           onBack={() => handleAction(() => setCurrentStep('samples'))}
           accentColor="gold"
-          statusLabel="Validation"
-          statusValue="Step 2 of 2"
-          statusColor="gold"
+          statusLabel="Verification"
+          statusValue="Validated"
+          statusColor="emerald"
         />
       </div>
 
       {/* Content */}
-      <div className="flex-1 p-6 md:p-10 relative z-10 pb-32">
-        <div className="max-w-7xl mx-auto space-y-10">
+      <div className="flex-1 p-8 md:p-12 relative z-10 pb-40">
+        <div className="max-w-7xl mx-auto space-y-12">
           
-          <div className="mb-10 glass-dark border-l-4 border-hard-gold p-8 soft-edge shadow-2xl relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-hard-gold/[0.03] via-transparent to-transparent pointer-events-none"></div>
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 relative z-10">
+          <div className="bg-white/5 border-l-4 border-amber-400 p-10 rounded-3xl shadow-2xl relative overflow-hidden">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
               <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] font-mono font-bold text-hard-gold uppercase tracking-[0.4em]">User Profile | {authUser?.uid.slice(0, 8) || 'Guest'}</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
+                  <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Active Profile</span>
                 </div>
-                <h2 className="text-4xl md:text-6xl font-impact text-white uppercase tracking-tighter leading-none mt-1">
-                  {authUser?.displayName || 'User Profile'}
+                <h2 className="text-4xl md:text-7xl font-black text-white uppercase tracking-tighter leading-none mt-1">
+                  {authUser?.displayName || 'Authorized User'}
                 </h2>
               </div>
               <div className="flex items-center gap-6">
-                <div className="hidden md:block text-right">
-                  <div className="text-[9px] font-mono font-bold text-zinc-600 uppercase tracking-widest mb-1">Last Analysis</div>
-                  <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{new Date().toLocaleDateString()}</div>
-                </div>
-                <div className="px-6 py-3 glass border border-white/5 text-left shadow-xl relative group soft-edge">
-                  <div className="text-[9px] font-mono font-bold text-zinc-500 uppercase tracking-widest mb-1.5">Voice Status</div>
-                  <div className="text-xs font-bold text-emerald-400 flex items-center gap-2">
-                     <Shield size={12} />
-                     <span>Verified</span>
+                <div className="px-8 py-4 bg-white/5 border border-white/5 rounded-2xl shadow-xl">
+                  <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5">Voice Integrity</div>
+                  <div className="text-sm font-bold text-emerald-400 flex items-center gap-2">
+                     <Shield size={14} />
+                     <span>High Match</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
 
             {/* LEFT COLUMN */}
-            <div className="space-y-8">
+            <div className="space-y-10">
               {analysisResult && (
-                <div className="glass-dark border-white/5 p-8 soft-edge relative overflow-hidden shadow-2xl">
-                  <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
-                    <Sparkles className="w-32 h-32 text-hard-gold" />
-                  </div>
-                  
-                  <div className="space-y-8 relative z-10">
-                    <div className="flex items-center justify-between border-b border-white/5 pb-6">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 glass flex items-center justify-center border-white/10 rounded-xl shadow-lg`}>
-                          {analysisResult.confidence === 0 ? <AlertTriangle className="w-6 h-6 text-hard-red animate-pulse" /> : <Cpu className="w-6 h-6 text-hard-gold" />}
+                <div className="bg-white/5 border border-white/5 p-10 rounded-[40px] shadow-2xl relative overflow-hidden">
+                  <div className="space-y-10">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-8">
+                      <div className="flex items-center gap-5">
+                        <div className="w-14 h-14 bg-white/5 flex items-center justify-center rounded-2xl border border-white/10 shadow-lg">
+                          {analysisResult.confidence === 0 ? <AlertTriangle className="text-red-400" /> : <Cpu className="text-amber-400" />}
                         </div>
                         <div>
-                          <div className={`text-[10px] font-mono font-bold ${analysisResult.confidence === 0 ? 'text-hard-red' : 'text-hard-gold'} uppercase tracking-widest mb-1`}>
+                          <div className={`text-[10px] font-bold ${analysisResult.confidence === 0 ? 'text-red-400' : 'text-amber-400'} uppercase tracking-widest mb-1`}>
                             {analysisResult.confidence === 0 ? 'Analysis Failed' : 'AI Analysis Results'}
                           </div>
-                          <div className="text-[8px] font-mono font-bold text-zinc-600 uppercase tracking-widest">Source: Linguistic Engine</div>
+                          <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">Neural Engine 2.0</div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-[8px] font-mono font-bold text-zinc-600 uppercase tracking-widest mb-1">Confidence</div>
-                        <div className={`text-3xl font-impact tracking-widest ${analysisResult.confidence >= 70 ? 'text-emerald-400' :
-                          analysisResult.confidence >= 40 ? 'text-hard-gold' :
-                            'text-hard-red'
-                          }`}>
+                        <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-1">Confidence</div>
+                        <div className={`text-4xl font-black tabular-nums ${analysisResult.confidence >= 70 ? 'text-emerald-400' : 'text-amber-400'}`}>
                           {analysisResult.confidence}%
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-black/40 border border-white/5 p-6 soft-edge relative">
-                      <div className="absolute top-0 left-0 w-1 h-full bg-hard-gold opacity-20"></div>
-                      <div className="text-[9px] font-mono font-bold text-zinc-600 mb-4 uppercase tracking-widest flex items-center gap-2">
-                         Personality Summary
-                      </div>
-                      <p className={`text-sm font-medium italic leading-relaxed text-zinc-400`}>
+                    <div className="bg-black/40 border border-white/5 p-8 rounded-3xl">
+                      <div className="text-[10px] font-bold text-zinc-600 mb-4 uppercase tracking-widest">Personality Summary</div>
+                      <p className="text-base font-medium italic leading-relaxed text-zinc-400">
                         "{analysisResult.summary}"
                       </p>
                     </div>
 
                     {analysisResult.extractedPatterns.length > 0 && (
                       <div className="space-y-4">
-                        <div className="text-[9px] font-mono font-bold text-zinc-600 uppercase tracking-widest px-1">Detected Patterns</div>
+                        <div className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest px-1">Style Markers</div>
                         <div className="flex flex-wrap gap-3">
                           {analysisResult.extractedPatterns.map((pattern, i) => (
-                            <span key={i} className="px-3 py-1.5 glass-zinc border-white/5 text-zinc-500 text-[9px] font-mono font-bold uppercase tracking-widest soft-edge">
+                            <span key={i} className="px-4 py-2 bg-white/5 border border-white/5 text-zinc-500 text-[10px] font-bold uppercase tracking-widest rounded-xl hover:text-white hover:border-white/20 transition-all">
                               {pattern}
                             </span>
                           ))}
@@ -541,96 +486,39 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
               )}
 
               {profile.signaturePatterns.length > 0 && (
-                <div className="glass-dark border-white/5 p-8 soft-edge relative shadow-2xl">
-                  <div className="text-[9px] font-mono font-bold text-zinc-600 mb-6 uppercase tracking-widest flex items-center gap-3">
-                    <div className="w-1 h-4 bg-zinc-800"></div>
-                    Signature Phrases
-                  </div>
+                <div className="bg-white/5 border border-white/5 p-10 rounded-[40px] shadow-2xl">
+                  <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-8 px-1">Common Phrases</div>
                   <div className="grid grid-cols-2 gap-4">
                     {profile.signaturePatterns.map((pattern, i) => (
-                      <div key={i} className="p-4 glass-zinc border-white/5 flex items-center justify-between group soft-edge hover:border-hard-gold/20 transition-all shadow-lg">
-                        <span className="text-hard-gold font-impact text-sm uppercase tracking-wider">{pattern}</span>
+                      <div key={i} className="p-5 bg-white/5 border border-white/5 rounded-2xl flex items-center justify-between group hover:border-amber-400/30 transition-all">
+                        <span className="text-white font-bold text-sm uppercase tracking-tight">{pattern}</span>
+                        <span className="text-[10px] font-bold text-zinc-700">0{i+1}</span>
                       </div>
                     ))}
-                  </div>
-                </div>
-              )}
-
-              {authUser && (
-                <div className="glass-dark border-white/5 p-8 soft-edge relative shadow-2xl">
-                  <div className="text-[9px] font-mono font-bold text-zinc-600 mb-8 uppercase tracking-widest flex items-center gap-3">
-                    <div className="w-1 h-4 bg-zinc-800"></div>
-                    Account Settings
-                  </div>
-                  
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-5 p-4 glass-zinc border-white/5 soft-edge shadow-lg">
-                      {authUser.photoURL ? (
-                        <img src={authUser.photoURL} alt="" className="w-12 h-12 soft-edge border border-white/10 grayscale shadow-inner" />
-                      ) : (
-                        <div className="w-12 h-12 glass flex items-center justify-center text-zinc-600 text-lg font-impact border-white/5 shadow-xl">
-                          {(authUser.displayName || 'U')[0]}
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <div className="text-sm font-bold text-white uppercase tracking-tight truncate">{authUser.displayName || 'User'}</div>
-                        <div className="text-[9px] font-mono font-bold text-zinc-600 uppercase tracking-widest truncate">{authUser.email}</div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-3">
-                      <div className="flex items-center justify-between p-4 glass-zinc border-white/5 soft-edge group">
-                        <div className="flex items-center gap-3">
-                          <div className="w-1.5 h-1.5 bg-emerald-500"></div>
-                          <span className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-widest">Data Synchronization</span>
-                        </div>
-                        <span className="text-[10px] font-mono font-bold text-emerald-500 tracking-widest uppercase">Active</span>
-                      </div>
-
-                      <button
-                        onClick={() => handleAction(onSignOut || (() => {}), 30)}
-                        className="w-full flex items-center justify-between p-4 glass border border-hard-red/20 hover:bg-hard-red/5 transition-all group soft-edge shadow-lg active:scale-[0.98]"
-                      >
-                        <div className="flex items-center gap-3">
-                          <LogOut className="w-4 h-4 text-hard-red" />
-                          <span className="text-[10px] font-mono font-bold text-hard-red uppercase tracking-widest">Sign Out</span>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-hard-red opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
-                      </button>
-                    </div>
                   </div>
                 </div>
               )}
             </div>
 
             {/* RIGHT COLUMN */}
-            <div className="space-y-6">
-              <div className="glass-dark border-white/5 p-8 soft-edge relative flex flex-col items-center shadow-2xl">
-                <div className="text-[9px] font-mono font-bold text-zinc-600 mb-8 w-full uppercase tracking-widest flex items-center gap-3">
-                  <div className="w-1 h-4 bg-zinc-800"></div>
-                  Style Profile Visualization
-                </div>
-                <div className="relative group">
-                   <div className="absolute inset-0 bg-hard-gold/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                   <StyleRadar profile={profile} size={280} className="my-4 relative z-10" />
-                </div>
-                <div className="w-full mt-10 pt-6 border-t border-white/5 flex justify-between items-end opacity-40">
-                  <div className="text-[8px] font-mono font-bold text-zinc-700 uppercase tracking-widest">Profile Configuration v3.0</div>
-                </div>
+            <div className="space-y-8">
+              <div className="bg-white/5 border border-white/5 p-10 rounded-[40px] flex flex-col items-center shadow-2xl relative overflow-hidden">
+                <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-10 w-full px-1">Visual Style Map</div>
+                <StyleRadar profile={profile} size={280} />
               </div>
 
-              {/* Parameter Settings */}
+              {/* Settings */}
               {[
-                { label: 'Emoji Density', param: 'emojiUsage', options: ['none', 'minimal', 'moderate', 'heavy'], icon: Sparkles },
+                { label: 'Emoji Usage', param: 'emojiUsage', options: ['none', 'minimal', 'moderate', 'heavy'], icon: Sparkles },
                 { label: 'Capitalization', param: 'capitalization', options: ['lowercase', 'mixed', 'normal'], icon: Terminal },
                 { label: 'Punctuation', param: 'punctuation', options: ['none', 'minimal', 'full'], icon: Activity },
                 { label: 'Message Length', param: 'averageLength', options: ['short', 'medium', 'long'], icon: Cpu },
-                { label: 'Colloquialism', param: 'slangLevel', options: ['formal', 'casual', 'heavy-slang'], icon: Shield },
-                { label: 'Overall Tone', param: 'preferredTone', options: ['playful', 'chill', 'direct', 'sweet'], icon: Activity }
+                { label: 'Slang Level', param: 'slangLevel', options: ['formal', 'casual', 'heavy-slang'], icon: Shield },
+                { label: 'Primary Tone', param: 'preferredTone', options: ['playful', 'chill', 'direct', 'sweet'], icon: Activity }
               ].map((item, i) => (
-                <div key={i} className="glass-dark border-white/5 p-6 md:p-8 soft-edge shadow-xl group hover:border-white/10 transition-all">
-                  <div className="text-[9px] font-mono font-bold text-zinc-600 mb-6 uppercase tracking-widest flex items-center gap-3">
-                    <item.icon className="w-3 h-3 text-zinc-800 group-hover:text-hard-gold transition-colors" />
+                <div key={i} className="bg-white/5 border border-white/5 p-8 rounded-3xl shadow-xl">
+                  <div className="text-[10px] font-bold text-zinc-600 mb-6 uppercase tracking-widest flex items-center gap-2">
+                    <item.icon size={12} className="text-zinc-700" />
                     {item.label}
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -638,9 +526,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
                       <button
                         key={level}
                         onClick={() => handleAction(() => setProfile({ ...profile, [item.param]: level }), 2)}
-                        className={`py-3 px-2 border text-[10px] font-mono font-bold uppercase tracking-widest transition-all soft-edge shadow-lg min-h-[48px] ${profile[item.param as keyof UserStyleProfile] === level
-                          ? 'bg-white text-black border-white shadow-white/5 scale-105 z-10'
-                          : 'glass-zinc text-zinc-600 border-white/5 hover:border-white/10 hover:text-zinc-400'
+                        className={`py-3 px-2 border text-[10px] font-bold uppercase tracking-widest transition-all rounded-xl shadow-lg min-h-[48px] ${profile[item.param as keyof UserStyleProfile] === level
+                          ? 'bg-white text-black border-white'
+                          : 'bg-white/5 text-zinc-600 border-white/5 hover:text-zinc-400'
                           }`}
                       >
                         {level.replace('-', ' ')}
@@ -652,13 +540,13 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
             </div>
           </div>
 
-          {/* Final Action */}
-          <div className="fixed bottom-0 left-0 right-0 p-6 md:p-10 bg-gradient-to-t from-matte-base via-matte-base to-transparent z-50">
+          {/* Save Button */}
+          <div className="fixed bottom-0 left-0 right-0 p-10 bg-gradient-to-t from-matte-base via-matte-base to-transparent z-50">
             <button
               onClick={() => handleAction(handleSave, 20)}
-              className="max-w-4xl mx-auto w-full py-6 bg-white text-black font-impact text-3xl uppercase tracking-widest hover:bg-zinc-200 transition-all soft-edge shadow-[0_30px_100px_rgba(255,255,255,0.15)] active:scale-[0.98] group relative overflow-hidden"
+              className="max-w-4xl mx-auto w-full py-6 bg-white text-black font-black text-3xl uppercase tracking-tight rounded-[32px] hover:bg-zinc-200 transition-all shadow-2xl active:scale-[0.98]"
             >
-              Save Profile Changes
+              Save Profile
             </button>
           </div>
         </div>

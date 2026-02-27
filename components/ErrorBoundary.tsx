@@ -1,6 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, ShieldAlert, Cpu } from 'lucide-react';
-import { CornerNodes } from './CornerNodes';
 
 interface Props {
     children?: ReactNode;

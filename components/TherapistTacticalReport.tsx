@@ -1,5 +1,5 @@
 import React from 'react';
-import { Brain, HeartHandshake, Sparkles, Lightbulb, ChevronRight, Bookmark, ShieldAlert, History, Activity, Target, X, Edit3, MessageCircle } from 'lucide-react';
+import { Brain, HeartHandshake, Sparkles, Lightbulb, ChevronRight, Bookmark, ShieldAlert, History, Activity, Target, X, Edit3, MessageCircle, BarChart3 } from 'lucide-react';
 import { ClinicalNotes, TherapistMemory } from '../types';
 
 interface TherapistTacticalReportProps {

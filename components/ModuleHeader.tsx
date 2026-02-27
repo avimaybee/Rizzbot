@@ -4,80 +4,65 @@ import { ArrowLeft } from 'lucide-react';
 interface ModuleHeaderProps {
   title: string;
   mode: string;
-  id?: string | number;
   onBack: () => void;
   accentColor?: 'gold' | 'blue' | 'red' | 'emerald';
   statusLabel?: string;
   statusValue?: string;
   statusColor?: 'gold' | 'blue' | 'red' | 'emerald';
-  lastAnalyzed?: string;
 }
 
 export const ModuleHeader: React.FC<ModuleHeaderProps> = ({
   title,
   mode,
-  id,
   onBack,
-  accentColor = 'gold',
-  statusLabel = 'STATUS',
-  statusValue = 'ACTIVE',
-  statusColor = 'emerald',
-  lastAnalyzed
+  accentColor = 'blue',
+  statusLabel,
+  statusValue,
+  statusColor = 'emerald'
 }) => {
-  const accentClasses = {
-    gold: 'border-hard-gold text-hard-gold',
-    blue: 'border-hard-blue text-hard-blue',
-    red: 'border-hard-red text-hard-red',
-    emerald: 'border-emerald-400 text-emerald-400',
-  };
-
   const statusClasses = {
-    gold: 'text-hard-gold',
-    blue: 'text-hard-blue',
-    red: 'text-hard-red',
+    gold: 'text-amber-400',
+    blue: 'text-blue-400',
+    red: 'text-red-400',
     emerald: 'text-emerald-400',
   };
 
   const accentBorder = {
-    gold: 'border-hard-gold',
-    blue: 'border-hard-blue',
-    red: 'border-hard-red',
+    gold: 'border-amber-400',
+    blue: 'border-blue-400',
+    red: 'border-red-400',
     emerald: 'border-emerald-400',
   };
 
   return (
-    <div className={`mb-4 sm:mb-8 border-l-4 ${accentBorder[accentColor]} pl-4 py-2 bg-zinc-900/50 sticky top-0 z-40 backdrop-blur-sm`}>
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div className="flex flex-col gap-2">
+    <div className="mb-8 border-l-2 border-white/10 pl-6 py-1 sticky top-0 z-40 bg-matte-base/80 backdrop-blur-md">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col gap-1">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-1 -ml-1 w-fit"
+            className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors group p-1 -ml-1 w-fit"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-[10px] font-mono uppercase tracking-widest group-hover:text-white transition-colors">BACK</span>
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Back</span>
           </button>
-          <div>
-            <div className={`label-sm ${statusClasses[accentColor]} flex items-center gap-2`}>
-              {mode} {id ? `| ${id}` : ''}
-            </div>
-            <h2 className="text-xl sm:text-3xl font-impact text-white uppercase tracking-tight mt-1">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest opacity-60">
+              {mode}
+            </span>
+            <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">
               {title}
             </h2>
           </div>
         </div>
         
-        <div className="flex items-center gap-4 text-right">
-          {lastAnalyzed && (
-            <div className="hidden md:block">
-              <div className="label-sm text-zinc-500 text-right uppercase">LAST ANALYZED</div>
-              <div className="text-[10px] font-mono text-zinc-400">{lastAnalyzed}</div>
+        {statusLabel && statusValue && (
+          <div className="flex items-center gap-4">
+            <div className="px-4 py-2 bg-white/5 border border-white/5 rounded-xl min-w-[140px]">
+              <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-0.5">{statusLabel}</div>
+              <div className={`text-xs font-bold ${statusClasses[statusColor]}`}>{statusValue}</div>
             </div>
-          )}
-          <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-zinc-900 border border-zinc-800 text-left min-w-[120px] soft-edge">
-            <div className="label-sm text-zinc-500 uppercase">{statusLabel}</div>
-            <div className={`text-[10px] font-mono ${statusClasses[statusColor]}`}>{statusValue}</div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ========================================
-   RIZZBOT MOBILE-FIRST RESPONSIVE DESIGN
+   RIZZBOT PROFESSIONAL MODERN DESIGN
    ======================================== */
 
 .soft-edge {
@@ -22,7 +22,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
-  cursor: crosshair;
   overscroll-behavior: none;
   /* Fluid base font size for better mobile scaling */
   font-size: clamp(14px, 3.5vw, 16px);
@@ -41,13 +40,12 @@ button,
 }
 
 /* ========================================
-   TYPOGRAPHY - Fluid & Responsive
+   TYPOGRAPHY - Professional & Balanced
    ======================================== */
 
-.font-impact {
-  font-family: 'Anton', sans-serif;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+.font-heading {
+  font-family: 'Montserrat', sans-serif;
+  letter-spacing: -0.02em;
 }
 
 .font-editorial {
@@ -67,16 +65,21 @@ button,
 .text-fluid-hero {
   font-size: clamp(2.5rem, 12vw, 6rem);
   line-height: 0.9;
+  font-weight: 900;
+  @apply font-heading;
 }
 
 .text-fluid-title {
   font-size: clamp(1.75rem, 6vw, 3.5rem);
   line-height: 1;
+  font-weight: 700;
+  @apply font-heading;
 }
 
 .text-fluid-subtitle {
   font-size: clamp(1.25rem, 4vw, 2rem);
   line-height: 1.1;
+  font-weight: 600;
 }
 
 /* ========================================
@@ -142,7 +145,7 @@ button,
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
   pointer-events: none;
   z-index: 50;
-  opacity: 0.5;
+  opacity: 0.3;
   mix-blend-mode: overlay;
 }
 
@@ -185,18 +188,6 @@ button,
   .glass, .glass-dark, .glass-zinc, .glass-blue, .glass-gold, .glass-red {
     @apply backdrop-blur-sm;
   }
-}
-
-.tactical-glow-gold {
-  box-shadow: 0 0 20px rgba(251, 191, 36, 0.15);
-}
-
-.tactical-glow-blue {
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
-}
-
-.tactical-glow-red {
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
 }
 
 /* ========================================
@@ -327,61 +318,17 @@ select {
 }
 
 /* ========================================
-   TERMINAL / THERAPIST MODE UTILITIES
+   PROFESSIONAL LAYOUT UTILITIES
    ======================================== */
 
-.term-input {
-  @apply bg-transparent border-none outline-none text-emerald-500 font-mono text-sm w-full p-0 focus:ring-0;
-  caret-color: #10b981;
+.standard-panel {
+  @apply bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/50 rounded-2xl relative overflow-hidden shadow-2xl;
 }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-.animate-cursor::after {
-  content: '▋';
-  animation: blink 1s step-end infinite;
-  @apply text-emerald-500 ml-1;
-}
-
-.font-courier {
-  font-family: 'Courier Prime', 'Courier New', Courier, monospace;
-}
-
-/* ========================================
-   THERAPIST MODE - FLUID & ORGANIC LAYOUTS
-   ======================================== */
-
-.organic-panel {
-  @apply bg-matte-panel rounded-organic border border-matte-border/50 shadow-2xl;
-}
-
-.tactical-report {
-  @apply organic-panel p-6 sm:p-8 space-y-6 overflow-hidden relative;
-}
-
-.monospaced-accent {
-  @apply font-mono uppercase tracking-[0.2em] text-[10px] sm:text-xs font-bold text-zinc-500;
-}
-
-.tactical-label {
-  @apply monospaced-accent flex items-center gap-2 mb-2;
+.section-label {
+  @apply font-mono uppercase tracking-[0.2em] text-[9px] font-bold text-zinc-500 mb-2;
 }
 
 .soft-border {
-  @apply border border-matte-border/30;
-}
-
-.organic-panel {
-  @apply bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/50 rounded-2xl relative overflow-hidden;
-}
-
-.tactical-report-label {
-  @apply text-[9px] font-mono uppercase tracking-[0.2em] text-zinc-500 font-bold mb-1;
-}
-
-.tactical-report-value {
-  @apply text-sm font-bold text-white uppercase font-mono tracking-tight;
+  @apply border border-white/5;
 }

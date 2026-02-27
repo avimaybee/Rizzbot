@@ -1,6 +1,5 @@
 import React from 'react';
 import { WellbeingState } from '../types';
-import { CornerNodes } from './CornerNodes';
 import { AlertTriangle, Clock, Target, Activity, HeartPulse, ShieldAlert } from 'lucide-react';
 
 interface WellbeingCheckInProps {
