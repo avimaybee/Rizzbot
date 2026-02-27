@@ -4,17 +4,17 @@ import { getQuickAdvice } from '../services/geminiService';
 import { saveFeedback, logSession } from '../services/feedbackService';
 import { createSession, submitFeedback } from '../services/dbService';
 import { useGlobalToast } from './Toast';
-import QuickAdvisorRedesign from './QuickAdvisorRedesign';
-import QuickAdvisorResultsRedesign from './QuickAdvisorResultsRedesign';
+import ResponseEngine from './ResponseEngine';
+import ResponseEngineResults from './ResponseEngineResults';
 
-interface QuickAdvisorProps {
+interface ResponseEngineWrapperProps {
   onBack: () => void;
   userProfile?: UserStyleProfile | null;
   firebaseUid?: string | null;
   userId?: number | null;
 }
 
-export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile, firebaseUid, userId }) => {
+export const ResponseEngineWrapper: React.FC<ResponseEngineWrapperProps> = ({ onBack, userProfile, firebaseUid, userId }) => {
   const [theirMessage, setTheirMessage] = useState('');
   const [yourDraft, setYourDraft] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -67,7 +67,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
         try {
           const headline = response.vibeCheck?.theirEnergy
             ? `${response.vibeCheck.theirEnergy.toUpperCase()} energy detected`
-            : 'Quick analysis';
+            : 'Analysis complete';
           const interestLevel = response.vibeCheck?.interestLevel;
 
           await createSession(firebaseUid, {
@@ -82,11 +82,11 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
             message_count: 1,
           });
         } catch (dbError) {
-          console.error('Failed to save quick session to DB:', dbError);
+          console.error('Failed to save session to DB:', dbError);
         }
       }
     } catch (error) {
-      console.error('Quick advice failed:', error);
+      console.error('Analysis failed:', error);
     } finally {
       setIsLoading(false);
     }
@@ -131,7 +131,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
 
   if (result) {
     return (
-      <QuickAdvisorResultsRedesign 
+      <ResponseEngineResults 
         result={result} 
         onNewScan={resetForm} 
         onFeedback={handleFeedback} 
@@ -150,7 +150,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
         multiple
         className="hidden"
       />
-      <QuickAdvisorRedesign 
+      <ResponseEngine 
         screenshots={screenshots}
         onRemoveScreenshot={removeScreenshot}
         onUploadClick={() => fileInputRef.current?.click()}
