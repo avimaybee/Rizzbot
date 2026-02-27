@@ -14,7 +14,7 @@
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Tactical Chat & Risk HUD' (Protocol in workflow.md)
 
 ## Phase 3: Mission Debrief & Polish
-- [ ] Task: Write tests for the "Mission Debrief" (Analysis) report view.
+- [~] Task: Write tests for the "Mission Debrief" (Analysis) report view.
 - [ ] Task: Implement the monospaced Mission Debrief report.
 - [ ] Task: Integrate Haptic Feedback for high-risk moments and strategic copies.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Mission Debrief & Polish' (Protocol in workflow.md)

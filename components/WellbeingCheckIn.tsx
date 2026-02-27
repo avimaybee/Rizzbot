@@ -55,7 +55,6 @@ export const WellbeingCheckIn: React.FC<WellbeingCheckInProps> = ({ reason, onDi
       <div className="absolute inset-0 bg-scan-lines opacity-[0.05] pointer-events-none"></div>
       
       <div className="glass-dark border-white/5 max-w-lg w-full relative soft-edge shadow-[0_50px_100px_rgba(0,0,0,0.8)] overflow-hidden">
-        <CornerNodes className="opacity-20 scale-75" />
 
         {/* Header Section */}
         <div className="p-8 pb-4">

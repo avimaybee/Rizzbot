@@ -6,11 +6,11 @@
 - [x] Task: Implement the redesigned Session History sidebar/drawer for mobile and desktop.
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Redesign & Navigation' (Protocol in workflow.md) (e30f38e)
 
-## Phase 2: Tactical Report & Insights
+## Phase 2: Tactical Report & Insights [checkpoint: 5af3c83]
 - [x] Task: Write tests for the "Tactical Report" panel component.
 - [x] Task: Implement the Tactical Report panel (rebranding Analysis/Memories) using Monospaced Accents.
 - [x] Task: Redesign Insight Cards (Pattern Detected, Closure Script, etc.) to match the new visual language.
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Tactical Report & Insights' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Tactical Report & Insights' (Protocol in workflow.md) (5af3c83)
 
 ## Phase 3: Interactions & Stabilization
 - [ ] Task: Write tests for the Suggested Prompts progressive reveal logic.

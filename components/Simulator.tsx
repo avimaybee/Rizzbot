@@ -216,7 +216,6 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
         <div className="bg-matte-grain"></div>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] bg-hard-blue/5 rounded-full blur-[100px] animate-pulse-slow"></div>
         
-        <CornerNodes className="opacity-20" />
         <div className="relative mb-12">
           <div className="w-24 h-24 glass flex items-center justify-center border-white/10 rounded-full relative shadow-[0_0_40px_rgba(59,130,246,0.1)]">
              <Cpu className="w-10 h-10 text-hard-blue animate-pulse" />
@@ -473,7 +472,6 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
             </div>
           </div>
         </div>
-        <CornerNodes className="opacity-[0.02]" />
       </div>
     );
   }
@@ -500,7 +498,6 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
     return (
       <div className="w-full h-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide font-mono select-none">
         <div className="bg-matte-grain"></div>
-        <CornerNodes className="opacity-[0.03]" />
 
         {/* MODULE HEADER */}
         <div className="px-6 pt-8 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
@@ -625,7 +622,6 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
   return (
     <div className="w-full h-full flex flex-col bg-matte-base relative overflow-hidden font-mono select-none">
       <div className="bg-matte-grain opacity-[0.03]"></div>
-      <CornerNodes className="opacity-[0.02]" />
 
       {/* MODULE HEADER */}
       <div className="px-6 pt-8 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">

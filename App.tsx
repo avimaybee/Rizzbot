@@ -239,10 +239,6 @@ function App() {
 
           {/* VIEWPORT FRAME */}
           <div className="relative w-full flex-1 min-h-0 md:border md:border-zinc-800 bg-black/20 overflow-hidden flex flex-col md:shadow-2xl">
-            <div className="hidden md:block">
-              <CornerNodes />
-            </div>
-
             {state === 'loading' && <LoadingScreen />}
 
             {/* STANDBY MODULE */}

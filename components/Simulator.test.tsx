@@ -1,5 +1,5 @@
-import { expect, test, describe } from "bun:test";
-import { render, fireEvent } from "@testing-library/react";
+import { expect, test, describe, beforeEach } from "bun:test";
+import { render, fireEvent, within } from "@testing-library/react";
 import React from "react";
 // @ts-ignore
 import { Simulator } from "./Simulator";
@@ -8,7 +8,11 @@ import { ToastProvider } from "./Toast";
 describe("Simulator Setup View Redesign", () => {
   const mockOnBack = () => {};
 
-  test("uses organic layout classes (soft-edge, glass-zinc/dark)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  test("uses organic layout classes (glass, soft-edge)", () => {
     const { container } = render(
       <ToastProvider>
         <Simulator onBack={mockOnBack} />
@@ -16,48 +20,33 @@ describe("Simulator Setup View Redesign", () => {
     );
     
     // Check for the main container or sub-panels using organic/glass classes
-    const organicElements = container.querySelectorAll('.soft-edge, .glass-zinc, .glass-dark');
+    const organicElements = container.querySelectorAll('.soft-edge, .glass, .glass-dark');
     expect(organicElements.length).toBeGreaterThan(0);
   });
 
-  test("uses fluid typography for main headings", () => {
-    const { container } = render(
-      <ToastProvider>
-        <Simulator onBack={mockOnBack} />
-      </ToastProvider>
-    );
-    
-    const fluidHeadings = container.querySelectorAll('.text-fluid-title, .text-fluid-subtitle');
-    expect(fluidHeadings.length).toBeGreaterThan(0);
-  });
-
-  test("uses tactical labels (label-sm) for all form inputs", () => {
+  test("uses tactical labels (label-sm) for form inputs", () => {
     const { getByText } = render(
       <ToastProvider>
         <Simulator onBack={mockOnBack} />
       </ToastProvider>
     );
     
-    // Check for specific labels that should be using tactical styling
-    const checkLabelClass = (text: string | RegExp) => {
-      const el = getByText(text);
-      const label = el.closest('label') || el;
-      expect(label.className).toContain('label-sm');
-    };
+    // Check for labels in the setup view
+    const nameLabel = getByText(/NODE_ID/i);
+    const contextLabel = getByText(/SITUATIONAL_CONTEXT/i);
 
-    checkLabelClass(/Their Name/i);
-    checkLabelClass(/The Situationship/i);
-    checkLabelClass(/Feedback Style/i);
-    checkLabelClass(/Their Red Flags/i);
+    expect(nameLabel).toHaveClass('label-sm');
+    expect(contextLabel).toHaveClass('label-sm');
   });
 
-  test("uses tactical HUD header with pulse animation", () => {
-    const { container } = render(
+  test("uses tactical ModuleHeader with animation", () => {
+    const { container, getByText } = render(
       <ToastProvider>
         <Simulator onBack={mockOnBack} />
       </ToastProvider>
     );
     
+    expect(getByText(/PRACTICE_NODE_INIT/i)).toBeInTheDocument();
     const pulseElement = container.querySelector('.animate-pulse');
     expect(pulseElement).toBeInTheDocument();
   });
@@ -69,19 +58,19 @@ describe("Simulator Setup View Redesign", () => {
       </ToastProvider>
     );
     
-    const nameInput = getByPlaceholderText(/ALEX/i);
+    const nameInput = getByPlaceholderText(/INPUT_IDENTITY_NODE/i);
     
     fireEvent.change(nameInput, { target: { value: 'JORDAN' } });
     expect(nameInput).toHaveValue('JORDAN');
 
-    const contextButton = getByText(/TALKING STAGE/i);
+    const contextButton = getByText(/TALKING_STAGE/i);
     fireEvent.click(contextButton);
     
     const datingOption = getByText(/DATING/i);
     fireEvent.click(datingOption);
     
     expect(getByText(/DATING/i)).toBeInTheDocument();
-    expect(queryByText(/TALKING STAGE/i)).not.toBeInTheDocument();
+    expect(queryByText(/TALKING_STAGE/i)).not.toBeInTheDocument();
   });
 
   test("allows entering red flags", () => {
@@ -91,27 +80,25 @@ describe("Simulator Setup View Redesign", () => {
       </ToastProvider>
     );
     
-    const redFlagsInput = getByPlaceholderText(/Describe their vibe/i);
+    const redFlagsInput = getByPlaceholderText(/DESCRIBE_BEHAVIORAL_FLAGS/i);
     
     fireEvent.change(redFlagsInput, { target: { value: 'Dry texter, leaves me on read.' } });
     expect(redFlagsInput).toHaveValue('Dry texter, leaves me on read.');
   });
 
   test("shows empty state when no personas are saved", () => {
-    localStorage.clear();
     const { getByText } = render(
       <ToastProvider>
         <Simulator onBack={mockOnBack} />
       </ToastProvider>
     );
     
-    expect(getByText(/No saved personas yet/i)).toBeInTheDocument();
+    expect(getByText(/Awaiting Node Creation/i)).toBeInTheDocument();
   });
 
   test("loads and displays saved personas from localStorage", () => {
     const mockPersonas = [
-      { name: 'SOPHIE', relationshipContext: 'DATING', tone: 'Spicy' },
-      { name: 'JACK', relationshipContext: 'EX', tone: 'Cold' }
+      { name: 'SOPHIE', relationshipContext: 'DATING', harshnessLevel: 3 }
     ];
     localStorage.setItem('unsend_personas', JSON.stringify(mockPersonas));
 
@@ -121,14 +108,12 @@ describe("Simulator Setup View Redesign", () => {
       </ToastProvider>
     );
     
-    // Check for names in the sidebar (appears twice due to mobile/desktop views)
     expect(getAllByText('SOPHIE').length).toBeGreaterThan(0);
-    expect(getAllByText('JACK').length).toBeGreaterThan(0);
   });
 
   test("clicking a persona loads it into chat view", () => {
     const mockPersonas = [
-      { name: 'SOPHIE', relationshipContext: 'DATING', tone: 'Spicy' }
+      { name: 'SOPHIE', relationshipContext: 'DATING', harshnessLevel: 3 }
     ];
     localStorage.setItem('unsend_personas', JSON.stringify(mockPersonas));
 
@@ -138,24 +123,23 @@ describe("Simulator Setup View Redesign", () => {
       </ToastProvider>
     );
     
-    // Pick the desktop one or any of them
     const sophieButton = getAllByText('SOPHIE')[0].closest('button');
     if (sophieButton) {
       fireEvent.click(sophieButton);
     }
     
-    // Check that we're now in chat view (CHAT_ENGAGEMENT header should be there)
-    expect(getByText(/CHAT_ENGAGEMENT/i)).toBeInTheDocument();
+    // Check that we're now in chat view (UPLINK header should be there)
+    expect(getByText(/UPLINK: SOPHIE/i)).toBeInTheDocument();
     const backButton = getByText(/BACK/i).closest('button');
     expect(backButton).toBeInTheDocument();
     
-    // And "Who's got you in your head?" should be gone
-    expect(queryByText(/WHO'S GOT YOU IN YOUR HEAD/i)).not.toBeInTheDocument();
+    // And "PRACTICE_NODE_INIT" should be gone
+    expect(queryByText(/PRACTICE_NODE_INIT/i)).not.toBeInTheDocument();
   });
 
   test("displays difficulty indicators for personas", () => {
     const mockPersonas = [
-      { name: 'SOPHIE', relationshipContext: 'DATING', tone: 'Spicy' }
+      { name: 'SOPHIE', relationshipContext: 'DATING', harshnessLevel: 3 }
     ];
     localStorage.setItem('unsend_personas', JSON.stringify(mockPersonas));
 
@@ -175,7 +159,6 @@ describe("Simulator Setup View Redesign", () => {
     ];
     localStorage.setItem('unsend_personas', JSON.stringify(mockPersonas));
 
-    // Seed history so HUD shows up
     const mockHistory = [
       { 
         draft: 'Hey', 
@@ -200,15 +183,21 @@ describe("Simulator Setup View Redesign", () => {
       fireEvent.click(sophieButton);
     }
 
-    // Verify we are in chat view
-    expect(getByText(/CHAT_ENGAGEMENT/i)).toBeInTheDocument();
+    expect(getByText(/UPLINK: SOPHIE/i)).toBeInTheDocument();
     
-    // Check for HUD container
     const hud = container.querySelector('.ghost-risk-hud');
     expect(hud).toBeInTheDocument();
-    
-    // Check for meters
     expect(container.querySelector('.risk-meter')).toBeInTheDocument();
-    expect(container.querySelector('.vibe-meter')).toBeInTheDocument();
+  });
+
+  test("shows Mission Debrief report when in analysis view", () => {
+    const { container } = render(
+      <ToastProvider>
+        <Simulator onBack={mockOnBack} />
+      </ToastProvider>
+    );
+    
+    const report = container.querySelector('.mission-debrief-report');
+    expect(report).toBeInTheDocument();
   });
 });

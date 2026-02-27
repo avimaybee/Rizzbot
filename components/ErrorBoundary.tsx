@@ -43,11 +43,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 <div className="w-full h-full min-h-[400px] flex items-center justify-center bg-matte-base p-6 font-mono">
                     <div className="absolute inset-0 bg-scan-lines opacity-[0.05] pointer-events-none"></div>
                     
-                    <div className="max-w-md w-full glass-dark border-red-500/20 relative shadow-[0_30px_60px_rgba(0,0,0,0.6)] overflow-hidden">
+                    <div className="max-w-md w-full glass-dark border-red-500/20 relative shadow-[0_30px_60px_rgba(0,0,0,0.6)] overflow-hidden soft-edge">
                         {/* Error Header Accent */}
                         <div className="absolute top-0 left-0 w-full h-[2px] bg-red-500/50"></div>
-                        
-                        <CornerNodes className="opacity-20 scale-75" />
                         
                         <div className="p-8 flex flex-col items-center text-center">
                             <div className="w-16 h-16 glass flex items-center justify-center border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.15)] mb-6 rounded-full relative">

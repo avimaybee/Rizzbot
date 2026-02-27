@@ -235,7 +235,6 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initia
         <div className="flex-1 min-h-0 overflow-y-auto flex items-center justify-center p-3 sm:p-5 relative z-10">
           <div className="w-full flex items-center justify-center">
             <div className="bg-zinc-900 border border-zinc-800 relative max-w-2xl w-full">
-              <CornerNodes />
               <div className="p-4 sm:p-6 md:p-8">
                 <div className="text-center space-y-4 sm:space-y-6">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto bg-hard-gold/10 border border-hard-gold flex items-center justify-center">

@@ -167,8 +167,6 @@ const QuickAdvisorRedesign: React.FC<QuickAdvisorRedesignProps> = ({
                   <p className="text-white font-impact text-3xl tracking-tight uppercase mb-2">Ingest Evidence</p>
                   <p className="text-zinc-600 text-[10px] font-bold uppercase tracking-[0.3em] leading-relaxed">Select interaction logs <br /> for linguistic processing</p>
                 </div>
-                
-                <CornerNodes className="opacity-10 group-hover:opacity-30 scale-75" />
               </button>
             </div>
           )}
@@ -218,8 +216,6 @@ const QuickAdvisorRedesign: React.FC<QuickAdvisorRedesignProps> = ({
           </div>
         </div>
       </div>
-      
-      <CornerNodes className="opacity-[0.03]" />
     </div>
   );
 };
