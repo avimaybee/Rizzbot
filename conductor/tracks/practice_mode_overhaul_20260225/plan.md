@@ -1,10 +1,10 @@
 # Implementation Plan: Practice Mode Overhaul
 
-## Phase 1: Setup & Persona UI
+## Phase 1: Setup & Persona UI [checkpoint: 8ad8b33]
 - [x] Task: Update the Simulator setup view with organic layout and tactical labels. (cdf04da)
 - [x] Task: Write tests for the redesigned Persona Selection sidebar. (f81d491)
 - [x] Task: Implement the redesigned Practice Partners sidebar with difficulty indicators. (f81d491)
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Setup & Persona UI' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Setup & Persona UI' (Protocol in workflow.md) (8ad8b33)
 
 ## Phase 2: Tactical Chat & Risk HUD
 - [ ] Task: Write tests for the Real-time Ghost Risk HUD component.
