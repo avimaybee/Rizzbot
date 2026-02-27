@@ -7,11 +7,11 @@
 - [x] Task: Refactor `index.css` to remove purely decorative "tactical" utility classes. (45def56)
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Foundation & De-cluttering' (a769bc7)
 
-## Phase 2: Core Layout Refinement
+## Phase 2: Core Layout Refinement [checkpoint: 7392956]
 - [x] Task: Redesign `ModuleHeader.tsx` for professional clarity (remove status pulses and fake IDs). (a769bc7)
 - [x] Task: Update `SideDock.tsx` and `BottomTabBar.tsx` with clean icons and standard sans labels. (a769bc7)
 - [x] Task: Refine `StandbyScreen.tsx` to be a functional dashboard (remove radar/grid fluff). (a769bc7)
-- [~] Task: Conductor - User Manual Verification 'Phase 2: Core Layout Refinement'
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Core Layout Refinement' (7392956)
 
 ## Phase 3: Module-Specific Professionalization
 - [ ] Task: Overhaul `AuthModal.tsx` to a clean, professional "Modern SaaS" style.
