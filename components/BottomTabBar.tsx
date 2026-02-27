@@ -11,8 +11,8 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeTab, onTabChan
     { id: 'standby', label: 'Home', icon: LayoutDashboard },
     { id: 'quick', label: 'Analyze', icon: Zap },
     { id: 'simulator', label: 'Practice', icon: Target },
-    { id: 'therapist', label: 'Support', icon: HeartHandshake },
-    { id: 'history', label: 'History', icon: Shield },
+    { id: 'therapist', label: 'Advisory', icon: HeartHandshake },
+    { id: 'history', label: 'History', icon: History },
     { id: 'profile', label: 'Profile', icon: User },
   ];
 

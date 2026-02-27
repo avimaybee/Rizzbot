@@ -1,16 +1,15 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, Send, ArrowLeft, HeartHandshake, ImagePlus, X, Edit3, Target, Heart, Users, Sparkles, Eye, BookOpen, ShieldAlert, History, Activity, Clipboard, AlertTriangle, Users2, Scale, Brain, Lightbulb, MessageCircle, ChevronRight, PanelRightOpen, PanelRightClose, Menu, BarChart3, Terminal, Shield } from 'lucide-react';
-import { streamTherapistAdvice } from '../services/geminiService';
-import { saveTherapistSession, getTherapistSession, getTherapistSessions, TherapistSession, getMemories, saveMemory, deleteMemory, updateMemory, TherapistMemory } from '../services/dbService';
-import { logger } from '../services/logger';
+import { Plus, Send, ArrowLeft, HeartHandshake, ImagePlus, X, Edit3, Target, Heart, Users, Sparkles, Eye, BookOpen, ShieldAlert, History, Activity, Clipboard, AlertTriangle, Users2, Scale, Brain, Lightbulb, MessageCircle, ChevronRight, PanelRightOpen, PanelRightClose, Menu, BarChart3 } from 'lucide-react';
+import { streamTherapistAdvice as streamAdvisoryAdvice } from '../services/geminiService';
+import { saveTherapistSession as saveAdvisorySession, getTherapistSessions as getAdvisorySessions, TherapistSession as AdvisorySession, getMemories, saveMemory, deleteMemory, updateMemory, TherapistMemory as AdvisoryMemory } from '../services/dbService';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { TherapistMessage, ClinicalNotes, TherapistExercise, ExerciseType } from '../types';
-import { TherapistSidebar } from './TherapistSidebar';
-import { TherapistSummary } from './TherapistSummary';
+import { TherapistMessage as AdvisoryMessage, ClinicalNotes, TherapistExercise as AdvisoryExercise, ExerciseType } from '../types';
+import { AdvisorySidebar } from './AdvisorySidebar';
+import { AdvisorySummary } from './AdvisorySummary';
 import { ModuleHeader } from './ModuleHeader';
 
-interface TherapistChatProps {
+interface AdvisoryChatProps {
     onBack: () => void;
     firebaseUid?: string;
 }
@@ -26,17 +25,17 @@ const DEFAULT_NOTES: ClinicalNotes = {
 };
 
 const WELCOME_MESSAGE = `
-### Welcome to Relationship Support
+### Advisory Session
 
-I'm here to help you process your experiences, recognize patterns, and gain clarity.
+We'll work together to process your experiences, recognize patterns, and gain communication clarity.
 
-**How we can work together:**
-- **Express freely** – Share your thoughts without judgment
-- **Identify patterns** – Spot recurring dynamics in your life
-- **Gain clarity** – Navigate confusing situations with perspective
-- **Develop skills** – Practice healthier, more effective communication
+**Session focus:**
+- **Reflection** – Openly share situations and thoughts
+- **Pattern Recognition** – Identify recurring interpersonal dynamics
+- **Clarity** – Gain perspective on complex social scenarios
+- **Skill Development** – Build more effective communication habits
 
-What's on your mind today?
+What would you like to discuss?
 `;
 
 // Insight Card Component
@@ -84,7 +83,7 @@ const InsightCard = ({
 
 // Exercise Card Component
 const ExerciseCard: React.FC<{
-    exercise: TherapistExercise;
+    exercise: AdvisoryExercise;
     onComplete: (result: any) => void;
     onSkip: () => void;
 }> = ({ exercise, onComplete, onSkip }) => {
@@ -92,9 +91,9 @@ const ExerciseCard: React.FC<{
     const [needsValues, setNeedsValues] = useState({ safety: 50, connection: 50, autonomy: 50 });
 
     const exerciseConfig: Record<string, any> = {
-        boundary_builder: { icon: Target, title: 'Boundary Setting', description: 'Define your personal standards' },
-        needs_assessment: { icon: Heart, title: 'Needs Assessment', description: 'Identify your core requirements' },
-        attachment_quiz: { icon: Users, title: 'Attachment Style', description: 'Explore your relationship patterns' }
+        boundary_builder: { icon: Target, title: 'Boundary Setting', description: 'Define communication standards' },
+        needs_assessment: { icon: Heart, title: 'Needs Assessment', description: 'Identify core requirements' },
+        attachment_quiz: { icon: Users, title: 'Relationship Patterns', description: 'Explore interaction dynamics' }
     };
 
     const config = exerciseConfig[exercise.type] || exerciseConfig.boundary_builder;
@@ -118,7 +117,7 @@ const ExerciseCard: React.FC<{
                         <Icon className="w-8 h-8 text-red-400" />
                     </div>
                     <div>
-                        <h3 className="text-xl font-bold text-white uppercase tracking-tight">{config.title}</h3>
+                        <h3 className="text-xl font-bold text-white tracking-tight">{config.title}</h3>
                         <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{config.description}</p>
                     </div>
                 </div>
@@ -130,7 +129,7 @@ const ExerciseCard: React.FC<{
 
                 {exercise.type === 'boundary_builder' && (
                     <div className="space-y-4">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2 block px-1">Define your boundaries</label>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2 block px-1">Define boundaries</label>
                         {boundaryInputs.map((input, i) => (
                             <input
                                 key={i}
@@ -141,7 +140,7 @@ const ExerciseCard: React.FC<{
                                     newInputs[i] = e.target.value;
                                     setBoundaryInputs(newInputs);
                                 }}
-                                placeholder={`Item 0${i + 1}`}
+                                placeholder={`Item ${i + 1}`}
                                 className="w-full bg-black/40 border border-white/5 px-5 py-4 text-sm text-white focus:outline-none focus:border-red-500/30 rounded-2xl transition-all"
                             />
                         ))}
@@ -174,7 +173,7 @@ const ExerciseCard: React.FC<{
                     onClick={onSkip}
                     className="text-[10px] font-bold text-zinc-600 hover:text-white transition-colors uppercase tracking-widest"
                 >
-                    Skip Session
+                    Skip
                 </button>
                 <button
                     onClick={handleSubmit}
@@ -188,29 +187,29 @@ const ExerciseCard: React.FC<{
 };
 
 // --- MAIN COMPONENT ---
-export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUid }) => {
+export const AdvisoryChat: React.FC<AdvisoryChatProps> = ({ onBack, firebaseUid }) => {
     // --- STATE ---
-    const [messages, setMessages] = useState<TherapistMessage[]>(() => {
-        const saved = localStorage.getItem('therapist_messages');
+    const [messages, setMessages] = useState<AdvisoryMessage[]>(() => {
+        const saved = localStorage.getItem('advisory_messages');
         if (saved) return JSON.parse(saved);
         return [{ role: 'therapist', content: WELCOME_MESSAGE.trim(), timestamp: Date.now() }];
     });
     const [clinicalNotes, setClinicalNotes] = useState<ClinicalNotes>(() => {
-        const saved = localStorage.getItem('therapist_notes');
+        const saved = localStorage.getItem('advisory_notes');
         return saved ? JSON.parse(saved) : DEFAULT_NOTES;
     });
 
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [interactionId, setInteractionId] = useState<string | undefined>(() => localStorage.getItem('therapist_interaction_id') || undefined);
+    const [interactionId, setInteractionId] = useState<string | undefined>(() => localStorage.getItem('advisory_interaction_id') || undefined);
     const [streamingContent, setStreamingContent] = useState('');
     const [pendingImages, setPendingImages] = useState<string[]>([]);
-    const [pendingExercise, setPendingExercise] = useState<TherapistExercise | null>(null);
-    const [memories, setMemories] = useState<TherapistMemory[]>([]);
-    const [sessions, setSessions] = useState<TherapistSession[]>([]);
+    const [pendingExercise, setPendingExercise] = useState<AdvisoryExercise | null>(null);
+    const [memories, setMemories] = useState<AdvisoryMemory[]>([]);
+    const [sessions, setSessions] = useState<AdvisorySession[]>([]);
     const [showRightPanel, setShowRightPanel] = useState(true);
     const [showSessionDrawer, setShowSessionDrawer] = useState(false);
-    const [showTacticalOverlay, setShowTacticalOverlay] = useState(false);
+    const [showSummaryOverlay, setShowSummaryOverlay] = useState(false);
     const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([]);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -219,18 +218,18 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
 
     // --- EFFECTS ---
     useEffect(() => {
-        localStorage.setItem('therapist_messages', JSON.stringify(messages));
-        localStorage.setItem('therapist_notes', JSON.stringify(clinicalNotes));
-        if (interactionId) localStorage.setItem('therapist_interaction_id', interactionId);
+        localStorage.setItem('advisory_messages', JSON.stringify(messages));
+        localStorage.setItem('advisory_notes', JSON.stringify(clinicalNotes));
+        if (interactionId) localStorage.setItem('advisory_interaction_id', interactionId);
         if (firebaseUid && interactionId) {
-            saveTherapistSession(firebaseUid, interactionId, messages, clinicalNotes).catch(console.error);
+            saveAdvisorySession(firebaseUid, interactionId, messages, clinicalNotes).catch(console.error);
         }
     }, [messages, clinicalNotes, interactionId, firebaseUid]);
 
     useEffect(() => {
         if (!firebaseUid) return;
         getMemories(firebaseUid, undefined, interactionId).then(setMemories).catch(console.error);
-        getTherapistSessions(firebaseUid).then(setSessions).catch(console.error);
+        getAdvisorySessions(firebaseUid).then(setSessions).catch(console.error);
     }, [firebaseUid, interactionId]);
 
     useEffect(() => {
@@ -249,16 +248,16 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
             setClinicalNotes(DEFAULT_NOTES);
             setInteractionId(undefined);
             setSuggestedPrompts([]);
-            localStorage.removeItem('therapist_messages');
-            localStorage.removeItem('therapist_notes');
-            localStorage.removeItem('therapist_interaction_id');
+            localStorage.removeItem('advisory_messages');
+            localStorage.removeItem('advisory_notes');
+            localStorage.removeItem('advisory_interaction_id');
             if (firebaseUid) getMemories(firebaseUid, 'GLOBAL').then(setMemories);
             setTimeout(() => setMessages([{ role: 'therapist', content: WELCOME_MESSAGE.trim(), timestamp: Date.now() }]), 0);
             setShowSessionDrawer(false);
         }, 15);
     };
 
-    const handleLoadSession = (session: TherapistSession) => {
+    const handleLoadSession = (session: AdvisorySession) => {
         handleAction(() => {
             setInteractionId(session.interaction_id);
             setMessages(session.messages || []);
@@ -287,7 +286,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
         if (!trimmed || isLoading) return;
 
         handleAction(() => {
-            const userMsg: TherapistMessage = {
+            const userMsg: AdvisoryMessage = {
                 role: 'user',
                 content: trimmed,
                 timestamp: Date.now(),
@@ -305,7 +304,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
 
         try {
             let fullResponse = '';
-            const newId = await streamTherapistAdvice(
+            const newId = await streamAdvisoryAdvice(
                 trimmed,
                 interactionId,
                 userMsg.images,
@@ -383,7 +382,6 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
     // --- RENDER ---
     return (
         <div className="flex h-[100dvh] w-full bg-matte-base text-zinc-300 overflow-hidden font-sans select-none">
-            <div className="bg-matte-grain"></div>
 
             {/* MOBILE SESSION DRAWER */}
             {showSessionDrawer && (
@@ -393,7 +391,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                         onClick={() => setShowSessionDrawer(false)}
                     />
                     <div className="md:hidden fixed top-0 left-0 bottom-0 w-full z-50 animate-slide-up">
-                        <TherapistSidebar 
+                        <AdvisorySidebar 
                             sessions={sessions}
                             currentInteractionId={interactionId}
                             onNewSession={handleNewSession}
@@ -408,7 +406,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
 
             {/* DESKTOP LEFT SIDEBAR */}
             <div className="hidden md:block w-80 h-full border-r border-white/5 relative z-20">
-                <TherapistSidebar 
+                <AdvisorySidebar 
                     sessions={sessions}
                     currentInteractionId={interactionId}
                     onNewSession={handleNewSession}
@@ -422,24 +420,24 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                 {/* MODULE HEADER */}
                 <div className="px-8 pt-10">
                   <ModuleHeader 
-                    title="Support Session" 
-                    mode="Therapy" 
+                    title="Advisory Session" 
+                    mode="Personal Advisory" 
                     onBack={() => handleAction(onBack)}
                     accentColor="red"
-                    statusLabel="Status"
-                    statusValue="Connected"
+                    statusLabel="Connection"
+                    statusValue="Active"
                     statusColor="red"
                     rightElement={
                         <div className="flex gap-3">
                             <button 
-                                onClick={() => handleAction(() => setShowTacticalOverlay(true), 10)}
-                                className="lg:hidden p-3 bg-white/5 border border-white/5 text-zinc-400 hover:text-white rounded-2xl transition-all"
+                                onClick={() => handleAction(() => setShowSummaryOverlay(true), 10)}
+                                className="lg:hidden p-3 bg-white/5 border border-white/5 text-zinc-400 hover:text-white rounded-2xl transition-all shadow-lg"
                             >
                                 <BarChart3 className="w-4 h-4" />
                             </button>
                             <button 
                                 onClick={() => handleAction(() => setShowSessionDrawer(true), 10)}
-                                className="md:hidden p-3 bg-white/5 border border-white/5 text-zinc-400 hover:text-white rounded-2xl transition-all"
+                                className="md:hidden p-3 bg-white/5 border border-white/5 text-zinc-400 hover:text-white rounded-2xl transition-all shadow-lg"
                             >
                                 <Menu className="w-4 h-4" />
                             </button>
@@ -459,7 +457,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                     <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">
                                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         {' • '}
-                                        {msg.role === 'user' ? 'You' : 'Assistant'}
+                                        {msg.role === 'user' ? 'User' : 'Advisor'}
                                     </span>
                                 </div>
 
@@ -481,7 +479,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                     )}
 
                                     {/* Message Bubble */}
-                                    <div className={`inline-block px-8 py-6 rounded-[32px] shadow-2xl relative overflow-hidden ${msg.role === 'user'
+                                    <div className={`inline-block px-8 py-6 rounded-[32px] shadow-2xl relative overflow-hidden transition-all ${msg.role === 'user'
                                         ? 'bg-white text-black font-bold border-white/5 rounded-br-none'
                                         : 'bg-white/5 border border-white/5 text-zinc-200 rounded-bl-none'
                                         }`}>
@@ -504,7 +502,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                         )}
                                         {msg.safetyIntervention && (
                                             <InsightCard
-                                                title="Alert"
+                                                title="Safety Note"
                                                 icon={ShieldAlert}
                                                 accentColor="red"
                                                 content={<p>{msg.safetyIntervention.reason}</p>}
@@ -512,7 +510,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                         )}
                                         {msg.parentalPattern && (
                                             <InsightCard
-                                                title="Pattern Identified"
+                                                title="Observation"
                                                 icon={Users2}
                                                 accentColor="emerald"
                                                 content={<p className="italic">"{msg.parentalPattern.insight}"</p>}
@@ -520,15 +518,15 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                         )}
                                         {msg.valuesMatrix && (
                                             <InsightCard
-                                                title="Alignment Analysis"
+                                                title="Value Alignment"
                                                 icon={Scale}
                                                 accentColor="gold"
-                                                content={<p>{msg.valuesMatrix.alignmentScore}% value alignment detected</p>}
+                                                content={<p>{msg.valuesMatrix.alignmentScore}% consistency detected</p>}
                                             />
                                         )}
                                         {(msg as any).perspective && (
                                             <InsightCard
-                                                title="Possible Perspective"
+                                                title="Perspective"
                                                 icon={Eye}
                                                 accentColor="blue"
                                                 content={<p className="italic">{(msg as any).perspective.suggestedMotive}</p>}
@@ -536,7 +534,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                         )}
                                         {(msg as any).pattern && (
                                             <InsightCard
-                                                title="Core Dynamic"
+                                                title="Key Dynamic"
                                                 icon={BookOpen}
                                                 accentColor="gold"
                                                 content={<p className="font-bold text-red-400">{(msg as any).pattern.patternName}</p>}
@@ -565,8 +563,8 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                         {isLoading && (
                             <div className="flex flex-col gap-3 items-start animate-fade-in">
                                 <div className="flex items-center gap-3 opacity-40 px-1">
-                                    <div className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse"></div>
-                                    <span className="text-[9px] font-bold text-red-400 uppercase tracking-widest">Processing...</span>
+                                    <div className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
+                                    <span className="text-[9px] font-bold text-red-400 uppercase tracking-widest">Generating...</span>
                                 </div>
                                 <div className="inline-block px-8 py-6 rounded-[32px] rounded-bl-none bg-white/5 border border-white/5 max-w-[90%] sm:max-w-[80%] shadow-xl">
                                     <div className="text-sm font-medium text-zinc-500 whitespace-pre-wrap leading-relaxed">
@@ -581,14 +579,14 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                         {!isLoading && suggestedPrompts.length > 0 && (
                             <div className="flex flex-col gap-4 animate-fade-in py-6">
                                 <div className="flex items-center gap-3 px-1">
-                                    <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">Next Steps</span>
+                                    <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">Follow up</span>
                                 </div>
                                 <div className="flex flex-wrap gap-3">
                                     {suggestedPrompts.map((prompt, i) => (
                                         <button
                                             key={i}
                                             onClick={() => handleAction(() => handleSend(prompt), 10)}
-                                            className="px-6 py-3 bg-white/5 border border-white/5 hover:border-red-500/30 hover:bg-red-500/5 rounded-2xl text-xs font-bold text-zinc-500 hover:text-white transition-all text-left shadow-lg"
+                                            className="px-6 py-3 bg-white/5 border border-white/5 hover:border-red-500/30 hover:bg-red-500/5 rounded-[20px] text-[11px] font-bold text-zinc-500 hover:text-white transition-all text-left shadow-lg uppercase tracking-tight"
                                         >
                                             {prompt}
                                         </button>
@@ -623,13 +621,13 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                         )}
 
                         {/* Input Row */}
-                        <div className="flex items-center gap-4 p-1.5 bg-white/5 border border-white/10 rounded-3xl focus-within:border-red-500/30 transition-all shadow-2xl">
+                        <div className="flex items-center gap-4 p-1.5 bg-white/5 border border-white/10 rounded-[32px] focus-within:border-red-500/30 transition-all shadow-2xl group">
                             <button
                                 onClick={() => handleAction(() => fileInputRef.current?.click(), 10)}
-                                className="p-4 text-zinc-600 hover:text-white transition-colors shrink-0 group"
-                                title="Attach screenshot"
+                                className="p-4 text-zinc-600 hover:text-white transition-colors shrink-0"
+                                title="Attach reference"
                             >
-                                <ImagePlus className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                                <ImagePlus className="w-6 h-6 transition-transform group-hover:scale-110" />
                             </button>
 
                             <input
@@ -638,7 +636,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyDown={handleKeyDown}
                                 disabled={isLoading}
-                                placeholder="Express your thoughts..."
+                                placeholder="Share your thoughts..."
                                 className="flex-1 bg-transparent text-white text-sm font-bold placeholder:text-zinc-800 focus:outline-none py-4"
                                 autoComplete="off"
                             />
@@ -650,7 +648,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                                 className={`px-8 py-4 rounded-2xl transition-all shrink-0 font-bold uppercase tracking-widest ${
                                     !inputValue.trim() || isLoading 
                                     ? 'text-zinc-800' 
-                                    : 'text-red-500 hover:bg-red-500/5'
+                                    : 'text-red-500 hover:bg-red-500/10'
                                 }`}
                             >
                                 <Send className="w-6 h-6" />
@@ -672,7 +670,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
             {/* DESKTOP RIGHT SIDEBAR */}
             {showRightPanel && (
                 <div className="hidden lg:flex flex-col w-96 shrink-0 border-l border-white/5 relative z-20 bg-black/20">
-                    <TherapistSummary 
+                    <AdvisorySummary 
                         clinicalNotes={clinicalNotes}
                         memories={memories}
                         onUpdateMemory={(id, c, t) => {
@@ -685,10 +683,10 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                 </div>
             )}
 
-            {/* MOBILE TACTICAL OVERLAY */}
-            {showTacticalOverlay && (
+            {/* MOBILE SUMMARY OVERLAY */}
+            {showSummaryOverlay && (
                 <div className="fixed inset-0 z-50 lg:hidden flex flex-col animate-fade-in bg-matte-base">
-                    <TherapistSummary 
+                    <AdvisorySummary 
                         clinicalNotes={clinicalNotes}
                         memories={memories}
                         onUpdateMemory={(id, c, t) => {
@@ -697,7 +695,7 @@ export const TherapistChat: React.FC<TherapistChatProps> = ({ onBack, firebaseUi
                         onDeleteMemory={(id) => {
                             handleAction(() => deleteMemory(id), 10);
                         }}
-                        onClose={() => handleAction(() => setShowTacticalOverlay(false), 5)}
+                        onClose={() => handleAction(() => setShowSummaryOverlay(false), 5)}
                         isMobile={true}
                     />
                 </div>

@@ -214,27 +214,20 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
   // --- LOADING STATES ---
   if (setupLoading || analyzing) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-matte-base p-12 relative overflow-hidden font-sans select-none">
-        <div className="bg-matte-grain"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] bg-hard-blue/5 rounded-full blur-[100px] animate-pulse-slow"></div>
+      <div className="w-full h-full flex flex-col items-center justify-center bg-matte-base p-12 relative overflow-hidden select-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] bg-white/[0.01] rounded-full blur-[100px]"></div>
         
         <div className="relative mb-12">
-          <div className="w-24 h-24 glass flex items-center justify-center border-white/10 rounded-full relative shadow-[0_0_40px_rgba(59,130,246,0.1)]">
-             <Cpu className="w-10 h-10 text-hard-blue animate-pulse" />
-             <div className="absolute inset-0 rounded-full border border-hard-blue/30 animate-ping opacity-20"></div>
+          <div className="w-24 h-24 bg-white/5 flex items-center justify-center border border-white/5 rounded-full shadow-2xl">
+             <Activity className="w-8 h-8 text-white/20" />
           </div>
         </div>
-        <h2 className="text-3xl font-bold text-white uppercase tracking-tight mb-4 filter drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]">
-          {analyzing ? "Analyzing Session" : "Preparing Profile"}
+        <h2 className="text-2xl font-bold text-white mb-4">
+          {analyzing ? "Analyzing Conversation" : "Generating Profile"}
         </h2>
         <div className="flex flex-col items-center gap-3">
-           <div className="flex gap-1.5">
-              <div className="w-1.5 h-1.5 bg-hard-blue rounded-full animate-bounce"></div>
-              <div className="w-1.5 h-1.5 bg-hard-blue rounded-full animate-bounce delay-75"></div>
-              <div className="w-1.5 h-1.5 bg-hard-blue rounded-full animate-bounce delay-150"></div>
-           </div>
-           <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-             {analyzing ? "Calculating session insights..." : "Processing conversation patterns..."}
+           <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
+             Please wait while we process your request
            </p>
         </div>
       </div>
@@ -244,17 +237,15 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
   // --- SETUP VIEW ---
   if (view === 'setup') {
     return (
-      <div className="w-full h-full flex flex-col bg-matte-base relative overflow-hidden font-sans select-none">
-        <div className="bg-matte-grain"></div>
-        
+      <div className="w-full h-full flex flex-col bg-matte-base relative overflow-hidden select-none">
         {/* MODULE HEADER */}
         <div className="px-6 pt-8 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
           <ModuleHeader 
-            title="Session Setup" 
-            mode="Practice Mode" 
+            title="Practice Mode" 
+            mode="Conversation Setup" 
             onBack={() => handleAction(onBack)}
             accentColor="blue"
-            statusLabel="Status"
+            statusLabel="Engine"
             statusValue="Ready"
             statusColor="emerald"
           />
@@ -262,56 +253,55 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
         <div className="flex-1 flex flex-col md:flex-row h-full overflow-hidden relative z-10">
           {/* LEFT: SAVED PROFILES */}
-          <div className={`order-2 md:order-1 w-full md:w-80 border-t md:border-t-0 md:border-r border-white/5 bg-black/40 flex flex-col md:h-full overflow-hidden ${savedPersonas.length === 0 ? 'hidden md:flex' : ''}`}>
+          <div className={`order-2 md:order-1 w-full md:w-80 border-t md:border-t-0 md:border-r border-white/5 bg-black/20 flex flex-col md:h-full overflow-hidden ${savedPersonas.length === 0 ? 'hidden md:flex' : ''}`}>
             <button
-              className="md:hidden w-full p-5 flex items-center justify-between bg-zinc-900/40 border-b border-white/5"
+              className="md:hidden w-full p-5 flex items-center justify-between bg-white/5 border-b border-white/5"
               onClick={() => handleAction(() => setShowPracticePartners(!showPracticePartners))}
             >
               <div className="flex items-center gap-3">
-                <Target className="w-4 h-4 text-hard-blue" />
-                <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Recent Profiles</h4>
+                <Target className="w-4 h-4 text-zinc-500" />
+                <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em]">Saved Profiles</h4>
                 {savedPersonas.length > 0 && (
-                  <span className="text-[9px] font-bold text-hard-blue bg-hard-blue/10 px-2 py-0.5 rounded-full border border-hard-blue/20">{savedPersonas.length}</span>
+                  <span className="text-[9px] font-bold text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded-full border border-blue-400/20">{savedPersonas.length}</span>
                 )}
               </div>
               <ChevronDown className={`w-4 h-4 text-zinc-600 transition-transform ${showPracticePartners ? 'rotate-180' : ''}`} />
             </button>
 
             <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${showPracticePartners || window.innerWidth >= 768 ? 'opacity-100' : 'max-h-0 opacity-0 md:opacity-100 md:max-h-full'}`}>
-              <div className="hidden md:flex items-center justify-between p-6 shrink-0 border-b border-white/5 bg-black/20">
+              <div className="hidden md:flex items-center justify-between p-6 shrink-0 border-b border-white/5">
                 <div className="flex items-center gap-3">
-                  <Target className="w-4 h-4 text-hard-blue" />
-                  <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Practice Partners</h4>
+                  <Target className="w-4 h-4 text-zinc-500" />
+                  <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em]">Saved Profiles</h4>
                 </div>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 scrollbar-hide">
                 {savedPersonas.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-20">
-                    <MessageSquare size={32} className="mb-4 text-zinc-600" />
-                    <p className="text-[10px] font-bold uppercase tracking-widest">Create a profile to begin</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">No saved profiles</p>
                   </div>
                 ) : (
                   savedPersonas.map((p, idx) => (
                     <button
                       key={idx}
                       onClick={() => loadPersona(p)}
-                      className="w-full text-left p-4 bg-zinc-900/40 border-white/5 hover:border-hard-blue/30 hover:bg-hard-blue/[0.02] transition-all group rounded-xl relative overflow-hidden active:scale-[0.98]"
+                      className="w-full text-left p-4 bg-white/5 border border-white/5 hover:border-blue-500/20 hover:bg-white/[0.02] transition-all group rounded-2xl relative overflow-hidden active:scale-[0.98]"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 shrink-0 glass flex items-center justify-center text-hard-blue border-white/5 shadow-xl group-hover:border-hard-blue/20 transition-all rounded-full font-bold text-lg">
+                        <div className="w-10 h-10 shrink-0 bg-white/5 flex items-center justify-center text-zinc-400 border border-white/10 rounded-full font-bold text-lg">
                           {p.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
                             <div className="font-bold text-xs text-white truncate">{p.name}</div>
-                            <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)] ${
-                              p.harshnessLevel && p.harshnessLevel >= 5 ? 'bg-hard-red animate-pulse' :
-                              p.harshnessLevel && p.harshnessLevel >= 3 ? 'bg-hard-gold' :
+                            <div className={`w-1.5 h-1.5 rounded-full ${
+                              p.harshnessLevel && p.harshnessLevel >= 5 ? 'bg-red-500' :
+                              p.harshnessLevel && p.harshnessLevel >= 3 ? 'bg-amber-500' :
                               'bg-emerald-500'
                             }`}></div>
                           </div>
-                          <div className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">{p.relationshipContext?.replace('_', ' ')}</div>
+                          <div className="text-[9px] font-medium text-zinc-500 uppercase tracking-widest">{p.relationshipContext?.replace('_', ' ')}</div>
                         </div>
                       </div>
                     </button>
@@ -325,42 +315,34 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
           <div className="order-1 md:order-2 flex-1 p-6 md:p-12 overflow-y-auto scrollbar-hide relative">
             <div className="max-w-2xl mx-auto w-full space-y-10">
               <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                   <Zap className="w-4 h-4 text-hard-blue" />
-                   <span className="text-[10px] font-bold text-hard-blue uppercase tracking-[0.2em]">Setup Parameters</span>
-                </div>
-                <h3 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tight leading-none">Define Target</h3>
-                <p className="text-zinc-500 text-[11px] font-bold uppercase tracking-widest leading-relaxed">Model behavioral patterns for conversation testing.</p>
+                <h3 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tight leading-none">New Practice Target</h3>
+                <p className="text-zinc-500 text-sm font-medium leading-relaxed">Define the communication patterns you want to test against.</p>
               </div>
 
-              <div className="space-y-8 bg-black/40 border-white/5 p-8 rounded-xl relative shadow-2xl">
+              <div className="space-y-8 bg-white/5 border border-white/5 p-8 rounded-[2.5rem] relative shadow-2xl">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                       <Terminal size={12} className="text-zinc-700" /> Name
-                    </label>
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-1">Name</label>
                     <input
                       type="text"
-                      className="w-full bg-zinc-900/40 border-white/5 p-4 text-white text-sm font-bold focus:border-hard-blue/30 focus:outline-none uppercase placeholder:text-zinc-800 rounded-xl transition-all"
-                      placeholder="Enter name"
+                      className="w-full bg-black/40 border border-white/5 p-4 text-white text-sm font-bold focus:border-blue-500/30 focus:outline-none rounded-2xl transition-all"
+                      placeholder="e.g. Alex"
                       value={customName}
                       onChange={(e) => setCustomName(e.target.value)}
                     />
                   </div>
                   <div className="space-y-3 relative">
-                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                       <Shield size={12} className="text-zinc-700" /> Context
-                    </label>
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-1">Relationship Context</label>
                     <button
                       type="button"
                       onClick={() => handleAction(() => setShowContextDropdown(!showContextDropdown))}
-                      className="w-full bg-zinc-900/40 border-white/5 p-4 text-white text-sm font-bold focus:border-hard-blue/30 focus:outline-none uppercase text-left flex justify-between items-center rounded-xl transition-all group"
+                      className="w-full bg-black/40 border border-white/5 p-4 text-white text-sm font-bold focus:border-blue-500/30 focus:outline-none text-left flex justify-between items-center rounded-2xl transition-all"
                     >
-                      <span>{relationshipContext.replace('_', ' ')}</span>
+                      <span className="uppercase">{relationshipContext.replace('_', ' ')}</span>
                       <ChevronDown className={`w-4 h-4 text-zinc-600 transition-transform ${showContextDropdown ? 'rotate-180' : ''}`} />
                     </button>
                     {showContextDropdown && (
-                      <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-black/40 border-white/10 shadow-2xl rounded-xl overflow-hidden animate-slide-up">
+                      <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-zinc-900 border border-white/10 shadow-2xl rounded-2xl overflow-hidden animate-slide-up">
                         {(['NEW_MATCH', 'TALKING_STAGE', 'DATING', 'SITUATIONSHIP', 'EX', 'FRIEND'] as const).map((option) => (
                           <button
                             key={option}
@@ -385,12 +367,12 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Feedback Harshness</label>
-                    <span className={`text-[10px] font-bold px-3 py-1 bg-zinc-900/40 rounded-xl border-white/5 ${
-                      harshnessLevel === 5 ? 'text-hard-red border-hard-red/20' : 
-                      harshnessLevel >= 3 ? 'text-hard-gold border-hard-gold/20' : 
-                      'text-emerald-400 border-emerald-400/20'
+                  <div className="flex items-center justify-between px-1">
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Feedback Style</label>
+                    <span className={`text-[10px] font-bold px-3 py-1 bg-white/5 rounded-full border border-white/5 ${
+                      harshnessLevel === 5 ? 'text-red-400' : 
+                      harshnessLevel >= 3 ? 'text-amber-400' : 
+                      'text-emerald-400'
                     }`}>
                       {harshnessLevel === 1 && 'GENTLE'}
                       {harshnessLevel === 2 && 'SUPPORTIVE'}
@@ -399,8 +381,8 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                       {harshnessLevel === 5 && 'BRUTAL'}
                     </span>
                   </div>
-                  <div className="flex items-center gap-4 bg-zinc-900/40 border-white/5 p-5 rounded-xl">
-                    <span className="text-[10px] font-bold text-zinc-700">LOW</span>
+                  <div className="flex items-center gap-4 bg-black/20 p-5 rounded-2xl border border-white/5">
+                    <span className="text-[10px] font-bold text-zinc-700 uppercase">Low</span>
                     <input
                       type="range"
                       min="1"
@@ -408,40 +390,40 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                       step="1"
                       value={harshnessLevel}
                       onChange={(e) => handleAction(() => setHarshnessLevel(parseInt(e.target.value) as 1 | 2 | 3 | 4 | 5), 2)}
-                      className="flex-1 h-1.5 bg-zinc-900 appearance-none cursor-pointer rounded-full accent-white"
+                      className="flex-1 h-1 bg-zinc-800 appearance-none cursor-pointer rounded-full accent-white"
                     />
-                    <span className="text-[10px] font-bold text-zinc-700">HIGH</span>
+                    <span className="text-[10px] font-bold text-zinc-700 uppercase">High</span>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Persona Details</label>
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-1">Traits & Red Flags</label>
                   <textarea
-                    className="w-full bg-zinc-900/40 border-white/5 p-5 text-white text-sm font-bold focus:border-hard-blue/30 focus:outline-none h-32 resize-none leading-relaxed placeholder:text-zinc-800 rounded-xl uppercase"
-                    placeholder="Describe their communication style, red flags, or specific traits."
+                    className="w-full bg-black/40 border border-white/5 p-5 text-white text-sm font-bold focus:border-blue-500/30 focus:outline-none h-32 rounded-2xl resize-none leading-relaxed placeholder:text-zinc-800"
+                    placeholder="Describe their communication style, personality, and any specific goals for this practice session."
                     value={personaDescription}
                     onChange={(e) => setPersonaDescription(e.target.value)}
                   />
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Interaction Screenshots (Optional)</label>
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-1">Reference Screenshots (Optional)</label>
                   <div
                     onClick={() => handleAction(() => fileInputRef.current?.click())}
-                    className="border-dashed border-2 border-white/5 bg-zinc-900/40 p-6 flex items-center justify-between cursor-pointer hover:border-hard-blue/20 hover:bg-hard-blue/[0.01] transition-all group rounded-xl relative overflow-hidden"
+                    className="border-dashed border-2 border-white/5 bg-white/5 p-6 flex items-center justify-between cursor-pointer hover:bg-white/10 transition-all rounded-3xl"
                   >
-                    <div className="flex items-center gap-5 relative z-10">
-                      <Upload className="w-5 h-5 text-zinc-600 group-hover:text-hard-blue transition-colors" />
-                      <span className="text-xs font-bold text-zinc-500 group-hover:text-white uppercase tracking-widest transition-colors">Upload reference images</span>
+                    <div className="flex items-center gap-5">
+                      <Upload className="w-5 h-5 text-zinc-600" />
+                      <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Upload conversation images</span>
                     </div>
                     <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
-                    {previewUrls.length > 0 && <span className="text-[9px] font-bold text-hard-blue bg-hard-blue/10 border border-hard-blue/20 px-3 py-1 rounded-full relative z-10">{previewUrls.length} Files Selected</span>}
+                    {previewUrls.length > 0 && <span className="text-[9px] font-bold text-blue-400 bg-blue-400/10 px-3 py-1 rounded-full">{previewUrls.length} Files</span>}
                   </div>
 
                   {previewUrls.length > 0 && (
                     <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 mt-4">
                       {previewUrls.map((url, index) => (
-                        <div key={index} className="relative group aspect-[9/16] bg-zinc-900/40 border-white/5 overflow-hidden rounded-xl shadow-lg">
+                        <div key={index} className="relative group aspect-[9/16] bg-white/5 border border-white/5 overflow-hidden rounded-xl shadow-lg">
                           <img src={url} alt="" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
                           <button
                             type="button"
@@ -452,7 +434,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                                 setScreenshots(prev => prev.filter((_, i) => i !== index));
                               }, 10);
                             }}
-                            className="absolute inset-0 bg-hard-red/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all"
+                            className="absolute inset-0 bg-red-500/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all"
                           >
                             <X className="w-6 h-6 text-white" />
                           </button>
@@ -465,10 +447,9 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                 <button
                   onClick={buildPersona}
                   disabled={!customName.trim() || (!personaDescription && screenshots.length === 0)}
-                  className="w-full bg-white text-black font-bold text-2xl py-5 hover:bg-zinc-200 transition-all disabled:opacity-30 disabled:grayscale tracking-tight uppercase rounded-xl shadow-[0_20px_50px_rgba(255,255,255,0.1)] group relative overflow-hidden"
+                  className="w-full bg-white text-black font-bold text-xl py-5 hover:bg-zinc-200 transition-all disabled:opacity-30 tracking-tight uppercase rounded-3xl shadow-2xl active:scale-[0.98]"
                 >
-                  <span className="relative z-10">Start Simulation</span>
-                  <div className="absolute inset-0 bg-hard-blue opacity-0 group-hover:opacity-5 transition-opacity"></div>
+                  Start Simulation
                 </button>
               </div>
             </div>
@@ -481,35 +462,33 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
   // --- ANALYSIS VIEW ---
   if (view === 'analysis' && analysisResult) {
     const getRiskColor = (risk: number) => {
-      if (risk > 70) return { text: 'text-hard-red', bg: 'bg-hard-red/5', border: 'border-hard-red/20', bar: 'bg-hard-red' };
-      if (risk > 40) return { text: 'text-hard-gold', bg: 'bg-hard-gold/5', border: 'border-hard-gold/20', bar: 'bg-hard-gold' };
-      return { text: 'text-emerald-400', bg: 'bg-emerald-400/5', border: 'border-emerald-400/20', bar: 'bg-emerald-400' };
+      if (risk > 70) return { text: 'text-red-400', bg: 'bg-red-400/5', bar: 'bg-red-400' };
+      if (risk > 40) return { text: 'text-amber-400', bg: 'bg-amber-400/5', bar: 'bg-amber-400' };
+      return { text: 'text-emerald-400', bg: 'bg-emerald-400/5', bar: 'bg-emerald-400' };
     };
     const riskColors = getRiskColor(analysisResult.ghostRisk);
 
     const getActionStyle = (action: string) => {
       switch (action) {
-        case 'HARD_STOP': return { icon: AlertTriangle, text: 'text-hard-red', bg: 'bg-hard-red/10', border: 'border-hard-red/30' };
-        case 'PULL_BACK': return { icon: Minus, text: 'text-hard-gold', bg: 'bg-hard-gold/10', border: 'border-hard-gold/30' };
-        case 'WAIT': return { icon: Clock, text: 'text-hard-blue', bg: 'bg-hard-blue/10', border: 'border-hard-blue/30' };
-        case 'FULL_SEND': return { icon: Zap, text: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/30' };
-        default: return { icon: MessageSquare, text: 'text-zinc-400', bg: 'bg-zinc-900/50', border: 'border-zinc-800' };
+        case 'HARD_STOP': return { icon: AlertTriangle, text: 'text-red-400', border: 'border-red-400/20' };
+        case 'PULL_BACK': return { icon: Minus, text: 'text-amber-400', border: 'border-amber-400/20' };
+        case 'WAIT': return { icon: Clock, text: 'text-blue-400', border: 'border-blue-400/20' };
+        case 'FULL_SEND': return { icon: Zap, text: 'text-emerald-400', border: 'border-emerald-400/20' };
+        default: return { icon: MessageSquare, text: 'text-zinc-400', border: 'border-white/5' };
       }
     };
 
     return (
-      <div className="mission-debrief-report w-full h-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide font-sans select-none">
-        <div className="bg-matte-grain"></div>
-
+      <div className="w-full h-full flex flex-col bg-matte-base relative overflow-y-auto scrollbar-hide font-sans select-none">
         {/* MODULE HEADER */}
         <div className="px-6 pt-8 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
           <ModuleHeader 
-            title="Session Debrief" 
-            mode="Analysis Report" 
+            title="Analysis Summary" 
+            mode="Practice Report" 
             id={activePersona?.name.toUpperCase()}
             onBack={() => handleAction(() => setView('chat'))}
             accentColor="blue"
-            statusLabel="Session Status"
+            statusLabel="Session"
             statusValue="Complete"
             statusColor="red"
           />
@@ -519,7 +498,7 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
           <div className="max-w-5xl mx-auto space-y-12 pb-32">
             {/* Hero Section */}
             <div className="flex flex-col items-center text-center space-y-8">
-              <h3 className="text-4xl md:text-7xl font-black text-white uppercase tracking-tighter leading-[0.9] max-w-3xl filter drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+              <h3 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tight leading-[0.9] max-w-3xl">
                 {analysisResult.headline}
               </h3>
               
@@ -527,17 +506,12 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                 const style = getActionStyle(analysisResult.recommendedNextMove);
                 const ActionIcon = style.icon;
                 return (
-                  <div className={`bg-black/40 p-8 md:p-12 border-2 ${style.border} relative group rounded-xl shadow-2xl`}>
-                    <div className={`absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-zinc-900/40 border border-white/5 text-[9px] font-bold text-zinc-500 uppercase tracking-[0.4em]`}>Recommended Action</div>
-                    <ActionIcon className={`w-12 h-12 ${style.text} mb-6 mx-auto animate-pulse`} />
-                    <span className={`font-black text-4xl md:text-6xl ${style.text} tracking-tighter uppercase`}>
+                  <div className={`bg-white/5 p-8 md:p-12 border ${style.border} rounded-[3rem] shadow-2xl relative`}>
+                    <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em] mb-6">Recommended Move</div>
+                    <ActionIcon className={`w-12 h-12 ${style.text} mb-6 mx-auto`} />
+                    <span className={`font-black text-4xl md:text-6xl ${style.text} tracking-tight uppercase`}>
                       {analysisResult.recommendedNextMove.replace('_', ' ')}
                     </span>
-                    {analysisResult.conversationFlow && (
-                      <div className="mt-8 pt-6 border-t border-white/5 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                        Conversation Flow: <span className="text-white ml-2">{analysisResult.conversationFlow}</span>
-                      </div>
-                    )}
                   </div>
                 );
               })()}
@@ -546,56 +520,49 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
             {/* Metrics Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
-                { label: 'GHOST RISK', value: analysisResult.ghostRisk, color: riskColors, info: 'Probability of disengagement' },
-                { label: 'VIBE MATCH', value: analysisResult.vMatch || analysisResult.vibeMatch || 0, color: { text: 'text-hard-blue', bar: 'bg-hard-blue' }, info: 'Linguistic energy alignment' },
-                { label: 'EFFORT BALANCE', value: analysisResult.effortBalance, color: { text: 'text-hard-gold', bar: 'bg-hard-gold' }, info: 'Message volume parity' }
+                { label: 'GHOST RISK', value: analysisResult.ghostRisk, color: riskColors, info: 'Likelihood of disengagement' },
+                { label: 'VIBE MATCH', value: analysisResult.vMatch || analysisResult.vibeMatch || 0, color: { text: 'text-blue-400', bar: 'bg-blue-400' }, info: 'Compatibility score' },
+                { label: 'BALANCE', value: analysisResult.effortBalance, color: { text: 'text-amber-400', bar: 'bg-amber-400' }, info: 'Relative investment level' }
               ].map((stat, i) => (
-                <div key={i} className="bg-black/40 border-white/5 p-8 rounded-xl relative overflow-hidden group shadow-xl">
-                  <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em] block mb-6">{stat.label}</span>
+                <div key={i} className="bg-white/5 border border-white/5 p-8 rounded-[2.5rem] shadow-xl">
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-6">{stat.label}</span>
                   <div className="flex items-baseline gap-2 mb-6 justify-center">
-                    <span className={`font-black text-6xl ${stat.color.text} tracking-tighter`}>{stat.value}</span>
+                    <span className={`text-6xl font-black ${stat.color.text} tracking-tighter`}>{stat.value}</span>
                     <span className="text-xl text-zinc-700">%</span>
                   </div>
                   <div className="w-full h-1 bg-black/60 rounded-full overflow-hidden mb-4">
-                    <div className={`h-full ${stat.color.bar} transition-all duration-1000 delay-300 shadow-[0_0_10px_rgba(0,0,0,0.5)]`} style={{ width: `${stat.value}%` }}></div>
+                    <div className={`h-full ${stat.color.bar} transition-all duration-1000`} style={{ width: `${stat.value}%` }}></div>
                   </div>
-                  <p className="text-[9px] font-bold text-zinc-600 text-center uppercase tracking-widest opacity-60">{stat.info}</p>
+                  <p className="text-[10px] font-medium text-zinc-600 text-center uppercase tracking-wider">{stat.info}</p>
                 </div>
               ))}
             </div>
 
             {/* Deep Analysis Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="bg-black/40 border-white/5 p-8 md:p-10 rounded-2xl relative shadow-2xl">
-                <div className="absolute top-0 left-0 w-1 h-full bg-hard-gold opacity-30"></div>
+              <div className="bg-white/5 border border-white/5 p-8 md:p-10 rounded-[2.5rem] shadow-2xl relative">
                 <div className="flex items-center gap-4 mb-8 border-b border-white/5 pb-6">
-                  <Activity className="w-5 h-5 text-hard-gold animate-pulse" />
-                  <h4 className="text-2xl font-bold uppercase tracking-tight text-white leading-none">Key Observations</h4>
+                  <Activity className="w-5 h-5 text-blue-400" />
+                  <h4 className="text-2xl font-black uppercase tracking-tight text-white leading-none">Key Observations</h4>
                 </div>
                 <ul className="space-y-6">
                   {analysisResult.insights.map((insight, i) => (
-                    <li key={i} className="flex items-start gap-4 group">
-                      <div className="w-1.5 h-1.5 rounded-full bg-hard-gold mt-1.5 shrink-0 animate-pulse"></div>
-                      <p className="text-[11px] font-bold text-zinc-400 leading-relaxed uppercase tracking-wide group-hover:text-zinc-200 transition-colors">{insight}</p>
+                    <li key={i} className="flex items-start gap-4">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 shrink-0"></div>
+                      <p className="text-sm font-medium text-zinc-400 leading-relaxed uppercase tracking-tight">{insight}</p>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div className="bg-white text-black p-8 md:p-10 rounded-2xl relative shadow-[0_30px_60px_rgba(255,255,255,0.1)] overflow-hidden group">
-                <div className="absolute -top-10 -right-10 w-40 h-40 bg-black/[0.03] rounded-full rotate-45"></div>
+              <div className="bg-white text-black p-8 md:p-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
                 <div className="flex items-center gap-4 mb-8 border-b border-black/10 pb-6">
                   <Target className="w-5 h-5 text-black" />
-                  <h4 className="text-2xl font-bold uppercase tracking-tight leading-none">Strategic Advice</h4>
+                  <h4 className="text-2xl font-black uppercase tracking-tight leading-none">Personalized Advice</h4>
                 </div>
-                <p className="text-lg md:text-xl font-bold leading-relaxed tracking-tight italic">
+                <p className="text-lg md:text-xl font-bold leading-relaxed uppercase tracking-tight italic">
                   "{analysisResult.advice}"
                 </p>
-                <div className="mt-12 flex justify-between items-end">
-                   <div className="text-[8px] font-bold uppercase tracking-widest opacity-40">Analysis Complete</div>
-                   <Shield className="w-8 h-8 opacity-10 group-hover:opacity-20 transition-opacity" />
-                </div>
               </div>
             </div>
           </div>
@@ -605,15 +572,15 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
         <div className="fixed bottom-0 left-0 right-0 p-6 md:p-8 bg-gradient-to-t from-matte-base via-matte-base to-transparent z-50 flex justify-center gap-4 md:gap-6">
           <button
             onClick={() => handleAction(() => setView('chat'), 10)}
-            className="px-8 py-4 bg-zinc-900/40 border-white/5 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.3em] hover:text-white hover:border-white/10 transition-all rounded-xl active:scale-[0.98] min-w-[180px]"
+            className="px-8 py-4 bg-white/5 border border-white/10 text-xs font-bold text-zinc-400 uppercase tracking-widest hover:text-white transition-all rounded-2xl active:scale-[0.98] min-w-[180px]"
           >
-            ← Resume Simulation
+            Back to Chat
           </button>
           <button
             onClick={() => handleAction(resetSim, 15)}
-            className="px-8 py-4 bg-white text-black font-black text-xl uppercase tracking-widest hover:bg-zinc-200 transition-all rounded-xl shadow-2xl active:scale-[0.98] min-w-[220px]"
+            className="px-8 py-4 bg-white text-black font-black text-lg uppercase tracking-tight hover:bg-zinc-200 transition-all rounded-2xl shadow-2xl active:scale-[0.98] min-w-[220px]"
           >
-            Start New Session
+            New Session
           </button>
         </div>
       </div>
@@ -623,41 +590,39 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
   // --- CHAT VIEW ---
   return (
     <div className="w-full h-full flex flex-col bg-matte-base relative overflow-hidden font-sans select-none">
-      <div className="bg-matte-grain opacity-[0.03]"></div>
-
       {/* MODULE HEADER */}
       <div className="px-6 pt-8 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
         <ModuleHeader 
-          title={`Practice Session: ${activePersona?.name}`} 
-          mode="Simulation" 
+          title={`Chat with ${activePersona?.name}`} 
+          mode="Practice Session" 
           onBack={() => handleAction(() => setView('setup'))}
           accentColor="blue"
           statusLabel="Status"
-          statusValue="Active"
+          statusValue="Live"
           statusColor="emerald"
         />
       </div>
 
-      {/* GHOST RISK HUD */}
+      {/* RISK HUD */}
       {(simHistory.length > 0 || chatLoading) && (
-        <div className="px-6 py-4 bg-black/40 border-b border-white/5 backdrop-blur-md animate-slide-up relative z-30 flex items-center gap-8">
+        <div className="px-6 py-4 bg-white/5 border-b border-white/5 backdrop-blur-md animate-slide-up relative z-30 flex items-center gap-8">
           <div className="flex-1 space-y-2">
             <div className="flex justify-between items-center px-1">
-              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Ghosting Risk</span>
+              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Ghost Risk</span>
               <span className={`text-xs font-bold ${
-                (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 70 ? 'text-hard-red' : 
-                (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 40 ? 'text-hard-gold' : 
+                (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 70 ? 'text-red-400' : 
+                (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 40 ? 'text-amber-400' : 
                 'text-emerald-400'
               }`}>
-                {chatLoading ? 'Calculating...' : `${simHistory[simHistory.length - 1]?.result.regretLevel || 0}%`}
+                {chatLoading ? '...' : `${simHistory[simHistory.length - 1]?.result.regretLevel || 0}%`}
               </span>
             </div>
             <div className="h-1 bg-black/60 rounded-full overflow-hidden">
               <div 
-                className={`h-full transition-all duration-1000 ease-out ${
-                  (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 70 ? 'bg-hard-red' : 
-                  (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 40 ? 'bg-hard-gold' : 
-                  'bg-emerald-500'
+                className={`h-full transition-all duration-1000 ${
+                  (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 70 ? 'bg-red-400' : 
+                  (simHistory[simHistory.length - 1]?.result.regretLevel || 0) > 40 ? 'bg-amber-400' : 
+                  'bg-emerald-400'
                 }`}
                 style={{ width: `${chatLoading ? 100 : (simHistory[simHistory.length - 1]?.result.regretLevel || 0)}%` }}
               ></div>
@@ -666,14 +631,14 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
           <div className="flex-1 space-y-2 border-l border-white/5 pl-8">
             <div className="flex justify-between items-center px-1">
-              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Vibe Score</span>
-              <span className="text-xs font-bold text-hard-blue">
-                {chatLoading ? 'Analyzing...' : '84%'}
+              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Vibe Match</span>
+              <span className="text-xs font-bold text-blue-400">
+                {chatLoading ? '...' : '84%'}
               </span>
             </div>
             <div className="h-1 bg-black/60 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-hard-blue transition-all duration-1000 ease-out"
+                className="h-full bg-blue-400 transition-all duration-1000"
                 style={{ width: `${chatLoading ? 100 : 84}%` }}
               ></div>
             </div>
@@ -681,9 +646,9 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
           
           <button 
             onClick={() => handleAction(handleEndSim, 20)}
-            className="px-6 py-2 bg-hard-red text-white font-bold text-xs uppercase tracking-widest rounded-lg hover:bg-red-600 transition-all active:scale-[0.98] shadow-lg"
+            className="px-6 py-2 bg-red-500/10 border border-red-500/20 text-red-400 font-bold text-[10px] uppercase tracking-widest rounded-xl hover:bg-red-500/20 transition-all active:scale-[0.98]"
           >
-            End Session
+            End & Analyze
           </button>
         </div>
       )}
@@ -692,13 +657,10 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
       <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide relative z-10 custom-scrollbar pb-32">
         {simHistory.length === 0 && !chatLoading && (
           <div className="h-[50vh] flex flex-col items-center justify-center text-center opacity-40">
-            <div className="w-20 h-20 glass border-white/5 flex items-center justify-center mb-8 rounded-2xl">
-              <MessageSquare className="w-10 h-10 text-zinc-600" />
+            <div className="w-20 h-20 bg-white/5 border border-white/5 flex items-center justify-center mb-8 rounded-[2rem]">
+              <MessageCircle className="w-10 h-10 text-zinc-600" />
             </div>
-            <p className="text-[10px] font-bold text-hard-blue uppercase tracking-widest mb-4">Awaiting Input</p>
-            <p className="text-zinc-500 text-xs max-w-xs leading-relaxed uppercase font-bold tracking-widest">
-              Enter a message to see how <span className="text-white">{activePersona?.name}</span> might respond.
-            </p>
+            <p className="text-xs font-bold text-zinc-500 uppercase tracking-[0.2em]">Start the conversation</p>
           </div>
         )}
 
@@ -708,12 +670,12 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
               {/* Messages */}
               <div className="space-y-6">
                 <div className="flex flex-col items-end group">
-                  <div className="max-w-[95%] bg-white text-black p-6 relative rounded-2xl shadow-2xl transition-all hover:translate-x-[-4px]">
-                    <div className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest mb-3 border-b border-black/5 pb-2">Your Draft</div>
-                    <p className="text-sm font-bold leading-relaxed tracking-tight">{entry.draft}</p>
+                  <div className="max-w-[95%] bg-white text-black p-6 relative rounded-3xl rounded-br-none shadow-xl transition-all">
+                    <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-3 border-b border-black/5 pb-2">Your Draft</div>
+                    <p className="text-sm font-bold leading-relaxed">{entry.draft}</p>
                     <button
                       onClick={() => copyToClipboard(entry.draft)}
-                      className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all w-8 h-8 flex items-center justify-center bg-black/5 hover:bg-black/10 text-zinc-500 hover:text-black rounded-full"
+                      className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all w-8 h-8 flex items-center justify-center bg-black/5 hover:bg-black/10 text-zinc-500 rounded-full"
                     >
                       {copiedText === entry.draft ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     </button>
@@ -722,15 +684,15 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
 
                 <div className="flex flex-col items-start group">
                   <div className="flex items-start gap-4 max-w-[95%]">
-                    <div className="w-10 h-10 glass shrink-0 flex items-center justify-center text-xs font-bold border-white/10 rounded-full text-zinc-400 shadow-xl">
+                    <div className="w-10 h-10 bg-white/5 border border-white/10 shrink-0 flex items-center justify-center text-xs font-bold rounded-full text-zinc-500 shadow-lg">
                       {activePersona?.name.charAt(0)}
                     </div>
-                    <div className="flex-1 bg-black/40 border-white/5 p-6 relative rounded-xl shadow-xl transition-all hover:translate-x-[4px]">
-                      <div className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.3em] mb-3 border-b border-white/5 pb-2">Predicted Response</div>
-                      <p className="text-sm font-bold italic text-zinc-200 leading-relaxed uppercase tracking-tight">"{entry.result.predictedReply}"</p>
+                    <div className="flex-1 bg-white/5 border border-white/5 p-6 relative rounded-3xl rounded-bl-none shadow-xl transition-all">
+                      <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-3 border-b border-white/5 pb-2">Predicted Reply</div>
+                      <p className="text-sm font-bold italic text-zinc-300 leading-relaxed">"{entry.result.predictedReply}"</p>
                       <button
                         onClick={() => copyToClipboard(entry.result.predictedReply || '')}
-                        className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all w-8 h-8 flex items-center justify-center bg-white/5 hover:bg-white/10 text-zinc-600 hover:text-white rounded-full"
+                        className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all w-8 h-8 flex items-center justify-center bg-white/5 hover:bg-white/10 text-zinc-600 rounded-full"
                       >
                         {copiedText === entry.result.predictedReply ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                       </button>
@@ -740,24 +702,23 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
               </div>
 
               {/* Real-time Analysis */}
-              <div className="bg-black/40 border-white/5 p-6 md:p-8 rounded-2xl shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-hard-blue/20 to-transparent"></div>
+              <div className="bg-white/5 border border-white/5 p-6 md:p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden group">
                 <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/5">
-                  <div className="flex items-center gap-3">
-                     <Cpu className="w-4 h-4 text-hard-blue" />
-                     <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Message Analysis</span>
+                  <div className="flex items-center gap-3 text-zinc-500">
+                     <Cpu className="w-4 h-4" />
+                     <span className="text-[10px] font-bold uppercase tracking-widest">Instant Feedback</span>
                   </div>
-                  <div className={`px-4 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-md ${
-                    entry.result.regretLevel > 70 ? 'bg-hard-red/10 text-hard-red border border-hard-red/20' :
-                    entry.result.regretLevel > 40 ? 'bg-hard-gold/10 text-hard-gold border border-hard-gold/20' :
-                    'bg-emerald-400/10 text-emerald-400 border border-emerald-400/20'
+                  <div className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-full border ${
+                    entry.result.regretLevel > 70 ? 'bg-red-400/10 text-red-400 border-red-400/20' :
+                    entry.result.regretLevel > 40 ? 'bg-amber-400/10 text-amber-400 border-amber-400/20' :
+                    'bg-emerald-400/10 text-emerald-400 border-emerald-400/20'
                   }`}>
-                    {entry.result.regretLevel > 70 ? 'High Risk' : entry.result.regretLevel > 40 ? 'Moderate Risk' : 'Low Risk'}
+                    {entry.result.regretLevel > 70 ? 'Risk Detected' : 'Optimal Flow'}
                   </div>
                 </div>
 
-                <p className="text-xs font-bold text-zinc-400 mb-8 leading-relaxed uppercase tracking-wide border-l-2 border-hard-blue/30 pl-4 italic">
-                  → {entry.result.verdict}
+                <p className="text-xs font-bold text-zinc-400 mb-8 leading-relaxed uppercase tracking-tight border-l-2 border-blue-400/30 pl-4 italic">
+                  {entry.result.verdict}
                 </p>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -765,63 +726,40 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                     <button
                       key={key}
                       onClick={() => handleAction(() => setDraft(text as string), 10)}
-                      className={`p-4 border text-left transition-all hover:scale-[1.02] rounded-xl group/btn relative overflow-hidden ${
-                        key === 'safe' ? 'bg-zinc-900/40 border-white/5 hover:border-white/20' :
-                        key === 'bold' ? 'glass-blue border-hard-blue/10 hover:border-hard-blue/30' :
-                        key === 'spicy' ? 'glass-red border-hard-red/10 hover:border-hard-red/30' :
-                        'glass-gold border-hard-gold/10 hover:border-hard-gold/30'
-                      }`}
+                      className="p-4 bg-white/5 border border-white/5 hover:border-blue-500/20 hover:bg-white/[0.02] text-left transition-all rounded-2xl active:scale-[0.98] group/btn"
                     >
-                      <div className="flex items-center justify-between mb-3 relative z-10">
-                        <span className={`text-[9px] font-bold uppercase tracking-[0.2em] flex items-center gap-2 ${
-                          key === 'safe' ? 'text-zinc-500' :
-                          key === 'bold' ? 'text-hard-blue' :
-                          key === 'spicy' ? 'text-hard-red' :
-                          'text-hard-gold'
-                        }`}>
-                          {key === 'you' ? <Sparkles className="w-3 h-3" /> : null} {key === 'you' ? 'Auto-Style' : key}
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 group-hover/btn:text-blue-400 transition-colors">
+                          {key === 'you' ? 'Auto-Style' : key}
                         </span>
                       </div>
-                      <p className="text-[10px] font-bold text-zinc-300 leading-relaxed uppercase tracking-tight line-clamp-2 relative z-10">"{text as string}"</p>
-                      <div className="absolute inset-0 bg-white opacity-0 group-hover/btn:opacity-[0.02] transition-opacity"></div>
+                      <p className="text-xs font-bold text-zinc-300 leading-relaxed line-clamp-2 uppercase tracking-tight italic opacity-80 group-hover/btn:opacity-100 transition-opacity">"{text as string}"</p>
                     </button>
                   ))}
                 </div>
               </div>
             </div>
-            
-            {idx < simHistory.length - 1 && (
-              <div className="flex items-center gap-6 py-4 opacity-20">
-                <div className="flex-1 h-px bg-zinc-800"></div>
-                <div className="text-[8px] font-bold uppercase tracking-[0.5em]">Exchange {idx + 1}</div>
-                <div className="flex-1 h-px bg-zinc-800"></div>
-              </div>
-            )}
           </div>
         ))}
 
         {pendingMessage && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-pulse grayscale opacity-50">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-pulse grayscale opacity-50 font-sans">
             <div className="flex flex-col items-end">
-              <div className="max-w-[95%] bg-white text-black p-6 rounded-xl">
-                <div className="text-[8px] font-bold text-zinc-400 uppercase tracking-[0.3em] mb-3">Sending...</div>
+              <div className="max-w-[95%] bg-white text-black p-6 rounded-3xl rounded-br-none">
                 <p className="text-sm font-bold uppercase tracking-tight">{pendingMessage}</p>
               </div>
             </div>
-            <div className="bg-black/40 border-white/5 rounded-xl p-8 flex items-center justify-center">
-              <div className="flex items-center gap-3">
-                 <div className="w-1.5 h-1.5 bg-zinc-600 rounded-full animate-ping"></div>
-                 <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.4em]">Analyzing Response</span>
-              </div>
+            <div className="bg-white/5 border border-white/5 rounded-[2.5rem] p-8 flex items-center justify-center">
+              <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Analyzing...</span>
             </div>
           </div>
         )}
 
         {chatLoading && !pendingMessage && (
-          <div className="flex justify-start animate-fade-in">
-            <div className="bg-black/40 px-6 py-4 border border-hard-blue/20 rounded-xl flex items-center gap-4">
-              <div className="w-1.5 h-1.5 bg-hard-blue rounded-full animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
-              <span className="text-[10px] font-bold text-hard-blue uppercase tracking-[0.4em]">AI is thinking</span>
+          <div className="flex justify-start animate-fade-in font-sans">
+            <div className="bg-white/5 border border-white/5 px-6 py-4 rounded-[2rem] flex items-center gap-4">
+              <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></div>
+              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Thinking</span>
             </div>
           </div>
         )}
@@ -829,20 +767,20 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
       </div>
 
       {/* INPUT AREA */}
-      <div className="p-6 md:p-8 bg-black/40 border-t border-white/5 relative z-40 shrink-0 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
-        <form onSubmit={runSimulation} className="max-w-4xl mx-auto flex gap-4 p-1 bg-zinc-900/40 border-white/10 rounded-2xl focus-within:border-hard-blue/30 transition-all shadow-2xl">
+      <div className="p-6 md:p-8 bg-matte-base border-t border-white/5 relative z-40 shrink-0">
+        <form onSubmit={runSimulation} className="max-w-4xl mx-auto flex gap-4 p-1.5 bg-white/5 border border-white/10 rounded-[2.5rem] focus-within:border-blue-500/30 transition-all shadow-2xl">
           <input
             type="text"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Type your message..."
+            placeholder="Type your draft message..."
             disabled={chatLoading}
-            className="flex-1 bg-transparent px-6 py-4 text-white focus:outline-none placeholder:text-zinc-800 text-sm font-bold uppercase tracking-widest"
+            className="flex-1 bg-transparent px-6 py-4 text-white focus:outline-none placeholder:text-zinc-800 text-sm font-bold uppercase tracking-wider font-sans"
           />
           <button
             type="submit"
             disabled={!draft.trim() || chatLoading}
-            className="bg-white text-black font-bold px-10 hover:bg-zinc-200 transition-all disabled:opacity-30 disabled:grayscale uppercase tracking-widest text-lg min-h-[56px] rounded-xl shadow-xl active:scale-[0.98]"
+            className="bg-white text-black font-bold px-10 hover:bg-zinc-200 transition-all disabled:opacity-30 uppercase tracking-tight text-lg min-h-[56px] rounded-3xl active:scale-[0.98]"
           >
             Send
           </button>

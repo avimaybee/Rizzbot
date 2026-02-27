@@ -13,7 +13,7 @@ const ProfileStats = ({ sessions, personas }: { sessions: number, personas: numb
       <div className="text-2xl font-bold text-white tabular-nums">{sessions}</div>
     </div>
     <div className="flex flex-col border-l border-white/5 pl-6">
-      <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Partners</div>
+      <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Profiles</div>
       <div className="text-2xl font-bold text-white tabular-nums">{personas}</div>
     </div>
   </div>
@@ -26,7 +26,7 @@ const AppStatus = ({ wellbeingReason }: { wellbeingReason: WellbeingReason | nul
       case 'high_frequency': return { label: 'Taking a Break', color: 'text-blue-400', icon: Activity };
       case 'same_person': return { label: 'Deep Focus', color: 'text-red-400', icon: Target };
       case 'high_risk': return { label: 'Vibe Check', color: 'text-red-400', icon: AlertTriangle };
-      default: return { label: 'Ready', color: 'text-emerald-400', icon: CheckCircle2 };
+      default: return { label: 'System Active', color: 'text-emerald-400', icon: CheckCircle2 };
     }
   };
 
@@ -45,15 +45,15 @@ const AppStatus = ({ wellbeingReason }: { wellbeingReason: WellbeingReason | nul
 
 const SetupChecklist = ({ hasProfile, sessionCount, onActivate }: { hasProfile: boolean, sessionCount: number, onActivate: (m: Module) => void }) => {
   const items = [
-    { label: 'Connect Account', complete: true },
-    { label: 'Calibrate Voice', complete: hasProfile, action: () => onActivate('profile') },
-    { label: 'Start First Session', complete: sessionCount > 0, action: () => onActivate('quick') }
+    { label: 'Account Connected', complete: true },
+    { label: 'Voice Calibration', complete: hasProfile, action: () => onActivate('profile') },
+    { label: 'First Analysis', complete: sessionCount > 0, action: () => onActivate('quick') }
   ];
 
   return (
     <div className="mt-8 space-y-3 w-full max-w-xs">
       <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4">
-        Getting Started
+        Setup Progress
       </div>
       {items.map((item, i) => (
         <button
@@ -124,7 +124,6 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
 
   return (
     <div className="h-full w-full flex flex-col relative overflow-hidden bg-matte-base font-sans select-none">
-      <div className="bg-matte-grain opacity-[0.03]"></div>
       
       {/* 1. TOP BAR */}
       <div className="pt-16 px-10 md:px-20 flex flex-col md:flex-row justify-between items-start gap-10 relative z-10">
@@ -136,7 +135,7 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
             RIZZ<span className="text-zinc-800">BOT</span>
           </h1>
           <p className="text-zinc-500 text-base max-w-sm leading-relaxed font-medium">
-            Your personal AI advisor for authentic, confident digital communication.
+            Personal AI advisory for authentic digital communication.
           </p>
         </div>
 
@@ -160,9 +159,9 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
                 <span className="text-lg font-bold text-white truncate max-w-[180px] tracking-tight">{authUser.displayName || 'Authorized User'}</span>
                 <div className="flex items-center gap-2 mt-1">
                   {hasProfile ? (
-                    <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Voice Calibrated</span>
+                    <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Profile Ready</span>
                   ) : (
-                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest animate-pulse">Needs Calibration</span>
+                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest animate-pulse">Needs Setup</span>
                   )}
                 </div>
               </div>
@@ -177,7 +176,7 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
         <div className="w-full max-w-6xl flex flex-col md:flex-row items-center justify-center gap-20 lg:gap-40">
           
           <div className="relative group">
-            <div className="absolute inset-0 bg-blue-500/[0.02] rounded-full blur-[100px] transition-all group-hover:bg-blue-500/[0.05]"></div>
+            <div className="absolute inset-0 bg-blue-500/[0.01] rounded-full blur-[100px] transition-all"></div>
             
             <button
               onClick={() => handleModeActivate('quick')}
@@ -186,9 +185,8 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
               <Zap className="w-20 h-20 mb-8 transition-transform duration-500 group-hover:scale-110" fill="currentColor" />
               <div className="flex flex-col items-center">
                 <span className="text-2xl font-black uppercase tracking-tight">Analyze Message</span>
-                <span className="text-[10px] font-bold opacity-40 mt-2 uppercase tracking-[0.2em]">Start Quick Scan</span>
+                <span className="text-[10px] font-bold opacity-40 mt-2 uppercase tracking-[0.2em]">Start New Session</span>
               </div>
-              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-transparent to-blue-500/5"></div>
             </button>
           </div>
 
@@ -199,10 +197,10 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
               <div className="bg-white/5 border border-white/5 p-10 rounded-[2.5rem] w-full shadow-xl">
                 <div className="flex items-center gap-3 mb-6">
                    <Activity className="w-5 h-5 text-blue-400" />
-                   <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Recent Performance</span>
+                   <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Recent Activity</span>
                 </div>
                 <p className="text-zinc-300 text-base leading-relaxed font-medium">
-                  Your communication engine is primed. Upload a screenshot to begin analysis.
+                  Analysis engine ready. Upload a conversation to receive feedback.
                 </p>
               </div>
             )}
@@ -219,7 +217,7 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
           <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 mb-10 group-hover:scale-110 transition-transform">
             <Target className="w-7 h-7" />
           </div>
-          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 group-hover:text-blue-400 transition-colors">Improve Skills</span>
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 group-hover:text-blue-400 transition-colors">Skill Practice</span>
           <span className="text-2xl font-black text-white uppercase tracking-tight">Practice</span>
         </button>
 
@@ -230,8 +228,8 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
           <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-400 mb-10 group-hover:scale-110 transition-transform">
             <HeartHandshake className="w-7 h-7" />
           </div>
-          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 group-hover:text-red-400 transition-colors">Expert Advice</span>
-          <span className="text-2xl font-black text-white uppercase tracking-tight">Support</span>
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 group-hover:text-red-400 transition-colors">Expert Guidance</span>
+          <span className="text-2xl font-black text-white uppercase tracking-tight">Advisory</span>
         </button>
 
         <button
@@ -241,7 +239,7 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
           <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-zinc-400 mb-10 group-hover:scale-110 transition-transform">
             <Shield className="w-7 h-7" />
           </div>
-          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 group-hover:text-white transition-colors">Past Insights</span>
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 group-hover:text-white transition-colors">Archive</span>
           <span className="text-2xl font-black text-white uppercase tracking-tight">History</span>
         </button>
       </div>

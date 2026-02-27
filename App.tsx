@@ -4,17 +4,17 @@ import { checkWellbeing, triggerWellbeingCheckIn, dismissWellbeingCheckIn, clear
 import { getOrCreateUser, getStyleProfile, saveStyleProfile } from './services/dbService';
 import { onAuthChange, signOutUser, AuthUser, logScreenView } from './services/firebaseService';
 import { LoadingScreen } from './components/LoadingScreen';
-import { Simulator } from './components/Simulator';
-import { QuickAdvisor } from './components/QuickAdvisor';
+import { Simulator as PracticeMode } from './components/Simulator';
+import { QuickAdvisor as ResponseEngine } from './components/QuickAdvisor';
 import { UserProfile } from './components/UserProfile';
 import { History } from './components/History';
 import { AuthModal } from './components/AuthModal';
-import { TherapistChat } from './components/TherapistChat';
+import { AdvisoryChat } from './components/AdvisoryChat';
 import { ToastProvider } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppState, UserStyleProfile, WellbeingState, Module } from './types';
 import { Logo } from './components/Logo';
-import BottomTabBar from './components/BottomTabBar';
+import { BottomTabBar } from './components/BottomTabBar';
 import { WellbeingCheckIn } from './components/WellbeingCheckIn';
 import { SideDock } from './components/SideDock';
 import { StandbyScreen } from './components/StandbyScreen';
@@ -232,14 +232,14 @@ function App() {
 
         <SideDock activeModule={activeModule} setModule={setActiveModule} authUser={authUser} onSignOut={handleSignOut} />
 
-        {/* MAIN CONTAINER - Better mobile spacing */}
+        {/* MAIN CONTAINER */}
         <div className="flex-1 relative h-full flex flex-col md:p-3 lg:p-4 overflow-hidden pb-0 md:pb-3 lg:pb-4 scrollbar-hide">
 
           {/* VIEWPORT FRAME */}
-          <div className="relative w-full flex-1 min-h-0 md:border md:border-zinc-800 bg-black/20 overflow-hidden flex flex-col md:shadow-2xl">
+          <div className="relative w-full flex-1 min-h-0 bg-white/[0.02] md:rounded-[2rem] md:border md:border-white/5 overflow-hidden flex flex-col md:shadow-2xl">
             {state === 'loading' && <LoadingScreen />}
 
-            {/* STANDBY MODULE */}
+            {/* DASHBOARD */}
             {activeModule === 'standby' && (
               <StandbyScreen 
                 onActivate={setActiveModule} 
@@ -250,11 +250,11 @@ function App() {
               />
             )}
 
-            {/* PRACTICE MODE MODULE */}
+            {/* PRACTICE MODE */}
             {activeModule === 'simulator' && (
               <div className="h-full w-full flex flex-col animate-fade-in bg-matte-base">
                 <ErrorBoundary>
-                  <Simulator
+                  <PracticeMode
                     userProfile={userProfile}
                     firebaseUid={authUser.uid}
                     userId={userId}
@@ -264,11 +264,11 @@ function App() {
               </div>
             )}
 
-            {/* QUICK MODE MODULE */}
+            {/* ANALYZE MODE */}
             {activeModule === 'quick' && (
-              <div className="h-full w-full flex flex-col animate-fade-in">
+              <div className="h-full w-full flex flex-col animate-fade-in bg-matte-base">
                 <ErrorBoundary>
-                  <QuickAdvisor
+                  <ResponseEngine
                     onBack={() => setActiveModule('standby')}
                     userProfile={userProfile}
                     firebaseUid={authUser.uid}
@@ -278,9 +278,9 @@ function App() {
               </div>
             )}
 
-            {/* USER PROFILE MODULE */}
+            {/* USER PROFILE */}
             {activeModule === 'profile' && (
-              <div className="h-full w-full flex flex-col animate-fade-in">
+              <div className="h-full w-full flex flex-col animate-fade-in bg-matte-base">
                 <ErrorBoundary>
                   <UserProfile
                     onBack={() => setActiveModule('standby')}
@@ -294,7 +294,7 @@ function App() {
               </div>
             )}
 
-            {/* HISTORY MODULE */}
+            {/* HISTORY */}
             {activeModule === 'history' && (
               <div className="h-full w-full flex flex-col animate-fade-in bg-matte-base">
                 <ErrorBoundary>
@@ -303,18 +303,18 @@ function App() {
               </div>
             )}
 
-            {/* THERAPIST CHAT MODULE */}
+            {/* ADVISORY CHAT */}
             {activeModule === 'therapist' && (
-              <div className="h-full w-full flex flex-col animate-fade-in">
+              <div className="h-full w-full flex flex-col animate-fade-in bg-matte-base">
                 <ErrorBoundary>
-                  <TherapistChat onBack={() => setActiveModule('standby')} firebaseUid={authUser?.uid} />
+                  <AdvisoryChat onBack={() => setActiveModule('standby')} firebaseUid={authUser?.uid} />
                 </ErrorBoundary>
               </div>
             )}
           </div>
         </div>
 
-        {/* Mobile Bottom Navigation */}
+        {/* Mobile Navigation */}
         <BottomTabBar activeTab={activeModule} onTabChange={(tabId) => setActiveModule(tabId as Module)} />
       </div>
     </ToastProvider>

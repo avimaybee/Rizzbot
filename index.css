@@ -3,18 +3,27 @@
 @tailwind utilities;
 
 /* ========================================
-   RIZZBOT MODERN PROFESSIONAL UI
+   RIZZBOT PROFESSIONAL MODERN DESIGN
    ======================================== */
+
+.soft-edge {
+  @apply rounded-organic;
+}
+
+.mono-accent {
+  @apply font-mono;
+}
 
 /* Base body styles */
 body {
   background-color: #050505;
   color: #f4f4f5;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
   overscroll-behavior: none;
+  /* Fluid base font size for better mobile scaling */
   font-size: clamp(14px, 3.5vw, 16px);
 }
 
@@ -31,36 +40,136 @@ button,
 }
 
 /* ========================================
-   TYPOGRAPHY
+   TYPOGRAPHY - Professional & Balanced
    ======================================== */
 
-/* Refined label sizing */
+.font-heading {
+  font-family: 'Montserrat', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.font-editorial {
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+/* Refined label sizing for modern UI */
 .label-sm {
-  @apply font-bold uppercase tracking-widest;
-  font-size: 9px;
+  @apply font-mono uppercase tracking-[0.1em] font-medium;
+  font-size: 10px;
   color: #71717a;
 }
 
+/* Fluid headings that scale beautifully */
+.text-fluid-hero {
+  font-size: clamp(2.5rem, 12vw, 6rem);
+  line-height: 0.9;
+  font-weight: 900;
+  @apply font-heading;
+}
+
+.text-fluid-title {
+  font-size: clamp(1.75rem, 6vw, 3.5rem);
+  line-height: 1;
+  font-weight: 700;
+  @apply font-heading;
+}
+
+.text-fluid-subtitle {
+  font-size: clamp(1.25rem, 4vw, 2rem);
+  line-height: 1.1;
+  font-weight: 600;
+}
+
 /* ========================================
-   GLASS & DEPTH UTILITIES
+   TOUCH TARGETS & ACCESSIBILITY
    ======================================== */
 
-.glass-panel {
-  @apply bg-white/[0.03] backdrop-blur-xl border border-white/5 shadow-2xl;
+@media (pointer: coarse) {
+
+  button:not(.icon-btn),
+  [role="button"]:not(.icon-btn),
+  a:not(.text-link) {
+    min-height: 44px;
+  }
+
+  /* Slightly larger tap targets on very small screens */
+  @media (max-width: 360px) {
+
+    button:not(.icon-btn),
+    [role="button"]:not(.icon-btn) {
+      min-height: 48px;
+    }
+  }
+}
+
+/* Icon buttons get smaller touch targets */
+.icon-btn {
+  min-height: 36px;
+  min-width: 36px;
+}
+
+/* ========================================
+   MOBILE SPACING UTILITIES
+   ======================================== */
+
+/* Compact padding for mobile */
+.mobile-compact {
+  @apply p-3 sm:p-4 md:p-6;
+}
+
+.mobile-compact-x {
+  @apply px-3 sm:px-4 md:px-6;
+}
+
+.mobile-compact-y {
+  @apply py-3 sm:py-4 md:py-6;
+}
+
+/* Tighter gaps on mobile */
+.gap-mobile {
+  @apply gap-2 sm:gap-3 md:gap-4;
+}
+
+/* ========================================
+   GLASSMORPHIC UTILITIES
+   ======================================== */
+
+.glass {
+  @apply backdrop-blur-md border border-white/10 bg-white/5;
+  will-change: backdrop-filter;
 }
 
 .glass-dark {
-  @apply bg-black/40 backdrop-blur-xl border border-white/5 shadow-2xl;
+  @apply backdrop-blur-lg border border-zinc-800/50 bg-black/40;
+  will-change: backdrop-filter;
 }
 
 .glass-zinc {
-  @apply bg-zinc-900/60 backdrop-blur-xl border border-white/5 shadow-2xl;
+  @apply backdrop-blur-lg border border-zinc-800/80 bg-zinc-900/60;
+  will-change: backdrop-filter;
 }
 
-/* Optimization for mobile blurs */
+.glass-blue {
+  @apply backdrop-blur-md border border-hard-blue/20 bg-hard-blue/5;
+  will-change: backdrop-filter;
+}
+
+.glass-gold {
+  @apply backdrop-blur-md border border-hard-gold/20 bg-hard-gold/5;
+  will-change: backdrop-filter;
+}
+
+.glass-red {
+  @apply backdrop-blur-md border border-red-500/20 bg-red-500/5;
+  will-change: backdrop-filter;
+}
+
+/* Optimization for low-end mobile devices */
 @media (max-width: 640px) {
-  .glass-panel, .glass-dark, .glass-zinc {
-    @apply backdrop-blur-md;
+  .glass, .glass-dark, .glass-zinc, .glass-blue, .glass-gold, .glass-red {
+    @apply backdrop-blur-sm;
   }
 }
 
@@ -78,7 +187,7 @@ button,
 }
 
 /* ========================================
-   SAFE AREAS
+   SAFE AREAS FOR NOTCHED DEVICES
    ======================================== */
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
@@ -96,23 +205,113 @@ button,
 }
 
 /* ========================================
-   FORM INPUTS
+   MOBILE BOTTOM NAV SPACING
+   ======================================== */
+
+/* Add bottom padding to account for fixed bottom nav on mobile */
+.mobile-nav-padding {
+  padding-bottom: 4.5rem;
+  /* 72px for bottom nav */
+}
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-nav-padding {
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0));
+  }
+}
+
+/* ========================================
+   ANIMATION OPTIMIZATIONS FOR MOBILE
+   ======================================== */
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ========================================
+   FORM INPUT MOBILE OPTIMIZATIONS
    ======================================== */
 
 input,
 textarea,
 select {
   font-size: 16px;
+  /* Prevents iOS zoom on focus */
+}
+
+@media (max-width: 640px) {
+
+  input,
+  textarea {
+    @apply text-base;
+  }
 }
 
 /* ========================================
-   LAYOUT UTILITIES
+   MOBILE-SPECIFIC COMPONENT OVERRIDES
    ======================================== */
 
-.card-rounded {
-  @apply rounded-[32px];
+/* Tighter cards on mobile */
+@media (max-width: 640px) {
+  .card-compact {
+    @apply p-3;
+  }
+
+  .card-compact .card-title {
+    @apply text-lg;
+  }
 }
 
-.button-rounded {
-  @apply rounded-2xl;
+/* Better bottom nav styling */
+.bottom-nav-item {
+  @apply flex flex-col items-center justify-center gap-0.5 min-w-[56px] py-1.5 px-2 rounded-lg transition-all;
+}
+
+.bottom-nav-item.active {
+  @apply text-white bg-zinc-800/80;
+}
+
+.bottom-nav-item:not(.active) {
+  @apply text-zinc-500;
+}
+
+/* ========================================
+   MOBILE INPUT GROUPS
+   ======================================== */
+
+.input-group {
+  @apply space-y-1.5 sm:space-y-2;
+}
+
+.input-group label {
+  @apply block;
+}
+
+.input-group input,
+.input-group textarea {
+  @apply w-full bg-zinc-900 border border-zinc-700 px-3 py-2.5 sm:px-4 sm:py-3 text-white text-sm focus:outline-none focus:border-white transition-colors;
+}
+
+/* ========================================
+   PROFESSIONAL LAYOUT UTILITIES
+   ======================================== */
+
+.standard-panel {
+  @apply bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/50 rounded-2xl relative overflow-hidden shadow-2xl;
+}
+
+.section-label {
+  @apply font-mono uppercase tracking-[0.2em] text-[9px] font-bold text-zinc-500 mb-2;
+}
+
+.soft-border {
+  @apply border border-white/5;
 }

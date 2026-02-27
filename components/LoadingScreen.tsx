@@ -33,7 +33,6 @@ export const LoadingScreen: React.FC = () => {
     <div className="fixed inset-0 z-[100] bg-matte-base flex flex-col items-center justify-center p-6 overflow-hidden font-sans select-none">
       {/* Subtle Background Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50%] h-[50%] bg-white/[0.02] rounded-full blur-[120px]"></div>
-      <div className="bg-matte-grain"></div>
 
       <div className="w-full max-w-sm flex flex-col items-center relative z-10">
         

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, LayoutDashboard, Zap, Target, Shield, HeartHandshake, User } from 'lucide-react';
+import { LogOut, LayoutDashboard, Zap, Target, History, HeartHandshake, User } from 'lucide-react';
 import { AuthUser } from '../services/firebaseService';
 import { Module } from '../types';
 import { Logo } from './Logo';
@@ -52,7 +52,7 @@ export const SideDock: React.FC<SideDockProps> = ({ activeModule, setModule, aut
         <DockItem
           active={activeModule === 'standby'}
           onClick={() => handleAction('standby')}
-          label="Home"
+          label="Dashboard"
           icon={LayoutDashboard}
         />
         <DockItem
@@ -71,12 +71,12 @@ export const SideDock: React.FC<SideDockProps> = ({ activeModule, setModule, aut
           active={activeModule === 'history'}
           onClick={() => handleAction('history')}
           label="History"
-          icon={Shield}
+          icon={History}
         />
         <DockItem
           active={activeModule === 'therapist'}
           onClick={() => handleAction('therapist')}
-          label="Support"
+          label="Advisory"
           icon={HeartHandshake}
         />
         <DockItem

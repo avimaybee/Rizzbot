@@ -27,7 +27,6 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
 
   return (
     <div className="h-full flex flex-col font-sans select-none">
-      <div className="bg-matte-grain"></div>
       {/* MODULE HEADER - DETAIL */}
       <div className="px-8 pt-10 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
         <ModuleHeader 
@@ -35,9 +34,9 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
           mode={session.mode === 'quick' ? 'Message Analysis' : 'Practice Session'} 
           onBack={() => handleAction(onBack)}
           accentColor={session.mode === 'quick' ? 'blue' : 'gold'}
-          statusLabel="Status"
-          statusValue="Archived"
-          statusColor="gold"
+          statusLabel="Type"
+          statusValue={session.mode === 'quick' ? 'Quick Analysis' : 'Practice'}
+          statusColor={session.mode === 'quick' ? 'blue' : 'gold'}
         />
       </div>
 
@@ -48,7 +47,7 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
           <div className="bg-white/5 border border-white/5 p-8 rounded-[32px] shadow-xl relative overflow-hidden">
             <div className="flex items-center gap-3 mb-8 opacity-60">
               <Image className="w-4 h-4" />
-              <span className="text-[10px] font-bold uppercase tracking-widest">Visual Data</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest">Images</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
               {screenshots.map((screenshot: string, idx: number) => (
@@ -67,7 +66,7 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
         {/* Their Message */}
         {theirMessage && (
           <div className="bg-white/5 border border-white/5 p-8 rounded-[32px] shadow-xl relative overflow-hidden">
-            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-6 px-1">Original Message</div>
+            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-6 px-1">Original Text</div>
             <div className="bg-white text-black p-8 rounded-2xl font-bold text-base leading-relaxed shadow-inner">
                "{theirMessage}"
             </div>
@@ -92,7 +91,7 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                {vibeCheck.greenFlags?.length > 0 && (
                  <div className="space-y-4">
-                   <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest px-1">Strengths</div>
+                   <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest px-1">Positives</div>
                    <div className="flex flex-wrap gap-2">
                      {vibeCheck.greenFlags.map((flag: string, i: number) => (
                        <span key={i} className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold rounded-xl">{flag}</span>
@@ -102,7 +101,7 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
                )}
                {vibeCheck.redFlags?.length > 0 && (
                  <div className="space-y-4">
-                   <div className="text-[10px] font-bold text-red-500 uppercase tracking-widest px-1">Concerns</div>
+                   <div className="text-[10px] font-bold text-red-500 uppercase tracking-widest px-1">Issues</div>
                    <div className="flex flex-wrap gap-2">
                      {vibeCheck.redFlags.map((flag: string, i: number) => (
                        <span key={i} className="px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold rounded-xl">{flag}</span>
@@ -117,10 +116,10 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
         {/* Suggestions */}
         {suggestions && (
           <div className="bg-white/5 border border-white/5 p-8 rounded-[32px] shadow-xl relative overflow-hidden">
-            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-10 px-1">Suggested Directions</div>
+            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-10 px-1">Response Options</div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
-                { label: 'Standard', color: 'text-zinc-400', border: 'border-white/10', content: suggestions.smooth },
+                { label: 'Balanced', color: 'text-zinc-400', border: 'border-white/10', content: suggestions.smooth },
                 { label: 'Direct', color: 'text-blue-400', border: 'border-blue-500/20', content: suggestions.bold },
                 { label: 'Personalized', color: 'text-amber-400', border: 'border-amber-500/20', content: suggestions.authentic }
               ].filter(s => s.content).map((s, i) => (
@@ -138,7 +137,7 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
         {/* History / Simulation Logs */}
         {history.length > 0 && (
           <div className="bg-white/5 border border-white/5 p-8 rounded-[32px] shadow-xl relative overflow-hidden">
-            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-10 px-1">Interaction Log</div>
+            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-10 px-1">Conversation Log</div>
             <div className="space-y-12">
               {history.map((turn: any, idx: number) => (
                 <div key={idx} className="space-y-8">
@@ -150,7 +149,7 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
                   </div>
                   <div className="flex flex-col items-start">
                     <div className="max-w-[90%] bg-white/5 border border-white/5 p-6 rounded-2xl rounded-bl-none shadow-xl font-bold text-sm italic text-zinc-300">
-                      <div className="text-[8px] font-bold text-zinc-600 mb-2 border-b border-white/5 pb-1">Assistant</div>
+                      <div className="text-[8px] font-bold text-zinc-600 mb-2 border-b border-white/5 pb-1">AI Response</div>
                       {turn.result?.predictedReply}
                     </div>
                   </div>
@@ -163,13 +162,13 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
         {/* Session Analysis */}
         {analysis && (
           <div className="bg-white/5 border border-white/5 p-8 rounded-[32px] shadow-xl relative overflow-hidden">
-            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-12 px-1">Summary Metrics</div>
+            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-12 px-1">Session Summary</div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
               {[
                 { label: 'Ghost Risk', value: analysis.ghostRisk, color: analysis.ghostRisk > 70 ? 'text-red-400' : analysis.ghostRisk > 40 ? 'text-amber-400' : 'text-emerald-400' },
                 { label: 'Vibe Match', value: analysis.vibeMatch, color: 'text-blue-400' },
-                { label: 'Balance', value: analysis.effortBalance, color: 'text-amber-400' }
+                { label: 'Investment', value: analysis.effortBalance, color: 'text-amber-400' }
               ].map((m, i) => (
                 <div key={i} className="p-8 bg-white/5 border border-white/5 rounded-2xl text-center shadow-lg">
                   <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-4">{m.label}</div>
@@ -232,7 +231,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
       });
     } catch (err) {
       console.error('Failed to fetch sessions:', err);
-      setError('Failed to sync history from cloud storage.');
+      setError('Failed to load history.');
     } finally {
       setLoading(false);
     }
@@ -249,7 +248,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
 
   const handleDelete = async (sessionId: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('Delete this record forever?')) return;
+    if (!confirm('Delete this record?')) return;
 
     handleAction(() => setDeletingId(sessionId), 20);
     try {
@@ -271,20 +270,19 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
     const diffDays = diffMs / (1000 * 60 * 60 * 24);
 
     if (diffHours < 1) return 'JUST NOW';
-    if (diffHours < 24) return `${Math.floor(diffHours)}H AGO`;
-    if (diffDays < 7) return `${Math.floor(diffDays)}D AGO`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+    if (diffHours < 24) return `${Math.floor(diffHours)}h ago`;
+    if (diffDays < 7) return `${Math.floor(diffDays)}d ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   if (!firebaseUid) {
     return (
       <div className="w-full h-full flex flex-col bg-matte-base relative font-sans overflow-hidden">
-        <div className="bg-matte-grain"></div>
         <div className="flex-1 flex items-center justify-center p-8 text-center relative z-10">
           <div className="bg-white/5 border border-white/5 p-16 rounded-[40px] shadow-2xl relative">
             <Shield className="w-20 h-20 text-zinc-800 mx-auto mb-10" />
-            <h3 className="text-3xl font-black text-white mb-4 uppercase tracking-tight">Identity Required</h3>
-            <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Sign in to access your archived sessions.</p>
+            <h3 className="text-3xl font-black text-white mb-4 uppercase tracking-tight">Sign In Required</h3>
+            <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Access your conversation history.</p>
           </div>
         </div>
       </div>
@@ -301,16 +299,15 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
 
   return (
     <div className="w-full h-full flex flex-col relative pb-20 md:pb-0 overflow-hidden bg-matte-base font-sans select-none">
-      <div className="bg-matte-grain"></div>
 
       {/* MODULE HEADER - LIST */}
       <div className="px-8 pt-10 sticky top-0 z-40 bg-matte-base/95 backdrop-blur-md">
         <ModuleHeader 
-          title="Session History" 
-          mode="Archives" 
+          title="History Log" 
+          mode="Saved Sessions" 
           onBack={() => handleAction(onBack || (() => {}))}
           accentColor="gold"
-          statusLabel="Total Records"
+          statusLabel="Total"
           statusValue={`${pagination.total} Sessions`}
           statusColor="gold"
         />
@@ -324,7 +321,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
           </div>
           <input
             type="text"
-            placeholder="Search your history..."
+            placeholder="Search history..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-white/5 border border-white/5 py-5 pl-14 pr-8 text-sm font-bold text-white placeholder:text-zinc-800 focus:outline-none focus:border-white/10 transition-all rounded-2xl shadow-xl"
@@ -342,7 +339,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
                 : 'bg-white/5 border-white/5 text-zinc-600 hover:text-zinc-300 hover:border-white/10'
               }`}
             >
-              {filter}
+              {filter === 'all' ? 'All' : filter === 'quick' ? 'Analysis' : 'Practice'}
             </button>
           ))}
         </div>
@@ -361,7 +358,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
           <div className="flex items-center justify-center p-24">
             <div className="text-center space-y-8">
               <RefreshCw className="w-12 h-12 text-zinc-800 mx-auto animate-spin" />
-              <p className="text-[10px] font-bold text-zinc-700 uppercase tracking-widest animate-pulse">Syncing Cloud Archive</p>
+              <p className="text-[10px] font-bold text-zinc-700 uppercase tracking-widest animate-pulse">Syncing Archive</p>
             </div>
           </div>
         ) : sessions.length === 0 ? (
@@ -369,8 +366,8 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
             <div className="text-center space-y-10">
               <Archive className="w-24 h-24 text-zinc-800 mx-auto" />
               <div className="space-y-3">
-                 <h3 className="text-2xl font-black text-white uppercase tracking-tight">Archive Empty</h3>
-                 <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">No previous sessions detected in your account.</p>
+                 <h3 className="text-2xl font-black text-white uppercase tracking-tight">No History</h3>
+                 <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Your saved sessions will appear here.</p>
               </div>
             </div>
           </div>
@@ -427,7 +424,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
                         ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' 
                         : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
                       }`}>
-                        {session.mode === 'quick' ? 'SCAN' : 'PRACTICE'}
+                        {session.mode === 'quick' ? 'ANALYSIS' : 'PRACTICE'}
                       </div>
                     </div>
                     
@@ -437,7 +434,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
                         ghostRisk > 40 ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' :
                         'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
                       }`}>
-                        RISK {ghostRisk}%
+                        {ghostRisk}% RISK
                       </div>
                     )}
                   </div>
@@ -501,7 +498,7 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
                     </div>
                   ) : (
                     <div className="flex items-center justify-center gap-3">
-                       <span>Load Older Records</span>
+                       <span>Load More</span>
                        <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </div>
                   )}

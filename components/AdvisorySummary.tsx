@@ -1,10 +1,10 @@
 import React from 'react';
 import { Brain, HeartHandshake, Sparkles, Lightbulb, ChevronRight, Bookmark, ShieldAlert, Clock, Activity, FileText, X, Edit3, MessageCircle, BarChart3 } from 'lucide-react';
-import { ClinicalNotes, TherapistMemory } from '../types';
+import { ClinicalNotes, TherapistMemory as AdvisoryMemory } from '../types';
 
-interface TherapistSummaryProps {
+interface AdvisorySummaryProps {
     clinicalNotes: ClinicalNotes;
-    memories: TherapistMemory[];
+    memories: AdvisoryMemory[];
     onUpdateMemory: (id: number, content: string, type: 'GLOBAL' | 'SESSION') => void;
     onDeleteMemory: (id: number) => void;
     onClose?: () => void;
@@ -39,7 +39,7 @@ const MemoryNode = ({
     onDelete,
     accent = 'zinc' 
 }: { 
-    memory: TherapistMemory, 
+    memory: AdvisoryMemory, 
     onUpdate: (id: number, content: string) => void, 
     onDelete: (id: number) => void,
     accent?: 'zinc' | 'emerald'
@@ -89,7 +89,7 @@ const MemoryNode = ({
     );
 };
 
-export const TherapistSummary: React.FC<TherapistSummaryProps> = ({
+export const AdvisorySummary: React.FC<AdvisorySummaryProps> = ({
     clinicalNotes,
     memories,
     onUpdateMemory,
@@ -128,20 +128,20 @@ export const TherapistSummary: React.FC<TherapistSummaryProps> = ({
                         />
                         <StatNode 
                             icon={HeartHandshake} 
-                            label="Attachment" 
+                            label="Context" 
                             value={clinicalNotes.attachmentStyle || ''} 
                         />
                     </div>
                     {clinicalNotes.relationshipDynamic && (
                         <div className="mt-4 p-5 bg-white/5 border border-white/5 rounded-3xl">
-                            <div className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2 px-1">Observed Dynamic</div>
-                            <p className="text-sm text-zinc-300 leading-relaxed font-medium uppercase tracking-tight">{clinicalNotes.relationshipDynamic}</p>
+                            <div className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2 px-1">Relationship Dynamic</div>
+                            <p className="text-sm text-zinc-300 leading-relaxed font-medium tracking-tight">{clinicalNotes.relationshipDynamic}</p>
                         </div>
                     )}
                 </ReportSection>
 
                 {/* 2. Insights */}
-                <ReportSection title="Clinical Observations" icon={Lightbulb} color="text-amber-400">
+                <ReportSection title="Observations" icon={Lightbulb} color="text-amber-400">
                     <div className="space-y-8">
                         {/* Themes */}
                         <div>
@@ -169,7 +169,7 @@ export const TherapistSummary: React.FC<TherapistSummaryProps> = ({
                                     clinicalNotes.actionItems.map((item, i) => (
                                         <div key={i} className="flex items-start gap-4 p-4 bg-white/5 border border-white/5 rounded-2xl transition-all hover:bg-white/10">
                                             <ChevronRight className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                                            <span className="text-xs text-zinc-400 leading-relaxed font-medium uppercase tracking-tight">{item}</span>
+                                            <span className="text-xs text-zinc-400 leading-relaxed font-medium tracking-tight">{item}</span>
                                         </div>
                                     ))
                                 ) : (
@@ -183,7 +183,7 @@ export const TherapistSummary: React.FC<TherapistSummaryProps> = ({
                 </ReportSection>
 
                 {/* 3. Memory */}
-                <ReportSection title="Clinical History" icon={Clock} color="text-purple-400">
+                <ReportSection title="History" icon={Clock} color="text-purple-400">
                     <div className="space-y-8">
                         {/* Global */}
                         {globalMemories.length > 0 && (
@@ -221,7 +221,7 @@ export const TherapistSummary: React.FC<TherapistSummaryProps> = ({
                                 ) : (
                                     <div className="text-center py-10 border border-dashed border-white/5 rounded-[32px] px-8">
                                         <FileText className="w-6 h-6 text-zinc-800 mx-auto mb-4 opacity-40" />
-                                        <p className="text-[10px] text-zinc-700 font-black uppercase tracking-[0.2em]">Awaiting interaction data</p>
+                                        <p className="text-[10px] text-zinc-700 font-black uppercase tracking-[0.2em]">Awaiting session data</p>
                                     </div>
                                 )}
                             </div>

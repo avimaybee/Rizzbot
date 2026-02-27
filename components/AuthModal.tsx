@@ -92,7 +92,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
     <div className="min-h-[100dvh] bg-matte-base flex items-center justify-center p-4 relative overflow-hidden font-sans">
       {/* Background Ambience */}
       <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-hard-gold/5 via-transparent to-hard-blue/5 opacity-30"></div>
-      <div className="bg-matte-grain"></div>
 
       <div className="w-full max-w-5xl relative z-10 grid md:grid-cols-2 gap-12 items-center">
 
