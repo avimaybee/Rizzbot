@@ -1,7 +1,7 @@
 # Implementation Plan: Practice Mode Overhaul
 
 ## Phase 1: Setup & Persona UI
-- [~] Task: Update the Simulator setup view with organic layout and tactical labels.
+- [x] Task: Update the Simulator setup view with organic layout and tactical labels. (cdf04da)
 - [ ] Task: Write tests for the redesigned Persona Selection sidebar.
 - [ ] Task: Implement the redesigned Practice Partners sidebar with difficulty indicators.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Setup & Persona UI' (Protocol in workflow.md)
