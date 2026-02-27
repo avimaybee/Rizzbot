@@ -365,13 +365,14 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
             </div>
           </div>
         ) : (
-          <div className="p-4 sm:p-6 space-y-3">
+          <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {sessions.map((session) => {
               const parsedResult = session.parsedResult;
 
               const headline = session.headline || parsedResult?.headline || parsedResult?.vibeCheck?.theirEnergy || 'Session';
               const ghostRisk = session.ghost_risk || parsedResult?.ghostRisk || parsedResult?.vibeCheck?.interestLevel;
               const messageCount = session.message_count || parsedResult?.history?.length || 0;
+              const screenshots = parsedResult?.request?.screenshots || parsedResult?.screenshots || [];
 
               return (
                 <div
@@ -380,71 +381,85 @@ export const History: React.FC<HistoryProps> = ({ firebaseUid, onSelectSession, 
                     setSelectedSession(session);
                     onSelectSession?.(session);
                   }}
-                  className={`group relative border border-zinc-800 hover:border-zinc-600 transition-all cursor-pointer min-h-[80px] ${getRiskBg(ghostRisk)}`}
+                  className={`group relative border border-zinc-800 hover:border-zinc-700 transition-all cursor-pointer flex flex-col h-full bg-matte-panel overflow-hidden`}
                 >
-                  <div className="p-4 sm:p-5 flex items-center gap-4">
-                    {/* Mode Icon */}
-                    <div className={`w-10 h-10 border flex items-center justify-center flex-shrink-0 ${session.mode === 'quick'
-                      ? 'border-hard-blue/50 bg-hard-blue/10'
-                      : 'border-hard-gold/50 bg-hard-gold/10'
+                  {/* Visual Preview */}
+                  <div className="aspect-[16/9] bg-zinc-900 overflow-hidden relative border-b border-zinc-800">
+                    {screenshots.length > 0 ? (
+                      <img
+                        src={screenshots[0].startsWith('data:') ? screenshots[0] : `data:image/png;base64,${screenshots[0]}`}
+                        alt="Preview"
+                        className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity grayscale group-hover:grayscale-0"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center opacity-20">
+                        {session.mode === 'quick' ? (
+                          <Zap className="w-12 h-12 text-hard-blue" />
+                        ) : (
+                          <MessageSquare className="w-12 h-12 text-hard-gold" />
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Status Overlays */}
+                    <div className="absolute top-3 left-3 flex gap-2">
+                      <div className={`px-2 py-0.5 text-[10px] font-mono border ${
+                        session.mode === 'quick' 
+                        ? 'border-hard-blue/50 bg-hard-blue/10 text-hard-blue' 
+                        : 'border-hard-gold/50 bg-hard-gold/10 text-hard-gold'
                       }`}>
-                      {session.mode === 'quick' ? (
-                        <Zap className="w-5 h-5 text-hard-blue" />
-                      ) : (
-                        <MessageSquare className="w-5 h-5 text-hard-gold" />
+                        {session.mode === 'quick' ? 'QUICK_MODE' : 'PRACTICE'}
+                      </div>
+                    </div>
+                    
+                    {ghostRisk !== undefined && (
+                      <div className={`absolute top-3 right-3 px-2 py-0.5 text-[10px] font-mono border ${
+                        ghostRisk > 70 ? 'border-red-500/50 bg-red-500/10 text-red-400' :
+                        ghostRisk > 40 ? 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400' :
+                        'border-emerald-500/50 bg-emerald-500/10 text-emerald-400'
+                      }`}>
+                        RISK_{ghostRisk}%
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-4 flex flex-col flex-1">
+                    <h3 className="font-impact text-lg text-white uppercase tracking-wide mb-2 line-clamp-1">
+                      {headline}
+                    </h3>
+                    
+                    <div className="flex-1">
+                      {session.persona_name && (
+                        <div className="text-[10px] font-mono text-zinc-500 mb-2 uppercase">
+                          PARTNER: {session.persona_name}
+                        </div>
                       )}
                     </div>
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-xs uppercase tracking-wider font-bold ${session.mode === 'quick' ? 'text-hard-blue' : 'text-hard-gold'
-                          }`}>
-                          {session.mode === 'quick' ? 'QUICK MODE' : 'PRACTICE'}
-                        </span>
-                        {session.persona_name && (
-                          <>
-                            <span className="text-zinc-600">•</span>
-                            <span className="text-xs text-zinc-400">{session.persona_name}</span>
-                          </>
-                        )}
+                    <div className="flex items-center justify-between pt-4 border-t border-zinc-800/50">
+                      <div className="text-[10px] font-mono text-zinc-600 uppercase">
+                        {formatDate(session.created_at)}
                       </div>
-                      <h3 className="font-semibold text-white text-sm sm:text-base truncate">
-                        {headline}
-                      </h3>
-                      <div className="flex items-center gap-4 mt-1.5 text-xs text-zinc-500">
-                        <span>{formatDate(session.created_at)}</span>
+                      <div className="flex items-center gap-3">
                         {messageCount > 0 && (
-                          <span>{messageCount} message{messageCount !== 1 ? 's' : ''}</span>
+                          <div className="text-[10px] font-mono text-zinc-500 uppercase">
+                            {messageCount} MSG
+                          </div>
                         )}
+                        <button
+                          onClick={(e) => handleDelete(session.id, e)}
+                          disabled={deletingId === session.id}
+                          className="text-zinc-600 hover:text-red-400 transition-colors"
+                          title="Delete session"
+                        >
+                          {deletingId === session.id ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3 h-3" />
+                          )}
+                        </button>
                       </div>
-                    </div>
-
-                    {/* Risk Score */}
-                    {ghostRisk !== undefined && (
-                      <div className="text-right flex-shrink-0 hidden sm:block">
-                        <span className="label-sm text-zinc-600 block mb-1">RISK</span>
-                        <span className={`font-mono font-bold text-lg ${getRiskColor(ghostRisk)}`}>
-                          {ghostRisk}%
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Actions - Always visible on mobile, hover on desktop */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button
-                        onClick={(e) => handleDelete(session.id, e)}
-                        disabled={deletingId === session.id}
-                        className="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-950/30 transition-colors md:opacity-0 md:group-hover:opacity-100 min-w-[32px] min-h-[32px]"
-                        title="Delete session"
-                      >
-                        {deletingId === session.id ? (
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                      </button>
-                      <ChevronRight className="w-5 h-5 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
                     </div>
                   </div>
                 </div>
