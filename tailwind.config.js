@@ -26,6 +26,9 @@ export default {
                     border: '#27272a',
                 }
             },
+            borderRadius: {
+                'organic': '2rem',
+            },
             fontFamily: {
                 sans: ['Inter', 'system-ui', 'sans-serif'],
                 mono: ['JetBrains Mono', 'monospace'],

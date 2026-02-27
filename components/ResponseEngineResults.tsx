@@ -71,7 +71,7 @@ const ResponseEngineResults: React.FC<ResponseEngineResultsProps> = ({
         {/* 1. HERO: ACTION DIRECTIVE */}
         <div className="flex flex-col items-center text-center gap-8">
           <div className="space-y-4">
-            <h3 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tight leading-[0.9]">
+            <h3 className="text-4xl md:text-6xl font-bold text-white tracking-tight leading-[0.9]">
               {result.vibeCheck.theirEnergy} Energy Detected
             </h3>
             <p className="text-zinc-500 text-sm md:text-base max-w-xl mx-auto font-medium leading-relaxed">
@@ -80,9 +80,9 @@ const ResponseEngineResults: React.FC<ResponseEngineResultsProps> = ({
           </div>
 
           <div className={`w-full max-w-2xl p-10 rounded-[3rem] border-2 ${actionStyle.border} ${actionStyle.bg} shadow-2xl group transition-all`}>
-            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em] mb-8">Recommended Action</div>
+            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-8">Recommended Action</div>
             <ActionIcon className={`w-16 h-16 ${actionStyle.text} mx-auto mb-6`} />
-            <div className={`text-4xl md:text-6xl font-black ${actionStyle.text} uppercase tracking-tighter`}>
+            <div className={`text-4xl md:text-6xl font-bold ${actionStyle.text} uppercase tracking-tight`}>
               {result.recommendedAction.replace('_', ' ')}
             </div>
           </div>
@@ -93,7 +93,7 @@ const ResponseEngineResults: React.FC<ResponseEngineResultsProps> = ({
           {/* Interest Level */}
           <div className="bg-white/5 border border-white/5 p-10 rounded-[2.5rem] shadow-xl flex flex-col items-center justify-center text-center">
             <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-8">Engagement Level</div>
-            <div className="text-7xl font-black text-blue-400 tracking-tighter mb-6">{result.vibeCheck.interestLevel}%</div>
+            <div className="text-7xl font-bold text-blue-400 tracking-tighter mb-6">{result.vibeCheck.interestLevel}%</div>
             <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
               <div className="h-full bg-blue-400 transition-all duration-1000" style={{ width: `${result.vibeCheck.interestLevel}%` }}></div>
             </div>

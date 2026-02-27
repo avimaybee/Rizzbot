@@ -106,7 +106,7 @@ export const AdvisorySummary: React.FC<AdvisorySummaryProps> = ({
             <div className="h-16 flex items-center justify-between px-8 border-b border-white/5 shrink-0">
                 <div className="flex items-center gap-3">
                     <BarChart3 className="w-4 h-4 text-blue-400" />
-                    <span className="text-xs font-black text-white uppercase tracking-widest">Session Summary</span>
+                    <span className="text-xs font-bold text-white uppercase tracking-widest">Session Summary</span>
                 </div>
                 {isMobile && (
                     <button onClick={onClose} className="p-2 text-zinc-500 hover:text-white transition-colors">
@@ -119,7 +119,7 @@ export const AdvisorySummary: React.FC<AdvisorySummaryProps> = ({
             <div className="flex-1 overflow-y-auto p-8 space-y-2 scrollbar-hide">
                 
                 {/* 1. Status */}
-                <ReportSection title="Session Insights" icon={Activity} color="text-emerald-400">
+                <ReportSection title="Status" icon={Activity} color="text-emerald-400">
                     <div className="grid grid-cols-2 gap-4">
                         <StatNode 
                             icon={Brain} 
@@ -128,13 +128,13 @@ export const AdvisorySummary: React.FC<AdvisorySummaryProps> = ({
                         />
                         <StatNode 
                             icon={HeartHandshake} 
-                            label="Context" 
+                            label="Communication Context" 
                             value={clinicalNotes.attachmentStyle || ''} 
                         />
                     </div>
                     {clinicalNotes.relationshipDynamic && (
-                        <div className="mt-4 p-5 bg-white/5 border border-white/5 rounded-3xl">
-                            <div className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2 px-1">Relationship Dynamic</div>
+                        <div className="mt-4 p-5 bg-white/5 border border-white/5 rounded-3xl shadow-sm">
+                            <div className="text-[9px] font-bold text-blue-400 uppercase tracking-widest mb-2 px-1">Identified Dynamic</div>
                             <p className="text-sm text-zinc-300 leading-relaxed font-medium tracking-tight">{clinicalNotes.relationshipDynamic}</p>
                         </div>
                     )}
@@ -221,7 +221,7 @@ export const AdvisorySummary: React.FC<AdvisorySummaryProps> = ({
                                 ) : (
                                     <div className="text-center py-10 border border-dashed border-white/5 rounded-[32px] px-8">
                                         <FileText className="w-6 h-6 text-zinc-800 mx-auto mb-4 opacity-40" />
-                                        <p className="text-[10px] text-zinc-700 font-black uppercase tracking-[0.2em]">Awaiting session data</p>
+                                        <p className="text-[10px] text-zinc-700 font-bold uppercase tracking-widest">Awaiting session context</p>
                                     </div>
                                 )}
                             </div>

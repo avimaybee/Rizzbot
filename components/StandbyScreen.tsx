@@ -26,7 +26,7 @@ const AppStatus = ({ wellbeingReason }: { wellbeingReason: WellbeingReason | nul
       case 'high_frequency': return { label: 'Taking a Break', color: 'text-blue-400', icon: Activity };
       case 'same_person': return { label: 'Deep Focus', color: 'text-red-400', icon: Target };
       case 'high_risk': return { label: 'Vibe Check', color: 'text-red-400', icon: AlertTriangle };
-      default: return { label: 'System Active', color: 'text-emerald-400', icon: CheckCircle2 };
+      default: return { label: 'Ready', color: 'text-emerald-400', icon: CheckCircle2 };
     }
   };
 
@@ -131,11 +131,11 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
           <div className="flex items-center gap-2 mb-6">
             <AppStatus wellbeingReason={wellbeingReason} />
           </div>
-          <h1 className="text-7xl md:text-9xl font-black text-white uppercase tracking-tighter leading-none mb-6">
-            RIZZ<span className="text-zinc-800">BOT</span>
+          <h1 className="text-5xl md:text-7xl font-bold text-white tracking-tight leading-tight mb-6">
+            Welcome back,<br /><span className="text-zinc-600">{authUser?.displayName?.split(' ')[0] || 'User'}</span>
           </h1>
           <p className="text-zinc-500 text-base max-w-sm leading-relaxed font-medium">
-            Personal AI advisory for authentic digital communication.
+            AI advisory for professional digital communication.
           </p>
         </div>
 
@@ -184,8 +184,8 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
             >
               <Zap className="w-20 h-20 mb-8 transition-transform duration-500 group-hover:scale-110" fill="currentColor" />
               <div className="flex flex-col items-center">
-                <span className="text-2xl font-black uppercase tracking-tight">Analyze Message</span>
-                <span className="text-[10px] font-bold opacity-40 mt-2 uppercase tracking-[0.2em]">Start New Session</span>
+                <span className="text-2xl font-bold uppercase tracking-tight">Analyze</span>
+                <span className="text-[10px] font-bold opacity-40 mt-2 uppercase tracking-[0.2em]">Message Analysis</span>
               </div>
             </button>
           </div>
@@ -197,10 +197,10 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
               <div className="bg-white/5 border border-white/5 p-10 rounded-[2.5rem] w-full shadow-xl">
                 <div className="flex items-center gap-3 mb-6">
                    <Activity className="w-5 h-5 text-blue-400" />
-                   <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Recent Activity</span>
+                   <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Activity</span>
                 </div>
                 <p className="text-zinc-300 text-base leading-relaxed font-medium">
-                  Analysis engine ready. Upload a conversation to receive feedback.
+                  Upload a conversation to receive professional communication feedback.
                 </p>
               </div>
             )}
@@ -217,8 +217,8 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
           <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 mb-10 group-hover:scale-110 transition-transform">
             <Target className="w-7 h-7" />
           </div>
-          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 group-hover:text-blue-400 transition-colors">Skill Practice</span>
-          <span className="text-2xl font-black text-white uppercase tracking-tight">Practice</span>
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 group-hover:text-blue-400 transition-colors">Simulation</span>
+          <span className="text-2xl font-bold text-white uppercase tracking-tight">Practice</span>
         </button>
 
         <button
@@ -228,8 +228,8 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
           <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-400 mb-10 group-hover:scale-110 transition-transform">
             <HeartHandshake className="w-7 h-7" />
           </div>
-          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 group-hover:text-red-400 transition-colors">Expert Guidance</span>
-          <span className="text-2xl font-black text-white uppercase tracking-tight">Advisory</span>
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 group-hover:text-red-400 transition-colors">Guidance</span>
+          <span className="text-2xl font-bold text-white uppercase tracking-tight">Advisory</span>
         </button>
 
         <button
@@ -240,7 +240,7 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
             <Shield className="w-7 h-7" />
           </div>
           <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 group-hover:text-white transition-colors">Archive</span>
-          <span className="text-2xl font-black text-white uppercase tracking-tight">History</span>
+          <span className="text-2xl font-bold text-white uppercase tracking-tight">History</span>
         </button>
       </div>
     </div>

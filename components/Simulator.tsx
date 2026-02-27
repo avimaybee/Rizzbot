@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Upload, MessageSquare, Copy, Check, Sparkles, ThumbsUp, Minus, ThumbsDown, ArrowLeft, Target, Shield, Activity, Cpu, Zap, Terminal, Clock, AlertTriangle } from 'lucide-react';
+import { ChevronDown, ChevronUp, Upload, MessageSquare, Copy, Check, Sparkles, ThumbsUp, Minus, ThumbsDown, ArrowLeft, Target, Shield, Activity, Cpu, Zap, Terminal, Clock, AlertTriangle, MessageCircle } from 'lucide-react';
 import { generatePersona, simulateDraft, analyzeSimulation } from '../services/geminiService';
 import { saveFeedback, logSession } from '../services/feedbackService';
 import { createPersona, createSession } from '../services/dbService';
