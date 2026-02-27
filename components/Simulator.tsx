@@ -323,7 +323,15 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                         {p.name.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-bold text-sm text-zinc-200 truncate mono-accent">{p.name}</div>
+                        <div className="flex items-center justify-between">
+                          <div className="font-bold text-sm text-zinc-200 truncate mono-accent">{p.name}</div>
+                          <div className={`difficulty-indicator w-2 h-2 rounded-full ${p.harshnessLevel && p.harshnessLevel >= 5 ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
+                              p.harshnessLevel && p.harshnessLevel >= 4 ? 'bg-orange-500' :
+                                p.harshnessLevel && p.harshnessLevel >= 3 ? 'bg-yellow-500' :
+                                  p.harshnessLevel && p.harshnessLevel >= 2 ? 'bg-emerald-500' :
+                                    'bg-blue-500'
+                            }`} title={`Difficulty: ${p.harshnessLevel || 3}/5`}></div>
+                        </div>
                         <div className="text-[10px] text-zinc-500 truncate mono-accent uppercase tracking-wider">{p.relationshipContext?.replace('_', ' ')}</div>
                       </div>
                     </div>
@@ -366,7 +374,15 @@ export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, 
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2 mb-1">
-                            <div className="font-bold text-sm text-zinc-200 group-hover:text-white truncate mono-accent">{p.name}</div>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="font-bold text-sm text-zinc-200 group-hover:text-white truncate mono-accent">{p.name}</div>
+                              <div className={`difficulty-indicator w-1.5 h-1.5 rounded-full shrink-0 ${p.harshnessLevel && p.harshnessLevel >= 5 ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
+                                  p.harshnessLevel && p.harshnessLevel >= 4 ? 'bg-orange-500' :
+                                    p.harshnessLevel && p.harshnessLevel >= 3 ? 'bg-yellow-500' :
+                                      p.harshnessLevel && p.harshnessLevel >= 2 ? 'bg-emerald-500' :
+                                        'bg-blue-500'
+                                }`} title={`Difficulty: ${p.harshnessLevel || 3}/5`}></div>
+                            </div>
                             {p.relationshipContext && (
                               <span className="text-[10px] font-mono text-zinc-500 bg-zinc-800/80 px-1.5 py-0.5 uppercase shrink-0 rounded-sm">
                                 {p.relationshipContext.replace('_', ' ')}

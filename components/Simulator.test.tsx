@@ -96,4 +96,74 @@ describe("Simulator Setup View Redesign", () => {
     fireEvent.change(redFlagsInput, { target: { value: 'Dry texter, leaves me on read.' } });
     expect(redFlagsInput).toHaveValue('Dry texter, leaves me on read.');
   });
+
+  test("shows empty state when no personas are saved", () => {
+    localStorage.clear();
+    const { getByText } = render(
+      <ToastProvider>
+        <Simulator onBack={mockOnBack} />
+      </ToastProvider>
+    );
+    
+    expect(getByText(/No saved personas yet/i)).toBeInTheDocument();
+  });
+
+  test("loads and displays saved personas from localStorage", () => {
+    const mockPersonas = [
+      { name: 'SOPHIE', relationshipContext: 'DATING', tone: 'Spicy' },
+      { name: 'JACK', relationshipContext: 'EX', tone: 'Cold' }
+    ];
+    localStorage.setItem('unsend_personas', JSON.stringify(mockPersonas));
+
+    const { getAllByText } = render(
+      <ToastProvider>
+        <Simulator onBack={mockOnBack} />
+      </ToastProvider>
+    );
+    
+    // Check for names in the sidebar (appears twice due to mobile/desktop views)
+    expect(getAllByText('SOPHIE').length).toBeGreaterThan(0);
+    expect(getAllByText('JACK').length).toBeGreaterThan(0);
+  });
+
+  test("clicking a persona loads it into chat view", () => {
+    const mockPersonas = [
+      { name: 'SOPHIE', relationshipContext: 'DATING', tone: 'Spicy' }
+    ];
+    localStorage.setItem('unsend_personas', JSON.stringify(mockPersonas));
+
+    const { getAllByText, getByText, queryByText } = render(
+      <ToastProvider>
+        <Simulator onBack={mockOnBack} />
+      </ToastProvider>
+    );
+    
+    // Pick the desktop one or any of them
+    const sophieButton = getAllByText('SOPHIE')[0].closest('button');
+    if (sophieButton) {
+      fireEvent.click(sophieButton);
+    }
+    
+    // Check that we're now in chat view (EXIT button should be there)
+    expect(getByText(/EXIT/i)).toBeInTheDocument();
+    // And "Who's got you in your head?" should be gone
+    expect(queryByText(/WHO'S GOT YOU IN YOUR HEAD/i)).not.toBeInTheDocument();
+  });
+
+  test("displays difficulty indicators for personas", () => {
+    const mockPersonas = [
+      { name: 'SOPHIE', relationshipContext: 'DATING', tone: 'Spicy' }
+    ];
+    localStorage.setItem('unsend_personas', JSON.stringify(mockPersonas));
+
+    const { container } = render(
+      <ToastProvider>
+        <Simulator onBack={mockOnBack} />
+      </ToastProvider>
+    );
+    
+    // This is expected to fail initially as difficulty indicators aren't implemented yet
+    const difficultyBadge = container.querySelector('.difficulty-indicator');
+    expect(difficultyBadge).toBeInTheDocument();
+  });
 });
