@@ -4,6 +4,7 @@ import { UserStyleProfile, StyleExtractionResponse, AIExtractedStyleProfile } fr
 import { extractUserStyle } from '../services/geminiService';
 import { AuthUser } from '../services/firebaseService';
 import { StyleRadar } from './StyleRadar';
+import { CornerNodes } from './CornerNodes';
 
 interface UserProfileProps {
   onBack: () => void;
@@ -13,28 +14,6 @@ interface UserProfileProps {
   authUser?: AuthUser | null;
   onSignOut?: () => void;
 }
-
-// Corner Nodes Component
-const CornerNodes = ({ className }: { className?: string }) => (
-  <div className={`pointer-events-none absolute inset-0 z-50 ${className}`}>
-    <div className="absolute top-0 left-0">
-      <div className="w-2 h-2 border-t border-l border-zinc-500"></div>
-      <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 text-zinc-600 text-[8px]">+</div>
-    </div>
-    <div className="absolute top-0 right-0">
-      <div className="w-2 h-2 border-t border-r border-zinc-500"></div>
-      <div className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 text-zinc-600 text-[8px]">+</div>
-    </div>
-    <div className="absolute bottom-0 left-0">
-      <div className="w-2 h-2 border-b border-l border-zinc-500"></div>
-      <div className="absolute bottom-0 left-0 -translate-x-1/2 translate-y-1/2 text-zinc-600 text-[8px]">+</div>
-    </div>
-    <div className="absolute bottom-0 right-0">
-      <div className="w-2 h-2 border-b border-r border-zinc-500"></div>
-      <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 text-zinc-600 text-[8px]">+</div>
-    </div>
-  </div>
-);
 
 export const UserProfile: React.FC<UserProfileProps> = ({ onBack, onSave, initialProfile, userId, authUser, onSignOut }) => {
   // Profile state

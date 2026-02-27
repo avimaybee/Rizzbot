@@ -1,6 +1,6 @@
 # Implementation Plan: History Mode Overhaul
 
-## Phase 1: Gallery & Cards
+## Phase 1: Gallery & Cards [checkpoint: 1767241]
 - [x] Task: Set up the visual gallery grid layout for the History view. (c9bcb9d)
 - [x] Task: Write tests for the redesigned History Card component. (c9bcb9d)
 - [x] Task: Implement the rich History Card with monospaced metrics and mode badges. (c9bcb9d)

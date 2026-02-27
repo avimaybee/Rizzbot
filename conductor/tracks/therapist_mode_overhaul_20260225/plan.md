@@ -1,10 +1,10 @@
 # Implementation Plan: Therapist Mode Overhaul
 
-## Phase 1: Redesign & Navigation
+## Phase 1: Redesign & Navigation [checkpoint: e30f38e]
 - [x] Task: Set up utility classes for the Therapist layout (Organic panels, soft borders).
 - [x] Task: Write tests for the redesigned Therapist Sidebar (Session History).
 - [x] Task: Implement the redesigned Session History sidebar/drawer for mobile and desktop.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Redesign & Navigation' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Redesign & Navigation' (Protocol in workflow.md) (e30f38e)
 
 ## Phase 2: Tactical Report & Insights
 - [ ] Task: Write tests for the "Tactical Report" panel component.

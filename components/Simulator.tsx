@@ -5,6 +5,7 @@ import { saveFeedback, logSession } from '../services/feedbackService';
 import { createPersona, createSession } from '../services/dbService';
 import { SimResult, Persona, SimAnalysisResult, UserStyleProfile } from '../types';
 import { useGlobalToast } from './Toast';
+import { CornerNodes } from './CornerNodes';
 
 interface SimulatorProps {  // User's style profile for personalized suggestions
   userProfile?: UserStyleProfile | null;
@@ -16,23 +17,6 @@ interface SimulatorProps {  // User's style profile for personalized suggestions
 }
 
 type View = 'setup' | 'chat' | 'analysis';
-
-const CornerNodes = ({ className }: { className?: string }) => (
-  <div className={`pointer-events-none absolute inset-0 z-50 ${className}`}>
-    <div className="absolute top-0 left-0">
-      <div className="w-2 h-2 border-t border-l border-zinc-500"></div>
-    </div>
-    <div className="absolute top-0 right-0">
-      <div className="w-2 h-2 border-t border-r border-zinc-500"></div>
-    </div>
-    <div className="absolute bottom-0 left-0">
-      <div className="w-2 h-2 border-b border-l border-zinc-500"></div>
-    </div>
-    <div className="absolute bottom-0 right-0">
-      <div className="w-2 h-2 border-b border-r border-zinc-500"></div>
-    </div>
-  </div>
-);
 
 export const Simulator: React.FC<SimulatorProps> = ({ userProfile, firebaseUid, userId, onBack }) => {
   const [view, setView] = useState<View>('setup');
