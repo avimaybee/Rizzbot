@@ -259,7 +259,7 @@ const SideDock = ({ activeModule, setModule, authUser, onSignOut }: {
 const BottomTabs = ({ activeModule, setModule }: { activeModule: Module, setModule: (m: Module) => void }) => {
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-900/95 backdrop-blur-sm border-t border-zinc-800/80 safe-area-inset-bottom">
-      <div className="flex justify-around items-center h-16 px-1">
+      <div className="flex justify-around items-center h-[52px] px-1">
         <MobileTabItemSvg
           active={activeModule === 'standby'}
           onClick={() => setModule('standby')}
@@ -309,13 +309,13 @@ const MobileTabItemSvg = ({ active, onClick, label, Icon }: {
 }) => (
   <button
     onClick={onClick}
-    className={`flex flex-col items-center justify-center gap-0.5 min-w-[56px] py-1.5 px-1.5 rounded-md transition-all ${active
+    className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-1 px-1 rounded-md transition-all ${active
       ? 'text-white bg-zinc-800/80'
       : 'text-zinc-500 active:text-zinc-300'
       }`}
   >
-    <Icon className={`${active ? 'w-5 h-5' : 'w-4 h-4'}`} />
-    <span className={`text-[10px] font-bold tracking-wide uppercase ${active ? '' : 'opacity-60'}`}>
+    <Icon className={`${active ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />
+    <span className={`text-[9px] font-bold tracking-tight uppercase ${active ? '' : 'opacity-60'}`}>
       {label}
     </span>
   </button>

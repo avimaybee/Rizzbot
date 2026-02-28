@@ -12,11 +12,27 @@ const CornerNodes = () => (
   </>
 );
 
-interface HistoryProps {
-  firebaseUid?: string;
-  onSelectSession?: (session: Session) => void;
-  onBack?: () => void;
-}
+// Helper to safely render suggestion text from various formats (string, array of strings, or SuggestionOption objects)
+const renderSuggestionText = (suggestion: any) => {
+  if (!suggestion) return '';
+  
+  // Handle array structure
+  const item = Array.isArray(suggestion) ? suggestion[0] : suggestion;
+  
+  if (typeof item === 'string') return item;
+  
+  if (item && typeof item === 'object') {
+    // New SuggestionOption structure: { replies: [{originalMessage, reply}], conversationHook }
+    if (item.replies && Array.isArray(item.replies)) {
+      const replyText = item.replies.map((r: any) => r.reply).join(' ');
+      return item.conversationHook ? `${replyText} ${item.conversationHook}` : replyText;
+    }
+    // Fallback for other object types
+    return 'Analysis data';
+  }
+  
+  return '';
+};
 
 // Session Detail View Component
 const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ session, onBack }) => {
@@ -127,19 +143,25 @@ const SessionDetail: React.FC<{ session: Session; onBack: () => void }> = ({ ses
               {suggestions.smooth && (
                 <div className="p-3 bg-zinc-800 border border-zinc-700">
                   <div className="text-xs text-zinc-500 mb-1">SMOOTH</div>
-                  <p className="text-white text-sm">{Array.isArray(suggestions.smooth) ? suggestions.smooth[0] : suggestions.smooth}</p>
+                  <p className="text-white text-sm">{renderSuggestionText(suggestions.smooth)}</p>
                 </div>
               )}
               {suggestions.bold && (
                 <div className="p-3 bg-zinc-800 border border-hard-blue/30">
                   <div className="text-xs text-hard-blue mb-1">BOLD</div>
-                  <p className="text-white text-sm">{Array.isArray(suggestions.bold) ? suggestions.bold[0] : suggestions.bold}</p>
+                  <p className="text-white text-sm">{renderSuggestionText(suggestions.bold)}</p>
+                </div>
+              )}
+              {suggestions.witty && (
+                <div className="p-3 bg-zinc-800 border border-hard-purple/30">
+                  <div className="text-xs text-hard-purple mb-1">WITTY</div>
+                  <p className="text-white text-sm">{renderSuggestionText(suggestions.witty)}</p>
                 </div>
               )}
               {suggestions.authentic && (
                 <div className="p-3 bg-zinc-800 border border-hard-gold/30">
                   <div className="text-xs text-hard-gold mb-1">YOUR STYLE</div>
-                  <p className="text-white text-sm">{Array.isArray(suggestions.authentic) ? suggestions.authentic[0] : suggestions.authentic}</p>
+                  <p className="text-white text-sm">{renderSuggestionText(suggestions.authentic)}</p>
                 </div>
               )}
             </div>

@@ -379,12 +379,12 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
           </div>
 
           {/* Form Grid - More compact spacing */}
-          <div className="grid md:grid-cols-2 gap-3 sm:gap-5 flex-1">
+          <div className="grid md:grid-cols-2 gap-3 sm:gap-8 flex-1">
             {/* Left Column - Inputs */}
             <div className="space-y-4">
               {/* Screenshot Upload (Primary) */}
               <div>
-                <label className="label-sm text-hard-gold mb-1.5 block flex items-center gap-1.5">
+                <label className="label-sm text-hard-gold mb-2 block flex items-center gap-1.5">
                   <Image className="w-3 h-3" />
                   EVIDENCE (SCREENSHOTS)
                 </label>
@@ -466,14 +466,17 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
             {/* Right Column - Context & Action */}
             <div className="flex flex-col">
               {/* Context Selector - More compact */}
-              <div className="mb-4">
-                <label className="label-sm text-zinc-400 mb-2 block">SITUATION</label>
+              <div>
+                <label className="label-sm text-zinc-400 mb-2 block flex items-center gap-1.5">
+                  <Zap className="w-3 h-3" />
+                  SITUATION
+                </label>
                 <div className="grid grid-cols-5 gap-1">
                   {contextOptions.map((opt) => (
                     <button
                       key={opt.value}
                       onClick={() => setContext(opt.value)}
-                      className={`py-3 px-1 border text-xs font-mono tracking-wider transition-all min-h-[44px] ${context === opt.value
+                      className={`py-3 px-1 border text-[10px] font-mono tracking-wider transition-all min-h-[44px] ${context === opt.value
                         ? 'bg-white text-black border-white'
                         : 'bg-transparent text-zinc-500 border-zinc-700 hover:border-zinc-500 hover:text-zinc-300'
                         }`}
@@ -485,20 +488,20 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
               </div>
 
               {/* Spacer */}
-              <div className="flex-1 min-h-[20px]"></div>
+              <div className="flex-1 min-h-[40px]"></div>
 
               {/* Submit Button - More compact on mobile */}
               <button
                 onClick={handleAnalyze}
                 disabled={(!theirMessage.trim() && screenshots.length === 0) || isLoading}
-                className={`w-full py-3.5 sm:py-4 font-impact text-lg sm:text-xl uppercase tracking-wide border transition-all min-h-[50px] ${(!theirMessage.trim() && screenshots.length === 0) || isLoading
+                className={`w-full py-4 sm:py-5 font-impact text-xl sm:text-2xl uppercase tracking-widest border transition-all min-h-[60px] ${(!theirMessage.trim() && screenshots.length === 0) || isLoading
                   ? 'bg-zinc-900 text-zinc-600 border-zinc-800 cursor-not-allowed'
-                  : 'bg-white text-black border-white hover:bg-zinc-200 active:bg-zinc-300'
-                  }`}
+                  : 'bg-white text-black border-white hover:bg-zinc-200 active:bg-zinc-300 shadow-[0_0_20px_rgba(255,255,255,0.1)]'
+                }`}
               >
                 {isLoading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Sparkles className="w-4 h-4 animate-spin" />
+                  <span className="flex items-center justify-center gap-3">
+                    <Sparkles className="w-5 h-5 animate-spin" />
                     ANALYZING...
                   </span>
                 ) : (
