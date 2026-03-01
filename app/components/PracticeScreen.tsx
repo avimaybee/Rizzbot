@@ -16,6 +16,7 @@ import {
   Target,
   User,
   X,
+  Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { TabBar } from "./TabBar";
@@ -167,7 +168,7 @@ export function PracticeScreen() {
 
   useEffect(() => {
     if (userId) {
-      getPersonas(userId).then(setSavedPersonas).catch(() => { });
+      getPersonas(userId).then((data) => setSavedPersonas(data as any)).catch(() => { });
     }
   }, [userId]);
 
@@ -649,26 +650,32 @@ export function PracticeScreen() {
             >
               <Lightbulb size={22} strokeWidth={1.8} color="rgba(26,18,8,0.45)" />
             </button>
-            <input
-              type="text"
+            <textarea
               value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
+              onChange={(e) => {
+                setInputText(e.target.value);
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = "auto";
+                target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
+              }}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
                   void handleSend();
                 }
               }}
               placeholder="Your move..."
-              className="flex-1 outline-none"
+              className="flex-1 outline-none resize-none overflow-y-auto m-1"
               style={{
                 height: 44,
-                borderRadius: 100,
+                borderRadius: 22,
                 backgroundColor: "#F5EFE6",
-                padding: "0 18px",
+                padding: "10px 18px",
                 fontFamily: "'DM Sans', sans-serif",
                 fontSize: 15,
                 color: "#1A1208",
                 border: "none",
+                lineHeight: "24px",
               }}
             />
             <button
@@ -794,9 +801,38 @@ export function PracticeScreen() {
                   </button>
                 </div>
 
-                {lastResult ? (
-                  <div className="space-y-0">
-                    {[
+                {tacticalTip && (
+                  <div className="mb-6 p-4" style={{ backgroundColor: "#F5E8E0", borderRadius: 16, border: "1px solid #E8E0D4" }}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Zap size={16} color="#C8522A" />
+                      <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: "#1A1208", textTransform: "uppercase", letterSpacing: "0.05em" }}>Strategic Insight</p>
+                    </div>
+                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "#1A1208", lineHeight: 1.5, marginBottom: (persona?.communicationTips?.length) ? 12 : 0 }}>
+                      {typeof tacticalTip === 'string' ? tacticalTip : (tacticalTip as any).feedback?.[0] || ""}
+                    </p>
+                    {persona?.communicationTips && persona.communicationTips.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-[rgba(26,18,8,0.05)]">
+                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, color: "rgba(26,18,8,0.45)", textTransform: "uppercase", marginBottom: 6 }}>Tactical Advice</p>
+                        <ul className="space-y-2">
+                          {persona.communicationTips.map((tip: string, idx: number) => (
+                            <li key={idx} className="flex gap-2 text-[13px]" style={{ fontFamily: "'DM Sans', sans-serif", color: "rgba(26,18,8,0.7)" }}>
+                              <span style={{ color: "#C8522A" }}>•</span> {tip}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {lastResult && (
+                  <div className="mb-4">
+                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, color: "rgba(26,18,8,0.45)", textTransform: "uppercase", marginBottom: 12, letterSpacing: "0.1em" }}>Live Rewrites</p>
+                  </div>
+                )}
+                <div className="space-y-0">
+                  {lastResult ? (
+                    [
                       { label: "Safe", text: lastResult.rewrites.safe },
                       { label: "Bold", text: lastResult.rewrites.bold },
                       { label: "Spicy", text: lastResult.rewrites.spicy },
@@ -839,13 +875,13 @@ export function PracticeScreen() {
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'rgba(26,18,8,0.55)' }}>
-                    Send one message to unlock live rewrites and tactical suggestions.
-                  </p>
-                )}
+                    ))
+                  ) : (
+                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'rgba(26,18,8,0.55)' }}>
+                      Send one message to unlock live rewrites and tactical suggestions.
+                    </p>
+                  )}
+                </div>
               </div>
             </motion.div>
           </>

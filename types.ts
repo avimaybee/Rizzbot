@@ -163,6 +163,7 @@ export interface QuickAdviceResponse {
     bold: SuggestionOption[];      // 3 options - confident, direct
     witty: SuggestionOption[];     // 3 options - subtle wordplay, clever (not cringe)
     authentic: SuggestionOption[]; // 3 options - user's vibe, elevated (not forced copy)
+    yourStyle: SuggestionOption[]; // 3 options - deep mimicry of user's specific phrasing/quirks
     wait?: string | null;          // Sometimes best move is no move - explains why
   };
   proTip: string; // One psychology-backed insight

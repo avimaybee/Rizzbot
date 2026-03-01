@@ -42,15 +42,15 @@ const toneMap: Record<Tone, keyof QuickAdviceResponse["suggestions"]> = {
   Bold: "bold",
   Witty: "witty",
   Authentic: "authentic",
-  "Your Style": "authentic",
+  "Your Style": "yourStyle",
 };
 
-const feedbackTypeMap: Record<Tone, "smooth" | "bold" | "authentic"> = {
+const feedbackTypeMap: Record<Tone, string> = {
   Smooth: "smooth",
   Bold: "bold",
-  Witty: "bold",
+  Witty: "witty",
   Authentic: "authentic",
-  "Your Style": "authentic",
+  "Your Style": "yourStyle",
 };
 
 const contextOptions = [
@@ -315,29 +315,37 @@ export function QuickModeScreen() {
             </button>
 
             {screenshots.length > 0 && (
-              <div className="flex gap-3 mt-3">
+              <div className="flex gap-3 mt-4 overflow-x-auto pb-4 no-scrollbar">
                 {screenshots.map((src, i) => (
                   <div key={i} className="relative shrink-0">
                     <img
                       src={src}
                       alt={`Screenshot ${i + 1}`}
-                      style={{ width: 48, height: 48, borderRadius: 12, objectFit: "cover" }}
+                      style={{
+                        width: 120,
+                        height: 160,
+                        borderRadius: 20,
+                        objectFit: "cover",
+                        border: "1px solid #E8E0D4",
+                        boxShadow: "0 4px 12px rgba(26, 18, 8, 0.08)"
+                      }}
                     />
                     <button
                       onClick={() => setScreenshots((prev) => prev.filter((_, idx) => idx !== i))}
-                      className="absolute flex items-center justify-center cursor-pointer"
+                      className="absolute flex items-center justify-center cursor-pointer shadow-lg"
                       style={{
-                        top: -6,
-                        right: -6,
-                        width: 16,
-                        height: 16,
+                        top: -10,
+                        right: -10,
+                        width: 28,
+                        height: 28,
                         borderRadius: "50%",
                         backgroundColor: "#C8522A",
-                        border: "none",
+                        border: "2px solid #FDFAF5",
                         padding: 0,
+                        zIndex: 20
                       }}
                     >
-                      <X size={10} strokeWidth={2.5} color="#FFFFFF" />
+                      <X size={14} strokeWidth={2.5} color="#FFFFFF" />
                     </button>
                   </div>
                 ))}
@@ -356,9 +364,13 @@ export function QuickModeScreen() {
               <label className="block mb-1.5" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>Their Message</label>
               <textarea
                 value={theirMessage}
-                onChange={(e) => setTheirMessage(e.target.value)}
+                onChange={(e) => {
+                  setTheirMessage(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
                 placeholder={screenshots.length > 0 ? "Any backstory? e.g., 'We haven't talked in 2 weeks'" : "Paste or type their message here..."}
-                className="w-full resize-none outline-none"
+                className="w-full resize-none outline-none overflow-hidden"
                 style={{
                   minHeight: 90,
                   backgroundColor: "#FDFAF5",
@@ -379,9 +391,13 @@ export function QuickModeScreen() {
               </label>
               <textarea
                 value={yourDraft}
-                onChange={(e) => setYourDraft(e.target.value)}
+                onChange={(e) => {
+                  setYourDraft(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
                 placeholder="What are you thinking of saying?"
-                className="w-full resize-none outline-none"
+                className="w-full resize-none outline-none overflow-hidden"
                 style={{
                   minHeight: 90,
                   backgroundColor: "#FDFAF5",
@@ -395,7 +411,7 @@ export function QuickModeScreen() {
               />
             </div>
 
-            <div className="mt-5 mb-8">
+            <div className="mt-5 mb-40">
               <label className="block mb-2 flex items-center gap-1.5" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>
                 <Zap size={14} color="#C8522A" />
                 Situation

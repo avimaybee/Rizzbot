@@ -21,6 +21,7 @@ import remarkGfm from "remark-gfm";
 import { TabBar } from "./TabBar";
 import { GrainOverlay } from "./GrainOverlay";
 import { useToast } from "./ui/Toast";
+import { haptics } from "../utils/haptics";
 import { useAppContext } from "../app-context";
 import {
   deleteMemory,
@@ -600,8 +601,8 @@ export function TherapistScreen() {
       <GrainOverlay />
 
       <div className="relative z-10 max-w-[430px] mx-auto flex flex-col min-h-screen w-full">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-14 pb-2">
+        {/* Sticky Header */}
+        <div className="sticky top-0 z-40 flex items-center justify-between px-5 pt-14 pb-3" style={{ backgroundColor: "#F5EFE6" }}>
           <button onClick={() => navigate("/home")} className="cursor-pointer p-1">
             <ChevronLeft size={24} strokeWidth={1.8} color="#1A1208" />
           </button>
@@ -610,16 +611,19 @@ export function TherapistScreen() {
           </p>
           <div className="flex items-center gap-1">
             <button
-              onClick={() => setShowSessionSheet(true)}
+              onClick={() => {
+                setInsightsOpen(true);
+                haptics.light();
+              }}
               style={{ border: "none", background: "none", color: "#C8522A", cursor: "pointer", padding: 6 }}
             >
-              <History size={18} />
+              <MemoryStick size={20} />
             </button>
             <button
-              onClick={() => setShowMemorySheet(true)}
-              style={{ border: "none", background: "none", color: "#C8522A", cursor: "pointer", padding: 6 }}
+              onClick={() => setShowSessionSheet(true)}
+              style={{ border: "none", background: "none", color: "rgba(26,18,8,0.4)", cursor: "pointer", padding: 6 }}
             >
-              <MemoryStick size={18} />
+              <History size={18} />
             </button>
           </div>
         </div>
@@ -743,9 +747,7 @@ export function TherapistScreen() {
             <button
               onClick={() => {
                 setInsightsOpen((prev) => !prev);
-                if (window.navigator && (window.navigator as any).vibrate) {
-                  (window.navigator as any).vibrate(10);
-                }
+                haptics.medium();
               }}
               className="flex items-center justify-center gap-2 w-full"
               style={{
@@ -756,7 +758,7 @@ export function TherapistScreen() {
               }}
             >
               <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, color: "#C8522A" }}>
-                {insightsOpen ? "Hide Insights" : "View Insights"}
+                {insightsOpen ? "Hide Session Insights" : "View Session Insights"}
               </span>
               {insightsOpen ? <ChevronDown size={14} color="#C8522A" /> : <ChevronUp size={14} color="#C8522A" />}
             </button>
@@ -803,452 +805,263 @@ export function TherapistScreen() {
                       void handleImageUpload(e.target.files);
                     }}
                   />
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: "50%",
-                      border: "none",
-                      backgroundColor: "transparent",
-                      color: "#C8522A",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Lightbulb size={18} />
-                  </button>
-                  <input
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        void handleSend();
-                      }
-                    }}
-                    placeholder="Share what's on your mind..."
-                    style={{
-                      flex: 1,
-                      height: 44,
-                      borderRadius: 100,
-                      border: "none",
-                      backgroundColor: "#F5EFE6",
-                      padding: "0 16px",
-                      fontFamily: "'DM Sans', sans-serif",
-                      fontSize: 14,
-                      outline: "none",
-                      color: "#1A1208",
-                    }}
-                  />
-                  <button
-                    onClick={() => void handleSend()}
-                    disabled={isLoading || (!inputValue.trim() && pendingImages.length === 0)}
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: "50%",
-                      border: "none",
-                      backgroundColor: "#C8522A",
-                      color: "#FFFFFF",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                      opacity: isLoading || (!inputValue.trim() && pendingImages.length === 0) ? 0.5 : 1,
-                    }}
-                  >
-                    <Send size={15} />
-                  </button>
+                  <div className="flex items-end gap-2">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{
+                        width: 40,
+                        height: 44,
+                        borderRadius: 12,
+                        border: "none",
+                        backgroundColor: "transparent",
+                        color: "#C8522A",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <ImagePlus size={20} />
+                    </button>
+                    <textarea
+                      value={inputValue}
+                      onChange={(e) => {
+                        setInputValue(e.target.value);
+                        e.target.style.height = 'auto';
+                        e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          void handleSend();
+                        }
+                      }}
+                      placeholder="Share what's on your mind..."
+                      rows={1}
+                      style={{
+                        flex: 1,
+                        minHeight: 44,
+                        maxHeight: 120,
+                        borderRadius: 22,
+                        border: "none",
+                        backgroundColor: "#F5EFE6",
+                        padding: "10px 16px",
+                        fontFamily: "'DM Sans', sans-serif",
+                        fontSize: 14,
+                        outline: "none",
+                        color: "#1A1208",
+                        resize: "none",
+                        overflowY: "auto",
+                      }}
+                    />
+                    <button
+                      onClick={() => void handleSend()}
+                      disabled={isLoading || (!inputValue.trim() && pendingImages.length === 0)}
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 12,
+                        border: "none",
+                        backgroundColor: "#C8522A",
+                        color: "#FFFFFF",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        opacity: isLoading || (!inputValue.trim() && pendingImages.length === 0) ? 0.5 : 1,
+                      }}
+                    >
+                      <Send size={18} />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Insights Drawer */}
-        <AnimatePresence>
-          {insightsOpen && (
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 280 }}
-              className="fixed left-0 right-0 bottom-20 z-30"
-              style={{ maxHeight: "60vh", pointerEvents: "auto" }}
-            >
-              <div
-                className="max-w-[430px] mx-auto overflow-y-auto"
-                style={{
-                  backgroundColor: "#FDFAF5",
-                  borderTopLeftRadius: 28,
-                  borderTopRightRadius: 28,
-                  boxShadow: "0 -4px 30px rgba(26,18,8,0.08)",
-                  maxHeight: "60vh",
-                  paddingBottom: 24,
-                }}
-              >
-                {/* Drag handle */}
-                <div className="flex justify-center pt-3 pb-2">
-                  <div style={{ width: 40, height: 4, borderRadius: 100, backgroundColor: "#E8E0D4" }} />
-                </div>
-
-                <div className="px-5">
-                  {/* Header */}
-                  <p className="mb-4" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
-                    YOUR INSIGHTS
-                  </p>
-
-                  {/* Key Themes */}
-                  {clinicalNotes.keyThemes.length > 0 && (
-                    <div className="mb-5">
-                      <p className="mb-2" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(26,18,8,0.55)" }}>
-                        KEY THEMES
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {clinicalNotes.keyThemes.map((theme) => (
-                          <button
-                            key={theme}
-                            onClick={() => setExpandedTheme((prev) => (prev === theme ? null : theme))}
-                            style={{
-                              borderRadius: 100,
-                              padding: "5px 12px",
-                              border: "none",
-                              backgroundColor: expandedTheme === theme ? "#C8522A" : "#F5E8E0",
-                              color: expandedTheme === theme ? "#FFFFFF" : "#C8522A",
-                              fontFamily: "'DM Sans', sans-serif",
-                              fontSize: 12,
-                              fontWeight: 500,
-                              cursor: "pointer",
-                              transition: "all 0.2s ease",
-                            }}
-                          >
-                            {theme}
-                          </button>
-                        ))}
-                      </div>
-                      <AnimatePresence>
-                        {expandedTheme && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="mt-2 overflow-hidden"
-                          >
-                            <div style={{ backgroundColor: "#F5E8E0", borderRadius: 14, padding: "12px 16px" }}>
-                              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#1A1208", lineHeight: 1.5 }}>
-                                Theme: {expandedTheme}
-                              </p>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  )}
-
-                  {/* Attachment Style */}
-                  {clinicalNotes.attachmentStyle && clinicalNotes.attachmentStyle !== "unknown" && (
-                    <div className="mb-5">
-                      <p className="mb-1" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, color: "#C8522A" }}>
-                        ATTACHMENT STYLE
-                      </p>
-                      <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
-                        {clinicalNotes.attachmentStyle}
-                      </p>
-                      <p className="mt-1" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 400, color: "rgba(26,18,8,0.55)", lineHeight: 1.5 }}>
-                        Based on the patterns we've discussed so far
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Action Items */}
-                  {clinicalNotes.actionItems.length > 0 && (
-                    <div className="mb-4">
-                      <p className="mb-2" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(26,18,8,0.55)" }}>
-                        ACTION ITEMS
-                      </p>
-                      <ol className="list-none m-0 p-0 space-y-1">
-                        {clinicalNotes.actionItems.map((item, i) => (
-                          <li key={i} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 400, color: "#1A1208", lineHeight: 1.5 }}>
-                            {i + 1}. {item}
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Session Sheet */}
-      <AnimatePresence>
-        {showSessionSheet && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50"
-              style={{ backgroundColor: "rgba(26,18,8,0.35)" }}
-              onClick={() => setShowSessionSheet(false)}
-            />
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 26, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 z-50"
-            >
-              <div
-                className="max-w-[430px] mx-auto"
-                style={{
-                  backgroundColor: "#FDFAF5",
-                  borderTopLeftRadius: 28,
-                  borderTopRightRadius: 28,
-                  padding: "18px 18px 38px",
-                  boxShadow: "0 -4px 30px rgba(26,18,8,0.08)",
-                  maxHeight: "65vh",
-                  overflowY: "auto",
-                }}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
-                    Therapist Sessions
-                  </p>
-                  <button onClick={() => setShowSessionSheet(false)} style={{ border: "none", background: "none", color: "rgba(26,18,8,0.5)", cursor: "pointer" }}>
-                    <X size={18} />
-                  </button>
-                </div>
-
-                <button
-                  onClick={handleNewSession}
-                  style={{
-                    width: "100%",
-                    height: 44,
-                    borderRadius: 999,
-                    border: "1px solid #C8522A",
-                    backgroundColor: "transparent",
-                    color: "#C8522A",
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    marginBottom: 12,
+          {/* Consolidated Insights/Notes Drawer */}
+          <AnimatePresence>
+            {insightsOpen && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-40"
+                  style={{ backgroundColor: "rgba(26,18,8,0.3)" }}
+                  onClick={() => setInsightsOpen(false)}
+                />
+                <motion.div
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  drag="y"
+                  dragConstraints={{ top: 0 }}
+                  dragElastic={0.1}
+                  onDragEnd={(_, info) => {
+                    if (info.offset.y > 100) setInsightsOpen(false);
                   }}
+                  transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                  className="fixed left-0 right-0 bottom-20 z-50 overflow-hidden"
+                  style={{ maxHeight: "75vh" }}
                 >
-                  New Session
-                </button>
-
-                {sessions.length === 0 ? (
-                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.55)" }}>
-                    No saved sessions yet.
-                  </p>
-                ) : (
-                  sessions.map((session) => (
-                    <button
-                      key={session.interaction_id}
-                      onClick={() => handleLoadSession(session)}
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        borderRadius: 12,
-                        border: "1px solid #E8E0D4",
-                        backgroundColor: interactionId === session.interaction_id ? "#F5E8E0" : "#FFFFFF",
-                        padding: 12,
-                        marginBottom: 8,
-                        cursor: "pointer",
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#1A1208" }}>
-                          {session.clinical_notes?.keyThemes?.[0] || "Session notes"}
-                        </span>
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "rgba(26,18,8,0.45)" }}>
-                          {formatAgo(session.updated_at || session.created_at || new Date().toISOString())}
-                        </span>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Memory Sheet */}
-      <AnimatePresence>
-        {showMemorySheet && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50"
-              style={{ backgroundColor: "rgba(26,18,8,0.35)" }}
-              onClick={() => setShowMemorySheet(false)}
-            />
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 26, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 z-50"
-            >
-              <div
-                className="max-w-[430px] mx-auto"
-                style={{
-                  backgroundColor: "#FDFAF5",
-                  borderTopLeftRadius: 28,
-                  borderTopRightRadius: 28,
-                  padding: "18px 18px 38px",
-                  boxShadow: "0 -4px 30px rgba(26,18,8,0.08)",
-                  maxHeight: "70vh",
-                  overflowY: "auto",
-                }}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
-                    Notes & Memories
-                  </p>
-                  <button onClick={() => setShowMemorySheet(false)} style={{ border: "none", background: "none", color: "rgba(26,18,8,0.5)", cursor: "pointer" }}>
-                    <X size={18} />
-                  </button>
-                </div>
-
-                <div style={{ backgroundColor: "#FFFFFF", border: "1px solid #E8E0D4", borderRadius: 14, padding: 12, marginBottom: 12 }}>
-                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(26,18,8,0.5)", marginBottom: 8 }}>
-                    Clinical snapshot
-                  </p>
-                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#1A1208", marginBottom: 4 }}>
-                    Attachment: {clinicalNotes.attachmentStyle || "unknown"}
-                  </p>
-                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#1A1208", marginBottom: 4 }}>
-                    State: {clinicalNotes.emotionalState || "listening"}
-                  </p>
-                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.6)" }}>
-                    Themes: {clinicalNotes.keyThemes.length ? clinicalNotes.keyThemes.join(", ") : "none yet"}
-                  </p>
-                </div>
-
-                <div style={{ backgroundColor: "#FFFFFF", border: "1px solid #E8E0D4", borderRadius: 14, padding: 12, marginBottom: 12 }}>
-                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(26,18,8,0.5)", marginBottom: 8 }}>
-                    Add memory
-                  </p>
-                  <div className="flex gap-2 mb-2">
-                    <button
-                      onClick={() => setMemoryType("GLOBAL")}
-                      style={{
-                        borderRadius: 999,
-                        border: memoryType === "GLOBAL" ? "1px solid #C8522A" : "1px solid #E8E0D4",
-                        backgroundColor: memoryType === "GLOBAL" ? "#F5E8E0" : "transparent",
-                        color: memoryType === "GLOBAL" ? "#C8522A" : "rgba(26,18,8,0.6)",
-                        fontSize: 12,
-                        padding: "5px 10px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Global
-                    </button>
-                    <button
-                      onClick={() => setMemoryType("SESSION")}
-                      style={{
-                        borderRadius: 999,
-                        border: memoryType === "SESSION" ? "1px solid #C8522A" : "1px solid #E8E0D4",
-                        backgroundColor: memoryType === "SESSION" ? "#F5E8E0" : "transparent",
-                        color: memoryType === "SESSION" ? "#C8522A" : "rgba(26,18,8,0.6)",
-                        fontSize: 12,
-                        padding: "5px 10px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Session
-                    </button>
-                  </div>
-                  <textarea
-                    value={memoryDraft}
-                    onChange={(e) => setMemoryDraft(e.target.value)}
-                    placeholder="Save a key fact or pattern..."
+                  <div
+                    className="max-w-[430px] mx-auto flex flex-col"
                     style={{
-                      width: "100%",
-                      minHeight: 54,
-                      borderRadius: 10,
-                      border: "1px solid #E8E0D4",
-                      padding: 10,
-                      fontFamily: "'DM Sans', sans-serif",
-                      fontSize: 13,
-                      outline: "none",
-                    }}
-                  />
-                  <button
-                    onClick={() => void handleAddMemory()}
-                    style={{
-                      marginTop: 8,
-                      height: 34,
-                      borderRadius: 999,
-                      border: "none",
-                      backgroundColor: "#C8522A",
-                      color: "#FFFFFF",
-                      fontSize: 12,
-                      padding: "0 12px",
-                      cursor: "pointer",
+                      backgroundColor: "#FDFAF5",
+                      borderTopLeftRadius: 32,
+                      borderTopRightRadius: 32,
+                      boxShadow: "0 -8px 40px rgba(26,18,8,0.12)",
+                      maxHeight: "75vh",
                     }}
                   >
-                    Save memory
-                  </button>
-                </div>
+                    {/* Drag handle */}
+                    <div className="flex justify-center pt-3 pb-3">
+                      <div style={{ width: 36, height: 4, borderRadius: 100, backgroundColor: "rgba(26,18,8,0.1)" }} />
+                    </div>
 
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles size={14} color="#C8522A" />
-                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, color: "#1A1208" }}>
-                      Global Memories
-                    </p>
-                  </div>
-                  {activeMemories.global.length === 0 ? (
-                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.55)", marginBottom: 10 }}>
-                      No global memories yet.
-                    </p>
-                  ) : (
-                    activeMemories.global.map((memory) => (
-                      <div key={memory.id} className="mb-2">
-                        <MemoryItem memory={memory} onUpdate={handleUpdateMemory} onDelete={handleDeleteMemory} />
+                    <div className="flex-1 overflow-y-auto px-5 pb-12">
+                      {/* Drawer Title & Header */}
+                      <div className="flex items-center justify-between mb-6">
+                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 18, fontWeight: 600, color: "#1A1208" }}>
+                          Session Insights
+                        </p>
+                        <button
+                          onClick={() => setInsightsOpen(false)}
+                          className="p-2"
+                          style={{ border: "none", background: "none", color: "rgba(26,18,8,0.3)", cursor: "pointer" }}
+                        >
+                          <X size={20} />
+                        </button>
                       </div>
-                    ))
-                  )}
 
-                  <div className="flex items-center gap-2 mb-2 mt-3">
-                    <Lightbulb size={14} color="#C8522A" />
-                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, color: "#1A1208" }}>
-                      Session Memories
-                    </p>
-                  </div>
-                  {activeMemories.session.length === 0 ? (
-                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.55)" }}>
-                      No session memories yet.
-                    </p>
-                  ) : (
-                    activeMemories.session.map((memory) => (
-                      <div key={memory.id} className="mb-2">
-                        <MemoryItem memory={memory} onUpdate={handleUpdateMemory} onDelete={handleDeleteMemory} />
+                      {/* Snapshot Section */}
+                      <div className="mb-8 p-4" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E8E0D4", borderRadius: 20 }}>
+                        <p className="mb-3" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(26,18,8,0.4)" }}>
+                          Current Context
+                        </p>
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                          <div className="p-3" style={{ backgroundColor: "#FDF0F0", borderRadius: 14 }}>
+                            <p style={{ fontSize: 11, color: "rgba(212,131,138,0.7)" }}>Attachment</p>
+                            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: "#1A1208", textTransform: "capitalize" }}>
+                              {clinicalNotes.attachmentStyle || "Analyzing..."}
+                            </p>
+                          </div>
+                          <div className="p-3" style={{ backgroundColor: "#FDFAF5", borderRadius: 14, border: "1px solid #E8E0D4" }}>
+                            <p style={{ fontSize: 11, color: "rgba(26,18,8,0.4)" }}>State</p>
+                            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: "#1A1208", textTransform: "capitalize" }}>
+                              {clinicalNotes.emotionalState || "Listening..."}
+                            </p>
+                          </div>
+                        </div>
+                        {clinicalNotes.keyThemes.length > 0 && (
+                          <div>
+                            <p className="mb-2" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, color: "rgba(26,18,8,0.4)" }}>ACTIVE THEMES</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {clinicalNotes.keyThemes.map(theme => (
+                                <span key={theme} style={{ padding: "4px 10px", backgroundColor: "#F5E8E0", color: "#C8522A", borderRadius: 100, fontSize: 12, fontWeight: 500 }}>
+                                  {theme}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
 
-      <TabBar />
+                      {/* Memories Section */}
+                      <div className="mb-8">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <MemoryStick size={16} color="#C8522A" />
+                            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
+                              Notes & Memories
+                            </p>
+                          </div>
+                          <span style={{ fontSize: 12, color: "rgba(26,18,8,0.45)", fontFamily: "'JetBrains Mono', monospace" }}>
+                            {memories.length} item(s)
+                          </span>
+                        </div>
+
+                        <div className="space-y-4 mb-4">
+                          <textarea
+                            value={memoryDraft}
+                            onChange={(e) => setMemoryDraft(e.target.value)}
+                            placeholder="Save a key fact or pattern..."
+                            style={{
+                              width: "100%",
+                              minHeight: 80,
+                              borderRadius: 16,
+                              border: "1px solid #E8E0D4",
+                              padding: 14,
+                              fontFamily: "'DM Sans', sans-serif",
+                              fontSize: 14,
+                              outline: "none",
+                              backgroundColor: "#FFFFFF",
+                              resize: "none",
+                            }}
+                          />
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => void handleAddMemory()}
+                              disabled={!memoryDraft.trim()}
+                              style={{
+                                flex: 1,
+                                height: 44,
+                                borderRadius: 100,
+                                border: "none",
+                                backgroundColor: "#C8522A",
+                                color: "#FFFFFF",
+                                fontFamily: "'DM Sans', sans-serif",
+                                fontSize: 14,
+                                fontWeight: 600,
+                                cursor: "pointer",
+                                opacity: memoryDraft.trim() ? 1 : 0.5,
+                              }}
+                            >
+                              Save Note
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          {memories.slice().reverse().map((memory) => (
+                            <MemoryItem key={memory.id} memory={memory} onUpdate={handleUpdateMemory} onDelete={handleDeleteMemory} />
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Insights Section */}
+                      {clinicalNotes.actionItems.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-4">
+                            <Sparkles size={16} color="#C8522A" />
+                            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
+                              Suggested Focus
+                            </p>
+                          </div>
+                          <div className="space-y-3">
+                            {clinicalNotes.actionItems.map((item, i) => (
+                              <div key={i} className="p-4" style={{ backgroundColor: "#FDFAF5", border: "1px solid #E8E0D4", borderRadius: 16 }}>
+                                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "#1A1208", lineHeight: 1.5 }}>
+                                  • {item}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <TabBar />
+      </div>
     </div>
   );
 }

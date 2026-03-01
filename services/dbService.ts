@@ -290,9 +290,13 @@ export async function submitFeedback(feedback: FeedbackEntry): Promise<{ id: num
 /**
  * Get user's sessions with pagination
  */
-export async function getSessions(firebaseUid?: string, limit = 20, offset = 0): Promise<SessionsResponse> {
+export async function getSessions(identifier?: string | number, limit = 20, offset = 0): Promise<SessionsResponse> {
   const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
-  if (firebaseUid) params.set('anon_id', firebaseUid);
+  if (typeof identifier === 'string') {
+    params.set('anon_id', identifier);
+  } else if (typeof identifier === 'number') {
+    params.set('user_id', String(identifier));
+  }
 
   const res = await fetch(`/api/sessions?${params}`);
 

@@ -71,7 +71,7 @@ const formatHoursAgo = (isoDate: string): string => {
 
 export function HomeScreen() {
   const navigate = useNavigate();
-  const { authUser, signOut } = useAppContext();
+  const { authUser, userId, signOut } = useAppContext();
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [streak, setStreak] = useState<StreakData>({
     current_streak: 0,
@@ -87,7 +87,7 @@ export function HomeScreen() {
   useEffect(() => {
     if (!authUser?.uid) return;
     let alive = true;
-    void getSessions(authUser.uid, 5, 0)
+    void getSessions(userId || authUser.uid, 5, 0)
       .then((response) => {
         if (!alive) return;
         const recent = (response.sessions || []).slice(0, 4).map((session) => ({
@@ -95,8 +95,8 @@ export function HomeScreen() {
             session.mode === "quick"
               ? "Quick Mode"
               : session.mode === "simulator"
-              ? "Practice"
-              : "Deep Dive",
+                ? "Practice"
+                : "Deep Dive",
           time: formatHoursAgo(session.created_at),
           risk:
             typeof session.ghost_risk === "number"
@@ -119,7 +119,7 @@ export function HomeScreen() {
     let alive = true;
     void recordActivity(authUser.uid).then((data) => {
       if (alive) setStreak(data);
-    }).catch(() => {});
+    }).catch(() => { });
     return () => { alive = false; };
   }, [authUser?.uid]);
 

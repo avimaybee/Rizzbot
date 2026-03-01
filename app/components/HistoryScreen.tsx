@@ -473,7 +473,7 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
 export function HistoryScreen() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { authUser } = useAppContext();
+  const { authUser, userId } = useAppContext();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [showFilter, setShowFilter] = useState(false);
@@ -487,7 +487,7 @@ export function HistoryScreen() {
   useEffect(() => {
     if (!authUser?.uid) return;
     setLoading(true);
-    void getSessions(authUser.uid, 50, 0)
+    void getSessions(userId || authUser.uid, 50, 0)
       .then((response) => setSessions(response.sessions || []))
       .catch(() => setSessions([]))
       .finally(() => setLoading(false));
@@ -790,7 +790,7 @@ export function HistoryScreen() {
                         </span>
                       </div>
                       <p
-                        className="mt-2 overflow-hidden text-ellipsis whitespace-nowrap"
+                        className="mt-2 text-ellipsis line-clamp-2"
                         style={{
                           fontFamily: "'DM Sans', sans-serif",
                           fontSize: 13,
