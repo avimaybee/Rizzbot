@@ -1,6 +1,7 @@
 name = "rizzbot"
 account_id = "275802114da3095a634457ef16168244"
 compatibility_date = "2025-01-01"
+pages_build_output_dir = "dist"
 
 # D1 Database Binding
 [[d1_databases]]

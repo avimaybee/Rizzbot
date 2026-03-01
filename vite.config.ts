@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
             manualChunks: {
               react: ['react', 'react-dom'],
               router: ['react-router'],
-              firebase: ['firebase'],
+              firebase: ['firebase/app', 'firebase/auth', 'firebase/analytics'],
               genai: ['@google/genai'],
               markdown: ['react-markdown', 'remark-gfm'],
               motion: ['motion'],
