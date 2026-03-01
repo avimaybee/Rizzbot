@@ -498,3 +498,37 @@ export async function updateMemory(id: number, content: string, type: 'GLOBAL' |
   return res.json();
 }
 
+// ===== Streaks API =====
+
+export interface StreakData {
+  current_streak: number;
+  longest_streak: number;
+  last_active_date: string | null;
+}
+
+export async function getStreak(firebaseUid: string): Promise<StreakData> {
+  try {
+    const res = await fetch(`/api/streaks?anon_id=${firebaseUid}`);
+    if (!res.ok) return { current_streak: 0, longest_streak: 0, last_active_date: null };
+    const data = await res.json();
+    return data.streak || { current_streak: 0, longest_streak: 0, last_active_date: null };
+  } catch {
+    return { current_streak: 0, longest_streak: 0, last_active_date: null };
+  }
+}
+
+export async function recordActivity(firebaseUid: string): Promise<StreakData> {
+  try {
+    const res = await fetch('/api/streaks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anon_id: firebaseUid })
+    });
+    if (!res.ok) return { current_streak: 0, longest_streak: 0, last_active_date: null };
+    const data = await res.json();
+    return data.streak || { current_streak: 0, longest_streak: 0, last_active_date: null };
+  } catch {
+    return { current_streak: 0, longest_streak: 0, last_active_date: null };
+  }
+}
+

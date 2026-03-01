@@ -1,3 +1,5 @@
+import { ensureAppSchema } from './schema';
+
 export async function onRequest(context: any) {
   const { env, request } = context;
   // Try several common binding names to be resilient to the exact name used in Pages settings
@@ -30,6 +32,8 @@ export async function onRequest(context: any) {
   }
 
   try {
+    await ensureAppSchema(db);
+
     const url = new URL(request.url);
 
     if (request.method === 'GET') {

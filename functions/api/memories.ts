@@ -1,4 +1,6 @@
 
+import { ensureAppSchema } from './schema';
+
 export async function onRequest(context: any) {
     const { env, request } = context;
     const db = env.RIZZBOT_DATA || env.RIZZBOT || env.RIZZBOT_DB || env.RIZZBOT_D1 || env.RIZZBOT_DATASET || env["rizzbot data"];
@@ -19,6 +21,8 @@ export async function onRequest(context: any) {
     }
 
     try {
+        await ensureAppSchema(db);
+
         const url = new URL(request.url);
 
         // GET memories
