@@ -333,6 +333,22 @@ export function MyVoiceScreen() {
             >
               {isLast ? "Finish →" : "Next →"}
             </button>
+            <button
+              onClick={() => setMode("result")}
+              style={{
+                width: "100%",
+                marginTop: 12,
+                backgroundColor: "transparent",
+                border: "none",
+                color: "rgba(26,18,8,0.55)",
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              Skip quiz & extract with AI instead
+            </button>
           </div>
         </div>
       </div>

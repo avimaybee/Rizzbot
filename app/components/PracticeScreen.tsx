@@ -24,7 +24,7 @@ import { useToast } from "./ui/Toast";
 import { haptics } from "../utils/haptics";
 import { useAppContext } from "../app-context";
 import { analyzeSimulation, generatePersona, simulateDraft } from "../../services/geminiService";
-import { createPersona, createSession } from "../../services/dbService";
+import { createPersona, createSession, getPersonas } from "../../services/dbService";
 import { logSession } from "../../services/feedbackService";
 import { Persona, SimResult } from "../../types";
 
@@ -161,8 +161,15 @@ export function PracticeScreen() {
   const [lastResult, setLastResult] = useState<SimResult | null>(null);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [showHintSheet, setShowHintSheet] = useState(false);
+  const [savedPersonas, setSavedPersonas] = useState<Persona[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (userId) {
+      getPersonas(userId).then(setSavedPersonas).catch(() => { });
+    }
+  }, [userId]);
 
   const tacticalTip = useMemo(() => {
     if (lastResult?.feedback?.length) return lastResult.feedback[0];
@@ -193,6 +200,21 @@ export function PracticeScreen() {
     } catch {
       toast("Could not read screenshots", "error");
     }
+  };
+
+  const handleLoadPersona = (p: Persona) => {
+    haptics.medium();
+    setPersona(p);
+    setMessages([
+      {
+        id: Date.now(),
+        sender: "ai",
+        text: `${p.name} is live. Send your first message.`,
+      },
+    ]);
+    setSimHistory([]);
+    setLastResult(null);
+    setMode("chat");
   };
 
   const handleStartSession = async () => {
@@ -347,29 +369,29 @@ export function PracticeScreen() {
               </p>
               <div className="relative">
                 <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                {personaOptions.map((name) => {
-                  const Icon = personaIcons[name] || User;
-                  return (
-                    <button
-                      key={name}
-                      onClick={() => setActivePersonaName(name)}
-                      className="flex items-center gap-1.5"
-                      style={{
-                        borderRadius: 100,
-                        padding: "8px 14px",
-                        backgroundColor: activePersonaName === name ? "#C8522A" : "transparent",
-                        color: activePersonaName === name ? "#FFFFFF" : "rgba(26,18,8,0.55)",
-                        border: activePersonaName === name ? "1px solid #C8522A" : "1px solid #E8E0D4",
-                        fontFamily: "'DM Sans', sans-serif",
-                        fontSize: 13,
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      <Icon size={14} /> {name}
-                    </button>
-                  );
-                })}
+                  {personaOptions.map((name) => {
+                    const Icon = personaIcons[name] || User;
+                    return (
+                      <button
+                        key={name}
+                        onClick={() => setActivePersonaName(name)}
+                        className="flex items-center gap-1.5"
+                        style={{
+                          borderRadius: 100,
+                          padding: "8px 14px",
+                          backgroundColor: activePersonaName === name ? "#C8522A" : "transparent",
+                          color: activePersonaName === name ? "#FFFFFF" : "rgba(26,18,8,0.55)",
+                          border: activePersonaName === name ? "1px solid #C8522A" : "1px solid #E8E0D4",
+                          fontFamily: "'DM Sans', sans-serif",
+                          fontSize: 13,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <Icon size={14} /> {name}
+                      </button>
+                    );
+                  })}
                 </div>
                 <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12" style={{ background: 'linear-gradient(to right, transparent, #FDFAF5)' }} />
               </div>
@@ -420,6 +442,36 @@ export function PracticeScreen() {
                 </>
               )}
             </div>
+
+            {savedPersonas.length > 0 && (
+              <div className="mt-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 24, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)", padding: 20 }}>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.15em", color: "rgba(26, 18, 8, 0.55)", textTransform: "uppercase", marginBottom: 12 }}>
+                  Saved Partners
+                </p>
+                <div className="flex flex-col gap-2">
+                  {savedPersonas.map((p, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleLoadPersona(p)}
+                      className="flex items-center justify-between text-left"
+                      style={{
+                        padding: "12px 16px",
+                        borderRadius: 12,
+                        backgroundColor: "#F5E8E0",
+                        border: "1px solid #E8E0D4",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div>
+                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: "#1A1208" }}>{p.name}</p>
+                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26, 18, 8, 0.6)", textTransform: "capitalize" }}>{p.relationshipContext ? p.relationshipContext.toLowerCase().replace('_', ' ') : p.tone || "Custom"}</p>
+                      </div>
+                      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, color: "#C8522A" }}>Load →</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="mt-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 24, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)", padding: 20 }}>
               <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.15em", color: "rgba(26, 18, 8, 0.55)", textTransform: "uppercase", marginBottom: 12 }}>
@@ -754,9 +806,37 @@ export function PracticeScreen() {
                         <div className="shrink-0 flex items-center justify-center" style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: '#F5E8E0' }}>
                           <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 500, color: '#C8522A' }}>{i + 1}</span>
                         </div>
-                        <div>
-                          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: '#1A1208', marginBottom: 3 }}>{item.label}</p>
-                          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'rgba(26,18,8,0.55)', lineHeight: 1.5 }}>{item.text}</p>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: '#1A1208' }}>{item.label}</p>
+                            <button
+                              onClick={() => {
+                                setInputText(item.text);
+                                setShowHintSheet(false);
+                                haptics.light();
+                              }}
+                              style={{ border: "none", background: "none", color: "#C8522A", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                            >
+                              Copy
+                            </button>
+                          </div>
+                          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'rgba(26,18,8,0.55)', lineHeight: 1.5, marginBottom: 8 }}>{item.text}</p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                toast("Thanks for the feedback!", "success");
+                                haptics.light();
+                              }}
+                              style={{ border: "1px solid #E8E0D4", borderRadius: 100, padding: "4px 10px", backgroundColor: "transparent", cursor: "pointer", fontSize: 12 }}
+                            >👍</button>
+                            <button
+                              onClick={() => {
+                                toast("Thanks for the feedback!", "info");
+                                haptics.light();
+                              }}
+                              style={{ border: "1px solid #E8E0D4", borderRadius: 100, padding: "4px 10px", backgroundColor: "transparent", cursor: "pointer", fontSize: 12 }}
+                            >👎</button>
+                          </div>
                         </div>
                       </div>
                     ))}

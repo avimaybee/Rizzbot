@@ -3,14 +3,18 @@ import { useNavigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Camera,
+  Check,
   ChevronLeft,
   Copy,
+  CornerDownRight,
   Info,
+  Link2,
   RotateCcw,
   Share2,
   ThumbsDown,
   ThumbsUp,
   X,
+  Zap,
 } from "lucide-react";
 import { TabBar } from "./TabBar";
 import { GrainOverlay } from "./GrainOverlay";
@@ -49,11 +53,15 @@ const feedbackTypeMap: Record<Tone, "smooth" | "bold" | "authentic"> = {
   "Your Style": "authentic",
 };
 
-const composeSuggestion = (option: SuggestionOption | null): string => {
-  if (!option) return "";
-  const replyLines = option.replies.map((r) => r.reply).join("\n");
-  return option.conversationHook ? `${replyLines}\n\n${option.conversationHook}` : replyLines;
-};
+const contextOptions = [
+  { value: "new", label: "NEW" },
+  { value: "talking", label: "TALKING" },
+  { value: "dating", label: "DATING" },
+  { value: "complicated", label: "COMPLICATED" },
+  { value: "ex", label: "EX" },
+] as const;
+
+type ContextOption = (typeof contextOptions)[number]["value"];
 
 const toDataUrl = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -77,6 +85,8 @@ export function QuickModeScreen() {
   const [showResults, setShowResults] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [theirMessage, setTheirMessage] = useState("");
+  const [yourDraft, setYourDraft] = useState("");
+  const [context, setContext] = useState<ContextOption>("talking");
   const [activeTone, setActiveTone] = useState<Tone>("Smooth");
   const [showStyleTooltip, setShowStyleTooltip] = useState(false);
   const [screenshots, setScreenshots] = useState<string[]>([]);
@@ -89,6 +99,7 @@ export function QuickModeScreen() {
     Authentic: 0,
     "Your Style": 0,
   });
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -135,7 +146,8 @@ export function QuickModeScreen() {
     try {
       const response = await getQuickAdvice({
         theirMessage: theirMessage.trim() || "Analyze the conversation screenshot",
-        context: "talking",
+        yourDraft: yourDraft.trim() || undefined,
+        context,
         screenshots: screenshots.length ? screenshots : undefined,
         userStyle: userProfile || undefined,
         userId: authUser?.uid,
@@ -183,18 +195,20 @@ export function QuickModeScreen() {
     setShowResults(false);
     setResult(null);
     setTheirMessage("");
+    setYourDraft("");
     setScreenshots([]);
     setCursor({ Smooth: 0, Bold: 0, Witty: 0, Authentic: 0, "Your Style": 0 });
     setFeedbackGiven(null);
     haptics.light();
   };
 
-  const handleCopy = () => {
-    const text = composeSuggestion(selectedOption);
+  const handleCopy = (text: string, key: string) => {
     if (!text) return;
     navigator.clipboard.writeText(text);
+    setCopiedKey(key);
     haptics.success();
     toast("Copied to clipboard", "success");
+    setTimeout(() => setCopiedKey(null), 1500);
   };
 
   const handleFeedback = (rating: "helpful" | "off") => {
@@ -339,13 +353,14 @@ export function QuickModeScreen() {
             </div>
 
             <div className="mt-4 relative">
+              <label className="block mb-1.5" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>Their Message</label>
               <textarea
                 value={theirMessage}
                 onChange={(e) => setTheirMessage(e.target.value)}
-                placeholder="Paste or type their message here..."
+                placeholder={screenshots.length > 0 ? "Any backstory? e.g., 'We haven't talked in 2 weeks'" : "Paste or type their message here..."}
                 className="w-full resize-none outline-none"
                 style={{
-                  minHeight: 110,
+                  minHeight: 90,
                   backgroundColor: "#FDFAF5",
                   borderRadius: 14,
                   border: "1px solid #E8E0D4",
@@ -355,6 +370,62 @@ export function QuickModeScreen() {
                   color: "#1A1208",
                 }}
               />
+            </div>
+
+            <div className="mt-4 relative">
+              <label className="block mb-1.5 flex items-center justify-between" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>
+                <span>Your Potential Reply</span>
+                <span style={{ color: "rgba(26,18,8,0.4)" }}>(Optional)</span>
+              </label>
+              <textarea
+                value={yourDraft}
+                onChange={(e) => setYourDraft(e.target.value)}
+                placeholder="What are you thinking of saying?"
+                className="w-full resize-none outline-none"
+                style={{
+                  minHeight: 90,
+                  backgroundColor: "#FDFAF5",
+                  borderRadius: 14,
+                  border: "1px solid #E8E0D4",
+                  padding: "14px 16px",
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 15,
+                  color: "#1A1208",
+                }}
+              />
+            </div>
+
+            <div className="mt-5 mb-8">
+              <label className="block mb-2 flex items-center gap-1.5" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>
+                <Zap size={14} color="#C8522A" />
+                Situation
+              </label>
+              <div className="grid grid-cols-5 gap-1.5">
+                {contextOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => {
+                      setContext(opt.value);
+                      haptics.light();
+                    }}
+                    className="cursor-pointer transition-colors"
+                    style={{
+                      height: 48,
+                      borderRadius: 12,
+                      backgroundColor: context === opt.value ? "#1A1208" : "transparent",
+                      color: context === opt.value ? "#FFFFFF" : "rgba(26, 18, 8, 0.55)",
+                      border: context === opt.value ? "1px solid #1A1208" : "1px solid #E8E0D4",
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontSize: 10,
+                      fontWeight: 600,
+                      letterSpacing: "0.05em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="fixed bottom-24 left-0 right-0 px-5 z-30">
@@ -508,34 +579,79 @@ export function QuickModeScreen() {
                 style={{ backgroundColor: "#FDFAF5", borderRadius: 24, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)", padding: 20 }}
               >
                 <AnimatePresence mode="wait">
-                  <motion.p
+                  <motion.div
                     key={`${activeTone}-${cursor[activeTone]}`}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.25 }}
-                    style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: "#1A1208", lineHeight: 1.6, whiteSpace: "pre-wrap" }}
+                    className="space-y-4"
                   >
-                    {composeSuggestion(selectedOption)}
-                  </motion.p>
+                    {selectedOption?.replies.map((replyItem, idx) => {
+                      const replyKey = `reply-${activeTone}-${cursor[activeTone]}-${idx}`;
+                      const isCopied = copiedKey === replyKey;
+                      return (
+                        <div key={idx} className="relative group">
+                          <button
+                            onClick={() => handleCopy(replyItem.reply, replyKey)}
+                            className="w-full text-left cursor-pointer transition-all"
+                            style={{
+                              backgroundColor: "#FFFFFF",
+                              border: "1px solid #E8E0D4",
+                              borderRadius: 16,
+                              padding: "16px",
+                            }}
+                          >
+                            <div className="flex justify-between items-start gap-3 mb-2">
+                              <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26, 18, 8, 0.6)", display: "flex", alignItems: "center", gap: 6 }}>
+                                <CornerDownRight size={14} />
+                                <span className="italic">"{replyItem.originalMessage}"</span>
+                              </span>
+                              <div className="flex items-center gap-1.5" style={{ color: isCopied ? "#7A9E7E" : "rgba(26, 18, 8, 0.4)", fontFamily: "'DM Sans', sans-serif", fontSize: 10, textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.05em" }}>
+                                {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                                <span>{isCopied ? "Copied" : "Copy"}</span>
+                              </div>
+                            </div>
+                            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: "#1A1208", lineHeight: 1.5, paddingLeft: 12, borderLeft: "2px solid #C8522A" }}>
+                              {replyItem.reply}
+                            </p>
+                          </button>
+                        </div>
+                      );
+                    })}
+
+                    {selectedOption?.conversationHook && (
+                      <div className="relative mt-2">
+                        <button
+                          onClick={() => handleCopy(selectedOption.conversationHook!, `hook-${activeTone}-${cursor[activeTone]}`)}
+                          className="w-full text-left cursor-pointer transition-all"
+                          style={{
+                            backgroundColor: "#F5E8E0",
+                            border: "1px solid #E8E0D4",
+                            borderRadius: 16,
+                            padding: "16px",
+                          }}
+                        >
+                          <div className="flex justify-between items-center mb-2">
+                            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#C8522A", display: "flex", alignItems: "center", gap: 6, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                              <Link2 size={14} />
+                              Conversation Hook
+                            </span>
+                            <div className="flex items-center gap-1.5" style={{ color: copiedKey === `hook-${activeTone}-${cursor[activeTone]}` ? "#C8522A" : "rgba(200, 82, 42, 0.5)", fontFamily: "'DM Sans', sans-serif", fontSize: 10, textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.05em" }}>
+                              {copiedKey === `hook-${activeTone}-${cursor[activeTone]}` ? <Check size={14} /> : <Copy size={14} />}
+                              <span>{copiedKey === `hook-${activeTone}-${cursor[activeTone]}` ? "Copied" : "Copy"}</span>
+                            </div>
+                          </div>
+                          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "#1A1208", lineHeight: 1.5 }}>
+                            {selectedOption.conversationHook}
+                          </p>
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
                 </AnimatePresence>
 
-                <div className="flex items-center justify-between mt-4 pt-3" style={{ borderTop: "1px solid #E8E0D4" }}>
-                  <button
-                    onClick={handleCopy}
-                    className="flex items-center gap-2 cursor-pointer"
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "#C8522A",
-                      fontFamily: "'DM Sans', sans-serif",
-                      fontSize: 13,
-                      fontWeight: 500,
-                    }}
-                  >
-                    <Copy size={16} strokeWidth={1.8} />
-                    Copy
-                  </button>
+                <div className="flex items-center justify-end mt-4 pt-3" style={{ borderTop: "1px solid #E8E0D4" }}>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleFeedback("helpful")}

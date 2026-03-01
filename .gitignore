@@ -33,3 +33,15 @@ d1_migrations
 .github
 
 NEW-UI-REFERNCE/
+
+# Legacy Files (Audited)
+App_old.tsx
+components_Simulator_old.tsx
+components_History_old.tsx
+components_UserProfile_old.tsx
+components_TherapistChat_old.tsx
+components/QuickAdvisor.tsx
+components/Simulator.tsx
+components/History.tsx
+components/UserProfile.tsx
+components/TherapistChat.tsx

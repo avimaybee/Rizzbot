@@ -9,6 +9,7 @@ import {
   Trash2,
   X,
   Zap,
+  AlertCircle,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { TabBar } from "./TabBar";
@@ -26,14 +27,21 @@ const toMode = (mode?: string) =>
 const getAccentColor = (risk: number) =>
   risk > 65 ? "#C8522A" : risk > 35 ? "#D4A853" : "#7A9E7E";
 
-const formatDate = (isoDate: string) =>
-  new Date(isoDate).toLocaleDateString(undefined, {
+const formatDate = (isoDate?: string | null) => {
+  if (!isoDate) return "Unknown date";
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return "Unknown date";
+  return d.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
   });
+};
 
-const formatAgo = (isoDate: string) => {
-  const delta = Date.now() - new Date(isoDate).getTime();
+const formatAgo = (isoDate?: string | null) => {
+  if (!isoDate) return "";
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return "";
+  const delta = Date.now() - d.getTime();
   const hours = Math.max(1, Math.floor(delta / (1000 * 60 * 60)));
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
@@ -474,6 +482,7 @@ export function HistoryScreen() {
   const [showSearch, setShowSearch] = useState(false);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!authUser?.uid) return;
@@ -506,6 +515,7 @@ export function HistoryScreen() {
       toast("Could not delete session", "error");
     } finally {
       setDeletingId(null);
+      setConfirmDeleteId(null);
     }
   };
 
@@ -813,7 +823,7 @@ export function HistoryScreen() {
                             onClick={(e) => {
                               e.stopPropagation();
                               haptics.medium();
-                              void handleDelete(session.id);
+                              setConfirmDeleteId(session.id);
                             }}
                             disabled={deletingId === session.id}
                             style={{
@@ -846,6 +856,81 @@ export function HistoryScreen() {
           )}
         </div>
       </div>
+
+      <AnimatePresence>
+        {confirmDeleteId && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50"
+              style={{ backgroundColor: "rgba(26,18,8,0.45)" }}
+              onClick={() => setConfirmDeleteId(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", bounce: 0.3, duration: 0.4 }}
+              className="fixed inset-x-5 z-50 max-w-[360px] mx-auto"
+              style={{ top: "50%", transform: "translateY(-50%)" }}
+            >
+              <div style={{ backgroundColor: "#FDFAF5", borderRadius: 28, padding: 28, boxShadow: "0 20px 60px rgba(26,18,8,0.15)" }}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div style={{ width: 40, height: 40, borderRadius: "50%", backgroundColor: "#F5E8E0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <AlertCircle size={20} strokeWidth={1.8} color="#C8522A" />
+                  </div>
+                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 17, fontWeight: 600, color: "#1A1208" }}>
+                    Delete Session?
+                  </p>
+                </div>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "rgba(26,18,8,0.6)", lineHeight: 1.5, marginBottom: 24 }}>
+                  This session will be permanently removed from your history.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setConfirmDeleteId(null)}
+                    style={{
+                      flex: 1,
+                      height: 48,
+                      borderRadius: 100,
+                      backgroundColor: "transparent",
+                      border: "1px solid #E8E0D4",
+                      color: "rgba(26,18,8,0.6)",
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontSize: 14,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => void handleDelete(confirmDeleteId)}
+                    disabled={deletingId === confirmDeleteId}
+                    style={{
+                      flex: 1,
+                      height: 48,
+                      borderRadius: 100,
+                      backgroundColor: "#C8522A",
+                      border: "none",
+                      color: "#FFFFFF",
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      opacity: deletingId === confirmDeleteId ? 0.7 : 1,
+                    }}
+                  >
+                    {deletingId === confirmDeleteId ? "Deleting..." : "Delete"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       <TabBar />
     </div>
   );
