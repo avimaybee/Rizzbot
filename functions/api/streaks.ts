@@ -60,7 +60,17 @@ export const onRequestPost = async (context: any) => {
 
     const user = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(anonId).first();
     if (!user) {
-      return new Response(JSON.stringify({ streak: { current_streak: 1, longest_streak: 1, last_active_date: new Date().toISOString().split('T')[0] } }), { headers: corsHeaders });
+      const todayForNewUser = new Date().toISOString().split('T')[0];
+      await db.prepare('INSERT INTO users (anon_id) VALUES (?)').bind(anonId).run();
+      const newUser = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(anonId).first();
+      if (!newUser) {
+        throw new Error(`Failed to create user for anon_id: ${anonId}`);
+      }
+      await db
+        .prepare('INSERT INTO streaks (user_id, current_streak, longest_streak, last_active_date) VALUES (?, 1, 1, ?)')
+        .bind(newUser.id, todayForNewUser)
+        .run();
+      return new Response(JSON.stringify({ streak: { current_streak: 1, longest_streak: 1, last_active_date: todayForNewUser } }), { headers: corsHeaders });
     }
 
     const today = new Date().toISOString().split('T')[0];

@@ -5,7 +5,7 @@ type D1Database = {
   };
 };
 
-let ensureSchemaPromise: Promise<void> | null = null;
+const ensureSchemaPromises = new WeakMap<D1Database, Promise<void>>();
 
 const IGNORABLE_SCHEMA_ERRORS = [
   "duplicate column name",
@@ -191,11 +191,13 @@ const ensureSchemaInternal = async (db: D1Database): Promise<void> => {
 };
 
 export async function ensureAppSchema(db: D1Database): Promise<void> {
+  let ensureSchemaPromise = ensureSchemaPromises.get(db);
   if (!ensureSchemaPromise) {
     ensureSchemaPromise = ensureSchemaInternal(db).catch((error) => {
-      ensureSchemaPromise = null;
+      ensureSchemaPromises.delete(db);
       throw error;
     });
+    ensureSchemaPromises.set(db, ensureSchemaPromise);
   }
   await ensureSchemaPromise;
 }

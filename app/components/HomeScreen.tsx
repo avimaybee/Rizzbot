@@ -112,7 +112,7 @@ export function HomeScreen() {
     return () => {
       alive = false;
     };
-  }, [authUser?.uid]);
+  }, [authUser?.uid, userId]);
 
   useEffect(() => {
     if (!authUser?.uid) return;

@@ -528,7 +528,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
           onClick={resetForm}
           className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group p-2 -ml-2 min-w-[44px]"
         >
-          <span className="text-lg">ΓåÉ</span>
+          <span className="text-lg">←</span>
           <span className="text-xs font-mono uppercase tracking-widest group-hover:text-hard-gold transition-colors">NEW</span>
         </button>
         <div className={`px-3 py-1.5 text-xs font-bold tracking-widest ${getActionStyle(result.recommendedAction)}`}>
@@ -565,7 +565,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
                 {result.extractedTargetMessage ? (
                   <div>
                     <div className="text-xs font-mono text-hard-gold uppercase tracking-wider mb-1.5">
-                      ≡ƒô▒ EXTRACTED FROM SCREENSHOT
+                      📱 EXTRACTED FROM SCREENSHOT
                     </div>
                     <p className="text-zinc-300 text-sm font-mono italic">"{result.extractedTargetMessage}"</p>
                   </div>
@@ -594,12 +594,12 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
               <div className="flex flex-wrap gap-2">
                 {result.vibeCheck.greenFlags.map((flag, i) => (
                   <span key={`green-${i}`} className="text-xs font-mono uppercase tracking-wider border border-zinc-700 px-2 py-1 text-zinc-300">
-                    Γ£ô {flag}
+                    ✓ {flag}
                   </span>
                 ))}
                 {result.vibeCheck.redFlags.map((flag, i) => (
                   <span key={`red-${i}`} className="text-xs font-mono uppercase tracking-wider border border-red-900 px-2 py-1 text-red-400">
-                    ΓÜá {flag}
+                    ✗ {flag}
                   </span>
                 ))}
               </div>
@@ -636,12 +636,12 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
                 <div className="flex flex-wrap gap-2">
                   {result.draftAnalysis.strengths.map((s, i) => (
                     <span key={`str-${i}`} className="text-xs font-mono uppercase tracking-wider border border-zinc-700 px-2 py-1 text-zinc-300">
-                      Γ£ô {s}
+                      ✓ {s}
                     </span>
                   ))}
                   {result.draftAnalysis.issues.map((issue, i) => (
                     <span key={`issue-${i}`} className="text-xs font-mono uppercase tracking-wider border border-red-900 px-2 py-1 text-red-400">
-                      Γ£ù {issue}
+                      ⚠ {issue}
                     </span>
                   ))}
                 </div>
@@ -753,7 +753,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
             onClick={() => setResult(null)}
             className="w-full py-4 border border-zinc-700 text-zinc-400 hover:text-white hover:border-white transition-all font-mono text-sm uppercase tracking-widest min-h-[44px]"
           >
-            ΓåÉ NEW SCAN
+            ← NEW SCAN
           </button>
 
         </div>
