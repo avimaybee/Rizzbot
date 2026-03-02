@@ -3,7 +3,7 @@ import { QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, FeedbackEntr
 import { getQuickAdvice } from '../services/geminiService';
 import { saveFeedback, logSession } from '../services/feedbackService';
 import { createSession, submitFeedback } from '../services/dbService';
-import { Sparkles, Upload, X, Image, ThumbsUp, Minus, ThumbsDown, ArrowLeft, Info, CornerDownRight, Link2, Copy, Check } from 'lucide-react';
+import { Sparkles, Upload, X, Image, ThumbsUp, Minus, ThumbsDown, ArrowLeft, Info, CornerDownRight, Link2, Copy, Check, Zap } from 'lucide-react';
 import { useGlobalToast } from './Toast';
 import { Logo } from './Logo';
 
@@ -497,7 +497,7 @@ export const QuickAdvisor: React.FC<QuickAdvisorProps> = ({ onBack, userProfile,
                 className={`w-full py-4 sm:py-5 font-impact text-xl sm:text-2xl uppercase tracking-widest border transition-all min-h-[60px] ${(!theirMessage.trim() && screenshots.length === 0) || isLoading
                   ? 'bg-zinc-900 text-zinc-600 border-zinc-800 cursor-not-allowed'
                   : 'bg-white text-black border-white hover:bg-zinc-200 active:bg-zinc-300 shadow-[0_0_20px_rgba(255,255,255,0.1)]'
-                }`}
+                  }`}
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-3">

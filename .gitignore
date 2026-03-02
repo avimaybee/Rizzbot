@@ -30,9 +30,8 @@ d1_migrations
 .wrangler
 .skills
 .agent
-.github
-
 NEW-UI-REFERNCE/
+new-frontend
 
 # Legacy Files (Audited)
 App_old.tsx
@@ -45,3 +44,4 @@ components/Simulator.tsx
 components/History.tsx
 components/UserProfile.tsx
 components/TherapistChat.tsx
+.github
