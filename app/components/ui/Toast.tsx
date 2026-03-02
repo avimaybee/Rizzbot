@@ -14,12 +14,13 @@ interface ToastContextType {
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
+let toastCounter = 0;
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const toast = useCallback((message: string, type: ToastType = "info") => {
-    const id = Math.random().toString(36).substring(2, 9);
+    const id = `toast-${++toastCounter}`;
     setToasts((prev) => [...prev, { id, message, type }]);
     
     // Haptic feedback for toast

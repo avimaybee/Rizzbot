@@ -37,7 +37,8 @@ const clampScore = (value: number) => Math.max(0, Math.min(100, Math.round(value
 export function TacticalReportScreen() {
   const navigate = useNavigate();
   const location = useLocation();
-  const report = ((location.state as ReportData) || defaultReport) as ReportData;
+  const partialReport = (location.state || {}) as Partial<ReportData>;
+  const report: ReportData = { ...defaultReport, ...partialReport };
   const analysis = report.analysis || defaultReport.analysis!;
 
   const confidence = clampScore(100 - analysis.ghostRisk);

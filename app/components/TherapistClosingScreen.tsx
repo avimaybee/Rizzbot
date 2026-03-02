@@ -171,8 +171,7 @@ export function TherapistClosingScreen() {
                 lineHeight: 1.5,
               }}
             >
-              "Give yourself permission to wait. Silence isn't rejection — it's
-              an invitation for them to miss you."
+              {insight}
             </p>
           </div>
         </motion.div>
