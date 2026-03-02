@@ -63,6 +63,10 @@ const DEFAULT_NOTES: ClinicalNotes = {
 
 const WELCOME_MESSAGE =
   "I am here to help you process patterns, decode mixed signals, and protect your peace. What feels heaviest right now?";
+const BOTTOM_NAV_HEIGHT = 80;
+const CHAT_BOTTOM_BUFFER = 16;
+const DEFAULT_COMPOSER_HEIGHT = 110;
+const HERO_SECTION_MAX_HEIGHT = 120;
 
 const ensureUnique = (values: string[] = []): string[] => [...new Set(values.filter(Boolean))];
 
@@ -370,9 +374,11 @@ export function TherapistScreen() {
   const [memoryDraft, setMemoryDraft] = useState("");
   const [memoryType, setMemoryType] = useState<"GLOBAL" | "SESSION">("GLOBAL");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const endRef = useRef<HTMLDivElement | null>(null);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<HTMLDivElement | null>(null);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [expandedTheme, setExpandedTheme] = useState<string | null>(null);
+  const [composerHeight, setComposerHeight] = useState(DEFAULT_COMPOSER_HEIGHT);
 
   const refreshSessions = useCallback(() => {
     if (!authUser?.uid) return;
@@ -397,8 +403,21 @@ export function TherapistScreen() {
   }, [refreshMemories]);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    const chatScrollEl = chatScrollRef.current;
+    if (!chatScrollEl) return;
+    chatScrollEl.scrollTo({ top: chatScrollEl.scrollHeight, behavior: "smooth" });
   }, [messages, streamingContent, pendingExercise]);
+
+  useEffect(() => {
+    const composerEl = composerRef.current;
+    if (!composerEl) return;
+
+    const syncComposerHeight = () => setComposerHeight(composerEl.offsetHeight);
+    syncComposerHeight();
+    const resizeObserver = new ResizeObserver(syncComposerHeight);
+    resizeObserver.observe(composerEl);
+    return () => resizeObserver.disconnect();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("therapist_messages", JSON.stringify(messages));
@@ -580,6 +599,8 @@ export function TherapistScreen() {
     }
   };
 
+  const isSendDisabled = isLoading || (!inputValue.trim() && pendingImages.length === 0);
+
   return (
     <div className="relative flex flex-col min-h-screen" style={{ backgroundColor: "#F5EFE6" }}>
       <GrainOverlay />
@@ -595,7 +616,7 @@ export function TherapistScreen() {
           </p>
           <div className="flex items-center gap-1">
             <button
-              onClick={() => setShowSessionSheet(true)}
+              onClick={() => navigate("/history")}
               style={{ border: "none", background: "none", color: "rgba(26,18,8,0.4)", cursor: "pointer", padding: 6 }}
             >
               <History size={18} />
@@ -604,16 +625,17 @@ export function TherapistScreen() {
         </div>
 
         {/* Hero text — only when conversation just started */}
-        {messages.length <= 1 && (
-          <div className="px-5 mt-2">
+        <div
+          className="px-5 mt-2 transition-all duration-300 overflow-hidden"
+          style={{ opacity: messages.length <= 1 ? 1 : 0, maxHeight: messages.length <= 1 ? HERO_SECTION_MAX_HEIGHT : 0 }}
+        >
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 22, fontWeight: 400, color: "rgba(26,18,8,0.55)", lineHeight: 1.3 }}>
               What's on
             </p>
             <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, fontWeight: 700, fontStyle: "italic", color: "#1A1208", lineHeight: 1.2 }}>
               your mind?
             </p>
-          </div>
-        )}
+        </div>
 
         {/* Context banner - Clickable to open insights */}
         <div className="px-5 pb-3">
@@ -634,17 +656,14 @@ export function TherapistScreen() {
             <div className="flex items-center gap-2">
               <Heart size={14} strokeWidth={1.8} color="#C8522A" style={{ flexShrink: 0 }} />
               <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, color: "#1A1208" }}>
-                Practice Insights & Context
+                Session Insights
               </p>
             </div>
             <ArrowRight size={14} color="rgba(26,18,8,0.3)" />
           </button>
         </div>
 
-        <div
-          className="flex-1 overflow-y-auto px-5"
-          style={{ paddingBottom: 110 }}
-        >
+        <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-5" style={{ paddingBottom: composerHeight + BOTTOM_NAV_HEIGHT + CHAT_BOTTOM_BUFFER }}>
           {messages.map((msg, idx) => (
             <div key={`${msg.timestamp}-${idx}`} className={`mb-3 ${msg.role === "user" ? "text-right" : "text-left"}`}>
               <div
@@ -727,11 +746,10 @@ export function TherapistScreen() {
             </div>
           )}
 
-          <div ref={endRef} />
         </div>
 
         {/* Fixed bottom area */}
-        <div className="fixed left-0 right-0 bottom-20 z-30">
+        <div ref={composerRef} className="fixed left-0 right-0 z-30" style={{ bottom: BOTTOM_NAV_HEIGHT }}>
           <div className="max-w-[430px] mx-auto">
             {/* Input bar */}
             <div style={{ backgroundColor: "#FDFAF5", borderTop: "1px solid #E8E0D4" }}>
@@ -777,7 +795,9 @@ export function TherapistScreen() {
                   />
                   <div className="flex items-end gap-2">
                     <button
+                      type="button"
                       onClick={() => fileInputRef.current?.click()}
+                      title="Attach image"
                       style={{
                         width: 40,
                         height: 44,
@@ -817,8 +837,10 @@ export function TherapistScreen() {
                       }}
                     />
                     <button
+                      type="button"
                       onClick={() => void handleSend()}
-                      disabled={isLoading || (!inputValue.trim() && pendingImages.length === 0)}
+                      disabled={isSendDisabled}
+                      title={isSendDisabled ? "Type a message or add an image to send" : "Send message"}
                       style={{
                         width: 44,
                         height: 44,
@@ -826,12 +848,12 @@ export function TherapistScreen() {
                         border: "none",
                         backgroundColor: "#C8522A",
                         color: "#FFFFFF",
-                        cursor: "pointer",
+                        cursor: isSendDisabled ? "not-allowed" : "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         flexShrink: 0,
-                        opacity: isLoading || (!inputValue.trim() && pendingImages.length === 0) ? 0.5 : 1,
+                        opacity: isSendDisabled ? 0.5 : 1,
                       }}
                     >
                       <Send size={18} />
@@ -905,7 +927,7 @@ export function TherapistScreen() {
                         </p>
                         <div className="grid grid-cols-2 gap-3 mb-4">
                           <div className="p-3" style={{ backgroundColor: "#FDF0F0", borderRadius: 14 }}>
-                            <p style={{ fontSize: 11, color: "rgba(212,131,138,0.7)" }}>Attachment</p>
+                            <p style={{ fontSize: 11, color: "rgba(212,131,138,0.7)" }}>Attachment Style</p>
                             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: "#1A1208", textTransform: "capitalize" }}>
                               {clinicalNotes.attachmentStyle || "Analyzing..."}
                             </p>
@@ -941,7 +963,7 @@ export function TherapistScreen() {
                             </p>
                           </div>
                           <span style={{ fontSize: 12, color: "rgba(26,18,8,0.45)", fontFamily: "'JetBrains Mono', monospace" }}>
-                            {memories.length} item(s)
+                            {memories.length} {memories.length === 1 ? "item" : "items"}
                           </span>
                         </div>
 
@@ -1004,6 +1026,10 @@ export function TherapistScreen() {
                           </div>
                         </div>
                       )}
+                      <div
+                        className="pointer-events-none sticky bottom-0 h-8 -mt-8"
+                        style={{ background: "linear-gradient(to top, #FDFAF5, rgba(253,250,245,0))" }}
+                      />
                     </div>
                   </div>
                 </motion.div>
