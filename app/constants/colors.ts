@@ -1,0 +1,15 @@
+export const COLORS = {
+  canvas: '#F5EFE6',
+  surface: '#FDFAF5',
+  elevated: '#FFFFFF',
+  divider: '#E8E0D4',
+  ink: '#1A1208',
+  inkSecondary: 'rgba(26, 18, 8, 0.55)',
+  inkTertiary: 'rgba(26, 18, 8, 0.35)',
+  terracotta: '#C8522A',
+  terracottaHover: '#A8401C',
+  terracottaTint: '#F5E8E0',
+  amberTint: '#FEF3E2',
+  blushTint: '#FDF0F0',
+  sage: '#7A9E7E',
+};

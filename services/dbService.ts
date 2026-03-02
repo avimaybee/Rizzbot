@@ -1,5 +1,5 @@
-// Database Service Layer – client-side helpers for fetching/posting to D1 APIs
 import { logger } from './logger';
+import { Persona, UserStyleProfile as StyleProfile } from '../types';
 
 const API_BASE = typeof window === 'undefined' ? '' : '';
 
@@ -37,33 +37,7 @@ export interface UserData {
   provider?: string | null;
 }
 
-export interface Persona {
-  id?: number;
-  user_id: number;
-  name: string;
-  relationship_context?: string;
-  harshness_level?: number;
-  communication_tips?: string[] | string;
-  conversation_starters?: string[] | string;
-  things_to_avoid?: string[] | string;
-  created_at?: string;
-}
-
-export interface StyleProfile {
-  id?: number;
-  user_id: number;
-  emoji_usage?: string;
-  capitalization?: string;
-  punctuation?: string;
-  average_length?: string;
-  slang_level?: string;
-  signature_patterns?: string[] | string;
-  preferred_tone?: string;
-  raw_samples?: any;
-  ai_summary?: string;
-  favorite_emojis?: string[] | string;
-  created_at?: string;
-}
+// Removed local Persona and StyleProfile interfaces - using center ones from types.ts
 
 export interface FeedbackEntry {
   id?: number;
@@ -188,7 +162,24 @@ export async function updateUserData(userId: number, userData: UserData): Promis
 export async function getPersonas(userId: number): Promise<Persona[]> {
   const res = await fetch(`/api/personas?user_id=${userId}`);
   if (!res.ok) throw new Error(`Failed to get personas: ${res.statusText}`);
-  return res.json();
+  const data = await res.json();
+
+  return (data || []).map((p: any) => ({
+    id: String(p.id),
+    name: p.name,
+    description: "", // Description wasn't in schema, but we can infer or leave empty
+    tone: p.tone || "Unknown",
+    style: p.style || "Standard",
+    habits: p.habits || "Unknown",
+    redFlags: p.red_flags ? JSON.parse(p.red_flags) : [],
+    greenFlags: p.green_flags ? JSON.parse(p.green_flags) : [],
+    relationshipContext: p.relationship_context,
+    harshnessLevel: p.harshness_level,
+    communicationTips: p.communication_tips ? JSON.parse(p.communication_tips) : [],
+    conversationStarters: p.conversation_starters ? JSON.parse(p.conversation_starters) : [],
+    thingsToAvoid: p.things_to_avoid ? JSON.parse(p.things_to_avoid) : [],
+    theirLanguage: p.their_language ? JSON.parse(p.their_language) : [],
+  }));
 }
 
 /**
@@ -197,7 +188,25 @@ export async function getPersonas(userId: number): Promise<Persona[]> {
 export async function getPersona(personaId: number): Promise<Persona | null> {
   const res = await fetch(`/api/personas?persona_id=${personaId}`);
   if (!res.ok) throw new Error(`Failed to get persona: ${res.statusText}`);
-  return res.json();
+  const p = await res.json();
+  if (!p) return null;
+
+  return {
+    id: String(p.id),
+    name: p.name,
+    description: "",
+    tone: p.tone || "Unknown",
+    style: p.style || "Standard",
+    habits: p.habits || "Unknown",
+    redFlags: p.red_flags ? JSON.parse(p.red_flags) : [],
+    greenFlags: p.green_flags ? JSON.parse(p.green_flags) : [],
+    relationshipContext: p.relationship_context,
+    harshnessLevel: p.harshness_level,
+    communicationTips: p.communication_tips ? JSON.parse(p.communication_tips) : [],
+    conversationStarters: p.conversation_starters ? JSON.parse(p.conversation_starters) : [],
+    thingsToAvoid: p.things_to_avoid ? JSON.parse(p.things_to_avoid) : [],
+    theirLanguage: p.their_language ? JSON.parse(p.their_language) : [],
+  };
 }
 
 /**
@@ -237,21 +246,14 @@ export async function deletePersona(id: number): Promise<{ success: boolean }> {
   return res.json();
 }
 
-// ===== Style Profiles API =====
-
-/**
- * Get user's style profile (most recent)
- */
+// Updated Style Profile methods to use imported Interface
 export async function getStyleProfile(userId: number): Promise<StyleProfile | null> {
   const res = await fetch(`/api/style_profiles?user_id=${userId}`);
   if (!res.ok) throw new Error(`Failed to get style profile: ${res.statusText}`);
   return res.json();
 }
 
-/**
- * Save style profile
- */
-export async function saveStyleProfile(profile: StyleProfile): Promise<{ id: number }> {
+export async function saveStyleProfile(profile: any): Promise<{ id: number }> {
   const res = await fetch(`/api/style_profiles`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -290,9 +292,13 @@ export async function submitFeedback(feedback: FeedbackEntry): Promise<{ id: num
 /**
  * Get user's sessions with pagination
  */
-export async function getSessions(firebaseUid?: string, limit = 20, offset = 0): Promise<SessionsResponse> {
+export async function getSessions(identifier?: string | number, limit = 20, offset = 0): Promise<SessionsResponse> {
   const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
-  if (firebaseUid) params.set('anon_id', firebaseUid);
+  if (typeof identifier === 'string') {
+    params.set('anon_id', identifier);
+  } else if (typeof identifier === 'number') {
+    params.set('user_id', String(identifier));
+  }
 
   const res = await fetch(`/api/sessions?${params}`);
 
@@ -451,6 +457,7 @@ export interface TherapistMemory {
   session_id?: string | null;
   type: 'GLOBAL' | 'SESSION';
   content: string;
+  creator?: 'AI' | 'USER';
   created_at?: string;
 }
 
@@ -465,7 +472,7 @@ export async function getMemories(firebaseUid: string, type?: 'GLOBAL' | 'SESSIO
   return data.memories || [];
 }
 
-export async function saveMemory(firebaseUid: string, type: 'GLOBAL' | 'SESSION', content: string, sessionId?: string): Promise<{ success: boolean; id?: number }> {
+export async function saveMemory(firebaseUid: string, type: 'GLOBAL' | 'SESSION', content: string, sessionId?: string, creator: 'AI' | 'USER' = 'USER'): Promise<{ success: boolean; id?: number }> {
   const res = await fetch('/api/memories', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -473,7 +480,8 @@ export async function saveMemory(firebaseUid: string, type: 'GLOBAL' | 'SESSION'
       user_anon_id: firebaseUid,
       type,
       content,
-      session_id: sessionId
+      session_id: sessionId,
+      creator
     })
   });
   if (!res.ok) throw new Error(`Failed to save memory: ${res.statusText}`);
@@ -488,13 +496,47 @@ export async function deleteMemory(id: number): Promise<{ success: boolean }> {
   return res.json();
 }
 
-export async function updateMemory(id: number, content: string, type: 'GLOBAL' | 'SESSION'): Promise<{ success: boolean }> {
+export async function updateMemory(id: number, content: string, type: 'GLOBAL' | 'SESSION', creator?: 'AI' | 'USER'): Promise<{ success: boolean }> {
   const res = await fetch(`/api/memories`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, content, type })
+    body: JSON.stringify({ id, content, type, creator })
   });
   if (!res.ok) throw new Error(`Failed to update memory: ${res.statusText}`);
   return res.json();
+}
+
+// ===== Streaks API =====
+
+export interface StreakData {
+  current_streak: number;
+  longest_streak: number;
+  last_active_date: string | null;
+}
+
+export async function getStreak(firebaseUid: string): Promise<StreakData> {
+  try {
+    const res = await fetch(`/api/streaks?anon_id=${firebaseUid}`);
+    if (!res.ok) return { current_streak: 0, longest_streak: 0, last_active_date: null };
+    const data = await res.json();
+    return data.streak || { current_streak: 0, longest_streak: 0, last_active_date: null };
+  } catch {
+    return { current_streak: 0, longest_streak: 0, last_active_date: null };
+  }
+}
+
+export async function recordActivity(firebaseUid: string): Promise<StreakData> {
+  try {
+    const res = await fetch('/api/streaks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anon_id: firebaseUid })
+    });
+    if (!res.ok) return { current_streak: 0, longest_streak: 0, last_active_date: null };
+    const data = await res.json();
+    return data.streak || { current_streak: 0, longest_streak: 0, last_active_date: null };
+  } catch {
+    return { current_streak: 0, longest_streak: 0, last_active_date: null };
+  }
 }
 

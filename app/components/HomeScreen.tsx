@@ -1,0 +1,359 @@
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
+import { Bell, ChevronRight, Heart, LogOut, Mic, Target, Zap } from "lucide-react";
+import { TabBar } from "./TabBar";
+import { GrainOverlay } from "./GrainOverlay";
+import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { useAppContext } from "../app-context";
+import { getSessions, recordActivity, type StreakData } from "../../services/dbService";
+
+const modeCards = [
+  {
+    name: "Quick Mode",
+    descriptor: "Analyze their text instantly",
+    icon: Zap,
+    path: "/quick",
+    tint: "#FEF8F5",
+    iconBg: "#F5E8E0",
+  },
+  {
+    name: "Practice",
+    descriptor: "Rehearse before you reply",
+    icon: Target,
+    path: "/practice",
+    tint: "#FEFAF5",
+    iconBg: "#FEF3E2",
+  },
+  {
+    name: "Deep Dive",
+    descriptor: "Unpack your patterns",
+    icon: Heart,
+    path: "/therapist",
+    tint: "#FDF9F9",
+    iconBg: "#FDF0F0",
+  },
+  {
+    name: "My Voice",
+    descriptor: "Train your texting style",
+    icon: Mic,
+    path: "/voice",
+    tint: "#F9F9FD",
+    iconBg: "#EEE8F8",
+  },
+];
+
+function getGreeting(): { sub: string; hero: string } {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) {
+    return { sub: "Good morning,", hero: "What's your opening move?" };
+  }
+  if (h >= 12 && h < 17) {
+    return { sub: "Good afternoon,", hero: "Ready to make a move?" };
+  }
+  if (h >= 17 && h < 21) {
+    return { sub: "Good evening,", hero: "What's the move today?" };
+  }
+  return { sub: "Still up?", hero: "Who are you texting?" };
+}
+
+type ActivityItem = {
+  mode: string;
+  time: string;
+  risk?: number;
+};
+
+const formatHoursAgo = (isoDate: string): string => {
+  const delta = Date.now() - new Date(isoDate).getTime();
+  const hours = Math.max(1, Math.floor(delta / (1000 * 60 * 60)));
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+};
+
+export function HomeScreen() {
+  const navigate = useNavigate();
+  const { authUser, userId, signOut } = useAppContext();
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [streak, setStreak] = useState<StreakData>({
+    current_streak: 0,
+    longest_streak: 0,
+    last_active_date: null,
+  });
+  const greeting = useMemo(() => getGreeting(), []);
+  const firstName =
+    authUser?.displayName?.split(" ")[0] ||
+    authUser?.email?.split("@")[0] ||
+    "there";
+
+  useEffect(() => {
+    if (!authUser?.uid) return;
+    let alive = true;
+    void getSessions(userId || authUser.uid, 5, 0)
+      .then((response) => {
+        if (!alive) return;
+        const recent = (response.sessions || []).slice(0, 4).map((session) => ({
+          mode:
+            session.mode === "quick"
+              ? "Quick Mode"
+              : session.mode === "simulator"
+                ? "Practice"
+                : "Deep Dive",
+          time: formatHoursAgo(session.created_at),
+          risk:
+            typeof session.ghost_risk === "number"
+              ? session.ghost_risk
+              : session.parsedResult?.analysis?.ghostRisk,
+        }));
+        setActivity(recent);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setActivity([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [authUser?.uid, userId]);
+
+  useEffect(() => {
+    if (!authUser?.uid) return;
+    let alive = true;
+    void recordActivity(authUser.uid).then((data) => {
+      if (alive) setStreak(data);
+    }).catch(() => { });
+    return () => { alive = false; };
+  }, [authUser?.uid]);
+
+  const isLateNight = new Date().getHours() >= 21 || new Date().getHours() < 5;
+
+  return (
+    <div className="relative min-h-screen pb-24" style={{ backgroundColor: "#F5EFE6" }}>
+      <GrainOverlay />
+      <div className="relative z-10 px-5 pt-14 max-w-[430px] mx-auto">
+        <div className="flex items-center justify-between">
+          <div>
+            <p
+              style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 13,
+                fontWeight: 400,
+                color: "rgba(26, 18, 8, 0.55)",
+              }}
+            >
+              {greeting.sub}
+            </p>
+            <p
+              style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 22,
+                fontWeight: 600,
+                color: "#1A1208",
+              }}
+            >
+              {firstName}
+            </p>
+            {streak.current_streak > 0 && (
+              <div className="mt-1.5 inline-flex items-center gap-1" style={{
+                backgroundColor: '#FEF3E2',
+                border: '1px solid #F5D9A8',
+                borderRadius: 100,
+                padding: '2px 8px',
+              }}>
+                <span style={{ fontSize: 12 }}>🔥</span>
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 500, color: '#C8783A' }}>{streak.current_streak}</span>
+                <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'rgba(26,18,8,0.45)' }}>day streak</span>
+                {streak.longest_streak > streak.current_streak && (
+                  <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 10, color: 'rgba(26,18,8,0.4)' }}>
+                    · best {streak.longest_streak}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Bell size={22} strokeWidth={1.8} color="rgba(26,18,8,0.55)" />
+              {activity.length > 0 && (
+                <div style={{
+                  position: 'absolute', top: 2, right: 2,
+                  width: 8, height: 8, borderRadius: '50%',
+                  backgroundColor: '#C8522A',
+                  border: '1.5px solid #F5EFE6',
+                }} />
+              )}
+            </div>
+            {authUser?.photoURL ? (
+              <ImageWithFallback
+                src={authUser.photoURL}
+                alt={firstName}
+                className="object-cover"
+                style={{ width: 32, height: 32, borderRadius: "50%" }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  backgroundColor: "#F5E8E0",
+                  color: "#C8522A",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontWeight: 700,
+                  fontSize: 12,
+                }}
+              >
+                {firstName.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {isLateNight && (
+          <div
+            className="mt-4"
+            style={{
+              backgroundColor: "#FDF0F0",
+              borderRadius: 16,
+              padding: "12px 16px",
+              border: "1px solid rgba(212,131,138,0.2)",
+            }}
+          >
+            <p
+              style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 13,
+                fontWeight: 400,
+                color: "rgba(26,18,8,0.6)",
+                lineHeight: 1.5,
+              }}
+            >
+              🌙 Late-night texting can feel louder than reality. Take a breath before your next move.
+            </p>
+          </div>
+        )}
+
+        <div className="mt-6">
+          <p
+            style={{
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: 22,
+              fontWeight: 400,
+              color: "rgba(26, 18, 8, 0.55)",
+              lineHeight: 1.3,
+            }}
+          >
+            What's your
+          </p>
+          <p
+            style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: 36,
+              fontWeight: 700,
+              fontStyle: "italic",
+              color: "#1A1208",
+              lineHeight: 1.2,
+            }}
+          >
+            {greeting.hero}
+          </p>
+        </div>
+
+        <div className="mt-6 flex flex-col gap-3">
+          {modeCards.map((card, idx) => {
+            const Icon = card.icon;
+            const iconColor = ["#C8522A", "#C8783A", "#D4838A", "#8B6DBE"][idx];
+            return (
+              <button
+                key={card.name}
+                onClick={() => navigate(card.path)}
+                className="w-full flex items-center cursor-pointer text-left"
+                style={{
+                  height: 80,
+                  backgroundColor: card.tint,
+                  borderRadius: 24,
+                  boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)",
+                  border: "none",
+                  padding: "0 20px",
+                }}
+              >
+                <div
+                  className="flex items-center justify-center shrink-0"
+                  style={{ width: 40, height: 40, borderRadius: "50%", backgroundColor: card.iconBg }}
+                >
+                  <Icon size={20} strokeWidth={1.8} color={iconColor} />
+                </div>
+                <div className="ml-4 flex-1 min-w-0">
+                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
+                    {card.name}
+                  </p>
+                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 400, color: "rgba(26, 18, 8, 0.55)" }}>
+                    {card.descriptor}
+                  </p>
+                </div>
+                <ChevronRight size={16} strokeWidth={1.8} color="rgba(26,18,8,0.35)" />
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-6">
+          <p
+            style={{
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: 11,
+              fontWeight: 500,
+              letterSpacing: "0.15em",
+              color: "rgba(26, 18, 8, 0.55)",
+              textTransform: "uppercase",
+            }}
+          >
+            Recent
+          </p>
+          <div className="mt-3 flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+            {(activity.length > 0 ? activity : [{ mode: "No sessions yet", time: "Start with Quick Mode" }]).map(
+              (item, i) => (
+                <div
+                  key={`${item.mode}-${i}`}
+                  className="flex items-center gap-2 shrink-0"
+                  style={{
+                    backgroundColor: "#FDFAF5",
+                    borderRadius: 100,
+                    border: "1px solid #E8E0D4",
+                    padding: "10px 16px",
+                  }}
+                >
+                  <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500, color: "#1A1208" }}>
+                    {item.mode}
+                  </span>
+                  <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26, 18, 8, 0.55)" }}>
+                    {item.time}
+                  </span>
+                  {typeof item.risk === "number" && (
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: item.risk > 65 ? "#C8522A" : "#7A9E7E" }}>
+                      {item.risk}%
+                    </span>
+                  )}
+                </div>
+              )
+            )}
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            void signOut().then(() => navigate("/auth"));
+          }}
+          className="mt-6 flex items-center gap-2 cursor-pointer"
+          style={{ background: "none", border: "none", color: "rgba(26,18,8,0.5)", fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}
+        >
+          <LogOut size={14} />
+          Sign out
+        </button>
+      </div>
+
+      <TabBar />
+    </div>
+  );
+}

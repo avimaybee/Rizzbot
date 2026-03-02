@@ -163,6 +163,7 @@ export interface QuickAdviceResponse {
     bold: SuggestionOption[];      // 3 options - confident, direct
     witty: SuggestionOption[];     // 3 options - subtle wordplay, clever (not cringe)
     authentic: SuggestionOption[]; // 3 options - user's vibe, elevated (not forced copy)
+    yourStyle: SuggestionOption[]; // 3 options - deep mimicry of user's specific phrasing/quirks
     wait?: string | null;          // Sometimes best move is no move - explains why
   };
   proTip: string; // One psychology-backed insight
@@ -218,7 +219,7 @@ export interface FeedbackEntry {
   id: string; // UUID
   timestamp: number; // Unix timestamp
   source: 'quick' | 'practice'; // Which module
-  suggestionType: 'smooth' | 'bold' | 'witty' | 'authentic' | 'safe' | 'spicy' | 'you';
+  suggestionType: 'smooth' | 'bold' | 'witty' | 'authentic' | 'safe' | 'spicy' | 'you' | 'yourStyle';
   rating: 'helpful' | 'mid' | 'off'; // User's feedback
   context?: string; // Optional: relationship context
   // Metadata for learning
