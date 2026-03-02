@@ -586,14 +586,7 @@ export function HistoryScreen() {
               className="overflow-hidden"
             >
               <div
-                className="mt-3 flex items-center gap-2"
-                style={{
-                  backgroundColor: "#FDFAF5",
-                  borderRadius: 100,
-                  border: "1px solid #E8E0D4",
-                  padding: "0 16px",
-                  height: 44,
-                }}
+                className="mt-3 flex items-center gap-2 bg-[#FDFAF5] rounded-[100px] border border-[#E8E0D4] px-4 h-[44px] transition-all duration-300 focus-within:border-[#C8522A] focus-within:ring-[3px] focus-within:ring-[#C8522A]/20 shadow-sm"
               >
                 <Search size={16} strokeWidth={1.8} color="rgba(26,18,8,0.4)" />
                 <input
@@ -602,13 +595,8 @@ export function HistoryScreen() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search sessions..."
-                  className="flex-1 outline-none bg-transparent"
-                  style={{
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: 14,
-                    color: "#1A1208",
-                    border: "none",
-                  }}
+                  className="flex-1 outline-none bg-transparent text-[14px] text-[#1A1208]"
+                  style={{ fontFamily: "'DM Sans', sans-serif" }}
                 />
                 {query && (
                   <button

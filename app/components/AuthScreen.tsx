@@ -289,16 +289,8 @@ export function AuthScreen() {
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="Display name (optional)"
-                  className="w-full mb-2"
-                  style={{
-                    height: 42,
-                    borderRadius: 12,
-                    border: "1px solid #E8E0D4",
-                    padding: "0 12px",
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: 14,
-                    outline: "none",
-                  }}
+                  className="w-full mb-2 h-[42px] px-3 rounded-[12px] border border-[#E8E0D4] bg-[#FFFFFF] outline-none text-[14px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
+                  style={{ fontFamily: "'DM Sans', sans-serif" }}
                 />
               )}
 
@@ -307,16 +299,8 @@ export function AuthScreen() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email"
                 type="email"
-                className="w-full mb-2"
-                style={{
-                  height: 42,
-                  borderRadius: 12,
-                  border: "1px solid #E8E0D4",
-                  padding: "0 12px",
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 14,
-                  outline: "none",
-                }}
+                className="w-full mb-2 h-[42px] px-3 rounded-[12px] border border-[#E8E0D4] bg-[#FFFFFF] outline-none text-[14px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
+                style={{ fontFamily: "'DM Sans', sans-serif" }}
               />
 
               {mode !== "reset" && (
@@ -325,16 +309,8 @@ export function AuthScreen() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
                   type="password"
-                  className="w-full mb-2"
-                  style={{
-                    height: 42,
-                    borderRadius: 12,
-                    border: "1px solid #E8E0D4",
-                    padding: "0 12px",
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: 14,
-                    outline: "none",
-                  }}
+                  className="w-full mb-2 h-[42px] px-3 rounded-[12px] border border-[#E8E0D4] bg-[#FFFFFF] outline-none text-[14px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
+                  style={{ fontFamily: "'DM Sans', sans-serif" }}
                 />
               )}
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSessionState } from "../utils/useSessionState";
 import { useNavigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -15,6 +16,7 @@ import {
   ThumbsUp,
   X,
   Zap,
+  ChevronRight,
 } from "lucide-react";
 import { TabBar } from "./TabBar";
 import { GrainOverlay } from "./GrainOverlay";
@@ -57,7 +59,7 @@ const contextOptions = [
   { value: "new", label: "NEW" },
   { value: "talking", label: "TALKING" },
   { value: "dating", label: "DATING" },
-  { value: "complicated", label: "COMPLICATED" },
+  { value: "complicated", label: "COMPLEX" },
   { value: "ex", label: "EX" },
 ] as const;
 
@@ -84,12 +86,12 @@ export function QuickModeScreen() {
 
   const [showResults, setShowResults] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [theirMessage, setTheirMessage] = useState("");
-  const [yourDraft, setYourDraft] = useState("");
-  const [context, setContext] = useState<ContextOption>("talking");
-  const [activeTone, setActiveTone] = useState<Tone>("Smooth");
+  const [theirMessage, setTheirMessage] = useSessionState("quick_theirMessage", "");
+  const [yourDraft, setYourDraft] = useSessionState("quick_yourDraft", "");
+  const [context, setContext] = useSessionState<ContextOption>("quick_context", "talking");
+  const [activeTone, setActiveTone] = useSessionState<Tone>("quick_tone", "Smooth");
   const [showStyleTooltip, setShowStyleTooltip] = useState(false);
-  const [screenshots, setScreenshots] = useState<string[]>([]);
+  const [screenshots, setScreenshots] = useSessionState<string[]>("quick_screenshots", []);
   const [result, setResult] = useState<QuickAdviceResponse | null>(null);
   const [feedbackGiven, setFeedbackGiven] = useState<"helpful" | "off" | null>(null);
   const [cursor, setCursor] = useState<Record<Tone, number>>({
@@ -123,10 +125,17 @@ export function QuickModeScreen() {
 
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    const picked = Array.from(files).slice(0, 3);
+
+    const remainingSlots = 3 - screenshots.length;
+    if (remainingSlots <= 0) {
+      toast("Maximum 3 screenshots allowed", "error");
+      return;
+    }
+
+    const picked = Array.from(files).slice(0, remainingSlots);
     try {
       const encoded = await Promise.all(picked.map((f) => toDataUrl(f)));
-      setScreenshots(encoded);
+      setScreenshots((prev) => [...prev, ...encoded]);
       toast(`${encoded.length} screenshot(s) attached`, "success");
     } catch {
       toast("Could not read one or more screenshots", "error");
@@ -214,7 +223,7 @@ export function QuickModeScreen() {
   const handleFeedback = (rating: "helpful" | "off") => {
     if (!authUser?.uid || !result) return;
     setFeedbackGiven(rating);
-    const suggestionType = feedbackTypeMap[activeTone];
+    const suggestionType = feedbackTypeMap[activeTone] as any;
     saveFeedback(authUser.uid, {
       source: "quick",
       suggestionType,
@@ -361,7 +370,7 @@ export function QuickModeScreen() {
             </div>
 
             <div className="mt-4 relative">
-              <label className="block mb-1.5" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>Their Message</label>
+              <label className="block mb-1.5" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>Context</label>
               <textarea
                 value={theirMessage}
                 onChange={(e) => {
@@ -369,17 +378,11 @@ export function QuickModeScreen() {
                   e.target.style.height = 'auto';
                   e.target.style.height = `${e.target.scrollHeight}px`;
                 }}
-                placeholder={screenshots.length > 0 ? "Any backstory? e.g., 'We haven't talked in 2 weeks'" : "Paste or type their message here..."}
-                className="w-full resize-none outline-none overflow-hidden"
+                placeholder={screenshots.length > 0 ? "Any backstory? e.g., 'We haven't talked in 2 weeks'" : "Paste their message or add context here..."}
+                className="w-full resize-none outline-none overflow-hidden bg-[#FDFAF5] rounded-[14px] border border-[#E8E0D4] p-4 text-[15px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
                 style={{
-                  minHeight: 90,
-                  backgroundColor: "#FDFAF5",
-                  borderRadius: 14,
-                  border: "1px solid #E8E0D4",
-                  padding: "14px 16px",
+                  minHeight: 100,
                   fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 15,
-                  color: "#1A1208",
                 }}
               />
             </div>
@@ -397,16 +400,10 @@ export function QuickModeScreen() {
                   e.target.style.height = `${e.target.scrollHeight}px`;
                 }}
                 placeholder="What are you thinking of saying?"
-                className="w-full resize-none outline-none overflow-hidden"
+                className="w-full resize-none outline-none overflow-hidden bg-[#FDFAF5] rounded-[14px] border border-[#E8E0D4] p-4 text-[15px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
                 style={{
-                  minHeight: 90,
-                  backgroundColor: "#FDFAF5",
-                  borderRadius: 14,
-                  border: "1px solid #E8E0D4",
-                  padding: "14px 16px",
+                  minHeight: 100,
                   fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 15,
-                  color: "#1A1208",
                 }}
               />
             </div>
@@ -512,7 +509,14 @@ export function QuickModeScreen() {
               <div className="mb-4" style={{ height: 1, backgroundColor: "#E8E0D4" }} />
 
               {[
-                { label: "Energy", value: result?.vibeCheck.theirEnergy || "neutral", level: 0.6, color: "#C8522A" },
+                {
+                  label: "Energy",
+                  value: result?.vibeCheck.theirEnergy || "neutral",
+                  level: result?.vibeCheck.theirEnergy === "hot" ? 1.0 :
+                    result?.vibeCheck.theirEnergy === "warm" ? 0.8 :
+                      result?.vibeCheck.theirEnergy === "cold" ? 0.2 : 0.5,
+                  color: "#C8522A"
+                },
                 {
                   label: "Interest",
                   value: `${result?.vibeCheck.interestLevel || 50}/100`,
@@ -685,27 +689,47 @@ export function QuickModeScreen() {
                 </div>
               </div>
 
-              <button
-                onClick={() =>
-                  setCursor((prev) => ({
-                    ...prev,
-                    [activeTone]:
-                      selectedOptions.length > 0 ? (prev[activeTone] + 1) % selectedOptions.length : 0,
-                  }))
-                }
-                className="w-full flex items-center justify-center gap-2 mt-4 cursor-pointer"
-                style={{
-                  background: "none",
-                  border: "none",
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 13,
-                  fontWeight: 400,
-                  color: "#C8522A",
-                }}
-              >
-                <RotateCcw size={14} strokeWidth={1.8} />
-                Regenerate
-              </button>
+              {selectedOptions.length > 0 && (
+                <div className="flex items-center justify-between mt-5 pt-4" style={{ borderTop: "1px solid #E8E0D4" }}>
+                  <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, color: "rgba(26,18,8,0.55)" }}>
+                    Variation {(cursor[activeTone] % selectedOptions.length) + 1} of {selectedOptions.length}
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        haptics.light();
+                        setCursor(prev => ({
+                          ...prev,
+                          [activeTone]: prev[activeTone] > 0 ? prev[activeTone] - 1 : selectedOptions.length - 1
+                        }));
+                      }}
+                      className="flex items-center justify-center cursor-pointer transition-colors"
+                      style={{
+                        width: 36, height: 36, borderRadius: 18,
+                        backgroundColor: "#F5E8E0", border: "1px solid #E8E0D4", color: "#C8522A"
+                      }}
+                    >
+                      <ChevronLeft size={16} strokeWidth={2.5} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        haptics.light();
+                        setCursor(prev => ({
+                          ...prev,
+                          [activeTone]: prev[activeTone] + 1
+                        }));
+                      }}
+                      className="flex items-center justify-center cursor-pointer transition-colors"
+                      style={{
+                        width: 36, height: 36, borderRadius: 18,
+                        backgroundColor: "#F5E8E0", border: "1px solid #E8E0D4", color: "#C8522A"
+                      }}
+                    >
+                      <ChevronRight size={16} strokeWidth={2.5} />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -459,15 +459,7 @@ export function MyVoiceScreen() {
             <select
               value={computedProfile.emojiUsage}
               onChange={(e) => updateProfile({ emojiUsage: e.target.value as UserStyleProfile["emojiUsage"] })}
-              style={{
-                height: 40,
-                borderRadius: 10,
-                border: "1px solid #E8E0D4",
-                padding: "0 10px",
-                fontSize: 13,
-                color: "#1A1208",
-                backgroundColor: "#FFFFFF",
-              }}
+              className="h-[40px] rounded-[10px] border border-[#E8E0D4] px-[10px] text-[13px] text-[#1A1208] bg-[#FFFFFF] outline-none transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20"
             >
               <option value="none">emoji: none</option>
               <option value="minimal">emoji: minimal</option>
@@ -477,15 +469,7 @@ export function MyVoiceScreen() {
             <select
               value={computedProfile.averageLength}
               onChange={(e) => updateProfile({ averageLength: e.target.value as UserStyleProfile["averageLength"] })}
-              style={{
-                height: 40,
-                borderRadius: 10,
-                border: "1px solid #E8E0D4",
-                padding: "0 10px",
-                fontSize: 13,
-                color: "#1A1208",
-                backgroundColor: "#FFFFFF",
-              }}
+              className="h-[40px] rounded-[10px] border border-[#E8E0D4] px-[10px] text-[13px] text-[#1A1208] bg-[#FFFFFF] outline-none transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20"
             >
               <option value="short">length: short</option>
               <option value="medium">length: medium</option>
@@ -494,15 +478,7 @@ export function MyVoiceScreen() {
             <select
               value={computedProfile.preferredTone}
               onChange={(e) => updateProfile({ preferredTone: e.target.value as UserStyleProfile["preferredTone"] })}
-              style={{
-                height: 40,
-                borderRadius: 10,
-                border: "1px solid #E8E0D4",
-                padding: "0 10px",
-                fontSize: 13,
-                color: "#1A1208",
-                backgroundColor: "#FFFFFF",
-              }}
+              className="h-[40px] rounded-[10px] border border-[#E8E0D4] px-[10px] text-[13px] text-[#1A1208] bg-[#FFFFFF] outline-none transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20"
             >
               <option value="chill">tone: chill</option>
               <option value="playful">tone: playful</option>
@@ -512,15 +488,7 @@ export function MyVoiceScreen() {
             <select
               value={computedProfile.responseSpeed || "normal"}
               onChange={(e) => updateProfile({ responseSpeed: e.target.value as UserStyleProfile["responseSpeed"] })}
-              style={{
-                height: 40,
-                borderRadius: 10,
-                border: "1px solid #E8E0D4",
-                padding: "0 10px",
-                fontSize: 13,
-                color: "#1A1208",
-                backgroundColor: "#FFFFFF",
-              }}
+              className="h-[40px] rounded-[10px] border border-[#E8E0D4] px-[10px] text-[13px] text-[#1A1208] bg-[#FFFFFF] outline-none transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20"
             >
               <option value="slow">speed: slow</option>
               <option value="normal">speed: normal</option>
@@ -529,15 +497,7 @@ export function MyVoiceScreen() {
             <select
               value={computedProfile.flirtLevel || "subtle"}
               onChange={(e) => updateProfile({ flirtLevel: e.target.value as UserStyleProfile["flirtLevel"] })}
-              style={{
-                height: 40,
-                borderRadius: 10,
-                border: "1px solid #E8E0D4",
-                padding: "0 10px",
-                fontSize: 13,
-                color: "#1A1208",
-                backgroundColor: "#FFFFFF",
-              }}
+              className="h-[40px] rounded-[10px] border border-[#E8E0D4] px-[10px] text-[13px] text-[#1A1208] bg-[#FFFFFF] outline-none transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20"
             >
               <option value="none">flirt: none</option>
               <option value="subtle">flirt: subtle</option>
@@ -547,15 +507,7 @@ export function MyVoiceScreen() {
             <select
               value={computedProfile.humorStyle || "playful"}
               onChange={(e) => updateProfile({ humorStyle: e.target.value as UserStyleProfile["humorStyle"] })}
-              style={{
-                height: 40,
-                borderRadius: 10,
-                border: "1px solid #E8E0D4",
-                padding: "0 10px",
-                fontSize: 13,
-                color: "#1A1208",
-                backgroundColor: "#FFFFFF",
-              }}
+              className="h-[40px] rounded-[10px] border border-[#E8E0D4] px-[10px] text-[13px] text-[#1A1208] bg-[#FFFFFF] outline-none transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20"
             >
               <option value="dry">humor: dry</option>
               <option value="playful">humor: playful</option>
@@ -643,18 +595,8 @@ export function MyVoiceScreen() {
                   setSampleTexts((prev) => prev.map((value, i) => (i === idx ? e.target.value : value)))
                 }
                 placeholder={`Text sample ${idx + 1}`}
-                style={{
-                  width: "100%",
-                  minHeight: 56,
-                  borderRadius: 12,
-                  border: "1px solid #E8E0D4",
-                  padding: "10px 12px",
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 13,
-                  color: "#1A1208",
-                  outline: "none",
-                  resize: "vertical",
-                }}
+                className="w-full min-h-[56px] rounded-[12px] border border-[#E8E0D4] p-3 text-[13px] text-[#1A1208] outline-none resize-y transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
+                style={{ fontFamily: "'DM Sans', sans-serif" }}
               />
             ))}
           </div>

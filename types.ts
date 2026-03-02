@@ -219,7 +219,7 @@ export interface FeedbackEntry {
   id: string; // UUID
   timestamp: number; // Unix timestamp
   source: 'quick' | 'practice'; // Which module
-  suggestionType: 'smooth' | 'bold' | 'authentic' | 'safe' | 'spicy' | 'you';
+  suggestionType: 'smooth' | 'bold' | 'authentic' | 'safe' | 'spicy' | 'you' | 'witty' | 'yourStyle';
   rating: 'helpful' | 'mid' | 'off'; // User's feedback
   context?: string; // Optional: relationship context
   // Metadata for learning

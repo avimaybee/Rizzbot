@@ -67,7 +67,7 @@ export async function onRequest(context: any) {
         // POST create memory
         if (request.method === 'POST') {
             const body = await request.json();
-            const { user_anon_id, session_id, type, content } = body;
+            const { user_anon_id, session_id, type, content, creator } = body;
 
             let resolvedUserId = body.user_id;
             if (!resolvedUserId && user_anon_id) {
@@ -79,9 +79,9 @@ export async function onRequest(context: any) {
             if (!content || !type) return new Response(JSON.stringify({ error: 'Content and Type required' }), { status: 400, headers: corsHeaders });
 
             const res = await db.prepare(`
-        INSERT INTO therapist_memories (user_id, session_id, type, content)
-        VALUES (?, ?, ?, ?)
-      `).bind(resolvedUserId, session_id || null, type, content).run();
+        INSERT INTO therapist_memories (user_id, session_id, type, content, creator)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(resolvedUserId, session_id || null, type, content, creator || 'USER').run();
 
             return new Response(JSON.stringify({ success: true, id: res.meta?.last_rowid }), { headers: corsHeaders });
         }
@@ -89,12 +89,12 @@ export async function onRequest(context: any) {
         // PUT update memory
         if (request.method === 'PUT') {
             const body = await request.json();
-            const { id, content, type } = body;
+            const { id, content, type, creator } = body;
 
             if (!id || !content || !type) return new Response(JSON.stringify({ error: 'ID, Content, and Type required' }), { status: 400, headers: corsHeaders });
 
-            await db.prepare('UPDATE therapist_memories SET content = ?, type = ? WHERE id = ?')
-                .bind(content, type, id).run();
+            await db.prepare('UPDATE therapist_memories SET content = ?, type = ?, creator = ? WHERE id = ?')
+                .bind(content, type, creator || 'USER', id).run();
 
             return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
         }

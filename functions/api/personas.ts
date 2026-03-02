@@ -68,6 +68,12 @@ export async function onRequest(context: any) {
         communication_tips,
         conversation_starters,
         things_to_avoid,
+        tone,
+        style,
+        habits,
+        redFlags,
+        greenFlags,
+        theirLanguage,
       } = body;
 
       if (!user_id || !name) {
@@ -79,8 +85,8 @@ export async function onRequest(context: any) {
 
       const result = await db
         .prepare(
-          `INSERT INTO personas (user_id, name, relationship_context, harshness_level, communication_tips, conversation_starters, things_to_avoid)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO personas (user_id, name, relationship_context, harshness_level, communication_tips, conversation_starters, things_to_avoid, tone, style, habits, red_flags, green_flags, their_language)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .bind(
           user_id,
@@ -89,7 +95,13 @@ export async function onRequest(context: any) {
           harshness_level || null,
           typeof communication_tips === 'string' ? communication_tips : JSON.stringify(communication_tips || []),
           typeof conversation_starters === 'string' ? conversation_starters : JSON.stringify(conversation_starters || []),
-          typeof things_to_avoid === 'string' ? things_to_avoid : JSON.stringify(things_to_avoid || [])
+          typeof things_to_avoid === 'string' ? things_to_avoid : JSON.stringify(things_to_avoid || []),
+          tone || null,
+          style || null,
+          habits || null,
+          typeof redFlags === 'string' ? redFlags : JSON.stringify(redFlags || []),
+          typeof greenFlags === 'string' ? greenFlags : JSON.stringify(greenFlags || []),
+          typeof theirLanguage === 'string' ? theirLanguage : JSON.stringify(theirLanguage || [])
         )
         .run();
 
@@ -100,7 +112,7 @@ export async function onRequest(context: any) {
 
     if (request.method === 'PUT') {
       const body = await request.json();
-      const { id, name, relationship_context, harshness_level, communication_tips, conversation_starters, things_to_avoid } = body;
+      const { id, name, relationship_context, harshness_level, communication_tips, conversation_starters, things_to_avoid, tone, style, habits, redFlags, greenFlags, theirLanguage } = body;
 
       if (!id) {
         return new Response(JSON.stringify({ error: 'id required' }), {
@@ -111,7 +123,7 @@ export async function onRequest(context: any) {
 
       const result = await db
         .prepare(
-          `UPDATE personas SET name = ?, relationship_context = ?, harshness_level = ?, communication_tips = ?, conversation_starters = ?, things_to_avoid = ?
+          `UPDATE personas SET name = ?, relationship_context = ?, harshness_level = ?, communication_tips = ?, conversation_starters = ?, things_to_avoid = ?, tone = ?, style = ?, habits = ?, red_flags = ?, green_flags = ?, their_language = ?
            WHERE id = ?`
         )
         .bind(
@@ -121,6 +133,12 @@ export async function onRequest(context: any) {
           typeof communication_tips === 'string' ? communication_tips : JSON.stringify(communication_tips || []),
           typeof conversation_starters === 'string' ? conversation_starters : JSON.stringify(conversation_starters || []),
           typeof things_to_avoid === 'string' ? things_to_avoid : JSON.stringify(things_to_avoid || []),
+          tone || null,
+          style || null,
+          habits || null,
+          typeof redFlags === 'string' ? redFlags : JSON.stringify(redFlags || []),
+          typeof greenFlags === 'string' ? greenFlags : JSON.stringify(greenFlags || []),
+          typeof theirLanguage === 'string' ? theirLanguage : JSON.stringify(theirLanguage || []),
           id
         )
         .run();

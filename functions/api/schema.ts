@@ -96,9 +96,22 @@ const ensureSchemaInternal = async (db: D1Database): Promise<void> => {
       communication_tips TEXT,
       conversation_starters TEXT,
       things_to_avoid TEXT,
+      tone TEXT,
+      style TEXT,
+      habits TEXT,
+      red_flags TEXT,
+      green_flags TEXT,
+      their_language TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`
   );
+
+  await runSchemaStatement(db, `ALTER TABLE personas ADD COLUMN tone TEXT`);
+  await runSchemaStatement(db, `ALTER TABLE personas ADD COLUMN style TEXT`);
+  await runSchemaStatement(db, `ALTER TABLE personas ADD COLUMN habits TEXT`);
+  await runSchemaStatement(db, `ALTER TABLE personas ADD COLUMN red_flags TEXT`);
+  await runSchemaStatement(db, `ALTER TABLE personas ADD COLUMN green_flags TEXT`);
+  await runSchemaStatement(db, `ALTER TABLE personas ADD COLUMN their_language TEXT`);
 
   await runSchemaStatement(
     db,
@@ -144,9 +157,12 @@ const ensureSchemaInternal = async (db: D1Database): Promise<void> => {
       session_id TEXT,
       type TEXT NOT NULL,
       content TEXT NOT NULL,
+      creator TEXT DEFAULT 'USER',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`
   );
+
+  await runSchemaStatement(db, `ALTER TABLE therapist_memories ADD COLUMN creator TEXT DEFAULT 'USER'`);
 
   await runSchemaStatement(
     db,

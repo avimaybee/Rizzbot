@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSessionState } from "../utils/useSessionState";
 import { useNavigate } from "react-router";
 import {
   ArrowRight,
@@ -164,17 +165,8 @@ function ExerciseCard({
                 setBoundaries(next);
               }}
               placeholder={`Boundary ${i + 1}`}
-              style={{
-                width: "100%",
-                height: 42,
-                borderRadius: 12,
-                border: "1px solid #E8E0D4",
-                padding: "0 12px",
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: 14,
-                outline: "none",
-                backgroundColor: "#FFFFFF",
-              }}
+              className="w-full h-[42px] px-3 rounded-[12px] border border-[#E8E0D4] bg-[#FFFFFF] outline-none text-[14px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
+              style={{ fontFamily: "'DM Sans', sans-serif" }}
             />
           ))}
         </div>
@@ -270,16 +262,8 @@ function MemoryItem({
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            style={{
-              width: "100%",
-              minHeight: 60,
-              borderRadius: 10,
-              border: "1px solid #E8E0D4",
-              padding: 10,
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: 13,
-              outline: "none",
-            }}
+            className="w-full min-h-[60px] rounded-[10px] border border-[#E8E0D4] p-2.5 text-[13px] bg-[#FFFFFF] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm outline-none resize-none"
+            style={{ fontFamily: "'DM Sans', sans-serif" }}
           />
           <div className="mt-2 flex gap-2">
             <button
@@ -373,8 +357,8 @@ export function TherapistScreen() {
   const [interactionId, setInteractionId] = useState<string | undefined>(
     () => localStorage.getItem("therapist_interaction_id") || undefined
   );
-  const [inputValue, setInputValue] = useState("");
-  const [pendingImages, setPendingImages] = useState<string[]>([]);
+  const [inputValue, setInputValue] = useSessionState("therapist_input", "");
+  const [pendingImages, setPendingImages] = useSessionState<string[]>("therapist_images", []);
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [pendingExercise, setPendingExercise] = useState<TherapistExercise | null>(null);
@@ -472,7 +456,7 @@ export function TherapistScreen() {
   const handleAddMemory = async () => {
     if (!authUser?.uid || !memoryDraft.trim()) return;
     try {
-      await saveMemory(authUser.uid, memoryType, memoryDraft.trim(), interactionId);
+      await saveMemory(authUser.uid, memoryType, memoryDraft.trim(), interactionId, "USER");
       setMemoryDraft("");
       await refreshMemories();
       toast("Memory saved", "success");
@@ -481,10 +465,10 @@ export function TherapistScreen() {
     }
   };
 
-  const handleUpdateMemory = async (id: number, content: string, type: "GLOBAL" | "SESSION") => {
+  const handleUpdateMemory = async (id: number, content: string, type: "GLOBAL" | "SESSION", creator?: "AI" | "USER") => {
     if (!id) return;
     try {
-      await updateMemory(id, content, type);
+      await updateMemory(id, content, type, creator);
       await refreshMemories();
     } catch {
       toast("Could not update memory", "error");
@@ -553,7 +537,7 @@ export function TherapistScreen() {
         (toolName, args) => {
           capturedInsights[toolName] = args;
           if (toolName === "save_memory" && args && authUser?.uid) {
-            void saveMemory(authUser.uid, args.type, args.content, currentInteractionId).then(() => {
+            void saveMemory(authUser.uid, args.type, args.content, currentInteractionId, "AI").then(() => {
               void refreshMemories();
             });
           }
@@ -611,15 +595,6 @@ export function TherapistScreen() {
           </p>
           <div className="flex items-center gap-1">
             <button
-              onClick={() => {
-                setInsightsOpen(true);
-                haptics.light();
-              }}
-              style={{ border: "none", background: "none", color: "#C8522A", cursor: "pointer", padding: 6 }}
-            >
-              <MemoryStick size={20} />
-            </button>
-            <button
               onClick={() => setShowSessionSheet(true)}
               style={{ border: "none", background: "none", color: "rgba(26,18,8,0.4)", cursor: "pointer", padding: 6 }}
             >
@@ -640,20 +615,35 @@ export function TherapistScreen() {
           </div>
         )}
 
-        {/* Context banner */}
+        {/* Context banner - Clickable to open insights */}
         <div className="px-5 pb-3">
-          <div className="flex items-center gap-2" style={{ backgroundColor: "#FDF0F0", borderRadius: 16, padding: "10px 16px" }}>
-            <Heart size={14} strokeWidth={1.8} color="rgba(212,131,138,0.6)" style={{ flexShrink: 0 }} />
-            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 400, color: "rgba(26,18,8,0.55)" }}>
-              This space is private and judgment-free
-            </p>
-          </div>
+          <button
+            onClick={() => {
+              setInsightsOpen(true);
+              haptics.light();
+            }}
+            className="w-full flex items-center justify-between gap-2 transition-all duration-300 active:scale-[0.98]"
+            style={{
+              backgroundColor: "#FDFAF5",
+              borderRadius: 16,
+              padding: "12px 16px",
+              border: "1px solid #E8E0D4",
+              boxShadow: "0 2px 8px rgba(26,18,8,0.04)"
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <Heart size={14} strokeWidth={1.8} color="#C8522A" style={{ flexShrink: 0 }} />
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, color: "#1A1208" }}>
+                Practice Insights & Context
+              </p>
+            </div>
+            <ArrowRight size={14} color="rgba(26,18,8,0.3)" />
+          </button>
         </div>
 
-        {/* Chat area */}
         <div
           className="flex-1 overflow-y-auto px-5"
-          style={{ paddingBottom: insightsOpen ? "calc(60vh + 80px)" : 148 }}
+          style={{ paddingBottom: 110 }}
         >
           {messages.map((msg, idx) => (
             <div key={`${msg.timestamp}-${idx}`} className={`mb-3 ${msg.role === "user" ? "text-right" : "text-left"}`}>
@@ -743,26 +733,6 @@ export function TherapistScreen() {
         {/* Fixed bottom area */}
         <div className="fixed left-0 right-0 bottom-20 z-30">
           <div className="max-w-[430px] mx-auto">
-            {/* View Insights toggle */}
-            <button
-              onClick={() => {
-                setInsightsOpen((prev) => !prev);
-                haptics.medium();
-              }}
-              className="flex items-center justify-center gap-2 w-full"
-              style={{
-                padding: "8px 0",
-                backgroundColor: "#FDFAF5",
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, color: "#C8522A" }}>
-                {insightsOpen ? "Hide Session Insights" : "View Session Insights"}
-              </span>
-              {insightsOpen ? <ChevronDown size={14} color="#C8522A" /> : <ChevronUp size={14} color="#C8522A" />}
-            </button>
-
             {/* Input bar */}
             <div style={{ backgroundColor: "#FDFAF5", borderTop: "1px solid #E8E0D4" }}>
               <div className="px-4 py-3">
@@ -839,20 +809,11 @@ export function TherapistScreen() {
                       }}
                       placeholder="Share what's on your mind..."
                       rows={1}
+                      className="flex-1 min-h-[44px] max-h-[120px] rounded-[22px] border border-transparent bg-[#F5EFE6] px-4 py-[11px] text-[15px] text-[#1A1208] outline-none resize-none overflow-y-auto transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20"
                       style={{
-                        flex: 1,
-                        minHeight: 44,
-                        maxHeight: 120,
-                        borderRadius: 22,
-                        border: "none",
-                        backgroundColor: "#F5EFE6",
-                        padding: "10px 16px",
                         fontFamily: "'DM Sans', sans-serif",
-                        fontSize: 14,
-                        outline: "none",
-                        color: "#1A1208",
-                        resize: "none",
-                        overflowY: "auto",
+                        lineHeight: "1.4",
+                        boxSizing: "border-box"
                       }}
                     />
                     <button
@@ -881,7 +842,7 @@ export function TherapistScreen() {
             </div>
           </div>
 
-          {/* Consolidated Insights/Notes Drawer */}
+          {/* Move Insights Drawer outside the z-10 container to fix glitch */}
           <AnimatePresence>
             {insightsOpen && (
               <>
@@ -889,8 +850,8 @@ export function TherapistScreen() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-40"
-                  style={{ backgroundColor: "rgba(26,18,8,0.3)" }}
+                  className="fixed inset-0 z-[100]"
+                  style={{ backgroundColor: "rgba(26,18,8,0.4)", backdropFilter: "blur(4px)" }}
                   onClick={() => setInsightsOpen(false)}
                 />
                 <motion.div
@@ -904,27 +865,27 @@ export function TherapistScreen() {
                     if (info.offset.y > 100) setInsightsOpen(false);
                   }}
                   transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                  className="fixed left-0 right-0 bottom-20 z-50 overflow-hidden"
-                  style={{ maxHeight: "75vh" }}
+                  className="fixed left-0 right-0 bottom-0 z-[110] overflow-hidden"
+                  style={{ maxHeight: "85vh" }}
                 >
                   <div
-                    className="max-w-[430px] mx-auto flex flex-col"
+                    className="max-w-[430px] mx-auto flex flex-col h-full"
                     style={{
                       backgroundColor: "#FDFAF5",
                       borderTopLeftRadius: 32,
                       borderTopRightRadius: 32,
-                      boxShadow: "0 -8px 40px rgba(26,18,8,0.12)",
-                      maxHeight: "75vh",
+                      boxShadow: "0 -8px 40px rgba(26,18,8,0.15)",
+                      maxHeight: "85vh",
                     }}
                   >
                     {/* Drag handle */}
-                    <div className="flex justify-center pt-3 pb-3">
-                      <div style={{ width: 36, height: 4, borderRadius: 100, backgroundColor: "rgba(26,18,8,0.1)" }} />
+                    <div className="flex justify-center pt-3 pb-2">
+                      <div style={{ width: 36, height: 4, borderRadius: 100, backgroundColor: "rgba(26,18,8,0.12)" }} />
                     </div>
 
-                    <div className="flex-1 overflow-y-auto px-5 pb-12">
+                    <div className="flex-1 overflow-y-auto px-5 pb-24">
                       {/* Drawer Title & Header */}
-                      <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center justify-between py-4 mb-2 sticky top-0 bg-[#FDFAF5] z-10">
                         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 18, fontWeight: 600, color: "#1A1208" }}>
                           Session Insights
                         </p>
@@ -938,7 +899,7 @@ export function TherapistScreen() {
                       </div>
 
                       {/* Snapshot Section */}
-                      <div className="mb-8 p-4" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E8E0D4", borderRadius: 20 }}>
+                      <div className="mb-8 p-4 cursor-pointer" onClick={() => setInsightsOpen(true)} style={{ backgroundColor: "#FFFFFF", border: "1px solid #E8E0D4", borderRadius: 20 }}>
                         <p className="mb-3" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(26,18,8,0.4)" }}>
                           Current Context
                         </p>
@@ -989,18 +950,8 @@ export function TherapistScreen() {
                             value={memoryDraft}
                             onChange={(e) => setMemoryDraft(e.target.value)}
                             placeholder="Save a key fact or pattern..."
-                            style={{
-                              width: "100%",
-                              minHeight: 80,
-                              borderRadius: 16,
-                              border: "1px solid #E8E0D4",
-                              padding: 14,
-                              fontFamily: "'DM Sans', sans-serif",
-                              fontSize: 14,
-                              outline: "none",
-                              backgroundColor: "#FFFFFF",
-                              resize: "none",
-                            }}
+                            className="w-full min-h-[80px] rounded-[16px] border border-[#E8E0D4] p-3.5 text-[15px] bg-[#FFFFFF] outline-none resize-none transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
+                            style={{ fontFamily: "'DM Sans', sans-serif", lineHeight: "1.4" }}
                           />
                           <div className="flex items-center gap-2">
                             <button
@@ -1008,16 +959,17 @@ export function TherapistScreen() {
                               disabled={!memoryDraft.trim()}
                               style={{
                                 flex: 1,
-                                height: 44,
+                                height: 48,
                                 borderRadius: 100,
                                 border: "none",
                                 backgroundColor: "#C8522A",
                                 color: "#FFFFFF",
                                 fontFamily: "'DM Sans', sans-serif",
-                                fontSize: 14,
+                                fontSize: 15,
                                 fontWeight: 600,
                                 cursor: "pointer",
                                 opacity: memoryDraft.trim() ? 1 : 0.5,
+                                boxShadow: "0 4px 12px rgba(200, 82, 42, 0.2)"
                               }}
                             >
                               Save Note
@@ -1034,7 +986,7 @@ export function TherapistScreen() {
 
                       {/* Insights Section */}
                       {clinicalNotes.actionItems.length > 0 && (
-                        <div>
+                        <div className="pb-10">
                           <div className="flex items-center gap-2 mb-4">
                             <Sparkles size={16} color="#C8522A" />
                             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSessionState } from "../utils/useSessionState";
 import { useNavigate } from "react-router";
 import {
   AlertCircle,
@@ -44,8 +45,6 @@ const personaIcons: Record<string, any> = {
   "The Flirt": SparklesIcon,
   "Custom...": Pencil,
 };
-
-const difficultyOptions = ["Chill", "Realistic", "Brutal"] as const;
 const vibeGoals = ["Get a date", "Reignite spark", "Stop the silence", "Just practice"];
 
 type ChatMessage = {
@@ -145,21 +144,20 @@ export function PracticeScreen() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { authUser, userId, userProfile, runWellbeingCheck } = useAppContext();
-  const [mode, setMode] = useState<"setup" | "chat">("setup");
-  const [activePersonaName, setActivePersonaName] = useState<(typeof personaOptions)[number]>("The Dry Texter");
-  const [activeDifficulty, setActiveDifficulty] = useState<(typeof difficultyOptions)[number]>("Realistic");
-  const [goalText, setGoalText] = useState("");
-  const [activeGoal, setActiveGoal] = useState("");
-  const [customDescription, setCustomDescription] = useState("");
-  const [screenshots, setScreenshots] = useState<string[]>([]);
+  const [mode, setMode] = useSessionState<"setup" | "chat">("practice_mode", "setup");
+  const [activePersonaName, setActivePersonaName] = useSessionState<(typeof personaOptions)[number]>("practice_persona_name", "The Dry Texter");
+  const [goalText, setGoalText] = useSessionState("practice_goal_text", "");
+  const [activeGoal, setActiveGoal] = useSessionState("practice_active_goal", "");
+  const [customDescription, setCustomDescription] = useSessionState("practice_custom_desc", "");
+  const [screenshots, setScreenshots] = useSessionState<string[]>("practice_screenshots", []);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [persona, setPersona] = useState<Persona | null>(null);
+  const [persona, setPersona] = useSessionState<Persona | null>("practice_persona", null);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [simHistory, setSimHistory] = useState<{ draft: string; result: SimResult }[]>([]);
-  const [inputText, setInputText] = useState("");
+  const [messages, setMessages] = useSessionState<ChatMessage[]>("practice_messages", []);
+  const [simHistory, setSimHistory] = useSessionState<{ draft: string; result: SimResult }[]>("practice_simHistory", []);
+  const [inputText, setInputText] = useSessionState("practice_inputText", "");
   const [isTyping, setIsTyping] = useState(false);
-  const [lastResult, setLastResult] = useState<SimResult | null>(null);
+  const [lastResult, setLastResult] = useSessionState<SimResult | null>("practice_lastResult", null);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [showHintSheet, setShowHintSheet] = useState(false);
   const [savedPersonas, setSavedPersonas] = useState<Persona[]>([]);
@@ -193,10 +191,17 @@ export function PracticeScreen() {
 
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    const picked = Array.from(files).slice(0, 3);
+    const picked = Array.from(files);
+
+    if (screenshots.length + picked.length > 3) {
+      toast("You can only attach up to 3 screenshots.", "error");
+      return;
+    }
+
+    const toProcess = picked.slice(0, 3 - screenshots.length);
     try {
-      const encoded = await Promise.all(picked.map((file) => toDataUrl(file)));
-      setScreenshots(encoded);
+      const encoded = await Promise.all(toProcess.map((file) => toDataUrl(file)));
+      setScreenshots((prev) => [...prev, ...encoded]);
       toast(`${encoded.length} screenshot(s) attached`, "success");
     } catch {
       toast("Could not read screenshots", "error");
@@ -233,7 +238,7 @@ export function PracticeScreen() {
           customDescription || "Custom persona",
           screenshots,
           "TALKING_STAGE",
-          activeDifficulty === "Chill" ? 1 : activeDifficulty === "Brutal" ? 5 : 3
+          3
         );
         if (userId) {
           void createPersona({
@@ -341,7 +346,7 @@ export function PracticeScreen() {
 
   if (mode === "setup") {
     return (
-      <div className="relative min-h-screen pb-24" style={{ backgroundColor: "#F5EFE6" }}>
+      <div className="relative min-h-screen pb-40" style={{ backgroundColor: "#F5EFE6" }}>
         <GrainOverlay />
         <div className="relative z-10 max-w-[430px] mx-auto">
           <div className="flex items-center justify-between px-5 pt-14">
@@ -403,16 +408,10 @@ export function PracticeScreen() {
                     value={customDescription}
                     onChange={(e) => setCustomDescription(e.target.value)}
                     placeholder="Describe their tone, habits, and context..."
-                    className="w-full mt-3 resize-none"
+                    className="w-full mt-3 resize-none bg-[#FFFFFF] rounded-[14px] border border-[#E8E0D4] p-3 text-[14px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm outline-none"
                     style={{
-                      minHeight: 78,
-                      borderRadius: 14,
-                      border: "1px solid #E8E0D4",
-                      padding: 12,
+                      minHeight: 80,
                       fontFamily: "'DM Sans', sans-serif",
-                      fontSize: 14,
-                      backgroundColor: "#FFFFFF",
-                      outline: "none",
                     }}
                   />
                   <input
@@ -425,21 +424,47 @@ export function PracticeScreen() {
                       void handleUpload(e.target.files);
                     }}
                   />
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="mt-2 flex items-center gap-2"
-                    style={{
-                      border: "none",
-                      background: "none",
-                      color: "#C8522A",
-                      fontFamily: "'DM Sans', sans-serif",
-                      fontSize: 13,
-                      cursor: "pointer",
-                    }}
-                  >
-                    <Camera size={14} />
-                    {screenshots.length > 0 ? `${screenshots.length} screenshot(s) attached` : "Attach screenshots"}
-                  </button>
+                  <div className="flex flex-col gap-3 mt-3">
+                    {screenshots.length > 0 && (
+                      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                        {screenshots.map((src, i) => (
+                          <div key={i} className="relative flex-shrink-0">
+                            <img
+                              src={src}
+                              alt={`Screenshot ${i + 1}`}
+                              style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 8, border: "1px solid #E8E0D4" }}
+                            />
+                            <button
+                              onClick={() => setScreenshots((prev) => prev.filter((_, idx) => idx !== i))}
+                              className="absolute -top-2 -right-2 bg-white rounded-full p-1"
+                              style={{ boxShadow: "0 2px 8px rgba(26,18,8,0.15)", color: "#C8522A", cursor: "pointer", border: "none" }}
+                            >
+                              <X size={12} strokeWidth={3} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {screenshots.length < 3 && (
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-2"
+                        style={{
+                          border: "none",
+                          background: "none",
+                          color: "#C8522A",
+                          fontFamily: "'DM Sans', sans-serif",
+                          fontSize: 13,
+                          cursor: "pointer",
+                          width: "fit-content"
+                        }}
+                      >
+                        <Camera size={14} />
+                        Attach screenshots ({screenshots.length}/3)
+                      </button>
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -475,33 +500,6 @@ export function PracticeScreen() {
             )}
 
             <div className="mt-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 24, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)", padding: 20 }}>
-              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.15em", color: "rgba(26, 18, 8, 0.55)", textTransform: "uppercase", marginBottom: 12 }}>
-                Difficulty
-              </p>
-              <div className="flex gap-2">
-                {difficultyOptions.map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => setActiveDifficulty(d)}
-                    style={{
-                      borderRadius: 12,
-                      padding: "10px 8px",
-                      backgroundColor: activeDifficulty === d ? "#F5E8E0" : "transparent",
-                      border: activeDifficulty === d ? "1px solid #C8522A" : "1px solid #E8E0D4",
-                      fontFamily: "'DM Sans', sans-serif",
-                      fontSize: 13,
-                      color: activeDifficulty === d ? "#C8522A" : "#1A1208",
-                      cursor: "pointer",
-                      flex: 1,
-                    }}
-                  >
-                    {d}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 24, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)", padding: 20 }}>
               <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.15em", color: "rgba(26, 18, 8, 0.55)", textTransform: "uppercase" }}>
                 Your goal this session
               </p>
@@ -509,16 +507,10 @@ export function PracticeScreen() {
                 value={goalText}
                 onChange={(e) => setGoalText(e.target.value)}
                 placeholder="What are you trying to achieve?"
-                className="w-full mt-3 resize-none"
+                className="w-full mt-3 resize-none bg-transparent rounded-[14px] border border-transparent p-3 text-[14px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-none outline-none focus:bg-white"
                 style={{
-                  minHeight: 56,
-                  borderRadius: 14,
-                  border: "none",
-                  padding: 12,
+                  minHeight: 60,
                   fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 14,
-                  backgroundColor: "transparent",
-                  outline: "none",
                 }}
               />
               <div className="flex gap-2 mt-3 flex-wrap">
@@ -573,7 +565,7 @@ export function PracticeScreen() {
           </div>
         </div>
         <TabBar />
-      </div>
+      </div >
     );
   }
 
@@ -589,9 +581,6 @@ export function PracticeScreen() {
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 17, fontWeight: 600, color: "#1A1208" }}>
               {persona?.name || "Practice"}
             </p>
-            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: "rgba(26,18,8,0.4)" }}>
-              {activeDifficulty}
-            </span>
           </div>
           <button
             onClick={() => setShowEndConfirm(true)}
@@ -617,7 +606,7 @@ export function PracticeScreen() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 pb-36">
+        <div className="flex-1 overflow-y-auto px-5 pb-[180px]">
           {messages.map((msg) => (
             <div key={msg.id} className={`flex mb-2 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
               <div
@@ -665,17 +654,10 @@ export function PracticeScreen() {
                 }
               }}
               placeholder="Your move..."
-              className="flex-1 outline-none resize-none overflow-y-auto m-1"
+              className="flex-1 resize-none overflow-y-auto m-1 bg-[#F5EFE6] rounded-[22px] border border-transparent px-[18px] py-[10px] text-[15px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 outline-none leading-[24px]"
               style={{
                 height: 44,
-                borderRadius: 22,
-                backgroundColor: "#F5EFE6",
-                padding: "10px 18px",
                 fontFamily: "'DM Sans', sans-serif",
-                fontSize: 15,
-                color: "#1A1208",
-                border: "none",
-                lineHeight: "24px",
               }}
             />
             <button

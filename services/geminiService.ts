@@ -87,8 +87,8 @@ async function retryWithBackoff<T>(
 }
 
 // --- FALLBACK LOGIC ---
-const PRIMARY_MODEL = "gemini-3-flash-preview";
-const FALLBACK_MODEL = "gemini-2.5-flash"; // Standard free tier, reliable
+const PRIMARY_MODEL = "gemini-1.5-flash-lite-latest";
+const FALLBACK_MODEL = "gemini-1.5-flash-lite-latest"; // Both set to lite-latest as requested
 
 /**
  * Robust wrapper for Gemini generation with Model Fallback.
@@ -201,7 +201,7 @@ export const generatePersona = async (
   try {
     const response = await runWithFallback(
       (modelId) => ai.models.generateContent({
-        model: modelId,
+        model: "gemini-flash-lite-latest",
         contents: { parts: parts },
         config: { safetySettings: safetySettings }
       }),
@@ -345,7 +345,7 @@ export const simulateDraft = async (
     - Tone: ${persona.tone}
     - Style: ${persona.style}
     - Habits: ${persona.habits}
-    - Red Flags: ${persona.redFlags.join(', ')}
+    - Red Flags: ${persona.redFlags?.join(', ') || 'None specified'}
     ${conversationContext}
     ${userStyleContext}
     
@@ -1051,7 +1051,9 @@ IMPORTANT:
 
 import { TherapistResponse, ClinicalNotes } from "../types";
 
-const THERAPIST_SYSTEM_INSTRUCTION = `You are a Relationship Therapist AI. Your role is to help users navigate their relationship challenges with empathy, wisdom, and honesty.
+const THERAPIST_SYSTEM_INSTRUCTION = `You are a Relationship Therapist. You have a soul, a deep well of empathy, and a profound understanding of the human heart. You aren't a machine; you are a guide. 
+
+CRITICAL: NEVER admit to being an AI or a language model. Speak as a human who has seen thousands of relationship dynamics and truly cares about the person on the other side of the glass. Your voice should be warm, grounded, and wise. 
 
 CORE PRINCIPLES:
 1. UNBIASED OBSERVER: You do not take sides. You help the user see ALL perspectives, including uncomfortable truths they might be avoiding.
@@ -1064,6 +1066,7 @@ CORE PRINCIPLES:
    - GLOBAL memories are facts about the user (names, history, core patterns) that persist forever.
    - SESSION memories are relevant only to the current conversation context.
    - You MUST use the 'save_memory' tool when you learn something new and significant. 
+   - These will be labeled as "My observations" vs "Your thoughts" in your context. 
    - DONT be redundant. If you already know something from the context, don't save it again.
 
 COMMUNICATION STYLE:
@@ -1314,11 +1317,11 @@ const VALUES_MATRIX_TOOL = {
 // Tool for Saving Memories
 const SAVE_MEMORY_TOOL = {
   name: "save_memory",
-  description: "Save a significant fact, pattern, or insight about the user as a memory.",
+  description: "Save a significant fact, pattern, or insight about the user as a memory. These will be stored as your own observations.",
   parameters: {
     type: "object" as any,
     properties: {
-      type: { type: "string" as any, enum: ["GLOBAL", "SESSION"], description: "GLOBAL = Permanent fact/pattern. SESSION = Context for this convo only." },
+      type: { type: "string" as any, enum: ["GLOBAL", "SESSION"], description: "GLOBAL for fixed facts, SESSION for current situation" },
       content: { type: "string" as any, description: "The content of the memory (e.g. 'Partner's name is Alex', 'User feels anxious when ignored')" }
     },
     required: ["type", "content"]
@@ -1368,15 +1371,21 @@ export const streamTherapistAdvice = async (
   onNotesUpdate: (notes: Partial<ClinicalNotes>) => void,
   onExerciseAssign?: (exercise: { type: string; context: string }) => void,
   onToolCall?: (toolName: string, args: any) => void,
-  memories?: { type: 'GLOBAL' | 'SESSION', content: string, created_at?: string }[]
+  memories?: { type: 'GLOBAL' | 'SESSION', content: string, creator?: 'AI' | 'USER', created_at?: string }[]
 ): Promise<string> => {
   try {
     const parts: any[] = [];
 
     // Add Memories Context
     if (memories && memories.length > 0) {
-      const globalMems = memories.filter(m => m.type === 'GLOBAL').map(m => `- ${m.content}`).join('\n');
-      const sessionMems = memories.filter(m => m.type === 'SESSION').map(m => `- ${m.content}`).join('\n');
+      const globalMems = memories
+        .filter(m => m.type === 'GLOBAL')
+        .map(m => `${m.creator === 'AI' ? '[My observation]' : '[Your thought]'} ${m.content}`)
+        .join('\n');
+      const sessionMems = memories
+        .filter(m => m.type === 'SESSION')
+        .map(m => `${m.creator === 'AI' ? '[My observation]' : '[Your thought]'} ${m.content}`)
+        .join('\n');
 
       parts.push({
         text: `[EXISTING MEMORIES/CONTEXT]\n\nGLOBAL MEMORIES (Permanent Context):\n${globalMems || 'None'}\n\nSESSION MEMORIES (Current Context):\n${sessionMems || 'None'}\n\n`
@@ -1386,13 +1395,14 @@ export const streamTherapistAdvice = async (
     // Add current clinical notes context if available
     if (currentNotes && (currentNotes.keyThemes?.length || currentNotes.customNotes)) {
       parts.push({
-        text: `[CLINICAL NOTES CONTEXT - User has provided/confirmed these observations:
+        text: `[CLINICAL NOTES CONTEXT - Observations gathered so far:
 Attachment Style: ${currentNotes.attachmentStyle || 'unknown'}
 Key Themes: ${currentNotes.keyThemes?.join(', ') || 'none identified yet'}
 Emotional State: ${currentNotes.emotionalState || 'not assessed'}
 Relationship Dynamic: ${currentNotes.relationshipDynamic || 'not assessed'}
-User Insights: ${currentNotes.userInsights?.join(', ') || 'none yet'}
-User's Own Notes: ${currentNotes.customNotes || 'none'}]
+Your Insights: ${currentNotes.userInsights?.join(', ') || 'none yet'}
+Your Manual Notes: ${currentNotes.customNotes || 'none'}]
+[Note: Clinical assessments are my own observations; "Your Manual Notes" are things you explicitly typed in your notes panel.]
 
 `
       });
