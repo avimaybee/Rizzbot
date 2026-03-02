@@ -853,7 +853,7 @@ export function HistoryScreen() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-50"
-              style={{ backgroundColor: "rgba(26,18,8,0.45)" }}
+              style={{ backgroundColor: "rgba(26, 18, 8, 0.45)", backdropFilter: "blur(8px)" }}
               onClick={() => setConfirmDeleteId(null)}
             />
             <motion.div

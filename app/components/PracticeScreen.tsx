@@ -679,7 +679,7 @@ export function PracticeScreen() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-50"
-              style={{ backgroundColor: "rgba(26,18,8,0.45)" }}
+              style={{ backgroundColor: "rgba(26, 18, 8, 0.45)", backdropFilter: "blur(8px)" }}
               onClick={() => setShowEndConfirm(false)}
             />
             <motion.div
@@ -751,7 +751,7 @@ export function PracticeScreen() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-50"
-              style={{ backgroundColor: "rgba(26,18,8,0.35)" }}
+              style={{ backgroundColor: "rgba(26, 18, 8, 0.45)", backdropFilter: "blur(8px)" }}
               onClick={() => setShowHintSheet(false)}
             />
             <motion.div

@@ -616,7 +616,20 @@ export function TherapistScreen() {
           </p>
           <div className="flex items-center gap-1">
             <button
-              onClick={() => navigate("/history")}
+              onClick={() => {
+                setInsightsOpen(true);
+                haptics.light();
+              }}
+              style={{ border: "none", background: "none", color: "rgba(26,18,8,0.4)", cursor: "pointer", padding: 6 }}
+              title="Session Insights"
+            >
+              <Lightbulb size={20} />
+            </button>
+            <button
+              onClick={() => {
+                setShowSessionSheet(true);
+                haptics.light();
+              }}
               style={{ border: "none", background: "none", color: "rgba(26,18,8,0.4)", cursor: "pointer", padding: 6 }}
             >
               <History size={18} />
@@ -629,39 +642,15 @@ export function TherapistScreen() {
           className="px-5 mt-2 transition-all duration-300 overflow-hidden"
           style={{ opacity: messages.length <= 1 ? 1 : 0, maxHeight: messages.length <= 1 ? HERO_SECTION_MAX_HEIGHT : 0 }}
         >
-            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 22, fontWeight: 400, color: "rgba(26,18,8,0.55)", lineHeight: 1.3 }}>
-              What's on
-            </p>
-            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, fontWeight: 700, fontStyle: "italic", color: "#1A1208", lineHeight: 1.2 }}>
-              your mind?
-            </p>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 22, fontWeight: 400, color: "rgba(26,18,8,0.55)", lineHeight: 1.3 }}>
+            What's on
+          </p>
+          <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, fontWeight: 700, fontStyle: "italic", color: "#1A1208", lineHeight: 1.2 }}>
+            your mind?
+          </p>
         </div>
 
-        {/* Context banner - Clickable to open insights */}
-        <div className="px-5 pb-3">
-          <button
-            onClick={() => {
-              setInsightsOpen(true);
-              haptics.light();
-            }}
-            className="w-full flex items-center justify-between gap-2 transition-all duration-300 active:scale-[0.98]"
-            style={{
-              backgroundColor: "#FDFAF5",
-              borderRadius: 16,
-              padding: "12px 16px",
-              border: "1px solid #E8E0D4",
-              boxShadow: "0 2px 8px rgba(26,18,8,0.04)"
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <Heart size={14} strokeWidth={1.8} color="#C8522A" style={{ flexShrink: 0 }} />
-              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, color: "#1A1208" }}>
-                Session Insights
-              </p>
-            </div>
-            <ArrowRight size={14} color="rgba(26,18,8,0.3)" />
-          </button>
-        </div>
+
 
         <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-5" style={{ paddingBottom: composerHeight + BOTTOM_NAV_HEIGHT + CHAT_BOTTOM_BUFFER }}>
           {messages.map((msg, idx) => (
@@ -782,7 +771,7 @@ export function TherapistScreen() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-2">
+                <div className="flex w-full items-center gap-2">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -793,7 +782,7 @@ export function TherapistScreen() {
                       void handleImageUpload(e.target.files);
                     }}
                   />
-                  <div className="flex items-end gap-2">
+                  <div className="flex flex-1 w-full items-end gap-2">
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
@@ -829,7 +818,7 @@ export function TherapistScreen() {
                       }}
                       placeholder="Share what's on your mind..."
                       rows={1}
-                      className="flex-1 min-h-[44px] max-h-[120px] rounded-[22px] border border-transparent bg-[#F5EFE6] px-4 py-[11px] text-[15px] text-[#1A1208] outline-none resize-none overflow-y-auto transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20"
+                      className="flex-1 w-full min-w-0 min-h-[44px] max-h-[120px] rounded-[22px] border border-transparent bg-[#F5EFE6] px-4 py-[11px] text-[15px] text-[#1A1208] outline-none resize-none overflow-y-auto transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20"
                       style={{
                         fontFamily: "'DM Sans', sans-serif",
                         lineHeight: "1.4",
@@ -863,183 +852,307 @@ export function TherapistScreen() {
               </div>
             </div>
           </div>
-
-          {/* Move Insights Drawer outside the z-10 container to fix glitch */}
-          <AnimatePresence>
-            {insightsOpen && (
-              <>
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-[100]"
-                  style={{ backgroundColor: "rgba(26,18,8,0.4)", backdropFilter: "blur(4px)" }}
-                  onClick={() => setInsightsOpen(false)}
-                />
-                <motion.div
-                  initial={{ y: "100%" }}
-                  animate={{ y: 0 }}
-                  exit={{ y: "100%" }}
-                  drag="y"
-                  dragConstraints={{ top: 0 }}
-                  dragElastic={0.1}
-                  onDragEnd={(_, info) => {
-                    if (info.offset.y > 100) setInsightsOpen(false);
-                  }}
-                  transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                  className="fixed left-0 right-0 bottom-0 z-[110] overflow-hidden"
-                  style={{ maxHeight: "85vh" }}
-                >
-                  <div
-                    className="max-w-[430px] mx-auto flex flex-col h-full"
-                    style={{
-                      backgroundColor: "#FDFAF5",
-                      borderTopLeftRadius: 32,
-                      borderTopRightRadius: 32,
-                      boxShadow: "0 -8px 40px rgba(26,18,8,0.15)",
-                      maxHeight: "85vh",
-                    }}
-                  >
-                    {/* Drag handle */}
-                    <div className="flex justify-center pt-3 pb-2">
-                      <div style={{ width: 36, height: 4, borderRadius: 100, backgroundColor: "rgba(26,18,8,0.12)" }} />
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto px-5 pb-24">
-                      {/* Drawer Title & Header */}
-                      <div className="flex items-center justify-between py-4 mb-2 sticky top-0 bg-[#FDFAF5] z-10">
-                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 18, fontWeight: 600, color: "#1A1208" }}>
-                          Session Insights
-                        </p>
-                        <button
-                          onClick={() => setInsightsOpen(false)}
-                          className="p-2"
-                          style={{ border: "none", background: "none", color: "rgba(26,18,8,0.3)", cursor: "pointer" }}
-                        >
-                          <X size={20} />
-                        </button>
-                      </div>
-
-                      {/* Snapshot Section */}
-                      <div className="mb-8 p-4 cursor-pointer" onClick={() => setInsightsOpen(true)} style={{ backgroundColor: "#FFFFFF", border: "1px solid #E8E0D4", borderRadius: 20 }}>
-                        <p className="mb-3" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(26,18,8,0.4)" }}>
-                          Current Context
-                        </p>
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                          <div className="p-3" style={{ backgroundColor: "#FDF0F0", borderRadius: 14 }}>
-                            <p style={{ fontSize: 11, color: "rgba(212,131,138,0.7)" }}>Attachment Style</p>
-                            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: "#1A1208", textTransform: "capitalize" }}>
-                              {clinicalNotes.attachmentStyle || "Analyzing..."}
-                            </p>
-                          </div>
-                          <div className="p-3" style={{ backgroundColor: "#FDFAF5", borderRadius: 14, border: "1px solid #E8E0D4" }}>
-                            <p style={{ fontSize: 11, color: "rgba(26,18,8,0.4)" }}>State</p>
-                            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: "#1A1208", textTransform: "capitalize" }}>
-                              {clinicalNotes.emotionalState || "Listening..."}
-                            </p>
-                          </div>
-                        </div>
-                        {clinicalNotes.keyThemes.length > 0 && (
-                          <div>
-                            <p className="mb-2" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, color: "rgba(26,18,8,0.4)" }}>ACTIVE THEMES</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {clinicalNotes.keyThemes.map(theme => (
-                                <span key={theme} style={{ padding: "4px 10px", backgroundColor: "#F5E8E0", color: "#C8522A", borderRadius: 100, fontSize: 12, fontWeight: 500 }}>
-                                  {theme}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Memories Section */}
-                      <div className="mb-8">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-2">
-                            <MemoryStick size={16} color="#C8522A" />
-                            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
-                              Notes & Memories
-                            </p>
-                          </div>
-                          <span style={{ fontSize: 12, color: "rgba(26,18,8,0.45)", fontFamily: "'JetBrains Mono', monospace" }}>
-                            {memories.length} {memories.length === 1 ? "item" : "items"}
-                          </span>
-                        </div>
-
-                        <div className="space-y-4 mb-4">
-                          <textarea
-                            value={memoryDraft}
-                            onChange={(e) => setMemoryDraft(e.target.value)}
-                            placeholder="Save a key fact or pattern..."
-                            className="w-full min-h-[80px] rounded-[16px] border border-[#E8E0D4] p-3.5 text-[15px] bg-[#FFFFFF] outline-none resize-none transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
-                            style={{ fontFamily: "'DM Sans', sans-serif", lineHeight: "1.4" }}
-                          />
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => void handleAddMemory()}
-                              disabled={!memoryDraft.trim()}
-                              style={{
-                                flex: 1,
-                                height: 48,
-                                borderRadius: 100,
-                                border: "none",
-                                backgroundColor: "#C8522A",
-                                color: "#FFFFFF",
-                                fontFamily: "'DM Sans', sans-serif",
-                                fontSize: 15,
-                                fontWeight: 600,
-                                cursor: "pointer",
-                                opacity: memoryDraft.trim() ? 1 : 0.5,
-                                boxShadow: "0 4px 12px rgba(200, 82, 42, 0.2)"
-                              }}
-                            >
-                              Save Note
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="space-y-3">
-                          {memories.slice().reverse().map((memory) => (
-                            <MemoryItem key={memory.id} memory={memory} onUpdate={handleUpdateMemory} onDelete={handleDeleteMemory} />
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Insights Section */}
-                      {clinicalNotes.actionItems.length > 0 && (
-                        <div className="pb-10">
-                          <div className="flex items-center gap-2 mb-4">
-                            <Sparkles size={16} color="#C8522A" />
-                            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
-                              Suggested Focus
-                            </p>
-                          </div>
-                          <div className="space-y-3">
-                            {clinicalNotes.actionItems.map((item, i) => (
-                              <div key={i} className="p-4" style={{ backgroundColor: "#FDFAF5", border: "1px solid #E8E0D4", borderRadius: 16 }}>
-                                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "#1A1208", lineHeight: 1.5 }}>
-                                  • {item}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      <div
-                        className="pointer-events-none sticky bottom-0 h-8 -mt-8"
-                        style={{ background: "linear-gradient(to top, #FDFAF5, rgba(253,250,245,0))" }}
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
         </div>
 
         <TabBar />
       </div>
+
+      <AnimatePresence>
+        {showSessionSheet && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100]"
+              style={{ backgroundColor: "rgba(26, 18, 8, 0.45)", backdropFilter: "blur(8px)" }}
+              onClick={() => setShowSessionSheet(false)}
+            />
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              drag="y"
+              dragConstraints={{ top: 0 }}
+              dragElastic={0.1}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 100) setShowSessionSheet(false);
+              }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed left-0 right-0 bottom-0 z-[110] overflow-hidden"
+              style={{ maxHeight: "85vh" }}
+            >
+              <div
+                className="max-w-[430px] mx-auto flex flex-col h-full"
+                style={{
+                  backgroundColor: "#FDFAF5",
+                  borderTopLeftRadius: 32,
+                  borderTopRightRadius: 32,
+                  boxShadow: "0 -8px 40px rgba(26,18,8,0.15)",
+                  maxHeight: "85vh",
+                }}
+              >
+                <div className="flex justify-center pt-3 pb-2">
+                  <div style={{ width: 36, height: 4, borderRadius: 100, backgroundColor: "rgba(26,18,8,0.12)" }} />
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-5 pb-24">
+                  <div className="flex items-center justify-between py-4 mb-2 sticky top-0 bg-[#FDFAF5] z-10">
+                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 18, fontWeight: 600, color: "#1A1208" }}>
+                      Session History
+                    </p>
+                    <button
+                      onClick={() => setShowSessionSheet(false)}
+                      className="p-2"
+                      style={{ border: "none", background: "none", color: "rgba(26,18,8,0.3)", cursor: "pointer" }}
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <div className="mb-4">
+                    <button
+                      onClick={handleNewSession}
+                      className="w-full flex items-center justify-center gap-2 mb-4"
+                      style={{
+                        backgroundColor: "#C8522A",
+                        color: "#FFFFFF",
+                        borderRadius: 16,
+                        padding: "14px 16px",
+                        border: "none",
+                        fontFamily: "'DM Sans', sans-serif",
+                        fontSize: 15,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        boxShadow: "0 4px 12px rgba(200, 82, 42, 0.2)"
+                      }}
+                    >
+                      <Sparkles size={16} />
+                      Start Fresh Session
+                    </button>
+
+                    <div className="space-y-3">
+                      {sessions.slice().reverse().map((session) => {
+                        const dateStr = session.created_at ? new Date(session.created_at).toLocaleDateString() : "Unknown Date";
+                        const msgCount = Array.isArray(session.messages) ? session.messages.filter((m: any) => m.role === "user").length : 0;
+                        const isCurrent = session.interaction_id === interactionId;
+                        const notes = session.clinical_notes as ClinicalNotes | undefined;
+
+                        return (
+                          <button
+                            key={session.interaction_id}
+                            onClick={() => handleLoadSession(session)}
+                            className="w-full text-left flex flex-col gap-1 transition-all duration-300 active:scale-[0.98]"
+                            style={{
+                              backgroundColor: isCurrent ? "#FDF0F0" : "#FFFFFF",
+                              border: isCurrent ? "1px solid #C8522A" : "1px solid #E8E0D4",
+                              borderRadius: 16,
+                              padding: "14px 16px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <div className="flex justify-between items-center w-full">
+                              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: isCurrent ? "#C8522A" : "#1A1208" }}>
+                                {dateStr} {isCurrent && "(Current)"}
+                              </p>
+                              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "rgba(26,18,8,0.4)" }}>
+                                {msgCount} msgs
+                              </span>
+                            </div>
+                            {notes?.emotionalState && (
+                              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.6)", marginTop: 4 }}>
+                                State: {notes.emotionalState}
+                              </p>
+                            )}
+                          </button>
+                        );
+                      })}
+
+                      {sessions.length === 0 && (
+                        <div className="text-center py-8">
+                          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "rgba(26,18,8,0.5)" }}>
+                            No past sessions found.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+
+        {insightsOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100]"
+              style={{ backgroundColor: "rgba(26, 18, 8, 0.45)", backdropFilter: "blur(8px)" }}
+              onClick={() => setInsightsOpen(false)}
+            />
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              drag="y"
+              dragConstraints={{ top: 0 }}
+              dragElastic={0.1}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 100) setInsightsOpen(false);
+              }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed left-0 right-0 bottom-0 z-[110] overflow-hidden"
+              style={{ maxHeight: "85vh" }}
+            >
+              <div
+                className="max-w-[430px] mx-auto flex flex-col h-full"
+                style={{
+                  backgroundColor: "#FDFAF5",
+                  borderTopLeftRadius: 32,
+                  borderTopRightRadius: 32,
+                  boxShadow: "0 -8px 40px rgba(26,18,8,0.15)",
+                  maxHeight: "85vh",
+                }}
+              >
+                {/* Drag handle */}
+                <div className="flex justify-center pt-3 pb-2">
+                  <div style={{ width: 36, height: 4, borderRadius: 100, backgroundColor: "rgba(26,18,8,0.12)" }} />
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-5 pb-24">
+                  {/* Drawer Title & Header */}
+                  <div className="flex items-center justify-between py-4 mb-2 sticky top-0 bg-[#FDFAF5] z-10">
+                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 18, fontWeight: 600, color: "#1A1208" }}>
+                      Session Insights
+                    </p>
+                    <button
+                      onClick={() => setInsightsOpen(false)}
+                      className="p-2"
+                      style={{ border: "none", background: "none", color: "rgba(26,18,8,0.3)", cursor: "pointer" }}
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  {/* Snapshot Section */}
+                  <div className="mb-8 p-4 cursor-pointer" onClick={() => setInsightsOpen(true)} style={{ backgroundColor: "#FFFFFF", border: "1px solid #E8E0D4", borderRadius: 20 }}>
+                    <p className="mb-3" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(26,18,8,0.4)" }}>
+                      Current Context
+                    </p>
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="p-3" style={{ backgroundColor: "#FDF0F0", borderRadius: 14 }}>
+                        <p style={{ fontSize: 11, color: "rgba(212,131,138,0.7)" }}>Attachment Style</p>
+                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: "#1A1208", textTransform: "capitalize" }}>
+                          {clinicalNotes.attachmentStyle || "Analyzing..."}
+                        </p>
+                      </div>
+                      <div className="p-3" style={{ backgroundColor: "#FDFAF5", borderRadius: 14, border: "1px solid #E8E0D4" }}>
+                        <p style={{ fontSize: 11, color: "rgba(26,18,8,0.4)" }}>State</p>
+                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: "#1A1208", textTransform: "capitalize" }}>
+                          {clinicalNotes.emotionalState || "Listening..."}
+                        </p>
+                      </div>
+                    </div>
+                    {clinicalNotes.keyThemes.length > 0 && (
+                      <div>
+                        <p className="mb-2" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, color: "rgba(26,18,8,0.4)" }}>ACTIVE THEMES</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {clinicalNotes.keyThemes.map(theme => (
+                            <span key={theme} style={{ padding: "4px 10px", backgroundColor: "#F5E8E0", color: "#C8522A", borderRadius: 100, fontSize: 12, fontWeight: 500 }}>
+                              {theme}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Memories Section */}
+                  <div className="mb-8">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <MemoryStick size={16} color="#C8522A" />
+                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
+                          Notes & Memories
+                        </p>
+                      </div>
+                      <span style={{ fontSize: 12, color: "rgba(26,18,8,0.45)", fontFamily: "'JetBrains Mono', monospace" }}>
+                        {memories.length} {memories.length === 1 ? "item" : "items"}
+                      </span>
+                    </div>
+
+                    <div className="space-y-4 mb-4">
+                      <textarea
+                        value={memoryDraft}
+                        onChange={(e) => setMemoryDraft(e.target.value)}
+                        placeholder="Save a key fact or pattern..."
+                        className="w-full min-h-[80px] rounded-[16px] border border-[#E8E0D4] p-3.5 text-[15px] bg-[#FFFFFF] outline-none resize-none transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
+                        style={{ fontFamily: "'DM Sans', sans-serif", lineHeight: "1.4" }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => void handleAddMemory()}
+                          disabled={!memoryDraft.trim()}
+                          style={{
+                            flex: 1,
+                            height: 48,
+                            borderRadius: 100,
+                            border: "none",
+                            backgroundColor: "#C8522A",
+                            color: "#FFFFFF",
+                            fontFamily: "'DM Sans', sans-serif",
+                            fontSize: 15,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            opacity: memoryDraft.trim() ? 1 : 0.5,
+                            boxShadow: "0 4px 12px rgba(200, 82, 42, 0.2)"
+                          }}
+                        >
+                          Save Note
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {memories.slice().reverse().map((memory) => (
+                        <MemoryItem key={memory.id} memory={memory} onUpdate={handleUpdateMemory} onDelete={handleDeleteMemory} />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Insights Section */}
+                  {clinicalNotes.actionItems.length > 0 && (
+                    <div className="pb-10">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Sparkles size={16} color="#C8522A" />
+                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
+                          Suggested Focus
+                        </p>
+                      </div>
+                      <div className="space-y-3">
+                        {clinicalNotes.actionItems.map((item, i) => (
+                          <div key={i} className="p-4" style={{ backgroundColor: "#FDFAF5", border: "1px solid #E8E0D4", borderRadius: 16 }}>
+                            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "#1A1208", lineHeight: 1.5 }}>
+                              • {item}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div
+                    className="pointer-events-none sticky bottom-0 h-8 -mt-8"
+                    style={{ background: "linear-gradient(to top, #FDFAF5, rgba(253,250,245,0))" }}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
