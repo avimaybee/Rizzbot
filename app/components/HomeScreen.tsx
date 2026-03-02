@@ -131,26 +131,31 @@ export function HomeScreen() {
       <div className="relative z-10 px-5 pt-14 max-w-[430px] mx-auto">
         <div className="flex items-center justify-between">
           <div>
-            <p
-              style={{
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: 13,
-                fontWeight: 400,
-                color: "rgba(26, 18, 8, 0.55)",
-              }}
-            >
-              {greeting.sub}
-            </p>
-            <p
-              style={{
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: 22,
-                fontWeight: 600,
-                color: "#1A1208",
-              }}
-            >
-              {firstName}
-            </p>
+            <div className="flex items-center gap-3">
+              <img src="/logo.png" alt="Rizzbot" style={{ width: 32, height: 32, borderRadius: 8 }} />
+              <div>
+                <p
+                  style={{
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 13,
+                    fontWeight: 400,
+                    color: "rgba(26, 18, 8, 0.55)",
+                  }}
+                >
+                  {greeting.sub}
+                </p>
+                <p
+                  style={{
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 22,
+                    fontWeight: 600,
+                    color: "#1A1208",
+                  }}
+                >
+                  {firstName}
+                </p>
+              </div>
+            </div>
             {streak.current_streak > 0 && (
               <div className="mt-1.5 inline-flex items-center gap-1" style={{
                 backgroundColor: '#FEF3E2',
@@ -354,6 +359,6 @@ export function HomeScreen() {
       </div>
 
       <TabBar />
-    </div>
+    </div >
   );
 }

@@ -157,6 +157,7 @@ export function AuthScreen() {
         </div>
 
         <div className="px-5 pt-8 pb-8 flex flex-col items-center">
+          <img src="/logo.png" alt="Rizzbot" style={{ width: 44, height: 44, borderRadius: 10, marginBottom: 20 }} />
           <p
             style={{
               fontFamily: "'DM Sans', sans-serif",
@@ -183,12 +184,13 @@ export function AuthScreen() {
             connection
           </p>
           <p
-            className="mt-3"
+            className="mt-3 text-center px-4"
             style={{
               fontFamily: "'DM Sans', sans-serif",
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: 400,
               color: "rgba(26, 18, 8, 0.55)",
+              lineHeight: 1.5
             }}
           >
             Your personal AI dating coach is ready to help.
