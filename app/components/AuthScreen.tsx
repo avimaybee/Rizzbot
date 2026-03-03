@@ -170,7 +170,7 @@ export function AuthScreen() {
           >
             MASTER THE ART OF
           </p>
-          <p
+          <h1
             className="mt-1"
             style={{
               fontFamily: "'Cormorant Garamond', serif",
@@ -182,7 +182,7 @@ export function AuthScreen() {
             }}
           >
             connection
-          </p>
+          </h1>
           <p
             className="mt-3 text-center px-4"
             style={{

@@ -23,17 +23,30 @@ export const onRequestOptions = async () => {
 };
 
 export const onRequestGet = async (context: any) => {
-  const db = getDB(context.env);
+  const { env, request, data } = context;
+  const db = getDB(env);
   if (!db) return new Response(JSON.stringify({ error: 'No database' }), { status: 500, headers: corsHeaders });
 
-  const url = new URL(context.request.url);
-  const anonId = url.searchParams.get('anon_id');
-  if (!anonId) return new Response(JSON.stringify({ error: 'Missing anon_id' }), { status: 400, headers: corsHeaders });
+  // Ensure authenticated user exists in context
+  const authenticatedUser = data?.user;
+  if (!authenticatedUser) {
+    return new Response(JSON.stringify({ error: 'Unauthorized: No verified user context' }), {
+      status: 401,
+      headers: corsHeaders,
+    });
+  }
+  const verifiedUid = authenticatedUser.uid;
+
+  const url = new URL(request.url);
+  const reqAnonId = url.searchParams.get('anon_id');
+  if (reqAnonId && reqAnonId !== verifiedUid) {
+    return new Response(JSON.stringify({ error: 'Forbidden: Cannot access other users\' data' }), { status: 403, headers: corsHeaders });
+  }
 
   try {
     await ensureAppSchema(db);
 
-    const user = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(anonId).first();
+    const user = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(verifiedUid).first();
     if (!user) {
       return new Response(JSON.stringify({ streak: { current_streak: 0, longest_streak: 0, last_active_date: null } }), { headers: corsHeaders });
     }
@@ -48,23 +61,30 @@ export const onRequestGet = async (context: any) => {
 };
 
 export const onRequestPost = async (context: any) => {
-  const db = getDB(context.env);
+  const { env, data } = context;
+  const db = getDB(env);
   if (!db) return new Response(JSON.stringify({ error: 'No database' }), { status: 500, headers: corsHeaders });
+
+  // Ensure authenticated user exists in context
+  const authenticatedUser = data?.user;
+  if (!authenticatedUser) {
+    return new Response(JSON.stringify({ error: 'Unauthorized: No verified user context' }), {
+      status: 401,
+      headers: corsHeaders,
+    });
+  }
+  const verifiedUid = authenticatedUser.uid;
 
   try {
     await ensureAppSchema(db);
 
-    const body: any = await context.request.json();
-    const anonId = body.anon_id;
-    if (!anonId) return new Response(JSON.stringify({ error: 'Missing anon_id' }), { status: 400, headers: corsHeaders });
-
-    const user = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(anonId).first();
+    const user = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(verifiedUid).first();
     if (!user) {
       const todayForNewUser = new Date().toISOString().split('T')[0];
-      await db.prepare('INSERT INTO users (anon_id) VALUES (?)').bind(anonId).run();
-      const newUser = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(anonId).first();
+      await db.prepare('INSERT INTO users (anon_id) VALUES (?)').bind(verifiedUid).run();
+      const newUser = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(verifiedUid).first();
       if (!newUser) {
-        throw new Error(`Failed to create user for anon_id: ${anonId}`);
+        throw new Error(`Failed to create user for anon_id: ${verifiedUid}`);
       }
       await db
         .prepare('INSERT INTO streaks (user_id, current_streak, longest_streak, last_active_date) VALUES (?, 1, 1, ?)')

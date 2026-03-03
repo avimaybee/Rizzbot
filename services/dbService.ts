@@ -1,7 +1,26 @@
 import { logger } from './logger';
 import { Persona, UserStyleProfile as StyleProfile } from '../types';
+import { getFirebaseToken } from './firebaseService';
 
 const API_BASE = typeof window === 'undefined' ? '' : '';
+
+/**
+ * Custom fetch wrapper that automatically attaches the Firebase ID token
+ * to the Authorization header for secure backend endpoints.
+ */
+async function authenticatedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const token = await getFirebaseToken();
+
+  const headers = new Headers(init?.headers);
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  return fetch(input, {
+    ...init,
+    headers,
+  });
+}
 
 // Reduce console spam in development when DB is unavailable
 const logDbError = (message: string, ...args: unknown[]) => {
@@ -26,6 +45,8 @@ export interface User {
   display_name?: string | null;
   photo_url?: string | null;
   provider?: string | null;
+  is_premium?: boolean;
+  premium_until?: string | null;
   created_at: string;
   last_login_at?: string;
 }
@@ -99,7 +120,7 @@ export interface SessionsResponse {
  * Now accepts optional user data for storing email, display name, etc.
  */
 export async function getOrCreateUser(firebaseUid: string, userData?: UserData): Promise<User> {
-  const res = await fetch(`/api/users?firebase_uid=${encodeURIComponent(firebaseUid)}`);
+  const res = await authenticatedFetch(`/api/users?firebase_uid=${encodeURIComponent(firebaseUid)}`);
 
   // Check content type before parsing JSON
   const contentType = res.headers.get('content-type');
@@ -126,7 +147,7 @@ export async function getOrCreateUser(firebaseUid: string, userData?: UserData):
  * Create user with Firebase UID and optional user data
  */
 export async function createUser(firebaseUid: string, userData?: UserData): Promise<User> {
-  const res = await fetch(`/api/users`, {
+  const res = await authenticatedFetch(`/api/users`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -144,7 +165,7 @@ export async function createUser(firebaseUid: string, userData?: UserData): Prom
  * Update user profile data
  */
 export async function updateUserData(userId: number, userData: UserData): Promise<void> {
-  const res = await fetch(`/api/users`, {
+  const res = await authenticatedFetch(`/api/users`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id: userId, ...userData }),
@@ -154,13 +175,77 @@ export async function updateUserData(userId: number, userData: UserData): Promis
   }
 }
 
+// ===== Payments API =====
+
+export interface PaymentVerificationRequest {
+  payment_method?: 'razorpay' | 'upi';
+  razorpay_payment_id?: string;
+  razorpay_order_id?: string;
+  razorpay_signature?: string;
+  utr?: string;
+  amount: number;
+  currency: string;
+}
+
+/**
+ * Verify payment (Razorpay or UPI UTR) and upgrade user status
+ */
+export async function verifyPayment(paymentData: PaymentVerificationRequest): Promise<{ success: boolean; is_premium: boolean }> {
+  const res = await authenticatedFetch('/api/payments/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(paymentData),
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(error.error || 'Payment verification failed');
+  }
+
+  return res.json();
+}
+
+/**
+ * Submit UPI UTR for automated verification
+ */
+export async function submitUtrPayment(utr: string): Promise<{ success: boolean; is_premium: boolean }> {
+  return verifyPayment({
+    payment_method: 'upi',
+    utr,
+    amount: 500,
+    currency: 'INR'
+  });
+}
+
+/**
+ * ADMIN: Get all submitted payments for reconciliation
+ */
+export async function getAdminPayments(): Promise<any[]> {
+  const res = await authenticatedFetch('/api/admin_payments');
+  if (!res.ok) throw new Error(`Failed to get admin payments: ${res.statusText}`);
+  return res.json();
+}
+
+/**
+ * ADMIN: Update payment status (APPROVE/REJECT)
+ */
+export async function updatePaymentStatus(payment_id: number, status: 'COMPLETED' | 'REJECTED'): Promise<{ success: boolean }> {
+  const res = await authenticatedFetch('/api/admin_payments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ payment_id, status }),
+  });
+  if (!res.ok) throw new Error(`Failed to update payment status: ${res.statusText}`);
+  return res.json();
+}
+
 // ===== Personas API =====
 
 /**
  * Get personas for a user
  */
 export async function getPersonas(userId: number): Promise<Persona[]> {
-  const res = await fetch(`/api/personas?user_id=${userId}`);
+  const res = await authenticatedFetch(`/api/personas?user_id=${userId}`);
   if (!res.ok) throw new Error(`Failed to get personas: ${res.statusText}`);
   const data = await res.json();
 
@@ -186,7 +271,7 @@ export async function getPersonas(userId: number): Promise<Persona[]> {
  * Get single persona by ID
  */
 export async function getPersona(personaId: number): Promise<Persona | null> {
-  const res = await fetch(`/api/personas?persona_id=${personaId}`);
+  const res = await authenticatedFetch(`/api/personas?persona_id=${personaId}`);
   if (!res.ok) throw new Error(`Failed to get persona: ${res.statusText}`);
   const p = await res.json();
   if (!p) return null;
@@ -213,7 +298,7 @@ export async function getPersona(personaId: number): Promise<Persona | null> {
  * Create persona
  */
 export async function createPersona(persona: Persona): Promise<{ id: number }> {
-  const res = await fetch(`/api/personas`, {
+  const res = await authenticatedFetch(`/api/personas`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(persona),
@@ -226,7 +311,7 @@ export async function createPersona(persona: Persona): Promise<{ id: number }> {
  * Update persona
  */
 export async function updatePersona(id: number, updates: Partial<Persona>): Promise<{ success: boolean }> {
-  const res = await fetch(`/api/personas`, {
+  const res = await authenticatedFetch(`/api/personas`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, ...updates }),
@@ -239,7 +324,7 @@ export async function updatePersona(id: number, updates: Partial<Persona>): Prom
  * Delete persona
  */
 export async function deletePersona(id: number): Promise<{ success: boolean }> {
-  const res = await fetch(`/api/personas?id=${id}`, {
+  const res = await authenticatedFetch(`/api/personas?id=${id}`, {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error(`Failed to delete persona: ${res.statusText}`);
@@ -248,13 +333,13 @@ export async function deletePersona(id: number): Promise<{ success: boolean }> {
 
 // Updated Style Profile methods to use imported Interface
 export async function getStyleProfile(userId: number): Promise<StyleProfile | null> {
-  const res = await fetch(`/api/style_profiles?user_id=${userId}`);
+  const res = await authenticatedFetch(`/api/style_profiles?user_id=${userId}`);
   if (!res.ok) throw new Error(`Failed to get style profile: ${res.statusText}`);
   return res.json();
 }
 
 export async function saveStyleProfile(profile: any): Promise<{ id: number }> {
-  const res = await fetch(`/api/style_profiles`, {
+  const res = await authenticatedFetch(`/api/style_profiles`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(profile),
@@ -269,7 +354,7 @@ export async function saveStyleProfile(profile: any): Promise<{ id: number }> {
  * Get feedback stats for user (aggregated by suggestion type)
  */
 export async function getFeedback(userId: number): Promise<any[]> {
-  const res = await fetch(`/api/feedback?user_id=${userId}`);
+  const res = await authenticatedFetch(`/api/feedback?user_id=${userId}`);
   if (!res.ok) throw new Error(`Failed to get feedback: ${res.statusText}`);
   return res.json();
 }
@@ -278,7 +363,7 @@ export async function getFeedback(userId: number): Promise<any[]> {
  * Submit feedback entry
  */
 export async function submitFeedback(feedback: FeedbackEntry): Promise<{ id: number }> {
-  const res = await fetch(`/api/feedback`, {
+  const res = await authenticatedFetch(`/api/feedback`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(feedback),
@@ -300,7 +385,7 @@ export async function getSessions(identifier?: string | number, limit = 20, offs
     params.set('user_id', String(identifier));
   }
 
-  const res = await fetch(`/api/sessions?${params}`);
+  const res = await authenticatedFetch(`/api/sessions?${params}`);
 
   // Handle 404 (no sessions found - this is normal for new users)
   if (res.status === 404) {
@@ -356,7 +441,7 @@ export async function createSession(
     message_count?: number;
   }
 ): Promise<{ lastInsertId: number }> {
-  const res = await fetch(`/api/sessions`, {
+  const res = await authenticatedFetch(`/api/sessions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -373,7 +458,7 @@ export async function createSession(
  * Delete a session by ID
  */
 export async function deleteSession(sessionId: number): Promise<{ success: boolean }> {
-  const res = await fetch(`/api/sessions?id=${sessionId}`, {
+  const res = await authenticatedFetch(`/api/sessions?id=${sessionId}`, {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error(`Failed to delete session: ${res.statusText}`);
@@ -400,7 +485,7 @@ export async function saveTherapistSession(
   messages: any[],
   clinicalNotes: any
 ): Promise<{ success: boolean; id?: number }> {
-  const res = await fetch('/api/therapist_sessions', {
+  const res = await authenticatedFetch('/api/therapist_sessions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -418,7 +503,7 @@ export async function saveTherapistSession(
  * Get a specific therapist session by interaction ID
  */
 export async function getTherapistSession(interactionId: string): Promise<TherapistSession | null> {
-  const res = await fetch(`/api/therapist_sessions?interaction_id=${interactionId}`);
+  const res = await authenticatedFetch(`/api/therapist_sessions?interaction_id=${interactionId}`);
   if (!res.ok) {
     if (res.status === 404) return null;
     throw new Error(`Failed to get therapist session: ${res.statusText}`);
@@ -438,7 +523,7 @@ export async function getTherapistSession(interactionId: string): Promise<Therap
  * Get all therapist sessions for a user
  */
 export async function getTherapistSessions(firebaseUid: string): Promise<TherapistSession[]> {
-  const res = await fetch(`/api/therapist_sessions?anon_id=${firebaseUid}`);
+  const res = await authenticatedFetch(`/api/therapist_sessions?anon_id=${firebaseUid}`);
   if (!res.ok) throw new Error(`Failed to get therapist sessions: ${res.statusText}`);
   const data = await res.json();
 
@@ -466,14 +551,14 @@ export async function getMemories(firebaseUid: string, type?: 'GLOBAL' | 'SESSIO
   if (type) params.set('type', type);
   if (sessionId) params.set('session_id', sessionId);
 
-  const res = await fetch(`/api/memories?${params}`);
+  const res = await authenticatedFetch(`/api/memories?${params}`);
   if (!res.ok) throw new Error(`Failed to get memories: ${res.statusText}`);
   const data = await res.json();
   return data.memories || [];
 }
 
 export async function saveMemory(firebaseUid: string, type: 'GLOBAL' | 'SESSION', content: string, sessionId?: string, creator: 'AI' | 'USER' = 'USER'): Promise<{ success: boolean; id?: number }> {
-  const res = await fetch('/api/memories', {
+  const res = await authenticatedFetch('/api/memories', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -489,7 +574,7 @@ export async function saveMemory(firebaseUid: string, type: 'GLOBAL' | 'SESSION'
 }
 
 export async function deleteMemory(id: number): Promise<{ success: boolean }> {
-  const res = await fetch(`/api/memories?id=${id}`, {
+  const res = await authenticatedFetch(`/api/memories?id=${id}`, {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error(`Failed to delete memory: ${res.statusText}`);
@@ -497,7 +582,7 @@ export async function deleteMemory(id: number): Promise<{ success: boolean }> {
 }
 
 export async function updateMemory(id: number, content: string, type: 'GLOBAL' | 'SESSION', creator?: 'AI' | 'USER'): Promise<{ success: boolean }> {
-  const res = await fetch(`/api/memories`, {
+  const res = await authenticatedFetch(`/api/memories`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, content, type, creator })
@@ -516,7 +601,7 @@ export interface StreakData {
 
 export async function getStreak(firebaseUid: string): Promise<StreakData> {
   try {
-    const res = await fetch(`/api/streaks?anon_id=${firebaseUid}`);
+    const res = await authenticatedFetch(`/api/streaks?anon_id=${firebaseUid}`);
     if (!res.ok) return { current_streak: 0, longest_streak: 0, last_active_date: null };
     const data = await res.json();
     return data.streak || { current_streak: 0, longest_streak: 0, last_active_date: null };
@@ -527,7 +612,7 @@ export async function getStreak(firebaseUid: string): Promise<StreakData> {
 
 export async function recordActivity(firebaseUid: string): Promise<StreakData> {
   try {
-    const res = await fetch('/api/streaks', {
+    const res = await authenticatedFetch('/api/streaks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ anon_id: firebaseUid })

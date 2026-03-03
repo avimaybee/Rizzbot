@@ -13,6 +13,7 @@ const slides = [
     title: "Read the room\ninstantly",
     titleAccent: "instantly",
     body: "Drop a screenshot or paste a message. Rizzbot reads the energy, flags ghost risk, and serves you the perfect reply in seconds.",
+    researchNote: "Backed by realtime linguistic signal analysis.",
     cta: "Next",
   },
   {
@@ -23,6 +24,7 @@ const slides = [
     title: "Rehearse before\nyou reply",
     titleAccent: "reply",
     body: "Pick a persona — The Dry Texter, The Ghoster, The Flirt — and spar until your responses feel effortless and confident.",
+    researchNote: "Stress-tested against established behavioral archetypes.",
     cta: "Next",
   },
   {
@@ -33,6 +35,7 @@ const slides = [
     title: "Understand your\nown patterns",
     titleAccent: "patterns",
     body: "Talk it through with your AI therapist. Surface attachment habits, decode recurring behaviors, and build a healthier texting style.",
+    researchNote: "Grounded in clinical attachment theory models.",
     cta: "Let's go →",
   },
 ];
@@ -125,7 +128,7 @@ export function OnboardingScreen() {
             </p>
 
             {/* Title */}
-            <p
+            <h1
               style={{
                 fontFamily: "'Cormorant Garamond', serif",
                 fontSize: 40,
@@ -137,7 +140,7 @@ export function OnboardingScreen() {
               }}
             >
               {slide.title}
-            </p>
+            </h1>
 
             {/* Body */}
             <p
@@ -153,6 +156,33 @@ export function OnboardingScreen() {
             >
               {slide.body}
             </p>
+
+            {/* Research Note */}
+            {slide.researchNote && (
+              <div
+                className="mt-6 px-4 py-3 rounded-2xl flex items-start gap-3 text-left"
+                style={{
+                  backgroundColor: "rgba(200, 82, 42, 0.05)",
+                  border: "1px solid rgba(200, 82, 42, 0.1)",
+                  maxWidth: 300,
+                }}
+              >
+                <div style={{ color: "#C8522A", marginTop: 2, flexShrink: 0 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                </div>
+                <p
+                  style={{
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 12,
+                    fontWeight: 500,
+                    color: "rgba(26,18,8,0.7)",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  <span className="font-bold text-[#C8522A]">Research Note:</span> {slide.researchNote}
+                </p>
+              </div>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>

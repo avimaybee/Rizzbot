@@ -1,7 +1,7 @@
 import { ensureAppSchema } from './schema';
 
 export async function onRequest(context: any) {
-  const { env, request } = context;
+  const { env, request, data } = context;
   // Try several common binding names to be resilient to the exact name used in Pages settings
   const db = env.RIZZBOT_DATA || env.RIZZBOT || env.RIZZBOT_DB || env.RIZZBOT_D1 || env.RIZZBOT_DATASET || env["rizzbot data"];
 
@@ -9,7 +9,7 @@ export async function onRequest(context: any) {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Content-Type': 'application/json',
   };
 
@@ -17,6 +17,17 @@ export async function onRequest(context: any) {
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
+
+  // Ensure authenticated user exists in context
+  const authenticatedUser = data?.user;
+  if (!authenticatedUser) {
+    return new Response(JSON.stringify({ error: 'Unauthorized: No verified user context' }), {
+      status: 401,
+      headers: corsHeaders,
+    });
+  }
+
+  const verifiedUid = authenticatedUser.uid;
 
   if (!db) {
     console.error('[sessions.ts] D1 binding not found. Available env keys:', Object.keys(env));
@@ -34,67 +45,57 @@ export async function onRequest(context: any) {
   try {
     await ensureAppSchema(db);
 
+    // Ensure the internal user exists for this verified Firebase UID
+    const userRow = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(verifiedUid).first();
+    let dbUserId = userRow?.id;
+
+    if (!dbUserId && request.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'User mapping not found in database' }), {
+        status: 404,
+        headers: corsHeaders,
+      });
+    }
+
     const url = new URL(request.url);
 
     if (request.method === 'GET') {
       // Check if requesting user-specific history
-      const userId = url.searchParams.get('user_id');
-      const anonId = url.searchParams.get('anon_id');
+      const reqUserId = url.searchParams.get('user_id');
+      const reqAnonId = url.searchParams.get('anon_id');
       const limit = parseInt(url.searchParams.get('limit') || '20');
       const offset = parseInt(url.searchParams.get('offset') || '0');
 
-      let query: string;
-      let bindings: any[] = [];
-
-      if (anonId) {
-        // Get sessions for a specific anonymous user
-        query = `
-          SELECT s.id, s.result, s.created_at, s.mode, s.persona_name, s.headline, s.ghost_risk, s.message_count,
-                 u.id AS user_id, u.anon_id
-          FROM sessions s
-          LEFT JOIN users u ON s.user_id = u.id
-          WHERE u.anon_id = ?
-          ORDER BY s.created_at DESC
-          LIMIT ? OFFSET ?
-        `;
-        bindings = [anonId, limit, offset];
-      } else if (userId) {
-        // Get sessions for a specific user by ID
-        query = `
-          SELECT s.id, s.result, s.created_at, s.mode, s.persona_name, s.headline, s.ghost_risk, s.message_count,
-                 u.id AS user_id, u.anon_id
-          FROM sessions s
-          LEFT JOIN users u ON s.user_id = u.id
-          WHERE s.user_id = ?
-          ORDER BY s.created_at DESC
-          LIMIT ? OFFSET ?
-        `;
-        bindings = [parseInt(userId), limit, offset];
-      } else {
-        // Default: get recent sessions (admin view)
-        query = `
-          SELECT s.id, s.result, s.created_at, s.mode, s.persona_name, s.headline, s.ghost_risk, s.message_count,
-                 u.id AS user_id, u.anon_id
-          FROM sessions s
-          LEFT JOIN users u ON s.user_id = u.id
-          ORDER BY s.created_at DESC
-          LIMIT ? OFFSET ?
-        `;
-        bindings = [limit, offset];
+      if (reqAnonId && reqAnonId !== verifiedUid) {
+        return new Response(JSON.stringify({ error: 'Forbidden: Cannot access other users\' data' }), {
+          status: 403,
+          headers: corsHeaders,
+        });
       }
+
+      if (reqUserId && Number(reqUserId) !== dbUserId) {
+        return new Response(JSON.stringify({ error: 'Forbidden: Cannot access other users\' data' }), {
+          status: 403,
+          headers: corsHeaders,
+        });
+      }
+
+      // If they passed no ID but are verified, just fetch for their verified user ID
+      const query = `
+        SELECT s.id, s.result, s.created_at, s.mode, s.persona_name, s.headline, s.ghost_risk, s.message_count,
+                u.id AS user_id, u.anon_id
+        FROM sessions s
+        JOIN users u ON s.user_id = u.id
+        WHERE u.anon_id = ?
+        ORDER BY s.created_at DESC
+        LIMIT ? OFFSET ?
+      `;
+      const bindings = [verifiedUid, limit, offset];
 
       const results = await db.prepare(query).bind(...bindings).all();
 
       // Also get total count for pagination
-      let countQuery = 'SELECT COUNT(*) as total FROM sessions s';
-      let countBindings: any[] = [];
-      if (anonId) {
-        countQuery = 'SELECT COUNT(*) as total FROM sessions s LEFT JOIN users u ON s.user_id = u.id WHERE u.anon_id = ?';
-        countBindings = [anonId];
-      } else if (userId) {
-        countQuery = 'SELECT COUNT(*) as total FROM sessions WHERE user_id = ?';
-        countBindings = [parseInt(userId)];
-      }
+      const countQuery = 'SELECT COUNT(*) as total FROM sessions s JOIN users u ON s.user_id = u.id WHERE u.anon_id = ?';
+      const countBindings = [verifiedUid];
 
       const countResult = await db.prepare(countQuery).bind(...countBindings).all();
       const total = countResult.results?.[0]?.total || 0;
@@ -109,26 +110,16 @@ export async function onRequest(context: any) {
 
     if (request.method === 'POST') {
       const body = await request.json();
-      // Support either user_anon_id (string) or user_id (numeric). Prefer anon id upsert flow.
-      const anonId: string | undefined = body.user_anon_id || body.anon_id;
-      let userId: number | null = null;
 
-      if (anonId) {
-        // try find existing user
-        const found = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(anonId).all();
-        if ((found.results || []).length > 0) {
-          userId = found.results[0].id;
-        } else {
-          // create user with basic fields
-          try {
-            const created = await db.prepare('INSERT INTO users (anon_id) VALUES (?)').bind(anonId).run();
-            userId = created?.meta?.last_rowid || created?.meta?.last_row_id || null;
-          } catch (userErr: any) {
-            console.warn('[sessions.ts] Failed to create user, continuing without user_id:', userErr.message);
-          }
+      // We ignore client-provided anon_id or user_id. Always use the verified context.
+      if (!dbUserId) {
+        // Auto-provision basic user row if it doesn't exist yet so the session can link
+        try {
+          const created = await db.prepare('INSERT INTO users (anon_id) VALUES (?)').bind(verifiedUid).run();
+          dbUserId = created?.meta?.last_rowid || created?.meta?.last_row_id;
+        } catch (userErr: any) {
+          console.error('[sessions.ts] Failed to create basic user for session:', userErr.message);
         }
-      } else if (body.user_id) {
-        userId = Number(body.user_id) || null;
       }
 
       const result = typeof body.result === 'string' ? body.result : JSON.stringify(body.result || {});
@@ -142,7 +133,7 @@ export async function onRequest(context: any) {
 
       const run = await db.prepare(
         'INSERT INTO sessions (user_id, result, mode, persona_name, headline, ghost_risk, message_count) VALUES (?, ?, ?, ?, ?, ?, ?)'
-      ).bind(userId, result, mode, personaName, headline, ghostRisk, messageCount).run();
+      ).bind(dbUserId, result, mode, personaName, headline, ghostRisk, messageCount).run();
 
       return new Response(JSON.stringify({ success: run.success, lastInsertId: run.meta?.last_rowid }), {
         headers: corsHeaders,
@@ -158,7 +149,16 @@ export async function onRequest(context: any) {
         });
       }
 
-      const run = await db.prepare('DELETE FROM sessions WHERE id = ?').bind(parseInt(sessionId)).run();
+      // Ensure that the session being deleted actually belongs to the verified user
+      const run = await db.prepare('DELETE FROM sessions WHERE id = ? AND user_id = ?').bind(parseInt(sessionId), dbUserId).run();
+
+      if (run.meta?.changes === 0) {
+        return new Response(JSON.stringify({ error: 'Session not found or forbidden' }), {
+          status: 403,
+          headers: corsHeaders,
+        });
+      }
+
       return new Response(JSON.stringify({ success: run.success }), {
         headers: corsHeaders,
       });

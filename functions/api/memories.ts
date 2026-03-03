@@ -2,19 +2,30 @@
 import { ensureAppSchema } from './schema';
 
 export async function onRequest(context: any) {
-    const { env, request } = context;
+    const { env, request, data } = context;
     const db = env.RIZZBOT_DATA || env.RIZZBOT || env.RIZZBOT_DB || env.RIZZBOT_D1 || env.RIZZBOT_DATASET || env["rizzbot data"];
 
     const corsHeaders = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Content-Type': 'application/json',
     };
 
     if (request.method === 'OPTIONS') {
         return new Response(null, { status: 204, headers: corsHeaders });
     }
+
+    // Ensure authenticated user exists in context
+    const authenticatedUser = data?.user;
+    if (!authenticatedUser) {
+        return new Response(JSON.stringify({ error: 'Unauthorized: No verified user context' }), {
+            status: 401,
+            headers: corsHeaders,
+        });
+    }
+
+    const verifiedUid = authenticatedUser.uid;
 
     if (!db) {
         return new Response(JSON.stringify({ error: 'DB binding not found' }), { status: 500, headers: corsHeaders });
@@ -23,28 +34,42 @@ export async function onRequest(context: any) {
     try {
         await ensureAppSchema(db);
 
+        // Ensure the internal user exists for this verified Firebase UID
+        const userRow = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(verifiedUid).first();
+        let dbUserId = userRow?.id;
+
+        if (!dbUserId && request.method !== 'POST') {
+            return new Response(JSON.stringify({ error: 'User mapping not found in database' }), {
+                status: 404,
+                headers: corsHeaders,
+            });
+        }
+
         const url = new URL(request.url);
 
         // GET memories
         if (request.method === 'GET') {
-            const userId = url.searchParams.get('user_id');
+            const reqUserId = url.searchParams.get('user_id');
             const sessionId = url.searchParams.get('session_id');
             const type = url.searchParams.get('type'); // GLOBAL or SESSION
-            const anonId = url.searchParams.get('anon_id'); // Resolve anon_id to user_id if needed
+            const reqAnonId = url.searchParams.get('anon_id');
 
-            let resolvedUserId = userId;
-            if (!resolvedUserId && anonId) {
-                const user = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(anonId).first();
-                if (user) resolvedUserId = user.id;
-                else return new Response(JSON.stringify({ memories: [] }), { headers: corsHeaders });
+            if (reqAnonId && reqAnonId !== verifiedUid) {
+                return new Response(JSON.stringify({ error: 'Forbidden: Cannot access other users\' data' }), {
+                    status: 403,
+                    headers: corsHeaders,
+                });
             }
 
-            if (!resolvedUserId) {
-                return new Response(JSON.stringify({ error: 'User identifier required' }), { status: 400, headers: corsHeaders });
+            if (reqUserId && Number(reqUserId) !== dbUserId) {
+                return new Response(JSON.stringify({ error: 'Forbidden: Cannot access other users\' data' }), {
+                    status: 403,
+                    headers: corsHeaders,
+                });
             }
 
             let query = 'SELECT * FROM therapist_memories WHERE user_id = ?';
-            const bindings: any[] = [resolvedUserId];
+            const bindings: any[] = [dbUserId];
 
             if (type) {
                 query += ' AND type = ?';
@@ -52,9 +77,7 @@ export async function onRequest(context: any) {
             }
 
             if (sessionId) {
-                // If getting session memories, specific session
-                // If getting global, ignore session_id usually, but strict filtering requested?
-                query += ' AND (session_id = ? OR type = "GLOBAL")';
+                query += ' AND session_id = ?';
                 bindings.push(sessionId);
             }
 
@@ -67,21 +90,27 @@ export async function onRequest(context: any) {
         // POST create memory
         if (request.method === 'POST') {
             const body = await request.json();
-            const { user_anon_id, session_id, type, content, creator } = body;
+            const { session_id, type, content, creator } = body;
 
-            let resolvedUserId = body.user_id;
-            if (!resolvedUserId && user_anon_id) {
-                const user = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(user_anon_id).first();
-                if (user) resolvedUserId = user.id;
+            // We ignore client-provided user IDs and use the verified user context
+            if (!dbUserId) {
+                // Auto-provision basic user row if it doesn't exist yet
+                try {
+                    const created = await db.prepare('INSERT INTO users (anon_id) VALUES (?)').bind(verifiedUid).run();
+                    dbUserId = created?.meta?.last_rowid || created?.meta?.last_row_id;
+                } catch (userErr: any) {
+                    console.error('[memories] Failed to create basic user for memory:', userErr.message);
+                    return new Response(JSON.stringify({ error: 'Failed to mapped user identity' }), { status: 500, headers: corsHeaders });
+                }
             }
 
-            if (!resolvedUserId) return new Response(JSON.stringify({ error: 'User required' }), { status: 400, headers: corsHeaders });
+            if (!dbUserId) return new Response(JSON.stringify({ error: 'User required' }), { status: 400, headers: corsHeaders });
             if (!content || !type) return new Response(JSON.stringify({ error: 'Content and Type required' }), { status: 400, headers: corsHeaders });
 
             const res = await db.prepare(`
         INSERT INTO therapist_memories (user_id, session_id, type, content, creator)
         VALUES (?, ?, ?, ?, ?)
-      `).bind(resolvedUserId, session_id || null, type, content, creator || 'USER').run();
+      `).bind(dbUserId, session_id || null, type, content, creator || 'USER').run();
 
             return new Response(JSON.stringify({ success: true, id: res.meta?.last_rowid }), { headers: corsHeaders });
         }
@@ -93,8 +122,13 @@ export async function onRequest(context: any) {
 
             if (!id || !content || !type) return new Response(JSON.stringify({ error: 'ID, Content, and Type required' }), { status: 400, headers: corsHeaders });
 
-            await db.prepare('UPDATE therapist_memories SET content = ?, type = ?, creator = ? WHERE id = ?')
-                .bind(content, type, creator || 'USER', id).run();
+            // Ensure ownership before updating
+            const run = await db.prepare('UPDATE therapist_memories SET content = ?, type = ?, creator = ? WHERE id = ? AND user_id = ?')
+                .bind(content, type, creator || 'USER', id, dbUserId).run();
+
+            if (run.meta?.changes === 0) {
+                return new Response(JSON.stringify({ error: 'Memory not found or forbidden' }), { status: 403, headers: corsHeaders });
+            }
 
             return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
         }
@@ -103,7 +137,14 @@ export async function onRequest(context: any) {
         if (request.method === 'DELETE') {
             const id = url.searchParams.get('id');
             if (!id) return new Response(JSON.stringify({ error: 'ID required' }), { status: 400, headers: corsHeaders });
-            await db.prepare('DELETE FROM therapist_memories WHERE id = ?').bind(id).run();
+
+            // Ensure ownership
+            const run = await db.prepare('DELETE FROM therapist_memories WHERE id = ? AND user_id = ?').bind(id, dbUserId).run();
+
+            if (run.meta?.changes === 0) {
+                return new Response(JSON.stringify({ error: 'Memory not found or forbidden' }), { status: 403, headers: corsHeaders });
+            }
+
             return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
         }
 

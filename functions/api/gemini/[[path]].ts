@@ -1,17 +1,26 @@
-export async function onRequest(context: { env: any; request: Request }) {
-  const { env, request } = context;
+export async function onRequest(context: { env: any; request: Request; data?: any }) {
+  const { env, request, data } = context;
 
   // CORS headers following the pattern used in other Pages Functions
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, x-goog-api-key',
+    'Access-Control-Allow-Headers': 'Content-Type, x-goog-api-key, Authorization',
     'Content-Type': 'application/json',
   };
 
   // Handle preflight
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  // Ensure authenticated user exists in context
+  const authenticatedUser = data?.user;
+  if (!authenticatedUser) {
+    return new Response(JSON.stringify({ error: 'Unauthorized: No verified user context' }), {
+      status: 401,
+      headers: corsHeaders,
+    });
   }
 
   const url = new URL(request.url);

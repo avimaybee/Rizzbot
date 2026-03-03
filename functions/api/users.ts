@@ -1,14 +1,14 @@
 import { ensureAppSchema } from './schema';
 
 export async function onRequest(context: any) {
-  const { env, request } = context;
+  const { env, request, data } = context;
   const db = env.RIZZBOT_DATA || env.RIZZBOT || env.RIZZBOT_DB || env.RIZZBOT_D1 || env.RIZZBOT_DATASET || env["rizzbot data"];
 
   // Add CORS headers
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Content-Type': 'application/json',
   };
 
@@ -16,6 +16,17 @@ export async function onRequest(context: any) {
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
+
+  // Ensure authenticated user exists in context (populated by _middleware.ts)
+  const authenticatedUser = data?.user;
+  if (!authenticatedUser) {
+    return new Response(JSON.stringify({ error: 'Unauthorized: No verified user context' }), {
+      status: 401,
+      headers: corsHeaders,
+    });
+  }
+
+  const verifiedUid = authenticatedUser.uid;
 
   if (!db) {
     console.error('[users.ts] D1 binding not found. Available env keys:', Object.keys(env));
@@ -34,74 +45,67 @@ export async function onRequest(context: any) {
 
     if (request.method === 'GET') {
       const url = new URL(request.url);
-      const firebaseUid = url.searchParams.get('firebase_uid');
-      const anonId = url.searchParams.get('anon_id');
-      const identifier = firebaseUid || anonId;
+      const reqUid = url.searchParams.get('firebase_uid') || url.searchParams.get('anon_id');
 
-      if (identifier) {
-        // Get user by firebase_uid (or fallback to anon_id for backwards compat)
-        // First try with all columns, fall back to basic columns if extra ones don't exist
-        let user;
-        try {
-          user = await db.prepare(
-            'SELECT id, anon_id, email, display_name, photo_url, provider, created_at, last_login_at FROM users WHERE anon_id = ?'
-          ).bind(identifier).first();
-        } catch (columnError: any) {
-          // Columns might not exist yet - try basic query
-          console.warn('[users.ts] Extended columns query failed, trying basic:', columnError.message);
-          user = await db.prepare(
-            'SELECT id, anon_id, created_at FROM users WHERE anon_id = ?'
-          ).bind(identifier).first();
-        }
-
-        if (!user) {
-          // Return 404 to let client know user doesn't exist
-          return new Response(JSON.stringify({ error: 'User not found' }), {
-            status: 404,
-            headers: corsHeaders,
-          });
-        }
-
-        // Update last_login_at (ignore if column doesn't exist)
-        try {
-          await db.prepare('UPDATE users SET last_login_at = ? WHERE id = ?')
-            .bind(new Date().toISOString(), user.id).run();
-        } catch (e) {
-          // Column might not exist yet
-        }
-
-        return new Response(JSON.stringify({ user }), {
+      // Enforce access control: request UID must match verified UID
+      if (reqUid && reqUid !== verifiedUid) {
+        return new Response(JSON.stringify({ error: 'Forbidden: Cannot access other users\' data' }), {
+          status: 403,
           headers: corsHeaders,
         });
       }
 
-      // Get all users (admin only, no auth for now)
-      const users = await db.prepare('SELECT id, anon_id, email, display_name, created_at FROM users LIMIT 100').all();
-      return new Response(JSON.stringify(users.results || []), {
+      // Get user by verified firebase_uid
+      let user;
+      try {
+        user = await db.prepare(
+          'SELECT id, anon_id, email, display_name, photo_url, provider, is_premium, premium_until, created_at, last_login_at FROM users WHERE anon_id = ?'
+        ).bind(verifiedUid).first();
+      } catch (columnError: any) {
+        // Columns might not exist yet - try basic query
+        console.warn('[users.ts] Extended columns query failed, trying basic:', columnError.message);
+        user = await db.prepare(
+          'SELECT id, anon_id, created_at FROM users WHERE anon_id = ?'
+        ).bind(verifiedUid).first();
+      }
+
+      if (!user) {
+        // Return 404 to let client know user doesn't exist
+        return new Response(JSON.stringify({ error: 'User not found' }), {
+          status: 404,
+          headers: corsHeaders,
+        });
+      }
+
+      // Update last_login_at (ignore if column doesn't exist)
+      try {
+        await db.prepare('UPDATE users SET last_login_at = ? WHERE id = ?')
+          .bind(new Date().toISOString(), user.id).run();
+      } catch (e) {
+        // Column might not exist yet
+      }
+
+      return new Response(JSON.stringify({ user }), {
         headers: corsHeaders,
       });
     }
 
     if (request.method === 'POST') {
       const body = await request.json();
-      const firebaseUid = body.firebase_uid || body.anon_id;
-      const email = body.email || null;
-      const displayName = body.display_name || null;
-      const photoUrl = body.photo_url || null;
-      const provider = body.provider || 'unknown';
 
-      if (!firebaseUid) {
-        return new Response(JSON.stringify({ error: 'firebase_uid or anon_id required' }), {
-          status: 400,
-          headers: corsHeaders,
-        });
-      }
+      // Auto-populate from verified token
+      const firebaseUid = verifiedUid;
+      // Allow body overrides if provided, otherwise fallback to token data
+      const email = body.email || authenticatedUser.email || null;
+      const displayName = body.display_name || authenticatedUser.name || null;
+      const photoUrl = body.photo_url || authenticatedUser.picture || null;
+      const provider = body.provider || 'firebase';
 
       // Check if user exists
       let user;
       try {
         user = await db.prepare(
-          'SELECT id, anon_id, email, display_name, photo_url, provider, created_at FROM users WHERE anon_id = ?'
+          'SELECT id, anon_id, email, display_name, photo_url, provider, is_premium, premium_until, created_at FROM users WHERE anon_id = ?'
         ).bind(firebaseUid).first();
       } catch (e) {
         // Try basic query if extended columns don't exist
@@ -149,18 +153,22 @@ export async function onRequest(context: any) {
 
     if (request.method === 'PUT') {
       const body = await request.json();
-      const userId = body.id;
       const email = body.email;
       const displayName = body.display_name;
       const photoUrl = body.photo_url;
       const provider = body.provider;
 
-      if (!userId) {
-        return new Response(JSON.stringify({ error: 'id required' }), {
-          status: 400,
+      // Ensure the user actually exists and maps to this verifiedUid
+      const user = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(verifiedUid).first();
+
+      if (!user) {
+        return new Response(JSON.stringify({ error: 'Forbidden: User not found for update' }), {
+          status: 403,
           headers: corsHeaders,
         });
       }
+
+      const userId = user.id;
 
       // Build dynamic update query
       const updates: string[] = [];

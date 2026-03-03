@@ -11,6 +11,7 @@ import { TherapistClosingScreen } from "./components/TherapistClosingScreen";
 import { HistoryScreen } from "./components/HistoryScreen";
 import { MyVoiceScreen } from "./components/MyVoiceScreen";
 import { TacticalReportScreen } from "./components/TacticalReportScreen";
+import { AdminPaymentsScreen } from "./components/AdminPaymentsScreen";
 import { useAppContext } from "./app-context";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -83,6 +84,14 @@ function ProtectedVoiceNew() {
   );
 }
 
+function ProtectedAdmin() {
+  return (
+    <RequireAuth>
+      <AdminPaymentsScreen />
+    </RequireAuth>
+  );
+}
+
 export const router = createBrowserRouter([
   { path: "/", Component: SplashScreen },
   { path: "/onboarding", Component: OnboardingScreen },
@@ -95,5 +104,6 @@ export const router = createBrowserRouter([
   { path: "/therapist-close", Component: ProtectedTherapistClosing },
   { path: "/history", Component: ProtectedHistoryNew },
   { path: "/voice", Component: ProtectedVoiceNew },
+  { path: "/admin/payments", Component: ProtectedAdmin },
   { path: "*", Component: SplashScreen },
 ]);

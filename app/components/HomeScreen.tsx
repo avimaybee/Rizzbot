@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { Bell, ChevronRight, Heart, LogOut, Mic, Target, Zap } from "lucide-react";
+import { motion } from "framer-motion";
+import { Bell, ChevronRight, Heart, LogOut, Mic, Sparkles, Target, Zap } from "lucide-react";
 import { TabBar } from "./TabBar";
 import { GrainOverlay } from "./GrainOverlay";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { PremiumModal } from "./PremiumModal";
 import { useAppContext } from "../app-context";
 import { getSessions, recordActivity, type StreakData } from "../../services/dbService";
 
@@ -71,7 +73,8 @@ const formatHoursAgo = (isoDate: string): string => {
 
 export function HomeScreen() {
   const navigate = useNavigate();
-  const { authUser, userId, signOut } = useAppContext();
+  const { authUser, userId, signOut, isPremium } = useAppContext();
+  const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [streak, setStreak] = useState<StreakData>({
     current_streak: 0,
@@ -144,7 +147,7 @@ export function HomeScreen() {
                 >
                   {greeting.sub}
                 </p>
-                <p
+                <h1
                   style={{
                     fontFamily: "'DM Sans', sans-serif",
                     fontSize: 22,
@@ -153,7 +156,7 @@ export function HomeScreen() {
                   }}
                 >
                   {firstName}
-                </p>
+                </h1>
               </div>
             </div>
             {streak.current_streak > 0 && (
@@ -251,7 +254,7 @@ export function HomeScreen() {
           >
             What's your
           </p>
-          <p
+          <h2
             style={{
               fontFamily: "'Cormorant Garamond', serif",
               fontSize: 36,
@@ -262,7 +265,7 @@ export function HomeScreen() {
             }}
           >
             {greeting.hero}
-          </p>
+          </h2>
         </div>
 
         <div className="mt-6 flex flex-col gap-3">
@@ -303,7 +306,36 @@ export function HomeScreen() {
           })}
         </div>
 
-        <div className="mt-6">
+        {/* Premium Banner (Temporarily Hidden) */}
+        {false && !isPremium && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={() => setIsPremiumModalOpen(true)}
+            className="mt-8 p-6 rounded-[28px] bg-[#1A1208] text-white relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all"
+          >
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
+                  Limited Offer
+                </span>
+                <Sparkles size={12} className="text-[#C8522A]" />
+              </div>
+              <h3 className="text-xl font-bold mb-1">Get Lifetime Access</h3>
+              <p className="text-sm text-white/60 mb-4">
+                Unlimited AI advice, practice sessions & more. Just ₹500.
+              </p>
+              <div className="inline-flex items-center gap-2 text-sm font-bold text-[#C8522A]">
+                Upgrade Now <ChevronRight size={16} />
+              </div>
+            </div>
+            <div className="absolute top-1/2 right-[-20px] -translate-y-1/2 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
+              <Zap size={140} fill="white" />
+            </div>
+          </motion.div>
+        )}
+
+        <div className="mt-8">
           <p
             style={{
               fontFamily: "'DM Sans', sans-serif",
@@ -359,6 +391,11 @@ export function HomeScreen() {
       </div>
 
       <TabBar />
-    </div >
+
+      <PremiumModal
+        isOpen={isPremiumModalOpen}
+        onClose={() => setIsPremiumModalOpen(false)}
+      />
+    </div>
   );
 }

@@ -177,8 +177,43 @@ const ensureSchemaInternal = async (db: D1Database): Promise<void> => {
     )`
   );
 
+  await runSchemaStatement(db, `ALTER TABLE users ADD COLUMN is_premium BOOLEAN DEFAULT 0`);
+  await runSchemaStatement(db, `ALTER TABLE users ADD COLUMN premium_until TIMESTAMP`);
+
+  await runSchemaStatement(
+    db,
+    `CREATE TABLE IF NOT EXISTS payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      transaction_id TEXT UNIQUE,
+      amount INTEGER,
+      currency TEXT,
+      payment_method TEXT,
+      status TEXT, -- 'PENDING', 'COMPLETED', 'FAILED'
+      metadata TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`
+  );
+
+  await runSchemaStatement(
+    db,
+    `CREATE TABLE IF NOT EXISTS subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      tier TEXT, -- 'LIFETIME', 'MONTHLY'
+      status TEXT, -- 'ACTIVE', 'EXPIRED'
+      starts_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      ends_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`
+  );
+
   await runSchemaStatement(db, `CREATE UNIQUE INDEX IF NOT EXISTS idx_users_anon_id ON users(anon_id)`);
   await runSchemaStatement(db, `CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
+  await runSchemaStatement(db, `CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id)`);
+  await runSchemaStatement(db, `CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_transaction_id ON payments(transaction_id)`);
+  await runSchemaStatement(db, `CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id)`);
   await runSchemaStatement(db, `CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)`);
   await runSchemaStatement(db, `CREATE INDEX IF NOT EXISTS idx_sessions_created_at ON sessions(created_at DESC)`);
   await runSchemaStatement(db, `CREATE INDEX IF NOT EXISTS idx_personas_user_id ON personas(user_id)`);

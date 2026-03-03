@@ -52,8 +52,28 @@ export function SplashScreen() {
           YOUR AI TEXTING WINGMAN
         </motion.p>
 
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="mt-6 px-10 text-center"
+        >
+          <p
+            style={{
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: 12,
+              fontWeight: 400,
+              lineHeight: 1.6,
+              color: "rgba(26, 18, 8, 0.45)",
+            }}
+          >
+            Powered by linguistic forensics, relational psychology, and attachment theory.
+          </p>
+        </motion.div>
+
         {/* More breathing room */}
-        <div className="h-16" />
+        <div className="h-10" />
+
 
         <motion.button
           initial={{ opacity: 0, y: 16 }}

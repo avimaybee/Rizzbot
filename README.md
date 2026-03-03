@@ -1,68 +1,31 @@
-# Rizzbot - Your AI Wingman for Texting
+# Rizzbot 🚀
+**Your AI-Powered Wingman & Emotional Intelligence Texting Coach.**
 
-Your AI-powered texting coach that helps you craft authentic, confident responses.
+Rizzbot is a sophisticated texting assistant designed to help users build authentic, meaningful connections. Unlike generic "rizz" generators, it uses research-backed psychology and advanced AI to help you communicate with confidence, clarity, and your own unique voice.
 
-## Features
+---
 
-- **🚀 Quick Mode:** Upload screenshots or paste messages for instant advice
-- **🧠 Relationship Therapist:** Deep-dive AI persona for uncovering relationship blind spots
-- **🎯 Practice Mode:** Simulate conversations with AI personas before sending
-- **📜 History:** Review past sessions with full context
-- **👤 Your Style:** AI learns your unique texting voice
-- **🔥 Vibe Check:** Instant analysis of their energy and interest level
-- **🎨 New Branding**: Professional organic AI-generated logo and aesthetic integration
+## 🔥 Key Features
 
-## Run Locally
+### ⚡ Quick Mode (Screenshot Advice)
+Upload a screenshot or paste a message for instant, context-aware advice.
+- **OCR Analysis:** Automatically detects platform (WhatsApp, Instagram, etc.) and message context.
+- **Multiple Variations:** Get suggestions in different tones: *Smooth*, *Bold*, *Witty*, and *Authentic*.
+- **Energy Analysis:** Instant "Vibe Check" on their interest level and energy.
 
-**Prerequisites:** Node.js 18+
+### 🎭 Practice Mode (AI Simulation)
+Trial your messages before you send them.
+- **Persona Architect:** Create detailed AI personas of the person you're texting.
+- **Real-time Feedback:** Get a "Regret Level" score and predicted replies.
+- **Tactical Reports:** End-of-session analysis with ghost risk assessment and vibe matching.
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
+### 🧠 Relationship Therapist
+A deep-dive AI mode for uncovering relationship blind spots and attachment patterns.
+- **Psychology-Backed:** Built on relationship models like Reis & Shaver intimacy or Miller & Kenny reciprocity.
+- **Vibe Checks:** Deep analysis of conversation dynamics.
 
-2. Set up environment variables:
-   Create a `.env.local` file with:
-   ```
-   GEMINI_API_KEY=your_gemini_api_key
-   VITE_FIREBASE_API_KEY=your_firebase_api_key
-   VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-   VITE_FIREBASE_PROJECT_ID=your_project_id
-   VITE_FIREBASE_APP_ID=your_app_id
-   ```
+### 👤 My Voice (Personal Styling)
+AI that actually sounds like you.
+- **Style Extraction:** Analyzes your raw messages to extract your specific texting quirks (caps usage, emoji habits, slang).
+- **Authentic Mimicry:** Suggestions that feel like you actually typed them, just slightly more polished.
 
-3. Run the app:
-   ```bash
-   npm run dev
-   ```
-
-## Deploy to Cloudflare Pages
-
-1. Push to GitHub
-2. Connect repo to Cloudflare Pages
-3. Set environment variables in Pages dashboard
-4. Configure D1 database binding (`RIZZBOT_DATA`)
-5. Run migrations:
-   ```bash
-   npx wrangler d1 migrations apply RIZZBOT_DATA --remote
-   ```
-
-See [Deployment Guide](./docs/05_DEPLOYMENT.md) for details.
-
-## Tech Stack
-
-- **Frontend:** React 19 + TypeScript + Vite
-- **Styling:** Tailwind CSS
-- **AI:** Google Gemini API (gemini-3-flash-preview)
-- **Auth:** Firebase Authentication
-- **Database:** Cloudflare D1 (SQLite)
-- **Hosting:** Cloudflare Pages
-
-## Documentation
-
-- [Product Vision](./docs/01_PRODUCT_VISION.md)
-- [Style & Voice Guide](./docs/02_STYLE_AND_VOICE.md)
-- [Development Status](./docs/03_DEVELOPMENT_STATUS.md)
-- [Technical Specs](./docs/04_TECHNICAL_SPECS.md)
-- [Deployment Guide](./docs/05_DEPLOYMENT.md)
-- [Testing & Bugs](./docs/06_TESTING_AND_BUGS.md)

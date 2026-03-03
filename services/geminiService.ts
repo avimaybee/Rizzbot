@@ -1,6 +1,7 @@
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { SimResult, Persona, SimAnalysisResult, QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, StyleExtractionRequest, StyleExtractionResponse, AIExtractedStyleProfile } from "../types";
 import { getPromptBias } from "./feedbackService";
+import { getFirebaseToken } from './firebaseService';
 import { logger } from "./logger";
 
 /**
@@ -8,8 +9,12 @@ import { logger } from "./logger";
  * Instead, we proxy all requests through our own backend function at /api/gemini
  * which injects the key securely from an environment variable.
  */
+
+// We need an async function to get the token, but window.fetch is synchronous.
+// When GoogleGenAI calls fetch, it's typically awaiting the result, but the fetch replacement itself is synchronous.
+// However, since originalFetch returns a Promise, we can make our wrapper async and return the Promise.
 const originalFetch = window.fetch;
-window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   const urlStr = typeof input === 'string'
     ? input
     : (input instanceof URL ? input.href : input.url);
@@ -24,15 +29,28 @@ window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
 
   if (parsedUrl.hostname === 'generativelanguage.googleapis.com') {
     const proxyUrl = `/api/gemini${parsedUrl.pathname}${parsedUrl.search}`;
+    const token = await getFirebaseToken();
+
+    const headers = new Headers(init?.headers);
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
 
     // Handle cases where input is a Request object to preserve headers, method, and body
     if (typeof input !== 'string' && !(input instanceof URL)) {
       // Create a new Request based on the original but with the proxy URL
+      // We can't directly modify headers of an existing Request, so we rebuild
       const modifiedRequest = new Request(proxyUrl, input);
+      if (token) {
+        modifiedRequest.headers.set('Authorization', `Bearer ${token}`);
+      }
       return originalFetch(modifiedRequest);
     }
 
-    return originalFetch(proxyUrl, init);
+    return originalFetch(proxyUrl, {
+      ...init,
+      headers
+    });
   }
   return originalFetch(input, init);
 };

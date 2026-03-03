@@ -1,14 +1,14 @@
 import { ensureAppSchema } from './schema';
 
 export async function onRequest(context: any) {
-  const { env, request } = context;
+  const { env, request, data } = context;
   const db = env.RIZZBOT_DATA || env.RIZZBOT || env.RIZZBOT_DB || env.RIZZBOT_D1 || env.RIZZBOT_DATASET || env["rizzbot data"];
 
   // Add CORS headers
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Content-Type': 'application/json',
   };
 
@@ -16,6 +16,17 @@ export async function onRequest(context: any) {
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
+
+  // Ensure authenticated user exists in context
+  const authenticatedUser = data?.user;
+  if (!authenticatedUser) {
+    return new Response(JSON.stringify({ error: 'Unauthorized: No verified user context' }), {
+      status: 401,
+      headers: corsHeaders,
+    });
+  }
+
+  const verifiedUid = authenticatedUser.uid;
 
   if (!db) {
     console.error('[style_profiles.ts] D1 binding not found. Available env keys:', Object.keys(env));
@@ -32,23 +43,35 @@ export async function onRequest(context: any) {
   try {
     await ensureAppSchema(db);
 
+    // Ensure the internal user exists for this verified Firebase UID
+    const userRow = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(verifiedUid).first();
+    let dbUserId = userRow?.id;
+
+    if (!dbUserId && request.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'User mapping not found in database' }), {
+        status: 404,
+        headers: corsHeaders,
+      });
+    }
+
     if (request.method === 'GET') {
       const url = new URL(request.url);
-      const userId = url.searchParams.get('user_id');
+      const reqUserId = url.searchParams.get('user_id');
 
-      if (userId) {
-        const profile = await db
-          .prepare('SELECT * FROM style_profiles WHERE user_id = ? ORDER BY created_at DESC LIMIT 1')
-          .bind(Number(userId))
-          .first();
-
-        return new Response(JSON.stringify(profile || null), {
+      if (reqUserId && Number(reqUserId) !== dbUserId) {
+        return new Response(JSON.stringify({ error: 'Forbidden: Cannot access other users\' data' }), {
+          status: 403,
           headers: corsHeaders,
         });
       }
 
-      const all = await db.prepare('SELECT * FROM style_profiles LIMIT 100').all();
-      return new Response(JSON.stringify(all.results || []), {
+      // Always fetch for the verified user
+      const profile = await db
+        .prepare('SELECT * FROM style_profiles WHERE user_id = ? ORDER BY created_at DESC LIMIT 1')
+        .bind(dbUserId)
+        .first();
+
+      return new Response(JSON.stringify(profile || null), {
         headers: corsHeaders,
       });
     }
@@ -56,7 +79,6 @@ export async function onRequest(context: any) {
     if (request.method === 'POST') {
       const body = await request.json();
       const {
-        user_id,
         emoji_usage,
         capitalization,
         punctuation,
@@ -69,7 +91,19 @@ export async function onRequest(context: any) {
         favorite_emojis,
       } = body;
 
-      if (!user_id) {
+      // We ignore client-provided user IDs and use the verified user context
+      if (!dbUserId) {
+        // Auto-provision basic user row if it doesn't exist yet
+        try {
+          const created = await db.prepare('INSERT INTO users (anon_id) VALUES (?)').bind(verifiedUid).run();
+          dbUserId = created?.meta?.last_rowid || created?.meta?.last_row_id;
+        } catch (userErr: any) {
+          console.error('[style_profiles.ts] Failed to create basic user for style_profile:', userErr.message);
+          return new Response(JSON.stringify({ error: 'Failed to mapped user identity' }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      if (!dbUserId) {
         return new Response(JSON.stringify({ error: 'user_id required' }), {
           status: 400,
           headers: corsHeaders,
@@ -83,7 +117,7 @@ export async function onRequest(context: any) {
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .bind(
-          user_id,
+          dbUserId,
           emoji_usage || null,
           capitalization || null,
           punctuation || null,

@@ -1,14 +1,14 @@
 import { ensureAppSchema } from './schema';
 
 export async function onRequest(context: any) {
-  const { env, request } = context;
+  const { env, request, data } = context;
   const db = env.RIZZBOT_DATA || env.RIZZBOT || env.RIZZBOT_DB || env.RIZZBOT_D1 || env.RIZZBOT_DATASET || env["rizzbot data"];
 
   // Add CORS headers
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Content-Type': 'application/json',
   };
 
@@ -16,6 +16,17 @@ export async function onRequest(context: any) {
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
+
+  // Ensure authenticated user exists in context
+  const authenticatedUser = data?.user;
+  if (!authenticatedUser) {
+    return new Response(JSON.stringify({ error: 'Unauthorized: No verified user context' }), {
+      status: 401,
+      headers: corsHeaders,
+    });
+  }
+
+  const verifiedUid = authenticatedUser.uid;
 
   if (!db) {
     console.error('[personas.ts] D1 binding not found. Available env keys:', Object.keys(env));
@@ -32,28 +43,39 @@ export async function onRequest(context: any) {
   try {
     await ensureAppSchema(db);
 
+    // Get the internal user DB ID associated with this verified firebase UID
+    // Most resources are keyed by user_id
+    const user = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(verifiedUid).first();
+    const dbUserId = user?.id;
+
+    if (!dbUserId) {
+      return new Response(JSON.stringify({ error: 'User mapping not found in database' }), {
+        status: 404,
+        headers: corsHeaders,
+      });
+    }
+
     if (request.method === 'GET') {
       const url = new URL(request.url);
-      const userId = url.searchParams.get('user_id');
+      const reqUserId = url.searchParams.get('user_id');
       const personaId = url.searchParams.get('persona_id');
 
+      if (reqUserId && Number(reqUserId) !== dbUserId) {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+          status: 403,
+          headers: corsHeaders,
+        });
+      }
+
       if (personaId) {
-        const persona = await db.prepare('SELECT * FROM personas WHERE id = ?').bind(Number(personaId)).first();
-        return new Response(JSON.stringify(persona || null), {
-          headers: corsHeaders,
-        });
+        const persona = await db.prepare('SELECT * FROM personas WHERE id = ? AND user_id = ?').bind(Number(personaId), dbUserId).first();
+        if (!persona) return new Response(JSON.stringify(null), { headers: corsHeaders });
+        return new Response(JSON.stringify(persona), { headers: corsHeaders });
       }
 
-      if (userId) {
-        const personas = await db.prepare('SELECT * FROM personas WHERE user_id = ? ORDER BY created_at DESC').bind(Number(userId)).all();
-        return new Response(JSON.stringify(personas.results || []), {
-          headers: corsHeaders,
-        });
-      }
-
-      // All personas (no auth)
-      const all = await db.prepare('SELECT * FROM personas LIMIT 100').all();
-      return new Response(JSON.stringify(all.results || []), {
+      // Default: fetch all personas for the authenticated user
+      const personas = await db.prepare('SELECT * FROM personas WHERE user_id = ? ORDER BY created_at DESC').bind(dbUserId).all();
+      return new Response(JSON.stringify(personas.results || []), {
         headers: corsHeaders,
       });
     }
@@ -61,7 +83,6 @@ export async function onRequest(context: any) {
     if (request.method === 'POST') {
       const body = await request.json();
       const {
-        user_id,
         name,
         relationship_context,
         harshness_level,
@@ -76,8 +97,8 @@ export async function onRequest(context: any) {
         theirLanguage,
       } = body;
 
-      if (!user_id || !name) {
-        return new Response(JSON.stringify({ error: 'user_id and name required' }), {
+      if (!name) {
+        return new Response(JSON.stringify({ error: 'name required' }), {
           status: 400,
           headers: corsHeaders,
         });
@@ -89,7 +110,7 @@ export async function onRequest(context: any) {
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .bind(
-          user_id,
+          dbUserId, // Always assign to the verified user
           name,
           relationship_context || null,
           harshness_level || null,
@@ -121,10 +142,19 @@ export async function onRequest(context: any) {
         });
       }
 
+      // Verify ownership before update
+      const existing = await db.prepare('SELECT id FROM personas WHERE id = ? AND user_id = ?').bind(id, dbUserId).first();
+      if (!existing) {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+          status: 403,
+          headers: corsHeaders,
+        });
+      }
+
       const result = await db
         .prepare(
           `UPDATE personas SET name = ?, relationship_context = ?, harshness_level = ?, communication_tips = ?, conversation_starters = ?, things_to_avoid = ?, tone = ?, style = ?, habits = ?, red_flags = ?, green_flags = ?, their_language = ?
-           WHERE id = ?`
+           WHERE id = ? AND user_id = ?`
         )
         .bind(
           name || null,
@@ -139,7 +169,8 @@ export async function onRequest(context: any) {
           typeof redFlags === 'string' ? redFlags : JSON.stringify(redFlags || []),
           typeof greenFlags === 'string' ? greenFlags : JSON.stringify(greenFlags || []),
           typeof theirLanguage === 'string' ? theirLanguage : JSON.stringify(theirLanguage || []),
-          id
+          id,
+          dbUserId
         )
         .run();
 
@@ -159,7 +190,15 @@ export async function onRequest(context: any) {
         });
       }
 
-      const result = await db.prepare('DELETE FROM personas WHERE id = ?').bind(Number(id)).run();
+      // Ensure user can only delete their own personas
+      const result = await db.prepare('DELETE FROM personas WHERE id = ? AND user_id = ?').bind(Number(id), dbUserId).run();
+
+      if (result.meta?.changes === 0) {
+        return new Response(JSON.stringify({ error: 'Persona not found or forbidden' }), {
+          status: 403,
+          headers: corsHeaders,
+        });
+      }
 
       return new Response(JSON.stringify({ success: true, changes: result?.meta?.changes }), {
         headers: corsHeaders,

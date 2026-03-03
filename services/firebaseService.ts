@@ -193,6 +193,21 @@ export const getCurrentUser = (): AuthUser | null => {
   };
 };
 
+/**
+ * Get the current user's Firebase ID Token for API authenticaton
+ */
+export const getFirebaseToken = async (): Promise<string | null> => {
+  const user = auth.currentUser;
+  if (!user) return null;
+
+  try {
+    return await user.getIdToken();
+  } catch (error) {
+    logger.error('Error fetching Firebase token:', error);
+    return null;
+  }
+};
+
 // ============================================
 // ANALYTICS
 // ============================================
