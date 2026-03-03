@@ -46,16 +46,17 @@ const modeCards = [
 
 function getGreeting(): { sub: string; hero: string } {
   const h = new Date().getHours();
+  const rand = Math.random();
   if (h >= 5 && h < 12) {
-    return { sub: "Good morning,", hero: "What's your opening move?" };
+    return { sub: "Good morning,", hero: rand > 0.5 ? "Your move starts here." : "Make today's opener count." };
   }
   if (h >= 12 && h < 17) {
-    return { sub: "Good afternoon,", hero: "Ready to make a move?" };
+    return { sub: "Good afternoon,", hero: rand > 0.5 ? "Decode the message." : "Your next move awaits." };
   }
   if (h >= 17 && h < 21) {
-    return { sub: "Good evening,", hero: "What's the move today?" };
+    return { sub: "Good evening,", hero: rand > 0.5 ? "Own the conversation." : "Time to level up." };
   }
-  return { sub: "Still up?", hero: "Who are you texting?" };
+  return { sub: "Still up?", hero: rand > 0.5 ? "Trust the process." : "Clarity over impulse." };
 }
 
 type ActivityItem = {
@@ -71,16 +72,27 @@ const formatHoursAgo = (isoDate: string): string => {
   return `${Math.floor(hours / 24)}d ago`;
 };
 
+const toModeCardName = (mode?: string): string | null => {
+  if (mode === "quick") return "Quick Mode";
+  if (mode === "simulator") return "Practice";
+  if (mode === "therapist") return "Deep Dive";
+  if (mode === "voice") return "My Voice";
+  return null;
+};
+
 export function HomeScreen() {
   const navigate = useNavigate();
-  const { authUser, userId, signOut, isPremium } = useAppContext();
+  const { authUser, userId, userProfile, signOut, isPremium } = useAppContext();
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [lastUsedByMode, setLastUsedByMode] = useState<Record<string, string>>({});
   const [streak, setStreak] = useState<StreakData>({
     current_streak: 0,
     longest_streak: 0,
     last_active_date: null,
   });
+  const [showProfileSheet, setShowProfileSheet] = useState(false);
+  const [showStreakTip, setShowStreakTip] = useState(false);
   const greeting = useMemo(() => getGreeting(), []);
   const firstName =
     authUser?.displayName?.split(" ")[0] ||
@@ -93,24 +105,40 @@ export function HomeScreen() {
     void getSessions(userId || authUser.uid, 5, 0)
       .then((response) => {
         if (!alive) return;
-        const recent = (response.sessions || []).slice(0, 4).map((session) => ({
+        const sessions = response.sessions || [];
+        const recent = sessions.slice(0, 4).map((session) => ({
           mode:
-            session.mode === "quick"
-              ? "Quick Mode"
-              : session.mode === "simulator"
-                ? "Practice"
-                : "Deep Dive",
+            toModeCardName(session.mode) ||
+            "Deep Dive",
           time: formatHoursAgo(session.created_at),
           risk:
             typeof session.ghost_risk === "number"
               ? session.ghost_risk
               : session.parsedResult?.analysis?.ghostRisk,
         }));
+        const latestByMode: Record<string, string> = {};
+        sessions.forEach((session) => {
+          const mode = toModeCardName(session.mode);
+          if (!mode || !session.created_at) return;
+          const nextTime = new Date(session.created_at).getTime();
+          const prevTime = latestByMode[mode]
+            ? new Date(latestByMode[mode]).getTime()
+            : 0;
+          if (!Number.isNaN(nextTime) && nextTime > prevTime) {
+            latestByMode[mode] = session.created_at;
+          }
+        });
+        const computedLastUsed: Record<string, string> = {};
+        Object.entries(latestByMode).forEach(([mode, createdAt]) => {
+          computedLastUsed[mode] = formatHoursAgo(createdAt);
+        });
+        setLastUsedByMode(computedLastUsed);
         setActivity(recent);
       })
       .catch(() => {
         if (!alive) return;
         setActivity([]);
+        setLastUsedByMode({});
       });
     return () => {
       alive = false;
@@ -127,26 +155,27 @@ export function HomeScreen() {
   }, [authUser?.uid]);
 
   const isLateNight = new Date().getHours() >= 21 || new Date().getHours() < 5;
+  const hasVoiceProfile = Boolean(userProfile);
 
   return (
     <div className="relative min-h-screen pb-24" style={{ backgroundColor: "#F5EFE6" }}>
       <GrainOverlay />
       <div className="relative z-10 px-5 pt-14 max-w-[430px] mx-auto">
         <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <img src="/logo.png" alt="Rizzbot" style={{ width: 32, height: 32, borderRadius: 8 }} />
-              <div>
-                <p
-                  style={{
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: 13,
-                    fontWeight: 400,
-                    color: "rgba(26, 18, 8, 0.55)",
-                  }}
-                >
-                  {greeting.sub}
-                </p>
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="Rizzbot" style={{ width: 32, height: 32, borderRadius: 8 }} />
+            <div>
+              <p
+                style={{
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 13,
+                  fontWeight: 400,
+                  color: "rgba(26, 18, 8, 0.55)",
+                }}
+              >
+                {greeting.sub}
+              </p>
+              <div className="flex items-center gap-2">
                 <h1
                   style={{
                     fontFamily: "'DM Sans', sans-serif",
@@ -157,50 +186,64 @@ export function HomeScreen() {
                 >
                   {firstName}
                 </h1>
-              </div>
-            </div>
-            {streak.current_streak > 0 && (
-              <div className="mt-1.5 inline-flex items-center gap-1" style={{
-                backgroundColor: '#FEF3E2',
-                border: '1px solid #F5D9A8',
-                borderRadius: 100,
-                padding: '2px 8px',
-              }}>
-                <span style={{ fontSize: 12 }}>🔥</span>
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 500, color: '#C8783A' }}>{streak.current_streak}</span>
-                <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'rgba(26,18,8,0.45)' }}>day streak</span>
-                {streak.longest_streak > streak.current_streak && (
-                  <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 10, color: 'rgba(26,18,8,0.4)' }}>
-                    · best {streak.longest_streak}
-                  </span>
+                {streak.current_streak > 0 && (
+                  <button
+                    onClick={() => setShowStreakTip((prev) => !prev)}
+                    className="inline-flex items-center gap-1 cursor-pointer fade-press"
+                    style={{
+                      backgroundColor: '#FEF3E2',
+                      border: '1px solid #F5D9A8',
+                      borderRadius: 100,
+                      padding: '2px 8px',
+                      position: 'relative',
+                    }}
+                  >
+                    <span style={{ fontSize: 12 }}>🔥</span>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 500, color: '#C8783A' }}>{streak.current_streak}</span>
+                    {showStreakTip && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        marginTop: 8,
+                        width: 220,
+                        backgroundColor: '#FDFAF5',
+                        borderRadius: 16,
+                        padding: '12px 14px',
+                        boxShadow: '0 8px 24px rgba(26,18,8,0.12)',
+                        border: '1px solid #E8E0D4',
+                        zIndex: 20,
+                        fontFamily: "'DM Sans', sans-serif",
+                        fontSize: 13,
+                        color: 'rgba(26,18,8,0.65)',
+                        lineHeight: 1.4,
+                      }}>
+                        You get a streak for each day you use Rizzbot. Keep it up!
+                      </div>
+                    )}
+                  </button>
                 )}
               </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Bell size={22} strokeWidth={1.8} color="rgba(26,18,8,0.55)" />
-              {activity.length > 0 && (
-                <div style={{
-                  position: 'absolute', top: 2, right: 2,
-                  width: 8, height: 8, borderRadius: '50%',
-                  backgroundColor: '#C8522A',
-                  border: '1.5px solid #F5EFE6',
-                }} />
-              )}
             </div>
+          </div>
+          <button
+            onClick={() => setShowProfileSheet((prev) => !prev)}
+            className="cursor-pointer hover-scale fade-press"
+            style={{ background: "none", border: "none", padding: 0, position: "relative" }}
+            title="Profile"
+          >
             {authUser?.photoURL ? (
               <ImageWithFallback
                 src={authUser.photoURL}
                 alt={firstName}
                 className="object-cover"
-                style={{ width: 32, height: 32, borderRadius: "50%" }}
+                style={{ width: 36, height: 36, borderRadius: "50%", border: "2px solid #D4B8A0", boxShadow: "0 0 0 2px rgba(200,82,42,0.15)" }}
               />
             ) : (
               <div
                 style={{
-                  width: 32,
-                  height: 32,
+                  width: 36,
+                  height: 36,
                   borderRadius: "50%",
                   backgroundColor: "#F5E8E0",
                   color: "#C8522A",
@@ -209,13 +252,25 @@ export function HomeScreen() {
                   justifyContent: "center",
                   fontFamily: "'DM Sans', sans-serif",
                   fontWeight: 700,
-                  fontSize: 12,
+                  fontSize: 14,
+                  border: "2px solid #D4B8A0",
+                  boxShadow: "0 0 0 2px rgba(200,82,42,0.15)",
                 }}
               >
                 {firstName.slice(0, 1).toUpperCase()}
               </div>
             )}
-          </div>
+            <div style={{
+              position: "absolute",
+              bottom: -2,
+              right: -2,
+              width: 10,
+              height: 10,
+              borderRadius: "50%",
+              backgroundColor: "#7A9E7E",
+              border: "2px solid #F5EFE6",
+            }} />
+          </button>
         </div>
 
         {isLateNight && (
@@ -242,18 +297,12 @@ export function HomeScreen() {
           </div>
         )}
 
-        <div className="mt-6">
-          <p
-            style={{
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: 22,
-              fontWeight: 400,
-              color: "rgba(26, 18, 8, 0.55)",
-              lineHeight: 1.3,
-            }}
-          >
-            What's your
-          </p>
+        <motion.div
+          className="mt-8"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+        >
           <h2
             style={{
               fontFamily: "'Cormorant Garamond', serif",
@@ -266,41 +315,53 @@ export function HomeScreen() {
           >
             {greeting.hero}
           </h2>
-        </div>
+        </motion.div>
 
         <div className="mt-6 flex flex-col gap-3">
           {modeCards.map((card, idx) => {
             const Icon = card.icon;
-            const iconColor = ["#C8522A", "#C8783A", "#D4838A", "#8B6DBE"][idx];
+            const isVoiceCard = card.name === "My Voice";
+            const isVoiceProfileActive = isVoiceCard && hasVoiceProfile;
+            const iconColor = isVoiceProfileActive ? "#7A9E7E" : ["#C8522A", "#D4A853", "#C8522A", "#D9A0A0"][idx % 4];
+            const bgTintColor = isVoiceProfileActive ? "rgba(122,158,126,0.14)" : ["#F5E8E0", "#FEF3E2", "#F5E8E0", "rgba(217,160,160,0.12)"][idx % 4];
+            const descriptorText = isVoiceProfileActive ? "✓ Voice profile active" : card.descriptor;
+            const descriptorColor = isVoiceProfileActive ? "#6B8F72" : "rgba(26, 18, 8, 0.55)";
+            const usedTime = lastUsedByMode[card.name];
             return (
               <button
                 key={card.name}
                 onClick={() => navigate(card.path)}
-                className="w-full flex items-center cursor-pointer text-left"
+                className="w-full relative flex items-center cursor-pointer text-left hover-scale fade-press active:scale-[0.97] active:brightness-95 transition-all duration-100"
                 style={{
                   height: 80,
                   backgroundColor: card.tint,
                   borderRadius: 24,
-                  boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)",
+                  boxShadow: "0 1px 4px rgba(26,18,8,0.06), 0 0 0 1px rgba(26,18,8,0.03)",
                   border: "none",
                   padding: "0 20px",
+                  transition: "transform 0.1s, box-shadow 0.1s",
                 }}
               >
                 <div
                   className="flex items-center justify-center shrink-0"
-                  style={{ width: 40, height: 40, borderRadius: "50%", backgroundColor: card.iconBg }}
+                  style={{ width: 44, height: 44, borderRadius: "50%", backgroundColor: bgTintColor }}
                 >
-                  <Icon size={20} strokeWidth={1.8} color={iconColor} />
+                  <Icon size={22} strokeWidth={1.8} color={iconColor} />
                 </div>
                 <div className="ml-4 flex-1 min-w-0">
                   <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
                     {card.name}
                   </p>
-                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 400, color: "rgba(26, 18, 8, 0.55)" }}>
-                    {card.descriptor}
+                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 400, color: descriptorColor }}>
+                    {descriptorText}
                   </p>
                 </div>
                 <ChevronRight size={16} strokeWidth={1.8} color="rgba(26,18,8,0.35)" />
+                {usedTime && (
+                  <span style={{ position: "absolute", right: 20, bottom: 10, fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, color: "rgba(26, 18, 8, 0.45)" }}>
+                    Used {usedTime}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -336,24 +397,41 @@ export function HomeScreen() {
         )}
 
         <div className="mt-8">
-          <p
-            style={{
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: 11,
-              fontWeight: 500,
-              letterSpacing: "0.15em",
-              color: "rgba(26, 18, 8, 0.55)",
-              textTransform: "uppercase",
-            }}
-          >
-            Recent
-          </p>
-          <div className="mt-3 flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
-            {(activity.length > 0 ? activity : [{ mode: "No sessions yet", time: "Start with Quick Mode" }]).map(
-              (item, i) => (
+          <div className="flex items-center justify-between">
+            <p
+              style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: "0.15em",
+                color: "rgba(26, 18, 8, 0.55)",
+                textTransform: "uppercase",
+              }}
+            >
+              Recent
+            </p>
+            <button
+              onClick={() => navigate("/history")}
+              className="cursor-pointer fade-press"
+              style={{
+                background: "none",
+                border: "none",
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 12,
+                fontWeight: 500,
+                color: "#C8522A",
+              }}
+            >
+              See all →
+            </button>
+          </div>
+          {activity.length > 0 ? (
+            <div className="mt-3 flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+              {activity.map((item, i) => (
                 <div
                   key={`${item.mode}-${i}`}
-                  className="flex items-center gap-2 shrink-0"
+                  onClick={() => navigate('/history')}
+                  className="flex items-center gap-2 shrink-0 hover-scale cursor-pointer"
                   style={{
                     backgroundColor: "#FDFAF5",
                     borderRadius: 100,
@@ -373,24 +451,104 @@ export function HomeScreen() {
                     </span>
                   )}
                 </div>
-              )
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div
+              className="mt-3 w-full flex flex-col items-center gap-3 text-center"
+              style={{
+                backgroundColor: "#FDFAF5",
+                borderRadius: 20,
+                border: "1px dashed rgba(26,18,8,0.15)",
+                padding: "24px 16px",
+              }}
+            >
+              <div style={{ padding: 12, borderRadius: 14, backgroundColor: "#F5E8E0" }}>
+                <Zap size={22} color="#C8522A" strokeWidth={1.8} />
+              </div>
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
+                No sessions yet
+              </p>
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26, 18, 8, 0.55)" }}>
+                Analyze a screenshot or type out a message to get started.
+              </p>
+              <button
+                onClick={() => navigate("/quick")}
+                className="hover-scale fade-press cursor-pointer"
+                style={{
+                  backgroundColor: "#C8522A",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: 100,
+                  padding: "12px 24px",
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  boxShadow: "0 4px 12px rgba(200,82,42,0.2)",
+                  marginTop: 4,
+                }}
+              >
+                Start Quick Mode →
+              </button>
+            </div>
+          )}
         </div>
-
-        <button
-          onClick={() => {
-            void signOut().then(() => navigate("/auth"));
-          }}
-          className="mt-6 flex items-center gap-2 cursor-pointer"
-          style={{ background: "none", border: "none", color: "rgba(26,18,8,0.5)", fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}
-        >
-          <LogOut size={14} />
-          Sign out
-        </button>
       </div>
 
       <TabBar />
+
+      {/* Profile Sheet */}
+      {showProfileSheet && (
+        <div
+          className="fixed inset-0 z-[60]"
+          onClick={() => setShowProfileSheet(false)}
+          style={{ backgroundColor: "rgba(26,18,8,0.3)" }}
+        >
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="absolute bottom-0 left-0 right-0"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: "#FDFAF5",
+              borderRadius: "24px 24px 0 0",
+              padding: "24px 20px 40px",
+              maxWidth: 430,
+              margin: "0 auto",
+            }}
+          >
+            <div className="flex justify-center mb-4">
+              <div style={{ width: 36, height: 4, borderRadius: 100, backgroundColor: "#E8E0D4" }} />
+            </div>
+            <div className="flex items-center gap-3 mb-6">
+              <div style={{ width: 48, height: 48, borderRadius: "50%", backgroundColor: "#F5E8E0", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 18, color: "#C8522A" }}>
+                {firstName.slice(0, 1).toUpperCase()}
+              </div>
+              <div>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 600, color: "#1A1208" }}>{authUser?.displayName || firstName}</p>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.5)" }}>{authUser?.email}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => { setShowProfileSheet(false); navigate("/voice"); }}
+              className="w-full flex items-center gap-3 cursor-pointer fade-press"
+              style={{ backgroundColor: "transparent", border: "1px solid #E8E0D4", borderRadius: 16, padding: "14px 16px", marginBottom: 8, fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500, color: "#1A1208", textAlign: "left" }}
+            >
+              <Mic size={18} color="#C8522A" />
+              My Voice Profile
+            </button>
+            <button
+              onClick={() => { setShowProfileSheet(false); signOut(); }}
+              className="w-full flex items-center gap-3 cursor-pointer fade-press"
+              style={{ backgroundColor: "transparent", border: "1px solid rgba(200,82,42,0.2)", borderRadius: 16, padding: "14px 16px", fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500, color: "#C8522A", textAlign: "left" }}
+            >
+              <LogOut size={18} color="#C8522A" />
+              Sign out
+            </button>
+          </motion.div>
+        </div>
+      )}
 
       <PremiumModal
         isOpen={isPremiumModalOpen}

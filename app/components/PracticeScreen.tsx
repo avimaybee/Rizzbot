@@ -66,25 +66,25 @@ const toDataUrl = (file: File): Promise<string> =>
 
 const buildPresetPersona = (name: string): Persona => {
   const preset: Record<string, Pick<Persona, "tone" | "style" | "habits" | "redFlags">> = {
-    "The Ghoster": {
+    "Ghoster": {
       tone: "Detached and inconsistent",
       style: "Short bursts, long gaps",
       habits: "Replies after long delays",
       redFlags: ["Inconsistent effort", "Avoids direct commitment"],
     },
-    "The Overthinker": {
+    "Overthinker": {
       tone: "Warm but cautious",
       style: "Detailed messages with uncertainty",
       habits: "Needs reassurance before opening up",
       redFlags: ["Second-guesses everything"],
     },
-    "The Dry Texter": {
+    "Dry Texter": {
       tone: "Low-expression",
       style: "Very short replies",
       habits: "Rarely asks follow-up questions",
       redFlags: ["Minimal reciprocity"],
     },
-    "The Flirt": {
+    "Flirt": {
       tone: "Playful and high-energy",
       style: "Confident and teasing",
       habits: "Fast banter, strong chemistry cues",
@@ -92,7 +92,7 @@ const buildPresetPersona = (name: string): Persona => {
     },
   };
 
-  const pick = preset[name] || preset["The Dry Texter"];
+  const pick = preset[name] || preset["Dry Texter"];
   return {
     id: `preset-${name}-${Date.now()}`,
     name,
@@ -249,7 +249,7 @@ export function PracticeScreen() {
             communication_tips: resolvedPersona.communicationTips || [],
             conversation_starters: resolvedPersona.conversationStarters || [],
             things_to_avoid: resolvedPersona.thingsToAvoid || [],
-          });
+          } as unknown as Persona);
         }
       } else {
         resolvedPersona = buildPresetPersona(activePersonaName);
@@ -350,22 +350,19 @@ export function PracticeScreen() {
         <GrainOverlay />
         <div className="relative z-10 max-w-[430px] mx-auto">
           <div className="flex items-center justify-between px-5 pt-14">
-            <button onClick={() => navigate("/home")} className="cursor-pointer p-1">
-              <ChevronLeft size={24} strokeWidth={1.8} color="#1A1208" />
+            <button onClick={() => navigate("/home")} className="cursor-pointer flex items-center justify-center fade-press" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#FDFAF5", border: "1px solid #E8E0D4" }}>
+              <ChevronLeft size={22} strokeWidth={1.8} color="#1A1208" />
             </button>
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 17, fontWeight: 600, color: "#1A1208" }}>
               Practice
             </p>
-            <div style={{ width: 32 }} />
+            <div style={{ width: 44 }} />
           </div>
 
           <div className="px-5">
             <div className="mt-6">
-              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 22, color: "rgba(26, 18, 8, 0.55)" }}>
-                Set the
-              </p>
-              <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, fontStyle: "italic", color: "#1A1208" }}>
-                scene.
+              <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, fontStyle: "italic", fontWeight: 600, color: "#1A1208", lineHeight: 1.2 }}>
+                Set the scene.
               </p>
             </div>
 
@@ -374,7 +371,13 @@ export function PracticeScreen() {
                 Who are you talking to?
               </p>
               <div className="relative">
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                <div
+                  className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide"
+                  style={{
+                    WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 84%, rgba(0,0,0,0) 100%)",
+                    maskImage: "linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 84%, rgba(0,0,0,0) 100%)",
+                  }}
+                >
                   {personaOptions.map((name) => {
                     const Icon = personaIcons[name] || User;
                     return (
@@ -399,7 +402,7 @@ export function PracticeScreen() {
                     );
                   })}
                 </div>
-                <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12" style={{ background: 'linear-gradient(to right, transparent, #FDFAF5)' }} />
+                <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-20" style={{ background: 'linear-gradient(to right, rgba(253, 250, 245, 0), #FDFAF5 80%)' }} />
               </div>
 
               {activePersonaName === "Custom..." && (
@@ -479,13 +482,13 @@ export function PracticeScreen() {
                     <button
                       key={idx}
                       onClick={() => handleLoadPersona(p)}
-                      className="flex items-center justify-between text-left"
+                      className="flex items-center justify-between text-left cursor-pointer transition-all hover-scale fade-press"
                       style={{
-                        padding: "12px 16px",
-                        borderRadius: 12,
-                        backgroundColor: "#F5E8E0",
+                        padding: "16px",
+                        borderRadius: 16,
+                        backgroundColor: "#FDFAF5",
                         border: "1px solid #E8E0D4",
-                        cursor: "pointer",
+                        minHeight: 64,
                       }}
                     >
                       <div>
@@ -525,8 +528,8 @@ export function PracticeScreen() {
                     style={{
                       borderRadius: 100,
                       padding: "7px 14px",
-                      backgroundColor: activeGoal === goal ? "#F5E8E0" : "transparent",
-                      color: activeGoal === goal ? "#C8522A" : "rgba(26, 18, 8, 0.55)",
+                      backgroundColor: activeGoal === goal ? "#C8522A" : "transparent",
+                      color: activeGoal === goal ? "#FFFFFF" : "rgba(26, 18, 8, 0.55)",
                       border: activeGoal === goal ? "1px solid #C8522A" : "1px solid #E8E0D4",
                       fontFamily: "'DM Sans', sans-serif",
                       fontSize: 13,
@@ -538,6 +541,13 @@ export function PracticeScreen() {
                 ))}
               </div>
             </div>
+            {activePersonaName !== "Custom..." && (
+              <div className="mt-12" style={{ backgroundColor: "#F5E8E0", borderRadius: 16, padding: "12px 16px" }}>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.65)", textAlign: "center" }}>
+                  Practicing with {activePersonaName}{activeGoal || goalText ? ` — ${activeGoal || goalText}` : ""}
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="fixed bottom-24 left-0 right-0 px-5 z-30">
@@ -574,8 +584,8 @@ export function PracticeScreen() {
       <GrainOverlay />
       <div className="relative z-10 flex flex-col flex-1 max-w-[430px] mx-auto w-full">
         <div className="flex items-center justify-between px-5 pt-14 pb-3">
-          <button onClick={() => setMode("setup")} className="cursor-pointer p-1">
-            <ChevronLeft size={24} strokeWidth={1.8} color="#1A1208" />
+          <button onClick={() => setMode("setup")} className="cursor-pointer flex items-center justify-center fade-press" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#FDFAF5", border: "1px solid #E8E0D4" }}>
+            <ChevronLeft size={22} strokeWidth={1.8} color="#1A1208" />
           </button>
           <div className="flex flex-col items-center">
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 17, fontWeight: 600, color: "#1A1208" }}>
@@ -608,13 +618,23 @@ export function PracticeScreen() {
 
         <div className="flex-1 overflow-y-auto px-5 pb-[180px]">
           {messages.map((msg) => (
-            <div key={msg.id} className={`flex mb-2 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
+            <div key={msg.id} className={`flex mb-4 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
+              {msg.sender === "ai" && (
+                <div
+                  className="shrink-0 mr-2 flex items-center justify-center mt-auto mb-1"
+                  style={{ width: 32, height: 32, borderRadius: "50%", backgroundColor: "#C8522A" }}
+                >
+                  <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 700, fontStyle: "italic", color: "#FFFFFF" }}>
+                    R
+                  </span>
+                </div>
+              )}
               <div
                 style={{
                   maxWidth: "75%",
-                  padding: "10px 16px",
+                  padding: "12px 16px",
                   borderRadius: msg.sender === "ai" ? "18px 18px 18px 4px" : "18px 18px 4px 18px",
-                  backgroundColor: msg.sender === "ai" ? "#FDFAF5" : "#F5E8E0",
+                  backgroundColor: msg.sender === "ai" ? "rgba(217, 160, 160, 0.15)" : "#F5E8E0",
                   fontFamily: "'DM Sans', sans-serif",
                   fontSize: 15,
                   color: "#1A1208",
@@ -634,10 +654,21 @@ export function PracticeScreen() {
           <div className="max-w-[430px] mx-auto flex items-center gap-2 px-4 py-3">
             <button
               onClick={() => setShowHintSheet(true)}
-              className="cursor-pointer shrink-0 p-1"
-              style={{ background: "none", border: "none" }}
+              className="cursor-pointer shrink-0 fade-press flex items-center justify-center gap-2"
+              title="Hints"
+              style={{
+                backgroundColor: "#FDF0F0",
+                border: "1px solid rgba(217,160,160,0.3)",
+                borderRadius: 100,
+                padding: "8px 14px",
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 13,
+                fontWeight: 600,
+                color: "#C8522A"
+              }}
             >
-              <Lightbulb size={22} strokeWidth={1.8} color="rgba(26,18,8,0.45)" />
+              <Lightbulb size={16} strokeWidth={2} color="#C8522A" />
+              Hints
             </button>
             <textarea
               value={inputText}
@@ -653,7 +684,7 @@ export function PracticeScreen() {
                   void handleSend();
                 }
               }}
-              placeholder="Your move..."
+              placeholder="Type a message..."
               className="flex-1 resize-none overflow-y-auto m-1 bg-[#F5EFE6] rounded-[22px] border border-transparent px-[18px] py-[10px] text-[15px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 outline-none leading-[24px]"
               style={{
                 height: 44,

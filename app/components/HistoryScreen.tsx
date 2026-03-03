@@ -4,8 +4,10 @@ import {
   ArrowLeft,
   Clock,
   Image,
+  MessageSquare,
   Search,
   SlidersHorizontal,
+  Sparkles,
   Trash2,
   X,
   Zap,
@@ -538,43 +540,42 @@ export function HistoryScreen() {
           >
             History
           </p>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                setShowSearch((prev) => !prev);
-                haptics.light();
-              }}
-              className="cursor-pointer p-1"
-            >
-              <Search size={20} strokeWidth={1.8} color="rgba(26,18,8,0.55)" />
-            </button>
-            <button
-              onClick={() => {
-                setShowFilter((prev) => !prev);
-                haptics.light();
-              }}
-              className="cursor-pointer p-1"
-            >
-              <SlidersHorizontal
-                size={20}
-                strokeWidth={1.8}
-                color={activeFilter !== "All" ? "#C8522A" : "rgba(26,18,8,0.55)"}
-              />
-            </button>
+          <div className="flex items-center justify-end" style={{ minWidth: 72 }}>
+            {sessions.length > 0 ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setShowSearch((prev) => !prev);
+                    haptics.light();
+                  }}
+                  className="cursor-pointer p-1"
+                >
+                  <Search size={20} strokeWidth={1.8} color="rgba(26,18,8,0.55)" />
+                </button>
+                <button
+                  onClick={() => {
+                    setShowFilter((prev) => !prev);
+                    haptics.light();
+                  }}
+                  className="cursor-pointer p-1"
+                >
+                  <SlidersHorizontal
+                    size={20}
+                    strokeWidth={1.8}
+                    color={activeFilter !== "All" ? "#C8522A" : "rgba(26,18,8,0.55)"}
+                  />
+                </button>
+              </div>
+            ) : (
+              <div style={{ width: 44, height: 20 }} />
+            )}
           </div>
         </div>
-
-        <p
-          className="mt-1"
-          style={{
-            fontFamily: "'DM Sans', sans-serif",
-            fontSize: 13,
-            fontWeight: 400,
-            color: "rgba(26, 18, 8, 0.45)",
-          }}
-        >
-          Your session history
-        </p>
+        {!loading && sessions.length > 0 && (
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.5)", marginTop: 4, textAlign: "right" }}>
+            {sessions.length} session{sessions.length !== 1 ? "s" : ""}
+          </p>
+        )}
 
         <AnimatePresence>
           {showSearch && (
@@ -683,42 +684,69 @@ export function HistoryScreen() {
               </p>
             </div>
           ) : filtered.length === 0 ? (
-            <div
-              className="flex flex-col items-center justify-center py-16"
-              style={{
-                backgroundColor: "#FDFAF5",
-                borderRadius: 20,
-                boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)",
-              }}
-            >
-              <Clock size={40} strokeWidth={1.4} color="rgba(26,18,8,0.2)" />
-              <p
-                className="mt-4"
+            <div className="flex flex-col mt-2">
+              <div
+                className="flex flex-col items-center justify-center py-12 px-6"
                 style={{
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 16,
-                  fontWeight: 600,
-                  color: "#1A1208",
+                  backgroundColor: "#FDFAF5",
+                  borderRadius: 20,
+                  border: "1px dashed rgba(26,18,8,0.15)",
                 }}
               >
-                {query || activeFilter !== "All"
-                  ? "No matching sessions"
-                  : "No sessions yet"}
-              </p>
-              <p
-                className="mt-2"
-                style={{
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 13,
-                  color: "rgba(26,18,8,0.45)",
-                  textAlign: "center",
-                  maxWidth: 220,
-                }}
-              >
-                {query || activeFilter !== "All"
-                  ? "Try adjusting your filters"
-                  : "Your conversations will appear here after your first session"}
-              </p>
+                <div className="mb-4 flex items-center justify-center" style={{ width: 72, height: 72, borderRadius: "50%", backgroundColor: "rgba(200,82,42,0.14)" }}>
+                  <MessageSquare size={48} strokeWidth={1.5} color="#C8522A" />
+                </div>
+                <p
+                  style={{
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: "#1A1208",
+                    marginBottom: 8,
+                    textAlign: "center"
+                  }}
+                >
+                  {query || activeFilter !== "All"
+                    ? "No matching sessions"
+                    : "Your story starts here."}
+                </p>
+                <p
+                  style={{
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 14,
+                    color: "rgba(26,18,8,0.5)",
+                    textAlign: "center",
+                    marginBottom: 24,
+                  }}
+                >
+                  {query || activeFilter !== "All"
+                    ? "Try adjusting your filters to find what you're looking for."
+                    : "Analyze a screenshot or type out a message to get started."}
+                </p>
+                {!(query || activeFilter !== "All") && (
+                  <button
+                    onClick={() => navigate("/quick")}
+                    className="hover-scale fade-press"
+                    style={{
+                      backgroundColor: "#C8522A",
+                      color: "#FFFFFF",
+                      border: "none",
+                      borderRadius: 100,
+                      width: "100%",
+                      maxWidth: 280,
+                      margin: "0 auto",
+                      padding: "14px 24px",
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontSize: 15,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      boxShadow: "0 4px 12px rgba(200,82,42,0.2)",
+                    }}
+                  >
+                    Start your first session →
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             filtered.map((session) => {

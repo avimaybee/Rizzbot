@@ -143,13 +143,11 @@ function AppRouter() {
             style={{
               marginTop: 10,
               fontFamily: "'DM Sans', sans-serif",
-              fontSize: 12,
-              color: "rgba(26,18,8,0.55)",
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
+              fontSize: 13,
+              color: "rgba(26,18,8,0.45)",
             }}
           >
-            Loading
+            getting things ready…
           </p>
         </div>
       </div>

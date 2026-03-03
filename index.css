@@ -43,6 +43,8 @@
   --chart-4: #F5E8E0;
   --chart-5: #1A1208;
   --radius: 0.625rem;
+  --space-hero-to-content: 24px;
+  --space-card-to-card: 10px;
   --sidebar: #FDFAF5;
   --sidebar-foreground: #1A1208;
   --sidebar-primary: #C8522A;
@@ -106,6 +108,7 @@
   --color-amber-tint: #FEF3E2;
   --color-blush-tint: #FDF0F0;
   --color-sage: #7A9E7E;
+  --color-dusty-rose: #D9A0A0;
 
   --font-display: 'Cormorant Garamond', serif;
   --font-body: 'DM Sans', sans-serif;
@@ -258,4 +261,31 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ── Micro-interactions ── */
+@utility hover-scale {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  @media (hover: hover) {
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(26, 18, 8, 0.06);
+    }
+  }
+  &:active {
+    transform: scale(0.97) translateY(0);
+    box-shadow: 0 1px 4px rgba(26, 18, 8, 0.1);
+  }
+}
+
+@utility fade-press {
+  transition: opacity 0.15s ease-out;
+  &:active {
+    opacity: 0.6;
+  }
+}
+
+.section-label-uppercase {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }

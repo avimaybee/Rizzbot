@@ -12,10 +12,10 @@ import {
   Link2,
   RotateCcw,
   Share2,
+  Tag,
   ThumbsDown,
   ThumbsUp,
   X,
-  Zap,
   ChevronRight,
 } from "lucide-react";
 import { TabBar } from "./TabBar";
@@ -88,7 +88,7 @@ export function QuickModeScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [theirMessage, setTheirMessage] = useSessionState("quick_theirMessage", "");
   const [yourDraft, setYourDraft] = useSessionState("quick_yourDraft", "");
-  const [context, setContext] = useSessionState<ContextOption>("quick_context", "talking");
+  const [context, setContext] = useSessionState<ContextOption>("quick_context", "new");
   const [activeTone, setActiveTone] = useSessionState<Tone>("quick_tone", "Smooth");
   const [showStyleTooltip, setShowStyleTooltip] = useState(false);
   const [screenshots, setScreenshots] = useSessionState<string[]>("quick_screenshots", []);
@@ -107,6 +107,10 @@ export function QuickModeScreen() {
   useEffect(() => {
     runWellbeingCheck();
   }, [runWellbeingCheck]);
+
+  useEffect(() => {
+    setContext("new");
+  }, [setContext]);
 
   const selectedOptions = useMemo(() => {
     if (!result) return [];
@@ -256,10 +260,11 @@ export function QuickModeScreen() {
       <GrainOverlay />
       <div className="relative z-10 max-w-[430px] mx-auto">
         <div className="flex items-center justify-between px-5 pt-14">
-          <button onClick={() => navigate("/home")} className="cursor-pointer p-1">
-            <ChevronLeft size={24} strokeWidth={1.8} color="#1A1208" />
+          <button onClick={() => navigate("/home")} className="cursor-pointer flex items-center justify-center fade-press" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#FDFAF5", border: "1px solid #E8E0D4" }}>
+            <ChevronLeft size={22} strokeWidth={1.8} color="#1A1208" />
           </button>
-          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 17, fontWeight: 600, color: "#1A1208" }}>
+          <div style={{ width: 44 }}></div>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
             Quick Mode
           </p>
           {showResults ? (
@@ -283,14 +288,11 @@ export function QuickModeScreen() {
         </div>
 
         {!showResults && !isLoading ? (
-          <div className="px-5">
-            <div className="mt-6">
-              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 22, fontWeight: 400, color: "rgba(26, 18, 8, 0.55)", lineHeight: 1.3 }}>
-                Drop their
-              </p>
-              <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, fontWeight: 700, fontStyle: "italic", color: "#1A1208", lineHeight: 1.2 }}>
-                message.
-              </p>
+          <div className="px-5 pb-[180px]">
+            <div className="mt-4">
+              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, fontWeight: 700, fontStyle: "italic", color: "#1A1208", lineHeight: 1.2 }}>
+                Drop their message.
+              </h2>
             </div>
 
             <input
@@ -306,12 +308,13 @@ export function QuickModeScreen() {
 
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="mt-6 w-full flex flex-col items-center justify-center cursor-pointer"
+              className="mt-6 w-full flex flex-col items-center justify-center cursor-pointer hover-scale fade-press"
               style={{
                 height: 160,
-                border: "2px dashed #C8522A",
-                backgroundColor: "#F5E8E0",
+                border: "2px dashed #B8AFA6",
+                backgroundColor: "#FDFAF5",
                 borderRadius: 24,
+                boxShadow: "inset 0 2px 8px rgba(26,18,8,0.03)",
               }}
             >
               <Camera size={28} strokeWidth={1.8} color="#C8522A" />
@@ -363,8 +366,8 @@ export function QuickModeScreen() {
 
             <div className="flex items-center gap-3 mt-4">
               <div className="flex-1" style={{ height: 1, backgroundColor: '#E8E0D4' }} />
-              <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: '0.15em', color: 'rgba(26,18,8,0.35)', textTransform: 'uppercase' }}>
-                or type it out
+              <span className="shrink-0 text-center" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: '0.15em', color: 'rgba(26,18,8,0.55)', textTransform: 'uppercase' }}>
+                OR TYPE IT OUT
               </span>
               <div className="flex-1" style={{ height: 1, backgroundColor: '#E8E0D4' }} />
             </div>
@@ -388,9 +391,8 @@ export function QuickModeScreen() {
             </div>
 
             <div className="mt-4 relative">
-              <label className="block mb-1.5 flex items-center justify-between" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>
-                <span>Your Potential Reply</span>
-                <span style={{ color: "rgba(26,18,8,0.4)" }}>(Optional)</span>
+              <label className="block mb-1.5" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>
+                Your Potential Reply <span style={{ color: "rgba(26,18,8,0.35)", textTransform: "lowercase", letterSpacing: "normal" }}>(optional)</span>
               </label>
               <textarea
                 value={yourDraft}
@@ -408,12 +410,12 @@ export function QuickModeScreen() {
               />
             </div>
 
-            <div className="mt-5 mb-40">
+            <div className="mt-5">
               <label className="block mb-2 flex items-center gap-1.5" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>
-                <Zap size={14} color="#C8522A" />
+                <Tag size={14} color="#C8522A" />
                 Situation
               </label>
-              <div className="grid grid-cols-5 gap-1.5">
+              <div className="flex flex-wrap gap-2">
                 {contextOptions.map((opt) => (
                   <button
                     key={opt.value}
@@ -441,20 +443,25 @@ export function QuickModeScreen() {
               </div>
             </div>
 
-            <div className="fixed bottom-24 left-0 right-0 px-5 z-30">
-              <div className="max-w-[430px] mx-auto">
+            <div className="fixed bottom-24 left-0 right-0 px-5 z-30 pointer-events-none">
+              <div className="max-w-[430px] mx-auto pointer-events-auto">
                 <button
                   onClick={() => void handleAnalyze()}
-                  className="w-full cursor-pointer transition-colors"
+                  disabled={!theirMessage.trim() && screenshots.length === 0}
+                  className="w-full transition-colors fade-press"
                   style={{
                     height: 56,
                     borderRadius: 100,
-                    backgroundColor: "#C8522A",
-                    color: "#FFFFFF",
+                    backgroundColor: (!theirMessage.trim() && screenshots.length === 0) ? "#E8E0D4" : "#C8522A",
+                    color: (!theirMessage.trim() && screenshots.length === 0) ? "rgba(26,18,8,0.35)" : "#FFFFFF",
                     fontFamily: "'DM Sans', sans-serif",
                     fontSize: 15,
                     fontWeight: 600,
                     border: "none",
+                    cursor: (!theirMessage.trim() && screenshots.length === 0) ? "not-allowed" : "pointer",
+                    boxShadow: (!theirMessage.trim() && screenshots.length === 0) ? "none" : "0 4px 16px rgba(200, 82, 42, 0.3)",
+                    opacity: (!theirMessage.trim() && screenshots.length === 0) ? 0.4 : 1,
+                    transition: "all 0.2s ease",
                   }}
                 >
                   Analyze →

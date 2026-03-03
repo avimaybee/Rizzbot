@@ -5,10 +5,13 @@ import {
   MessageCircle,
   Mic,
   Pencil,
+  Smile,
   Smartphone,
   Sparkles,
   Trash2,
+  ChevronLeft,
 } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { TabBar } from "./TabBar";
 import { GrainOverlay } from "./GrainOverlay";
 import { useToast } from "./ui/Toast";
@@ -33,7 +36,7 @@ const questions: QuizQuestion[] = [
     options: ["Match their energy", "Keep it short and calm", "Wait even longer", "Bring the heat immediately"],
   },
   {
-    icon: MessageCircle,
+    icon: Smile,
     question: "How often do you use emojis in your texts?",
     options: ["Every message", "A few when it fits", "Barely ever", "Only ironic ones"],
   },
@@ -151,7 +154,7 @@ export function MyVoiceScreen() {
   const { toast } = useToast();
   const { userProfile, saveUserProfile } = useAppContext();
 
-  const [mode, setMode] = useState<"quiz" | "result">("quiz");
+  const [mode, setMode] = useState<"intro" | "quiz" | "result">("intro");
   const [currentQ, setCurrentQ] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [answers, setAnswers] = useState<number[]>([]);
@@ -243,111 +246,200 @@ export function MyVoiceScreen() {
     setProfileDraft((prev) => ({ ...prev, ...patch }));
   };
 
+  if (mode === "intro") {
+    return (
+      <div className="relative min-h-screen flex flex-col justify-center items-center px-6" style={{ backgroundColor: "#F5EFE6" }}>
+        <GrainOverlay />
+        <div className="relative z-10 w-full max-w-[430px] mx-auto text-center flex flex-col items-center">
+          <div className="flex items-center justify-center mb-6" style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: "#F5E8E0" }}>
+            <Sparkles size={32} color="#C8522A" strokeWidth={1.5} />
+          </div>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, fontWeight: 700, color: "#1A1208", lineHeight: 1.1, marginBottom: 12 }}>
+            Find Your Voice
+          </h1>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: "rgba(26,18,8,0.6)", lineHeight: 1.5, marginBottom: 32, maxWidth: 280 }}>
+            Take a quick 6-question quiz so Rizzbot matches your unique texting style and tone.
+          </p>
+          <button
+            onClick={() => setMode("quiz")}
+            className="hover-scale fade-press w-full cursor-pointer"
+            style={{
+              backgroundColor: "#C8522A",
+              color: "#FFFFFF",
+              borderRadius: 100,
+              padding: "16px 24px",
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: 16,
+              fontWeight: 600,
+              border: "none",
+              boxShadow: "0 4px 14px rgba(200,82,42,0.25)"
+            }}
+          >
+            Start Quiz
+          </button>
+          <button
+            onClick={() => setMode("result")}
+            className="mt-5 fade-press cursor-pointer flex items-center justify-center gap-2"
+            style={{
+              backgroundColor: "#FDFAF5",
+              color: "rgba(26,18,8,0.6)",
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: 14,
+              border: "1px solid #E8E0D4",
+              borderRadius: 999,
+              padding: "10px 18px",
+              fontWeight: 500,
+            }}
+          >
+            Skip for now
+          </button>
+          <div className="mt-8 flex flex-col items-center gap-2">
+            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.35)" }}>
+              ✨ You can always redo this later
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (mode === "quiz") {
     return (
       <div className="relative min-h-screen flex flex-col" style={{ backgroundColor: "#F5EFE6" }}>
         <GrainOverlay />
         <div className="relative z-10 flex flex-col flex-1 max-w-[430px] mx-auto w-full px-5 pt-14">
-          <div className="flex items-center justify-center gap-2">
-            {Array.from({ length: totalQuestions }).map((_, i) => (
-              <div
-                key={i}
-                style={{
-                  width: i === currentQ ? 10 : 8,
-                  height: i === currentQ ? 10 : 8,
-                  borderRadius: "50%",
-                  backgroundColor: i <= currentQ ? "#C8522A" : "#E8E0D4",
-                  opacity: i < currentQ ? 0.5 : 1,
-                  transition: "all 0.2s",
-                }}
-              />
-            ))}
-          </div>
-          <p
-            className="text-center mt-2"
-            style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26, 18, 8, 0.55)" }}
-          >
-            {currentQ + 1} of {totalQuestions}
-          </p>
-
-          <div className="flex-1 flex flex-col items-center justify-center">
-            <div
-              className="flex items-center justify-center"
-              style={{ width: 48, height: 48, borderRadius: "50%", backgroundColor: "#F5E8E0" }}
-            >
-              <Icon size={24} strokeWidth={1.8} color="#C8522A" />
-            </div>
-            <p
-              className="mt-6 text-center"
-              style={{
-                fontFamily: "'Cormorant Garamond', serif",
-                fontSize: 28,
-                fontWeight: 700,
-                color: "#1A1208",
-                lineHeight: 1.3,
-                maxWidth: 300,
+          <div className="relative flex items-center justify-center w-full min-h-[44px]">
+            <button
+              onClick={() => {
+                if (currentQ > 0) {
+                  setCurrentQ((q) => q - 1);
+                  return;
+                }
+                if (window.confirm("Exit quiz? Your progress won't be saved.")) {
+                  navigate(-1);
+                }
               }}
+              className="absolute left-0 cursor-pointer flex items-center justify-center hover-scale fade-press"
+              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#FDFAF5", border: "1px solid #E8E0D4", zIndex: 10 }}
+              title="Back"
             >
-              {question.question}
-            </p>
-            <div className="w-full mt-8 flex flex-col gap-3">
-              {question.options.map((option, i) => (
-                <button
+              <ChevronLeft size={22} color="#1A1208" />
+            </button>
+            <div className="flex items-center justify-center gap-2">
+              {Array.from({ length: totalQuestions }).map((_, i) => (
+                <div
                   key={i}
-                  onClick={() => setSelectedOption(i)}
                   style={{
-                    height: 52,
-                    borderRadius: 100,
-                    backgroundColor: selectedOption === i ? "#F5E8E0" : "#FDFAF5",
-                    border: selectedOption === i ? "1px solid #C8522A" : "1px solid #E8E0D4",
-                    color: selectedOption === i ? "#C8522A" : "#1A1208",
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: 14,
-                    fontWeight: 500,
-                    textAlign: "center",
-                    cursor: "pointer",
+                    width: 16,
+                    height: 8,
+                    borderRadius: 999,
+                    backgroundColor: i <= currentQ ? "#C8522A" : "rgba(26,18,8,0.12)",
+                    opacity: i <= currentQ ? 1 : 0.45,
+                    transition: "all 0.3s ease",
                   }}
-                >
-                  {option}
-                </button>
+                />
               ))}
             </div>
           </div>
 
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentQ}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="flex-1 flex flex-col items-center justify-center w-full"
+            >
+              <div
+                className="flex items-center justify-center"
+                style={{ width: 48, height: 48, borderRadius: "50%", backgroundColor: "#F5E8E0" }}
+              >
+                <Icon size={24} strokeWidth={1.8} color="#C8522A" />
+              </div>
+              <p
+                className="mt-6 text-center"
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontSize: 28,
+                  fontWeight: 700,
+                  color: "#1A1208",
+                  lineHeight: 1.3,
+                  maxWidth: 300,
+                }}
+              >
+                {question.question}
+              </p>
+              <div className="w-full mt-8 flex flex-col gap-3">
+                {question.options.map((option, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedOption(i)}
+                    className="cursor-pointer hover-scale fade-press"
+                    style={{
+                      minHeight: 56,
+                      borderRadius: 16,
+                      backgroundColor: selectedOption === i ? "rgba(200,82,42,0.08)" : "#FDFAF5",
+                      border: selectedOption === i ? "2px solid #C8522A" : "1px solid #E8E0D4",
+                      color: selectedOption === i ? "#C8522A" : "#1A1208",
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontSize: 15,
+                      fontWeight: selectedOption === i ? 600 : 500,
+                      textAlign: "center",
+                      padding: "16px 20px",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
           <div className="pb-8">
             <button
               onClick={handleNext}
+              className="fade-press cursor-pointer"
               style={{
                 width: "100%",
                 height: 56,
                 borderRadius: 100,
-                backgroundColor: selectedOption !== null ? "#C8522A" : "#E8E0D4",
-                color: selectedOption !== null ? "#FFFFFF" : "rgba(26, 18, 8, 0.35)",
+                backgroundColor: selectedOption !== null ? "#C8522A" : "rgba(26, 18, 8, 0.06)",
+                color: selectedOption !== null ? "#FFFFFF" : "rgba(26, 18, 8, 0.3)",
                 fontFamily: "'DM Sans', sans-serif",
                 fontSize: 15,
                 fontWeight: 600,
                 border: "none",
                 pointerEvents: selectedOption !== null ? "auto" : "none",
-                cursor: "pointer",
+                cursor: selectedOption !== null ? "pointer" : "default",
+                opacity: selectedOption !== null ? 1 : 0.5,
+                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                transform: selectedOption !== null ? "scale(1)" : "scale(0.98)",
+                boxShadow: selectedOption !== null ? "0 4px 14px rgba(200,82,42,0.25)" : "none",
               }}
             >
               {isLast ? "Finish →" : "Next →"}
             </button>
             <button
               onClick={() => setMode("result")}
+              className="cursor-pointer fade-press flex items-center justify-center gap-2"
               style={{
                 width: "100%",
                 marginTop: 12,
-                backgroundColor: "transparent",
-                border: "none",
-                color: "rgba(26,18,8,0.55)",
+                backgroundColor: "#F5E8E0",
+                border: "1px solid #E8E0D4",
+                borderRadius: 100,
+                color: "#C8522A",
                 fontFamily: "'DM Sans', sans-serif",
                 fontSize: 14,
-                fontWeight: 500,
-                cursor: "pointer",
+                fontWeight: 600,
+                minHeight: 52,
+                padding: "10px 16px",
               }}
             >
-              Skip quiz & extract with AI instead
+              <Sparkles size={16} color="#C8522A" />
+              Let AI analyze my texts instead
             </button>
           </div>
         </div>

@@ -5,7 +5,7 @@ const tabs = [
   { label: "Home", icon: Home, path: "/home" },
   { label: "Quick", icon: Zap, path: "/quick" },
   { label: "Practice", icon: Target, path: "/practice" },
-  { label: "Therapist", icon: Heart, path: "/therapist" },
+  { label: "Deep Dive", icon: Heart, path: "/therapist" },
   { label: "History", icon: Clock, path: "/history" },
 ];
 
@@ -22,7 +22,7 @@ export function TabBar() {
         borderTop: "1px solid #E8E0D4",
       }}
     >
-      <div className="flex items-center justify-around h-full px-2 pb-4 max-w-[430px] mx-auto">
+      <div className="flex items-center justify-around h-full px-1 pb-4 max-w-[430px] mx-auto">
         {tabs.map((tab) => {
           const isActive = location.pathname.startsWith(tab.path);
           const Icon = tab.icon;
@@ -30,26 +30,47 @@ export function TabBar() {
             <button
               key={tab.label}
               onClick={() => navigate(tab.path)}
-              className="flex flex-col items-center gap-1 flex-1 cursor-pointer"
+              className="flex items-center justify-center cursor-pointer"
+              style={{
+                flex: 1,
+                height: 56,
+                paddingTop: 4,
+                background: "none",
+                border: "none",
+              }}
             >
-              <Icon
-                size={22}
-                strokeWidth={1.8}
+              <div
+                className="flex flex-col items-center justify-center transition-all"
                 style={{
-                  color: isActive ? "#C8522A" : "rgba(26, 18, 8, 0.35)",
-                }}
-              />
-              <span
-                className="font-[\'DM_Sans\']"
-                style={{
-                  fontSize: 11,
-                  fontWeight: 500,
-                  color: isActive ? "#C8522A" : "rgba(26, 18, 8, 0.35)",
-                  fontFamily: "'DM Sans', sans-serif",
+                  padding: "4px 14px",
+                  borderRadius: 999,
+                  backgroundColor: isActive ? "rgba(200, 82, 42, 0.10)" : "transparent",
+                  gap: 2,
+                  minWidth: tab.label === "Deep Dive" ? 84 : 62,
                 }}
               >
-                {tab.label}
-              </span>
+                <Icon
+                  size={20}
+                  strokeWidth={isActive ? 2.2 : 1.8}
+                  style={{
+                    color: isActive ? "#C8522A" : "rgba(26, 18, 8, 0.35)",
+                    flexShrink: 0,
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? "#C8522A" : "rgba(26, 18, 8, 0.45)",
+                    fontFamily: "'DM Sans', sans-serif",
+                    lineHeight: 1,
+                    letterSpacing: "-0.02em",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {tab.label}
+                </span>
+              </div>
             </button>
           );
         })}

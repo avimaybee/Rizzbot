@@ -62,13 +62,32 @@ const DEFAULT_NOTES: ClinicalNotes = {
 };
 
 const WELCOME_MESSAGE =
-  "I am here to help you process patterns, decode mixed signals, and protect your peace. What feels heaviest right now?";
+  "Welcome. I'm here to help you make sense of what's happening — vent, spot patterns, or just think it through. Where do you want to start?";
 const BOTTOM_NAV_HEIGHT = 80;
 const CHAT_BOTTOM_BUFFER = 16;
 const DEFAULT_COMPOSER_HEIGHT = 110;
 const HERO_SECTION_MAX_HEIGHT = 120;
 
 const ensureUnique = (values: string[] = []): string[] => [...new Set(values.filter(Boolean))];
+const normalizeMessageContent = (content: string = "") =>
+  content.replace(/\[shared screenshots\]/gi, "📎 Screenshot");
+const isLegacyTherapistWelcome = (content: string = "") => {
+  const lowerContent = content.toLowerCase();
+  const hasLegacyWelcomeHeader =
+    lowerContent.includes("welcome to therapist mode") || lowerContent.includes("how i can help");
+  const matchedBulletPhrases = ["vent freely", "spot patterns", "build skills"].filter((phrase) =>
+    lowerContent.includes(phrase)
+  ).length;
+  return hasLegacyWelcomeHeader || matchedBulletPhrases >= 2;
+};
+const normalizeMessages = (messages: TherapistUiMessage[] = []): TherapistUiMessage[] =>
+  messages.map((msg) => {
+    const normalizedContent = normalizeMessageContent(msg.content);
+    if (msg.role === "therapist" && isLegacyTherapistWelcome(normalizedContent)) {
+      return { ...msg, content: WELCOME_MESSAGE };
+    }
+    return { ...msg, content: normalizedContent };
+  });
 
 const toDataUrl = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -343,7 +362,7 @@ export function TherapistScreen() {
   const [messages, setMessages] = useState<TherapistUiMessage[]>(() => {
     try {
       const saved = localStorage.getItem("therapist_messages");
-      if (saved) return JSON.parse(saved) as TherapistUiMessage[];
+      if (saved) return normalizeMessages(JSON.parse(saved) as TherapistUiMessage[]);
     } catch {
       // ignore invalid cache
     }
@@ -454,7 +473,7 @@ export function TherapistScreen() {
 
   const handleLoadSession = (session: TherapistSession) => {
     setInteractionId(session.interaction_id);
-    setMessages((session.messages || []) as TherapistUiMessage[]);
+    setMessages(normalizeMessages((session.messages || []) as TherapistUiMessage[]));
     setClinicalNotes((session.clinical_notes || DEFAULT_NOTES) as ClinicalNotes);
     setPendingExercise(null);
     setShowSessionSheet(false);
@@ -505,23 +524,27 @@ export function TherapistScreen() {
     }
   };
 
-  const handleSend = async () => {
-    const trimmed = inputValue.trim();
-    if ((!trimmed && pendingImages.length === 0) || isLoading || !authUser?.uid) return;
+  const handleSend = async (override?: { content: string; images?: string[] }) => {
+    const trimmed = normalizeMessageContent(override ? override.content : inputValue).trim();
+    const outgoingImages = override ? [...(override.images || [])] : pendingImages;
+    if ((!trimmed && outgoingImages.length === 0) || isLoading || !authUser?.uid) return;
 
     const currentInteractionId = interactionId || `session_${Date.now()}`;
     if (!interactionId) setInteractionId(currentInteractionId);
 
+    const userContent = trimmed || "📎 Screenshot";
     const userMsg: TherapistUiMessage = {
       role: "user",
-      content: trimmed || "[shared screenshots]",
+      content: userContent,
       timestamp: Date.now(),
-      images: pendingImages.length > 0 ? [...pendingImages] : undefined,
+      images: outgoingImages.length > 0 ? outgoingImages : undefined,
     };
 
     setMessages((prev) => [...prev, userMsg]);
-    setInputValue("");
-    setPendingImages([]);
+    if (!override) {
+      setInputValue("");
+      setPendingImages([]);
+    }
     setIsLoading(true);
     setStreamingContent("");
 
@@ -530,7 +553,7 @@ export function TherapistScreen() {
     try {
       let fullResponse = "";
       const newInteractionId = await streamTherapistAdvice(
-        trimmed || "Please analyze the attached screenshots and guide me.",
+        userContent === "📎 Screenshot" ? "Please analyze the attached screenshots and guide me." : userContent,
         currentInteractionId,
         userMsg.images,
         clinicalNotes,
@@ -589,7 +612,7 @@ export function TherapistScreen() {
         ...prev,
         {
           role: "therapist",
-          content: "I hit a processing issue. Try rephrasing or sending one screenshot at a time.",
+          content: "⚠️ Something went wrong. Let me try a different approach — could you rephrase that, or send one screenshot at a time?",
           timestamp: Date.now(),
         },
       ]);
@@ -597,6 +620,16 @@ export function TherapistScreen() {
       setIsLoading(false);
       setStreamingContent("");
     }
+  };
+
+  const lastUserTurn = useMemo(
+    () => [...messages].reverse().find((msg) => msg.role === "user"),
+    [messages]
+  );
+
+  const handleRetryLastTurn = () => {
+    if (!lastUserTurn) return;
+    void handleSend({ content: lastUserTurn.content, images: lastUserTurn.images });
   };
 
   const isSendDisabled = isLoading || (!inputValue.trim() && pendingImages.length === 0);
@@ -608,8 +641,12 @@ export function TherapistScreen() {
       <div className="relative z-10 max-w-[430px] mx-auto flex flex-col min-h-screen w-full">
         {/* Sticky Header */}
         <div className="sticky top-0 z-40 flex items-center justify-between px-5 pt-14 pb-3" style={{ backgroundColor: "#F5EFE6" }}>
-          <button onClick={() => navigate("/home")} className="cursor-pointer p-1">
-            <ChevronLeft size={24} strokeWidth={1.8} color="#1A1208" />
+          <button
+            onClick={() => navigate("/home")}
+            className="cursor-pointer flex items-center justify-center fade-press"
+            style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#FDFAF5", border: "1px solid #E8E0D4" }}
+          >
+            <ChevronLeft size={22} strokeWidth={1.8} color="#1A1208" />
           </button>
           <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 17, fontWeight: 600, color: "#1A1208" }}>
             Deep Dive
@@ -620,19 +657,41 @@ export function TherapistScreen() {
                 setInsightsOpen(true);
                 haptics.light();
               }}
-              style={{ border: "none", background: "none", color: "rgba(26,18,8,0.4)", cursor: "pointer", padding: 6 }}
-              title="Session Insights"
+              className="flex items-center gap-1.5 cursor-pointer hover-scale fade-press"
+              style={{
+                border: "1px solid #C8522A",
+                background: "#C8522A",
+                borderRadius: 100,
+                color: "#FFFFFF",
+                padding: "6px 12px",
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 12,
+                fontWeight: 600,
+                transition: "all 0.2s ease",
+              }}
             >
-              <Lightbulb size={20} />
+              <Lightbulb size={14} color="#FFFFFF" />
+              Insights
             </button>
             <button
               onClick={() => {
                 setShowSessionSheet(true);
                 haptics.light();
               }}
-              style={{ border: "none", background: "none", color: "rgba(26,18,8,0.4)", cursor: "pointer", padding: 6 }}
+              className="flex items-center gap-1.5 cursor-pointer hover-scale fade-press"
+              style={{
+                border: "1px solid #E8E0D4",
+                background: "#FDFAF5",
+                borderRadius: 100,
+                color: "rgba(26,18,8,0.6)",
+                padding: "6px 12px",
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 12,
+                fontWeight: 600,
+              }}
             >
-              <History size={18} />
+              <History size={14} />
+              History
             </button>
           </div>
         </div>
@@ -653,44 +712,64 @@ export function TherapistScreen() {
 
 
         <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-5" style={{ paddingBottom: composerHeight + BOTTOM_NAV_HEIGHT + CHAT_BOTTOM_BUFFER }}>
-          {messages.map((msg, idx) => (
-            <div key={`${msg.timestamp}-${idx}`} className={`mb-3 ${msg.role === "user" ? "text-right" : "text-left"}`}>
-              <div
-                style={{
-                  display: "inline-block",
-                  maxWidth: "75%",
-                  borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                  backgroundColor: msg.role === "user" ? "#FDFAF5" : "#FDF0F0",
-                  padding: "10px 16px",
-                }}
-              >
-                {msg.images && msg.images.length > 0 && (
-                  <div className="mb-2 flex gap-2 flex-wrap">
-                    {msg.images.map((img, i) => (
-                      <img key={i} src={img} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 8 }} />
-                    ))}
+          {messages.map((msg, idx) => {
+            const normalizedContent = normalizeMessageContent(msg.content);
+            const isTherapistError = msg.role === "therapist" && normalizedContent.startsWith("⚠️");
+            return (
+              <div key={`${msg.timestamp}-${idx}`} className={`mb-3 flex ${msg.role === "user" ? "justify-end" : "justify-start gap-2"}`}>
+                {msg.role === "therapist" && (
+                  <div className="flex-shrink-0 flex items-center justify-center shrink-0" style={{ width: 32, height: 32, borderRadius: "50%", backgroundColor: "#C8522A", color: "#FFFFFF", fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 700, fontStyle: "italic", marginTop: 4, boxShadow: "0 2px 10px rgba(200,82,42,0.28)" }}>
+                    R
                   </div>
                 )}
-                <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 400, color: "#1A1208", lineHeight: 1.5 }}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                <div className={msg.role === "user" ? "text-right" : "text-left"} style={{ maxWidth: "75%" }}>
+                  <div
+                    style={{
+                      display: "inline-block",
+                      borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                      backgroundColor: msg.role === "user" ? "#FDFAF5" : isTherapistError ? "#FFF5E4" : "#FDF0F0",
+                      border: isTherapistError ? "1px solid #F0DEC0" : "none",
+                      padding: "10px 16px",
+                      textAlign: "left",
+                    }}
+                  >
+                    {msg.images && msg.images.length > 0 && (
+                      <div className="mb-2 flex gap-2 flex-wrap">
+                        {msg.images.map((img, i) => (
+                          <img key={i} src={img} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 8 }} />
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 400, color: "#1A1208", lineHeight: 1.5 }}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{normalizedContent}</ReactMarkdown>
+                    </div>
+                  </div>
+
+                  {msg.role === "therapist" && (
+                    <div className="mt-2 text-left">
+                      {isTherapistError && lastUserTurn && (
+                        <button
+                          onClick={handleRetryLastTurn}
+                          style={{ border: "none", background: "none", color: "#C8522A", fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: 0, marginBottom: 6 }}
+                        >
+                          Retry
+                        </button>
+                      )}
+                      {msg.pattern?.patternName && <InsightCard title="Pattern Insight" body={msg.pattern.patternName} />}
+                      {msg.perspective?.suggestedMotive && <InsightCard title="Perspective Bridge" body={msg.perspective.suggestedMotive} />}
+                      {msg.projection?.behavior && <InsightCard title="Projection Check" body={`${msg.projection.behavior} ↔ ${msg.projection.potentialRoot || ""}`} />}
+                      {msg.closureScript?.script && <InsightCard title="Closure Script" body={msg.closureScript.script} />}
+                      {msg.parentalPattern?.insight && <InsightCard title="Generational Pattern" body={msg.parentalPattern.insight} />}
+                      {typeof msg.valuesMatrix?.alignmentScore === "number" && (
+                        <InsightCard title="Values Alignment" body={`${msg.valuesMatrix.alignmentScore}% alignment score`} />
+                      )}
+                      {msg.safetyIntervention?.reason && <InsightCard title="Safety Flag" body={msg.safetyIntervention.reason} />}
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {msg.role === "therapist" && (
-                <div style={{ maxWidth: "75%" }}>
-                  {msg.pattern?.patternName && <InsightCard title="Pattern Insight" body={msg.pattern.patternName} />}
-                  {msg.perspective?.suggestedMotive && <InsightCard title="Perspective Bridge" body={msg.perspective.suggestedMotive} />}
-                  {msg.projection?.behavior && <InsightCard title="Projection Check" body={`${msg.projection.behavior} ↔ ${msg.projection.potentialRoot || ""}`} />}
-                  {msg.closureScript?.script && <InsightCard title="Closure Script" body={msg.closureScript.script} />}
-                  {msg.parentalPattern?.insight && <InsightCard title="Generational Pattern" body={msg.parentalPattern.insight} />}
-                  {typeof msg.valuesMatrix?.alignmentScore === "number" && (
-                    <InsightCard title="Values Alignment" body={`${msg.valuesMatrix.alignmentScore}% alignment score`} />
-                  )}
-                  {msg.safetyIntervention?.reason && <InsightCard title="Safety Flag" body={msg.safetyIntervention.reason} />}
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
 
           {pendingExercise && !pendingExercise.completed && (
             <ExerciseCard
@@ -704,33 +783,37 @@ export function TherapistScreen() {
           )}
 
           {isLoading && (
-            <div className="mb-3 text-left">
-              <div
-                style={{
-                  display: "inline-block",
-                  maxWidth: "75%",
-                  borderRadius: "18px 18px 18px 4px",
-                  backgroundColor: "#FDF0F0",
-                  padding: "10px 16px",
-                }}
-              >
-                {streamingContent ? (
-                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 400, color: "#1A1208", lineHeight: 1.5 }}>
-                    {streamingContent}
-                    <span style={{ opacity: 0.7 }}>▋</span>
-                  </p>
-                ) : (
-                  <div className="flex items-center gap-1 py-1">
-                    {[0, 1, 2].map((i) => (
-                      <motion.div
-                        key={i}
-                        style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "rgba(212,131,138,0.6)" }}
-                        animate={{ opacity: [0.3, 1, 0.3] }}
-                        transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
-                      />
-                    ))}
-                  </div>
-                )}
+            <div className="mb-3 flex justify-start gap-2">
+              <div className="flex-shrink-0 flex items-center justify-center shrink-0" style={{ width: 32, height: 32, borderRadius: "50%", backgroundColor: "#C8522A", color: "#FFFFFF", fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 700, fontStyle: "italic", marginTop: 4, boxShadow: "0 2px 10px rgba(200,82,42,0.28)" }}>
+                R
+              </div>
+              <div className="text-left" style={{ maxWidth: "75%" }}>
+                <div
+                  style={{
+                    display: "inline-block",
+                    borderRadius: "18px 18px 18px 4px",
+                    backgroundColor: "#FDF0F0",
+                    padding: "10px 16px",
+                  }}
+                >
+                  {streamingContent ? (
+                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 400, color: "#1A1208", lineHeight: 1.5 }}>
+                      {streamingContent}
+                      <span style={{ opacity: 0.7 }}>▋</span>
+                    </p>
+                  ) : (
+                    <div className="flex items-center gap-1 py-1 px-2">
+                      {[0, 1, 2].map((i) => (
+                        <motion.div
+                          key={i}
+                          style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "rgba(212,131,138,0.6)" }}
+                          animate={{ y: [0, -4, 0] }}
+                          transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -816,7 +899,7 @@ export function TherapistScreen() {
                           void handleSend();
                         }
                       }}
-                      placeholder="Share what's on your mind..."
+                      placeholder="Type a message..."
                       rows={1}
                       className="flex-1 w-full min-w-0 min-h-[44px] max-h-[120px] rounded-[22px] border border-transparent bg-[#F5EFE6] px-4 py-[11px] text-[15px] text-[#1A1208] outline-none resize-none overflow-y-auto transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20"
                       style={{
@@ -842,7 +925,7 @@ export function TherapistScreen() {
                         alignItems: "center",
                         justifyContent: "center",
                         flexShrink: 0,
-                        opacity: isSendDisabled ? 0.5 : 1,
+                        opacity: isSendDisabled ? 0.4 : 1,
                       }}
                     >
                       <Send size={18} />
