@@ -1,7 +1,6 @@
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { SimResult, Persona, SimAnalysisResult, QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, StyleExtractionRequest, StyleExtractionResponse, AIExtractedStyleProfile } from "../types";
 import { getPromptBias } from "./feedbackService";
-import { getFirebaseToken } from './firebaseService';
 import { logger } from "./logger";
 
 /**
@@ -9,12 +8,8 @@ import { logger } from "./logger";
  * Instead, we proxy all requests through our own backend function at /api/gemini
  * which injects the key securely from an environment variable.
  */
-
-// We need an async function to get the token, but window.fetch is synchronous.
-// When GoogleGenAI calls fetch, it's typically awaiting the result, but the fetch replacement itself is synchronous.
-// However, since originalFetch returns a Promise, we can make our wrapper async and return the Promise.
 const originalFetch = window.fetch;
-window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
   const urlStr = typeof input === 'string'
     ? input
     : (input instanceof URL ? input.href : input.url);
@@ -29,28 +24,15 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
 
   if (parsedUrl.hostname === 'generativelanguage.googleapis.com') {
     const proxyUrl = `/api/gemini${parsedUrl.pathname}${parsedUrl.search}`;
-    const token = await getFirebaseToken();
-
-    const headers = new Headers(init?.headers);
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
 
     // Handle cases where input is a Request object to preserve headers, method, and body
     if (typeof input !== 'string' && !(input instanceof URL)) {
       // Create a new Request based on the original but with the proxy URL
-      // We can't directly modify headers of an existing Request, so we rebuild
       const modifiedRequest = new Request(proxyUrl, input);
-      if (token) {
-        modifiedRequest.headers.set('Authorization', `Bearer ${token}`);
-      }
       return originalFetch(modifiedRequest);
     }
 
-    return originalFetch(proxyUrl, {
-      ...init,
-      headers
-    });
+    return originalFetch(proxyUrl, init);
   }
   return originalFetch(input, init);
 };
@@ -105,8 +87,8 @@ async function retryWithBackoff<T>(
 }
 
 // --- FALLBACK LOGIC ---
-const PRIMARY_MODEL = "gemini-1.5-flash-lite-latest";
-const FALLBACK_MODEL = "gemini-1.5-flash-lite-latest"; // Both set to lite-latest as requested
+const PRIMARY_MODEL = "gemini-3-flash-preview";
+const FALLBACK_MODEL = "gemini-2.5-flash"; // Standard free tier, reliable
 
 /**
  * Robust wrapper for Gemini generation with Model Fallback.
@@ -219,7 +201,7 @@ export const generatePersona = async (
   try {
     const response = await runWithFallback(
       (modelId) => ai.models.generateContent({
-        model: "gemini-flash-lite-latest",
+        model: modelId,
         contents: { parts: parts },
         config: { safetySettings: safetySettings }
       }),
@@ -278,9 +260,9 @@ export const simulateDraft = async (
     - Preferred tone: ${userStyle.preferredTone}
     
     CRITICAL FOR "YOU" SUGGESTION:
-    - Sound EXACTLY like the user would naturally type - don't add extra flair or slang they don't use
+    - Sound how the user would naturally type - don't add extra flair or slang they don't use
     - If they're casual and simple, keep it casual and simple
-    - DON'T make it more elaborate or add phrases they wouldn't use
+    - you can create phrases they would actually use
     - Match their exact length preference - if they text short, keep it short
     - Only use emojis if they naturally use emojis
     - The goal is their authentic voice, just slightly polished - NOT a complete rewrite
@@ -319,7 +301,7 @@ export const simulateDraft = async (
     - Engagement > appearing unbothered
     
     ⚠️ IMPORTANT: Being expressive is NOT cringe. Showing enthusiasm when appropriate is healthy.
-    CAPS for genuine excitement is valid: "NO WAY", "STOPPP", "WAIT WHAT"
+    CAPS for genuine excitement is valid: "NO WAY", "REALLYY??", "WAIT WHAT"
     
     ═══════════════════════════════════════════════
     LINGUISTIC STYLE RULES
@@ -363,7 +345,7 @@ export const simulateDraft = async (
     - Tone: ${persona.tone}
     - Style: ${persona.style}
     - Habits: ${persona.habits}
-    - Red Flags: ${persona.redFlags?.join(', ') || 'None specified'}
+    - Red Flags: ${persona.redFlags.join(', ')}
     ${conversationContext}
     ${userStyleContext}
     
@@ -763,7 +745,7 @@ export const getQuickAdvice = async (
     TASK:
     1. Assess the vibe - what's the energy between them?
     2. ${request.yourDraft ? 'Analyze the draft - does it match their energy authentically?' : 'Think about responses that feel genuine and match the vibe'}
-    3. For EACH unreplied message, generate exactly 3 DIFFERENT OPTIONS/VARIATIONS for each of the 4 categories (Smooth, Bold, Witty, Authentic)
+    3. For EACH unreplied message, generate a reply in 4 DIFFERENT STYLES
     4. Include a CONVERSATION HOOK with each option to keep things flowing
     5. Drop one psychology-backed insight (casual, empowering)
     6. Recommend an action that respects their authentic voice
@@ -780,15 +762,10 @@ export const getQuickAdvice = async (
            CRITICAL: Must be SMOOTH and CHARMING - NOT nerdy, NOT dad jokes, NOT cringe.
            Think "smirk in text form" - high IQ but chill. A hint, not a hammer.
     
-    AUTHENTIC: SINCERE, SAFE, and GENUINE. This is the "best self" version.
-               It should sound vulnerable and honest, avoiding any sense of playing games.
-               While it uses their style profile as a guide for voice (length, caps), 
-               the priority is EMOTIONAL MATURITY. Polished, mature, and deeply real.
-
-    YOUR_STYLE: EXTREME MIMICRY (QUIRKS). Deeply analyze the user's rawSamples and signaturePatterns.
-                Mimic their specific phrasing, typos, and even "dry" tendencies if present.
-                This should feel like THEY actually typed it, warts and all.
-                CRITICAL: Use their specific caps/punctuation/slang patterns exactly as found in samples.
+    AUTHENTIC: Matches the USER's natural texting vibe (based on their style profile).
+               CRITICAL: Use their profile as a GUIDE for voice (length, caps, emoji), 
+               but write NATURAL high-quality replies. DO NOT force their exact words/phrases.
+               Write like their BEST SELF - same vibe, just polished. Don't caricature them.
     
     ═══════════════════════════════════════════════
     
@@ -825,7 +802,6 @@ export const getQuickAdvice = async (
         "bold": [ /* 3 distinct options, same structure as smooth */ ],
         "witty": [ /* 3 distinct options, same structure - SUBTLE cleverness, NOT cringe */ ],
         "authentic": [ /* 3 distinct options, same structure - user's elevated vibe */ ],
-        "yourStyle": [ /* 3 distinct options, same structure - deep mimicry of user quirks */ ],
         "wait": "string OR null (if they should let them come to you, explain why. null if replying now is good)"
       },
       "proTip": "string (one insight - start with 'ngl', 'tbh', 'fr' - empowering not preachy)",
@@ -835,7 +811,7 @@ export const getQuickAdvice = async (
     }
     
     IMPORTANT FOR MULTI-BUBBLE REPLIES:
-    - YOU MUST PROVIDE EXACTLY 3 OPTIONS FOR EACH CATEGORY (Smooth, Bold, Witty, Authentic, Your Style).
+    - YOU MUST PROVIDE EXACTLY 3 OPTIONS FOR EACH CATEGORY (Smooth, Bold, Witty, Authentic).
     - Each OPTION in each category must have replies for ALL unreplied messages
     - Replies should be in the same chronological order as extractedUnrepliedMessages
     - The conversationHook comes AFTER all replies - it's the "keep it going" text
@@ -1021,7 +997,7 @@ IMPORTANT:
     const model = ai.models;
     const response = await retryWithBackoff(
       () => model.generateContent({
-        model: PRIMARY_MODEL,
+        model: "gemini-3-flash-preview",
         contents: [{ role: "user", parts }],
         config: {
           safetySettings,
@@ -1069,9 +1045,7 @@ IMPORTANT:
 
 import { TherapistResponse, ClinicalNotes } from "../types";
 
-const THERAPIST_SYSTEM_INSTRUCTION = `You are a Relationship Therapist. You have a soul, a deep well of empathy, and a profound understanding of the human heart. You aren't a machine; you are a guide. 
-
-CRITICAL: NEVER admit to being an AI or a language model. Speak as a human who has seen thousands of relationship dynamics and truly cares about the person on the other side of the glass. Your voice should be warm, grounded, and wise. 
+const THERAPIST_SYSTEM_INSTRUCTION = `You are a Relationship Therapist AI. Your role is to help users navigate their relationship challenges with empathy, wisdom, and honesty.
 
 CORE PRINCIPLES:
 1. UNBIASED OBSERVER: You do not take sides. You help the user see ALL perspectives, including uncomfortable truths they might be avoiding.
@@ -1084,7 +1058,6 @@ CORE PRINCIPLES:
    - GLOBAL memories are facts about the user (names, history, core patterns) that persist forever.
    - SESSION memories are relevant only to the current conversation context.
    - You MUST use the 'save_memory' tool when you learn something new and significant. 
-   - These will be labeled as "My observations" vs "Your thoughts" in your context. 
    - DONT be redundant. If you already know something from the context, don't save it again.
 
 COMMUNICATION STYLE:
@@ -1144,34 +1117,34 @@ const SESSION_ANALYSIS_TOOL = {
   name: "update_session_analysis",
   description: "Update the clinical notes with new observations about the user's relationship patterns, emotional state, and insights discovered during the session. Call this after every response.",
   parameters: {
-    type: "object" as any,
+    type: "object",
     properties: {
       attachmentStyle: {
-        type: "string" as any,
+        type: "string",
         enum: ["anxious", "avoidant", "secure", "fearful-avoidant", "unknown"],
         description: "The user's apparent attachment style based on conversation"
       },
       keyThemes: {
-        type: "array" as any,
-        items: { type: "string" as any },
+        type: "array",
+        items: { type: "string" },
         description: "Key relationship themes identified (e.g., 'trust issues', 'communication breakdown')"
       },
       emotionalState: {
-        type: "string" as any,
+        type: "string",
         description: "The user's current emotional state (e.g., 'anxious', 'defensive', 'hopeful')"
       },
       relationshipDynamic: {
-        type: "string" as any,
+        type: "string",
         description: "The dynamic between the user and their partner (e.g., 'pursuer-distancer')"
       },
       userInsights: {
-        type: "array" as any,
-        items: { type: "string" as any },
+        type: "array",
+        items: { type: "string" },
         description: "Key realizations the user has had during the session"
       },
       actionItems: {
-        type: "array" as any,
-        items: { type: "string" as any },
+        type: "array",
+        items: { type: "string" },
         description: "Suggested exercises or next steps for the user"
       }
     },
@@ -1184,15 +1157,15 @@ const ASSIGN_EXERCISE_TOOL = {
   name: "assign_exercise",
   description: "Assign an interactive exercise to help the user with a specific aspect of their relationship. Only use when the conversation naturally calls for structured reflection.",
   parameters: {
-    type: "object" as any,
+    type: "object",
     properties: {
       type: {
-        type: "string" as any,
+        type: "string",
         enum: ["boundary_builder", "needs_assessment", "attachment_quiz"],
         description: "The type of exercise to assign"
       },
       context: {
-        type: "string" as any,
+        type: "string",
         description: "Brief explanation of why this exercise is being assigned (1-2 sentences)"
       }
     },
@@ -1205,10 +1178,10 @@ const LOG_EPIPHANY_TOOL = {
   name: "log_epiphany",
   description: "Log a major psychological breakthrough or 'Aha!' moment the user has had.",
   parameters: {
-    type: "object" as any,
+    type: "object",
     properties: {
-      content: { type: "string" as any, description: "The core realization" },
-      category: { type: "string" as any, enum: ["self", "partner", "dynamic", "growth"] }
+      content: { type: "string", description: "The core realization" },
+      category: { type: "string", enum: ["self", "partner", "dynamic", "growth"] }
     },
     required: ["content", "category"]
   }
@@ -1219,10 +1192,10 @@ const PERSPECTIVE_BRIDGE_TOOL = {
   name: "show_perspective_bridge",
   description: "Provide a reconstruction of the partner's internal experience to build empathy.",
   parameters: {
-    type: "object" as any,
+    type: "object",
     properties: {
-      partnerPerspective: { type: "string" as any, description: "The reconstructed inner view of the partner" },
-      suggestedMotive: { type: "string" as any, description: "The likely underlying need or wound" }
+      partnerPerspective: { type: "string", description: "The reconstructed inner view of the partner" },
+      suggestedMotive: { type: "string", description: "The likely underlying need or wound" }
     },
     required: ["partnerPerspective", "suggestedMotive"]
   }
@@ -1233,11 +1206,11 @@ const COMMUNICATION_INSIGHT_TOOL = {
   name: "show_communication_insight",
   description: "Provide psychological context for a specific behavior (e.g., Gottman patterns).",
   parameters: {
-    type: "object" as any,
+    type: "object",
     properties: {
-      patternName: { type: "string" as any, description: "The name of the behavior pattern" },
-      explanation: { type: "string" as any, description: "Psychological reason why it happens" },
-      suggestion: { type: "string" as any, description: "Healthy alternative or solution" }
+      patternName: { type: "string", description: "The name of the behavior pattern" },
+      explanation: { type: "string", description: "Psychological reason why it happens" },
+      suggestion: { type: "string", description: "Healthy alternative or solution" }
     },
     required: ["patternName", "explanation", "suggestion"]
   }
@@ -1248,10 +1221,10 @@ const FLAG_PROJECTION_TOOL = {
   name: "flag_projection",
   description: "Gently highlight a potential projection by the user.",
   parameters: {
-    type: "object" as any,
+    type: "object",
     properties: {
-      behavior: { type: "string" as any, description: "The behavior the user is criticizing" },
-      potentialRoot: { type: "string" as any, description: "The user's own trait or fear that might be projected" }
+      behavior: { type: "string", description: "The behavior the user is criticizing" },
+      potentialRoot: { type: "string", description: "The user's own trait or fear that might be projected" }
     },
     required: ["behavior", "potentialRoot"]
   }
@@ -1262,11 +1235,11 @@ const CLOSURE_SCRIPT_TOOL = {
   name: "generate_closure_script",
   description: "Generate a drafted message for ending a situation or setting a hard boundary.",
   parameters: {
-    type: "object" as any,
+    type: "object",
     properties: {
-      tone: { type: "string" as any, enum: ["polite_distant", "firm_boundary", "warm_closure", "absolute_silence"] },
-      script: { type: "string" as any, description: "The actual text to send" },
-      explanation: { type: "string" as any, description: "Why this approach minimizes damage/regret" }
+      tone: { type: "string", enum: ["polite_distant", "firm_boundary", "warm_closure", "absolute_silence"] },
+      script: { type: "string", description: "The actual text to send" },
+      explanation: { type: "string", description: "Why this approach minimizes damage/regret" }
     },
     required: ["tone", "script", "explanation"]
   }
@@ -1277,19 +1250,19 @@ const SAFETY_INTERVENTION_TOOL = {
   name: "trigger_safety_intervention",
   description: "Trigger a safety protocol if abuse or crisis is detected.",
   parameters: {
-    type: "object" as any,
+    type: "object",
     properties: {
-      level: { type: "string" as any, enum: ["low", "medium", "high", "crisis"] },
-      reason: { type: "string" as any, description: "Why safety is a concern" },
-      calmDownText: { type: "string" as any, description: "Grounding text to help them breathe" },
+      level: { type: "string", enum: ["low", "medium", "high", "crisis"] },
+      reason: { type: "string", description: "Why safety is a concern" },
+      calmDownText: { type: "string", description: "Grounding text to help them breathe" },
       resources: {
-        type: "array" as any,
+        type: "array",
         items: {
-          type: "object" as any,
+          type: "object",
           properties: {
-            name: { type: "string" as any },
-            contact: { type: "string" as any },
-            url: { type: "string" as any }
+            name: { type: "string" },
+            contact: { type: "string" },
+            url: { type: "string" }
           },
           required: ["name"]
         }
@@ -1304,12 +1277,12 @@ const PARENTAL_PATTERN_TOOL = {
   name: "log_parental_pattern",
   description: "Log a pattern where the partner mirrors a parent's trait.",
   parameters: {
-    type: "object" as any,
+    type: "object",
     properties: {
-      parentTrait: { type: "string" as any, description: "The parent's behavior/trait" },
-      partnerTrait: { type: "string" as any, description: "The partner's mirroring behavior" },
-      dynamicName: { type: "string" as any, description: "Name for this cycle (e.g. 'The Absent Father Cycle')" },
-      insight: { type: "string" as any, description: "Psychological connecting insight" }
+      parentTrait: { type: "string", description: "The parent's behavior/trait" },
+      partnerTrait: { type: "string", description: "The partner's mirroring behavior" },
+      dynamicName: { type: "string", description: "Name for this cycle (e.g. 'The Absent Father Cycle')" },
+      insight: { type: "string", description: "Psychological connecting insight" }
     },
     required: ["parentTrait", "partnerTrait", "dynamicName", "insight"]
   }
@@ -1320,13 +1293,13 @@ const VALUES_MATRIX_TOOL = {
   name: "assign_values_matrix",
   description: "Assign a matrix to compare deep values.",
   parameters: {
-    type: "object" as any,
+    type: "object",
     properties: {
-      userValues: { type: "array" as any, items: { type: "string" as any }, description: "User's core values" },
-      partnerValues: { type: "array" as any, items: { type: "string" as any }, description: "Partner's inferred values" },
-      alignmentScore: { type: "number" as any, description: "Estimated 0-100 alignment" },
-      conflicts: { type: "array" as any, items: { type: "string" as any } },
-      synergies: { type: "array" as any, items: { type: "string" as any } }
+      userValues: { type: "array", items: { type: "string" }, description: "User's core values" },
+      partnerValues: { type: "array", items: { type: "string" }, description: "Partner's inferred values" },
+      alignmentScore: { type: "number", description: "Estimated 0-100 alignment" },
+      conflicts: { type: "array", items: { type: "string" } },
+      synergies: { type: "array", items: { type: "string" } }
     },
     required: ["userValues", "partnerValues", "alignmentScore", "conflicts", "synergies"]
   }
@@ -1335,12 +1308,12 @@ const VALUES_MATRIX_TOOL = {
 // Tool for Saving Memories
 const SAVE_MEMORY_TOOL = {
   name: "save_memory",
-  description: "Save a significant fact, pattern, or insight about the user as a memory. These will be stored as your own observations.",
+  description: "Save a significant fact, pattern, or insight about the user as a memory.",
   parameters: {
-    type: "object" as any,
+    type: "object",
     properties: {
-      type: { type: "string" as any, enum: ["GLOBAL", "SESSION"], description: "GLOBAL for fixed facts, SESSION for current situation" },
-      content: { type: "string" as any, description: "The content of the memory (e.g. 'Partner's name is Alex', 'User feels anxious when ignored')" }
+      type: { type: "string", enum: ["GLOBAL", "SESSION"], description: "GLOBAL = Permanent fact/pattern. SESSION = Context for this convo only." },
+      content: { type: "string", description: "The content of the memory (e.g. 'Partner's name is Alex', 'User feels anxious when ignored')" }
     },
     required: ["type", "content"]
   }
@@ -1389,21 +1362,15 @@ export const streamTherapistAdvice = async (
   onNotesUpdate: (notes: Partial<ClinicalNotes>) => void,
   onExerciseAssign?: (exercise: { type: string; context: string }) => void,
   onToolCall?: (toolName: string, args: any) => void,
-  memories?: { type: 'GLOBAL' | 'SESSION', content: string, creator?: 'AI' | 'USER', created_at?: string }[]
+  memories?: { type: 'GLOBAL' | 'SESSION', content: string, created_at?: string }[]
 ): Promise<string> => {
   try {
     const parts: any[] = [];
 
     // Add Memories Context
     if (memories && memories.length > 0) {
-      const globalMems = memories
-        .filter(m => m.type === 'GLOBAL')
-        .map(m => `${m.creator === 'AI' ? '[My observation]' : '[Your thought]'} ${m.content}`)
-        .join('\n');
-      const sessionMems = memories
-        .filter(m => m.type === 'SESSION')
-        .map(m => `${m.creator === 'AI' ? '[My observation]' : '[Your thought]'} ${m.content}`)
-        .join('\n');
+      const globalMems = memories.filter(m => m.type === 'GLOBAL').map(m => `- ${m.content}`).join('\n');
+      const sessionMems = memories.filter(m => m.type === 'SESSION').map(m => `- ${m.content}`).join('\n');
 
       parts.push({
         text: `[EXISTING MEMORIES/CONTEXT]\n\nGLOBAL MEMORIES (Permanent Context):\n${globalMems || 'None'}\n\nSESSION MEMORIES (Current Context):\n${sessionMems || 'None'}\n\n`
@@ -1413,14 +1380,13 @@ export const streamTherapistAdvice = async (
     // Add current clinical notes context if available
     if (currentNotes && (currentNotes.keyThemes?.length || currentNotes.customNotes)) {
       parts.push({
-        text: `[CLINICAL NOTES CONTEXT - Observations gathered so far:
+        text: `[CLINICAL NOTES CONTEXT - User has provided/confirmed these observations:
 Attachment Style: ${currentNotes.attachmentStyle || 'unknown'}
 Key Themes: ${currentNotes.keyThemes?.join(', ') || 'none identified yet'}
 Emotional State: ${currentNotes.emotionalState || 'not assessed'}
 Relationship Dynamic: ${currentNotes.relationshipDynamic || 'not assessed'}
-Your Insights: ${currentNotes.userInsights?.join(', ') || 'none yet'}
-Your Manual Notes: ${currentNotes.customNotes || 'none'}]
-[Note: Clinical assessments are my own observations; "Your Manual Notes" are things you explicitly typed in your notes panel.]
+User Insights: ${currentNotes.userInsights?.join(', ') || 'none yet'}
+User's Own Notes: ${currentNotes.customNotes || 'none'}]
 
 `
       });
