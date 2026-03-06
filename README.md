@@ -28,4 +28,3 @@ A deep-dive AI mode for uncovering relationship blind spots and attachment patte
 AI that actually sounds like you.
 - **Style Extraction:** Analyzes your raw messages to extract your specific texting quirks (caps usage, emoji habits, slang).
 - **Authentic Mimicry:** Suggestions that feel like you actually typed them, just slightly more polished.
-

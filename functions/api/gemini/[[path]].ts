@@ -55,6 +55,7 @@ export async function onRequest(context: { env: any; request: Request; data?: an
   // Prepare headers for forwarding
   const headers = new Headers(request.headers);
   headers.delete('host');
+  headers.delete('authorization'); // Remove Firebase token before sending to Google
 
   // Always set x-goog-api-key to the backend API key to replace any placeholder value
   headers.set('x-goog-api-key', apiKey);

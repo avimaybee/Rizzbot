@@ -5,7 +5,7 @@ const tabs = [
   { label: "Home", icon: Home, path: "/home" },
   { label: "Quick", icon: Zap, path: "/quick" },
   { label: "Practice", icon: Target, path: "/practice" },
-  { label: "Deep Dive", icon: Heart, path: "/therapist" },
+  { label: "Therapist", icon: Heart, path: "/therapist" },
   { label: "History", icon: Clock, path: "/history" },
 ];
 
@@ -17,12 +17,12 @@ export function TabBar() {
     <div
       className="fixed bottom-0 left-0 right-0 z-50"
       style={{
-        height: 80,
+        height: 60,
         backgroundColor: "#FDFAF5",
         borderTop: "1px solid #E8E0D4",
       }}
     >
-      <div className="flex items-center justify-around h-full px-1 pb-4 max-w-[430px] mx-auto">
+      <div className="flex items-center justify-around h-full px-1 pb-0 max-w-[430px] mx-auto">
         {tabs.map((tab) => {
           const isActive = location.pathname.startsWith(tab.path);
           const Icon = tab.icon;
@@ -46,7 +46,7 @@ export function TabBar() {
                   borderRadius: 999,
                   backgroundColor: isActive ? "rgba(200, 82, 42, 0.10)" : "transparent",
                   gap: 2,
-                  minWidth: tab.label === "Deep Dive" ? 84 : 62,
+                  minWidth: tab.label === "Therapist" ? 84 : 62,
                 }}
               >
                 <Icon

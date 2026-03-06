@@ -34,11 +34,12 @@ export async function onRequest(context: any) {
         await ensureAppSchema(db);
 
         // Ensure the internal user exists for this verified Firebase UID
-        const userRow = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(verifiedUid).first();
+        const userRowRes = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(verifiedUid).all();
+        const userRow = userRowRes.results?.[0];
         let dbUserId = userRow?.id;
 
         if (!dbUserId && request.method !== 'POST') {
-            return new Response(JSON.stringify({ error: 'User mapping not found in database' }), {
+            return new Response(JSON.stringify({ error: 'User mapping not found in database', hint: 'User might not have connected yet.' }), {
                 status: 404,
                 headers: corsHeaders,
             });
@@ -71,9 +72,11 @@ export async function onRequest(context: any) {
 
             if (interactionId) {
                 // Get specific session, ensuring it belongs to the verified user
-                const session = await db.prepare(
+                const sessionRes = await db.prepare(
                     'SELECT ts.* FROM therapist_sessions ts JOIN users u ON ts.user_id = u.id WHERE ts.interaction_id = ? AND u.anon_id = ?'
-                ).bind(interactionId, verifiedUid).first();
+                ).bind(interactionId, verifiedUid).all();
+                
+                const session = sessionRes.results?.[0];
 
                 return new Response(JSON.stringify(session || null), { headers: corsHeaders });
             }
@@ -92,8 +95,8 @@ export async function onRequest(context: any) {
             const countBindings = [verifiedUid];
 
             const results = await db.prepare(query).bind(...bindings).all();
-            const countResult = await db.prepare(countQuery).bind(...countBindings).first();
-            const total = countResult?.total || 0;
+            const countResult = await db.prepare(countQuery).bind(...countBindings).all();
+            const total = countResult.results?.[0]?.total || 0;
 
             return new Response(JSON.stringify({
                 sessions: results.results || [],
@@ -123,7 +126,8 @@ export async function onRequest(context: any) {
             }
 
             // Check if session exists AND ensure ownership
-            const existing = await db.prepare('SELECT id FROM therapist_sessions WHERE interaction_id = ? AND user_id = ?').bind(interaction_id, dbUserId).first();
+            const existingRes = await db.prepare('SELECT id FROM therapist_sessions WHERE interaction_id = ? AND user_id = ?').bind(interaction_id, dbUserId).all();
+            const existing = existingRes.results?.[0];
 
             if (existing) {
                 // UPDATE
@@ -176,6 +180,13 @@ export async function onRequest(context: any) {
 
     } catch (err: any) {
         console.error('[therapist_sessions] Error:', err);
-        return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
+        return new Response(JSON.stringify({ 
+            error: err.message || String(err),
+            stack: err.stack,
+            hint: 'If this is a schema error, try calling /api/migrate first'
+        }), { 
+            status: 500, 
+            headers: corsHeaders 
+        });
     }
 }

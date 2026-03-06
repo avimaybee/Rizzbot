@@ -182,7 +182,7 @@ export function TherapistClosingScreen() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.6 }}
-        className="relative z-10 px-5 pb-24 max-w-[430px] mx-auto w-full flex flex-col gap-3"
+        className="relative z-10 px-5 pb-6 max-w-[430px] mx-auto w-full flex flex-col gap-3"
       >
         <button
           onClick={() => navigate("/home")}

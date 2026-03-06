@@ -48,12 +48,12 @@ export function TacticalReportScreen() {
     analysis.recommendedNextMove === "WAIT"
       ? 80
       : analysis.recommendedNextMove === "MATCH_ENERGY"
-      ? 78
-      : analysis.recommendedNextMove === "PULL_BACK"
-      ? 70
-      : analysis.recommendedNextMove === "FULL_SEND"
-      ? 65
-      : 55
+        ? 78
+        : analysis.recommendedNextMove === "PULL_BACK"
+          ? 70
+          : analysis.recommendedNextMove === "FULL_SEND"
+            ? 65
+            : 55
   );
 
   const scores = [
@@ -71,9 +71,9 @@ export function TacticalReportScreen() {
   ];
 
   return (
-    <div className="relative min-h-screen pb-24" style={{ backgroundColor: "#F5EFE6" }}>
+    <div className="relative min-h-screen pb-6" style={{ backgroundColor: "#F5EFE6" }}>
       <GrainOverlay />
-      <div className="relative z-10 px-5 pt-14 max-w-[430px] mx-auto">
+      <div className="relative z-10 px-5 pt-6 max-w-[430px] mx-auto">
         <div className="flex items-center justify-between">
           <button onClick={() => navigate("/practice")} className="cursor-pointer p-1">
             <ChevronLeft size={24} strokeWidth={1.8} color="#1A1208" />

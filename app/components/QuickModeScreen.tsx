@@ -28,6 +28,7 @@ import { getQuickAdvice } from "../../services/geminiService";
 import { createSession, submitFeedback } from "../../services/dbService";
 import { logSession, saveFeedback } from "../../services/feedbackService";
 import { QuickAdviceResponse, SuggestionOption } from "../../types";
+import { useScrollFade } from "../utils/useScrollFade";
 
 const toneOptions = [
   { key: "Smooth", help: null },
@@ -60,6 +61,7 @@ const contextOptions = [
   { value: "talking", label: "TALKING" },
   { value: "dating", label: "DATING" },
   { value: "complicated", label: "COMPLEX" },
+  { value: "friends", label: "FRIENDS" },
   { value: "ex", label: "EX" },
 ] as const;
 
@@ -156,6 +158,13 @@ export function QuickModeScreen() {
     setShowResults(false);
     haptics.medium();
 
+    let isStillLoading = true;
+    const toastTimeout = setTimeout(() => {
+      if (isStillLoading) {
+        toast("This is taking a bit longer than usual, stay with us...", "info");
+      }
+    }, 6000);
+
     try {
       const response = await getQuickAdvice({
         theirMessage: theirMessage.trim() || "Analyze the conversation screenshot",
@@ -200,6 +209,8 @@ export function QuickModeScreen() {
       toast(message, "error");
       haptics.error();
     } finally {
+      isStillLoading = false;
+      clearTimeout(toastTimeout);
       setIsLoading(false);
     }
   };
@@ -214,6 +225,11 @@ export function QuickModeScreen() {
     setFeedbackGiven(null);
     haptics.light();
   };
+
+  const situationFade = useScrollFade();
+  const toneFade = useScrollFade();
+  const personaFade = useScrollFade();
+  const screenshotsFade = useScrollFade();
 
   const handleCopy = (text: string, key: string) => {
     if (!text) return;
@@ -256,35 +272,41 @@ export function QuickModeScreen() {
   const showMessage = result?.extractedTargetMessage || theirMessage || "Conversation screenshot";
 
   return (
-    <div className="relative min-h-screen pb-24" style={{ backgroundColor: "#F5EFE6" }}>
+    <motion.div 
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="relative min-h-screen pb-6" 
+      style={{ backgroundColor: "#F5EFE6" }}
+    >
       <GrainOverlay />
       <div className="relative z-10 max-w-[430px] mx-auto">
-        <div className="flex items-center justify-between px-5 pt-14">
-          <button onClick={() => navigate("/home")} className="cursor-pointer flex items-center justify-center fade-press" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#FDFAF5", border: "1px solid #E8E0D4" }}>
+        <div className="flex items-center justify-between px-5 pt-6 pb-2 relative">
+          <button onClick={() => navigate("/home")} className="cursor-pointer flex items-center justify-center fade-press relative z-10" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#FDFAF5", border: "1px solid #E8E0D4" }}>
             <ChevronLeft size={22} strokeWidth={1.8} color="#1A1208" />
           </button>
-          <div style={{ width: 44 }}></div>
-          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
+          <p className="absolute left-1/2 -translate-x-1/2" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 600, color: "#1A1208", paddingBottom: 2 }}>
             Quick Mode
           </p>
-          {showResults ? (
-            <button
-              onClick={handleRedo}
-              className="cursor-pointer"
-              style={{
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: 14,
-                fontWeight: 500,
-                color: "#C8522A",
-                background: "none",
-                border: "none",
-              }}
-            >
-              Redo
-            </button>
-          ) : (
-            <div style={{ width: 32 }} />
-          )}
+          <div className="relative z-10 flex justify-end" style={{ width: 44 }}>
+            {showResults && (
+              <button
+                onClick={handleRedo}
+                className="cursor-pointer"
+                style={{
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: "#C8522A",
+                  background: "none",
+                  border: "none",
+                }}
+              >
+                Redo
+              </button>
+            )}
+          </div>
         </div>
 
         {!showResults && !isLoading ? (
@@ -327,7 +349,11 @@ export function QuickModeScreen() {
             </button>
 
             {screenshots.length > 0 && (
-              <div className="flex gap-3 mt-4 overflow-x-auto pb-4 no-scrollbar">
+              <div 
+                ref={screenshotsFade.ref}
+                className="flex gap-3 w-full mt-4 overflow-x-auto pb-4 no-scrollbar"
+                style={screenshotsFade.style}
+              >
                 {screenshots.map((src, i) => (
                   <div key={i} className="relative shrink-0">
                     <img
@@ -415,7 +441,11 @@ export function QuickModeScreen() {
                 <Tag size={14} color="#C8522A" />
                 Situation
               </label>
-              <div className="flex flex-wrap gap-2">
+              <div 
+                ref={situationFade.ref}
+                className="flex gap-2 w-full overflow-x-auto pb-2 no-scrollbar"
+                style={situationFade.style}
+              >
                 {contextOptions.map((opt) => (
                   <button
                     key={opt.value}
@@ -427,6 +457,7 @@ export function QuickModeScreen() {
                     style={{
                       height: 48,
                       borderRadius: 12,
+                      padding: "0 16px",
                       backgroundColor: context === opt.value ? "#1A1208" : "transparent",
                       color: context === opt.value ? "#FFFFFF" : "rgba(26, 18, 8, 0.55)",
                       border: context === opt.value ? "1px solid #1A1208" : "1px solid #E8E0D4",
@@ -460,7 +491,7 @@ export function QuickModeScreen() {
                     border: "none",
                     cursor: (!theirMessage.trim() && screenshots.length === 0) ? "not-allowed" : "pointer",
                     boxShadow: (!theirMessage.trim() && screenshots.length === 0) ? "none" : "0 4px 16px rgba(200, 82, 42, 0.3)",
-                    opacity: (!theirMessage.trim() && screenshots.length === 0) ? 0.4 : 1,
+                    opacity: 1,
                     transition: "all 0.2s ease",
                   }}
                 >
@@ -556,7 +587,11 @@ export function QuickModeScreen() {
               <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.15em", color: "rgba(26, 18, 8, 0.55)", textTransform: "uppercase" }}>
                 Suggested replies
               </p>
-              <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
+              <div 
+                ref={toneFade.ref}
+                className="flex gap-2 mt-3 overflow-x-auto pb-1 no-scrollbar"
+                style={toneFade.style}
+              >
                 {toneOptions.map(({ key, help }) => (
                   <div key={key} className="relative shrink-0">
                     <button
@@ -742,6 +777,6 @@ export function QuickModeScreen() {
         )}
       </div>
       <TabBar />
-    </div>
+    </motion.div>
   );
 }

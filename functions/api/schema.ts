@@ -149,6 +149,8 @@ const ensureSchemaInternal = async (db: D1Database): Promise<void> => {
     )`
   );
 
+  await runSchemaStatement(db, `ALTER TABLE therapist_sessions ADD COLUMN summary TEXT`);
+
   await runSchemaStatement(
     db,
     `CREATE TABLE IF NOT EXISTS therapist_memories (

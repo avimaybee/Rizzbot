@@ -29,6 +29,7 @@ import { analyzeSimulation, generatePersona, simulateDraft } from "../../service
 import { createPersona, createSession, getPersonas } from "../../services/dbService";
 import { logSession } from "../../services/feedbackService";
 import { Persona, SimResult } from "../../types";
+import { useScrollFade } from "../utils/useScrollFade";
 
 const personaOptions = [
   "The Ghoster",
@@ -189,6 +190,9 @@ export function PracticeScreen() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
+  const screenshotFade = useScrollFade();
+  const personaFade = useScrollFade();
+
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     const picked = Array.from(files);
@@ -226,6 +230,14 @@ export function PracticeScreen() {
   const handleStartSession = async () => {
     haptics.medium();
     setIsGenerating(true);
+
+    let isStillGenerating = true;
+    const toastTimeout = setTimeout(() => {
+      if (isStillGenerating) {
+        toast("This is taking a bit longer than usual, stay with us...", "info");
+      }
+    }, 6000);
+
     try {
       let resolvedPersona: Persona;
       if (activePersonaName === "Custom...") {
@@ -270,6 +282,8 @@ export function PracticeScreen() {
       const message = error instanceof Error ? error.message : "Could not start session";
       toast(message, "error");
     } finally {
+      isStillGenerating = false;
+      clearTimeout(toastTimeout);
       setIsGenerating(false);
     }
   };
@@ -281,6 +295,13 @@ export function PracticeScreen() {
     haptics.light();
     setMessages((prev) => [...prev, { id: Date.now(), sender: "user", text: draft }]);
     setIsTyping(true);
+
+    let isStillTyping = true;
+    const toastTimeout = setTimeout(() => {
+      if (isStillTyping) {
+        toast("This is taking a bit longer than usual, stay with us...", "info");
+      }
+    }, 6000);
 
     try {
       const result = await simulateDraft(authUser.uid, draft, persona, userProfile, simHistory);
@@ -297,6 +318,8 @@ export function PracticeScreen() {
     } catch {
       toast("Simulation failed. Try again.", "error");
     } finally {
+      isStillTyping = false;
+      clearTimeout(toastTimeout);
       setIsTyping(false);
     }
   };
@@ -346,10 +369,17 @@ export function PracticeScreen() {
 
   if (mode === "setup") {
     return (
-      <div className="relative min-h-screen pb-40" style={{ backgroundColor: "#F5EFE6" }}>
+      <motion.div 
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className="relative min-h-screen pb-40" 
+        style={{ backgroundColor: "#F5EFE6" }}
+      >
         <GrainOverlay />
         <div className="relative z-10 max-w-[430px] mx-auto">
-          <div className="flex items-center justify-between px-5 pt-14">
+          <div className="flex items-center justify-between px-5 pt-6">
             <button onClick={() => navigate("/home")} className="cursor-pointer flex items-center justify-center fade-press" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#FDFAF5", border: "1px solid #E8E0D4" }}>
               <ChevronLeft size={22} strokeWidth={1.8} color="#1A1208" />
             </button>
@@ -370,39 +400,34 @@ export function PracticeScreen() {
               <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.15em", color: "rgba(26, 18, 8, 0.55)", textTransform: "uppercase", marginBottom: 12 }}>
                 Who are you talking to?
               </p>
-              <div className="relative">
-                <div
-                  className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide"
-                  style={{
-                    WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 84%, rgba(0,0,0,0) 100%)",
-                    maskImage: "linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 84%, rgba(0,0,0,0) 100%)",
-                  }}
-                >
-                  {personaOptions.map((name) => {
-                    const Icon = personaIcons[name] || User;
-                    return (
-                      <button
-                        key={name}
-                        onClick={() => setActivePersonaName(name)}
-                        className="flex items-center gap-1.5"
-                        style={{
-                          borderRadius: 100,
-                          padding: "8px 14px",
-                          backgroundColor: activePersonaName === name ? "#C8522A" : "transparent",
-                          color: activePersonaName === name ? "#FFFFFF" : "rgba(26,18,8,0.55)",
-                          border: activePersonaName === name ? "1px solid #C8522A" : "1px solid #E8E0D4",
-                          fontFamily: "'DM Sans', sans-serif",
-                          fontSize: 13,
-                          cursor: "pointer",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <Icon size={14} /> {name}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-20" style={{ background: 'linear-gradient(to right, rgba(253, 250, 245, 0), #FDFAF5 80%)' }} />
+              <div
+                ref={personaFade.ref}
+                className="flex gap-2 w-full overflow-x-auto pb-2 no-scrollbar"
+                style={personaFade.style}
+              >
+                {personaOptions.map((name) => {
+                  const Icon = personaIcons[name] || User;
+                  return (
+                    <button
+                      key={name}
+                      onClick={() => setActivePersonaName(name)}
+                      className="flex items-center gap-1.5"
+                      style={{
+                        borderRadius: 100,
+                        padding: "8px 14px",
+                        backgroundColor: activePersonaName === name ? "#C8522A" : "transparent",
+                        color: activePersonaName === name ? "#FFFFFF" : "rgba(26,18,8,0.55)",
+                        border: activePersonaName === name ? "1px solid #C8522A" : "1px solid #E8E0D4",
+                        fontFamily: "'DM Sans', sans-serif",
+                        fontSize: 13,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      <Icon size={14} /> {name}
+                    </button>
+                  );
+                })}
               </div>
 
               {activePersonaName === "Custom..." && (
@@ -429,7 +454,11 @@ export function PracticeScreen() {
                   />
                   <div className="flex flex-col gap-3 mt-3">
                     {screenshots.length > 0 && (
-                      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                      <div 
+                        ref={screenshotFade.ref}
+                        className="flex gap-2 w-full overflow-x-auto pb-1 no-scrollbar"
+                        style={screenshotFade.style}
+                      >
                         {screenshots.map((src, i) => (
                           <div key={i} className="relative flex-shrink-0">
                             <img
@@ -575,15 +604,22 @@ export function PracticeScreen() {
           </div>
         </div>
         <TabBar />
-      </div >
+      </motion.div >
     );
   }
 
   return (
-    <div className="relative min-h-screen flex flex-col" style={{ backgroundColor: "#F5EFE6" }}>
+    <motion.div 
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="relative min-h-screen flex flex-col" 
+      style={{ backgroundColor: "#F5EFE6" }}
+    >
       <GrainOverlay />
       <div className="relative z-10 flex flex-col flex-1 max-w-[430px] mx-auto w-full">
-        <div className="flex items-center justify-between px-5 pt-14 pb-3">
+        <div className="flex items-center justify-between px-5 pt-6 pb-3">
           <button onClick={() => setMode("setup")} className="cursor-pointer flex items-center justify-center fade-press" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#FDFAF5", border: "1px solid #E8E0D4" }}>
             <ChevronLeft size={22} strokeWidth={1.8} color="#1A1208" />
           </button>
@@ -902,6 +938,6 @@ export function PracticeScreen() {
       </AnimatePresence>
 
       <TabBar />
-    </div>
+    </motion.div>
   );
 }

@@ -8,6 +8,7 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { PremiumModal } from "./PremiumModal";
 import { useAppContext } from "../app-context";
 import { getSessions, recordActivity, type StreakData } from "../../services/dbService";
+import { useScrollFade } from "../utils/useScrollFade";
 
 const modeCards = [
   {
@@ -27,7 +28,7 @@ const modeCards = [
     iconBg: "#FEF3E2",
   },
   {
-    name: "Deep Dive",
+    name: "Therapist",
     descriptor: "Unpack your patterns",
     icon: Heart,
     path: "/therapist",
@@ -75,7 +76,7 @@ const formatHoursAgo = (isoDate: string): string => {
 const toModeCardName = (mode?: string): string | null => {
   if (mode === "quick") return "Quick Mode";
   if (mode === "simulator") return "Practice";
-  if (mode === "therapist") return "Deep Dive";
+  if (mode === "therapist") return "Therapist";
   if (mode === "voice") return "My Voice";
   return null;
 };
@@ -94,6 +95,7 @@ export function HomeScreen() {
   const [showProfileSheet, setShowProfileSheet] = useState(false);
   const [showStreakTip, setShowStreakTip] = useState(false);
   const greeting = useMemo(() => getGreeting(), []);
+  const activityFade = useScrollFade();
   const firstName =
     authUser?.displayName?.split(" ")[0] ||
     authUser?.email?.split("@")[0] ||
@@ -109,7 +111,7 @@ export function HomeScreen() {
         const recent = sessions.slice(0, 4).map((session) => ({
           mode:
             toModeCardName(session.mode) ||
-            "Deep Dive",
+            "Therapist",
           time: formatHoursAgo(session.created_at),
           risk:
             typeof session.ghost_risk === "number"
@@ -158,12 +160,19 @@ export function HomeScreen() {
   const hasVoiceProfile = Boolean(userProfile);
 
   return (
-    <div className="relative min-h-screen pb-24" style={{ backgroundColor: "#F5EFE6" }}>
+    <motion.div 
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="relative min-h-screen pb-6" 
+      style={{ backgroundColor: "#F5EFE6" }}
+    >
       <GrainOverlay />
-      <div className="relative z-10 px-5 pt-14 max-w-[430px] mx-auto">
+      <div className="relative z-10 px-5 pt-6 max-w-[430px] mx-auto">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Rizzbot" style={{ width: 32, height: 32, borderRadius: 8 }} />
+            <img src="/logo.png" alt="Rizzbot" style={{ width: 32, height: 32, borderRadius: 8, filter: "invert(1)" }} />
             <div>
               <p
                 style={{
@@ -426,7 +435,11 @@ export function HomeScreen() {
             </button>
           </div>
           {activity.length > 0 ? (
-            <div className="mt-3 flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+            <div 
+              ref={activityFade.ref}
+              className="mt-3 flex gap-3 w-full overflow-x-auto pb-2 -mx-1 px-1 no-scrollbar"
+              style={activityFade.style}
+            >
               {activity.map((item, i) => (
                 <div
                   key={`${item.mode}-${i}`}
@@ -554,6 +567,6 @@ export function HomeScreen() {
         isOpen={isPremiumModalOpen}
         onClose={() => setIsPremiumModalOpen(false)}
       />
-    </div>
+    </motion.div>
   );
 }

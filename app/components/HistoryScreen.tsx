@@ -84,9 +84,9 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
   const accent = getAccentColor(risk);
 
   return (
-    <div className="relative min-h-screen pb-24" style={{ backgroundColor: "#F5EFE6" }}>
+    <div className="relative min-h-screen pb-6" style={{ backgroundColor: "#F5EFE6" }}>
       <GrainOverlay />
-      <div className="relative z-10 px-5 pt-14 max-w-[430px] mx-auto">
+      <div className="relative z-10 px-5 pt-6 max-w-[430px] mx-auto">
         <div className="flex items-center justify-between">
           <button
             onClick={onBack}
@@ -468,7 +468,7 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
         )}
       </div>
       <TabBar />
-    </div>
+    </div >
   );
 }
 
@@ -526,9 +526,9 @@ export function HistoryScreen() {
   }
 
   return (
-    <div className="relative min-h-screen pb-24" style={{ backgroundColor: "#F5EFE6" }}>
+    <div className="relative min-h-screen pb-6" style={{ backgroundColor: "#F5EFE6" }}>
       <GrainOverlay />
-      <div className="relative z-10 px-5 pt-14 max-w-[430px] mx-auto">
+      <div className="relative z-10 px-5 pt-6 max-w-[430px] mx-auto">
         <div className="flex items-center justify-between">
           <p
             style={{
@@ -948,6 +948,6 @@ export function HistoryScreen() {
       </AnimatePresence>
 
       <TabBar />
-    </div>
+    </div >
   );
 }

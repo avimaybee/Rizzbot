@@ -36,6 +36,7 @@ import {
 } from "../../services/dbService";
 import { streamTherapistAdvice } from "../../services/geminiService";
 import { ClinicalNotes, ExerciseType, TherapistExercise } from "../../types";
+import { useScrollFade } from "../utils/useScrollFade";
 
 type TherapistUiMessage = {
   role: "user" | "therapist";
@@ -63,7 +64,7 @@ const DEFAULT_NOTES: ClinicalNotes = {
 
 const WELCOME_MESSAGE =
   "Welcome. I'm here to help you make sense of what's happening — vent, spot patterns, or just think it through. Where do you want to start?";
-const BOTTOM_NAV_HEIGHT = 80;
+const BOTTOM_NAV_HEIGHT = 60;
 const CHAT_BOTTOM_BUFFER = 16;
 const DEFAULT_COMPOSER_HEIGHT = 110;
 const HERO_SECTION_MAX_HEIGHT = 120;
@@ -355,6 +356,21 @@ function MemoryItem({
   );
 }
 
+function MessageImages({ images }: { images: string[] }) {
+  const { ref, style } = useScrollFade();
+  return (
+    <div
+      ref={ref}
+      className="mb-2 flex gap-2 w-full overflow-x-auto pb-1 no-scrollbar"
+      style={style}
+    >
+      {images.map((img, i) => (
+        <img key={i} src={img} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 8 }} />
+      ))}
+    </div>
+  );
+}
+
 export function TherapistScreen() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -396,6 +412,7 @@ export function TherapistScreen() {
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLDivElement | null>(null);
   const [insightsOpen, setInsightsOpen] = useState(false);
+  const pendingFade = useScrollFade();
   const [expandedTheme, setExpandedTheme] = useState<string | null>(null);
   const [composerHeight, setComposerHeight] = useState(DEFAULT_COMPOSER_HEIGHT);
 
@@ -548,6 +565,13 @@ export function TherapistScreen() {
     setIsLoading(true);
     setStreamingContent("");
 
+    let isStillLoading = true;
+    const toastTimeout = setTimeout(() => {
+      if (isStillLoading) {
+        toast("This is taking a bit longer than usual, stay with us...", "info");
+      }
+    }, 6000);
+
     const capturedInsights: Record<string, any> = {};
 
     try {
@@ -617,6 +641,8 @@ export function TherapistScreen() {
         },
       ]);
     } finally {
+      isStillLoading = false;
+      clearTimeout(toastTimeout);
       setIsLoading(false);
       setStreamingContent("");
     }
@@ -635,63 +661,62 @@ export function TherapistScreen() {
   const isSendDisabled = isLoading || (!inputValue.trim() && pendingImages.length === 0);
 
   return (
-    <div className="relative flex flex-col min-h-screen" style={{ backgroundColor: "#F5EFE6" }}>
+    <motion.div 
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="relative flex flex-col min-h-screen" 
+      style={{ backgroundColor: "#F5EFE6" }}
+    >
       <GrainOverlay />
 
       <div className="relative z-10 max-w-[430px] mx-auto flex flex-col min-h-screen w-full">
         {/* Sticky Header */}
-        <div className="sticky top-0 z-40 flex items-center justify-between px-5 pt-14 pb-3" style={{ backgroundColor: "#F5EFE6" }}>
+        <div className="sticky top-0 z-40 flex items-center justify-between px-5 pt-6 pb-2 relative" style={{ backgroundColor: "#F5EFE6" }}>
           <button
             onClick={() => navigate("/home")}
-            className="cursor-pointer flex items-center justify-center fade-press"
+            className="cursor-pointer flex items-center justify-center fade-press relative z-10"
             style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#FDFAF5", border: "1px solid #E8E0D4" }}
           >
             <ChevronLeft size={22} strokeWidth={1.8} color="#1A1208" />
           </button>
-          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 17, fontWeight: 600, color: "#1A1208" }}>
-            Deep Dive
+          <p className="absolute left-1/2 -translate-x-1/2" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 600, color: "#1A1208", paddingBottom: 2 }}>
+            Therapist
           </p>
-          <div className="flex items-center gap-1">
+          <div className="relative z-10 flex items-center gap-1 justify-end">
             <button
               onClick={() => {
                 setInsightsOpen(true);
                 haptics.light();
               }}
-              className="flex items-center gap-1.5 cursor-pointer hover-scale fade-press"
+              className="flex items-center justify-center cursor-pointer fade-press"
               style={{
-                border: "1px solid #C8522A",
-                background: "#C8522A",
-                borderRadius: 100,
-                color: "#FFFFFF",
-                padding: "6px 12px",
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: 12,
-                fontWeight: 600,
+                width: 44,
+                height: 44,
+                border: "1px solid #E8E0D4",
+                background: "#FDFAF5",
+                borderRadius: 22,
                 transition: "all 0.2s ease",
               }}
             >
-              <Lightbulb size={14} color="#FFFFFF" />
-              Insights
+              <Lightbulb size={18} color="rgba(26,18,8,0.6)" />
             </button>
             <button
               onClick={() => {
                 setShowSessionSheet(true);
                 haptics.light();
               }}
-              className="flex items-center gap-1.5 cursor-pointer hover-scale fade-press"
+              className="flex items-center justify-center cursor-pointer fade-press"
               style={{
+                width: 44,
+                height: 44,
                 border: "1px solid #E8E0D4",
                 background: "#FDFAF5",
-                borderRadius: 100,
-                color: "rgba(26,18,8,0.6)",
-                padding: "6px 12px",
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: 12,
-                fontWeight: 600,
+                borderRadius: 22,
               }}
             >
-              <History size={14} />
-              History
+              <History size={18} color="rgba(26,18,8,0.6)" />
             </button>
           </div>
         </div>
@@ -717,11 +742,6 @@ export function TherapistScreen() {
             const isTherapistError = msg.role === "therapist" && normalizedContent.startsWith("⚠️");
             return (
               <div key={`${msg.timestamp}-${idx}`} className={`mb-3 flex ${msg.role === "user" ? "justify-end" : "justify-start gap-2"}`}>
-                {msg.role === "therapist" && (
-                  <div className="flex-shrink-0 flex items-center justify-center shrink-0" style={{ width: 32, height: 32, borderRadius: "50%", backgroundColor: "#C8522A", color: "#FFFFFF", fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 700, fontStyle: "italic", marginTop: 4, boxShadow: "0 2px 10px rgba(200,82,42,0.28)" }}>
-                    R
-                  </div>
-                )}
                 <div className={msg.role === "user" ? "text-right" : "text-left"} style={{ maxWidth: "75%" }}>
                   <div
                     style={{
@@ -732,13 +752,9 @@ export function TherapistScreen() {
                       padding: "10px 16px",
                       textAlign: "left",
                     }}
-                  >
+                    >
                     {msg.images && msg.images.length > 0 && (
-                      <div className="mb-2 flex gap-2 flex-wrap">
-                        {msg.images.map((img, i) => (
-                          <img key={i} src={img} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 8 }} />
-                        ))}
-                      </div>
+                      <MessageImages images={msg.images} />
                     )}
                     <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 400, color: "#1A1208", lineHeight: 1.5 }}>
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{normalizedContent}</ReactMarkdown>
@@ -784,9 +800,6 @@ export function TherapistScreen() {
 
           {isLoading && (
             <div className="mb-3 flex justify-start gap-2">
-              <div className="flex-shrink-0 flex items-center justify-center shrink-0" style={{ width: 32, height: 32, borderRadius: "50%", backgroundColor: "#C8522A", color: "#FFFFFF", fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 700, fontStyle: "italic", marginTop: 4, boxShadow: "0 2px 10px rgba(200,82,42,0.28)" }}>
-                R
-              </div>
               <div className="text-left" style={{ maxWidth: "75%" }}>
                 <div
                   style={{
@@ -827,7 +840,11 @@ export function TherapistScreen() {
             <div style={{ backgroundColor: "#FDFAF5", borderTop: "1px solid #E8E0D4" }}>
               <div className="px-4 py-3">
                 {pendingImages.length > 0 && (
-                  <div className="mb-2 flex gap-2 overflow-x-auto">
+                  <div 
+                    ref={pendingFade.ref}
+                    className="mb-2 flex gap-2 w-full overflow-x-auto no-scrollbar pb-1"
+                    style={pendingFade.style}
+                  >
                     {pendingImages.map((img, i) => (
                       <div key={i} className="relative shrink-0">
                         <img src={img} alt="" style={{ width: 54, height: 54, objectFit: "cover", borderRadius: 10, border: "1px solid #E8E0D4" }} />
@@ -979,7 +996,7 @@ export function TherapistScreen() {
                   <div style={{ width: 36, height: 4, borderRadius: 100, backgroundColor: "rgba(26,18,8,0.12)" }} />
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-5 pb-24">
+                <div className="flex-1 overflow-y-auto px-5 pb-6">
                   <div className="flex items-center justify-between py-4 mb-2 sticky top-0 bg-[#FDFAF5] z-10">
                     <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 18, fontWeight: 600, color: "#1A1208" }}>
                       Session History
@@ -1105,7 +1122,7 @@ export function TherapistScreen() {
                   <div style={{ width: 36, height: 4, borderRadius: 100, backgroundColor: "rgba(26,18,8,0.12)" }} />
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-5 pb-24">
+                <div className="flex-1 overflow-y-auto px-5 pb-6">
                   {/* Drawer Title & Header */}
                   <div className="flex items-center justify-between py-4 mb-2 sticky top-0 bg-[#FDFAF5] z-10">
                     <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 18, fontWeight: 600, color: "#1A1208" }}>
@@ -1236,6 +1253,6 @@ export function TherapistScreen() {
           </>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div >
   );
 }

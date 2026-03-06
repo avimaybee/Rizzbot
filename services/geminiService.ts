@@ -1,6 +1,14 @@
-import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
+import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from "@google/genai";
+
+export enum ThinkingLevel {
+  MINIMAL = "MINIMAL",
+  LOW = "LOW",
+  MEDIUM = "MEDIUM",
+  HIGH = "HIGH",
+}
 import { SimResult, Persona, SimAnalysisResult, QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, StyleExtractionRequest, StyleExtractionResponse, AIExtractedStyleProfile } from "../types";
 import { getPromptBias } from "./feedbackService";
+import { getFirebaseToken } from "./firebaseService";
 import { logger } from "./logger";
 
 /**
@@ -9,7 +17,7 @@ import { logger } from "./logger";
  * which injects the key securely from an environment variable.
  */
 const originalFetch = window.fetch;
-window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   const urlStr = typeof input === 'string'
     ? input
     : (input instanceof URL ? input.href : input.url);
@@ -24,15 +32,42 @@ window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
 
   if (parsedUrl.hostname === 'generativelanguage.googleapis.com') {
     const proxyUrl = `/api/gemini${parsedUrl.pathname}${parsedUrl.search}`;
+    const token = await getFirebaseToken();
 
     // Handle cases where input is a Request object to preserve headers, method, and body
     if (typeof input !== 'string' && !(input instanceof URL)) {
+      const newHeaders = new Headers(input.headers);
+      if (token) newHeaders.set('Authorization', `Bearer ${token}`);
+
+      const requestOptions: RequestInit = {
+        method: input.method,
+        headers: newHeaders,
+        mode: input.mode,
+        credentials: input.credentials,
+        cache: input.cache,
+        redirect: input.redirect,
+        referrer: input.referrer,
+        integrity: input.integrity,
+      };
+
+      // In Node/some environments, body can't be set for GET/HEAD
+      if (input.method !== 'GET' && input.method !== 'HEAD') {
+        const clonedBody = input.clone();
+        // ReadableStream support body proxy
+        requestOptions.body = clonedBody.body;
+        // @ts-ignore - Duplex is required for streaming bodies in some fetch impls
+        requestOptions.duplex = 'half';
+      }
+
       // Create a new Request based on the original but with the proxy URL
-      const modifiedRequest = new Request(proxyUrl, input);
+      const modifiedRequest = new Request(proxyUrl, requestOptions);
       return originalFetch(modifiedRequest);
     }
 
-    return originalFetch(proxyUrl, init);
+    const newHeaders = new Headers(init?.headers);
+    if (token) newHeaders.set('Authorization', `Bearer ${token}`);
+
+    return originalFetch(proxyUrl, { ...init, headers: newHeaders });
   }
   return originalFetch(input, init);
 };
@@ -86,57 +121,102 @@ async function retryWithBackoff<T>(
   throw lastError;
 }
 
-// --- FALLBACK LOGIC ---
-const PRIMARY_MODEL = "gemini-3-flash-preview";
-const FALLBACK_MODEL = "gemini-2.5-flash"; // Standard free tier, reliable
+// --- MODEL CHAINS ---
+const QUICK_MODE_MODELS = [
+  "gemini-3-flash-preview", 
+  "gemini-3.1-flash-lite-preview", 
+  "gemini-2.5-flash"
+];
+
+const THERAPIST_MODELS = [
+  "gemini-3.1-flash-lite-preview", 
+  "gemini-2.5-flash-lite"
+];
 
 /**
- * Robust wrapper for Gemini generation with Model Fallback.
- * Tries PRIMARY_MODEL first. If it hits 429 (Quota) or 503 (Overloaded), 
- * it seamlessly retries with FALLBACK_MODEL.
+ * Helper to inject model-specific thinking configuration.
+ */
+const getModelConfig = (modelId: string, baseConfig: any) => {
+  const config = { ...baseConfig };
+  
+  // Apply thinking configurations based on model series
+  if (modelId === "gemini-3.1-flash-lite-preview") {
+    config.thinkingConfig = {
+      thinkingLevel: ThinkingLevel.HIGH
+    };
+  } else if (modelId.includes("gemini-2.5")) {
+    config.thinkingConfig = {
+      thinkingBudget: 1024
+    };
+  }
+  
+  return config;
+};
+
+/**
+ * Robust wrapper for Gemini generation with Multi-tier Model Fallback.
+ * Tries models in the provided chain one by one.
  */
 async function runWithFallback(
-  operation: (model: string) => Promise<any>,
-  operationName: string
+  operation: (modelId: string) => Promise<any>,
+  operationName: string,
+  modelChain: string[]
 ): Promise<any> {
-  try {
-    // Try Primary Model
-    return await retryWithBackoff(() => operation(PRIMARY_MODEL), `${operationName} [Primary]`);
-  } catch (error: any) {
-    const msg = error?.message || error?.toString() || '';
+  let lastError: any = new Error(`${operationName}: No models in chain`);
 
-    // Check for Quota (429) or Overloaded (503) or generic 500s that might be model specific
-    if (msg.includes('429') || msg.includes('503') || msg.includes('Quota') || msg.includes('Overloaded')) {
-      logger.warn(`⚠️ ${operationName}: Primary model (${PRIMARY_MODEL}) failed (${msg}). Switching to fallback: ${FALLBACK_MODEL}`);
-
-      // Try Fallback Model
-      return await retryWithBackoff(() => operation(FALLBACK_MODEL), `${operationName} [Fallback]`);
+  for (let i = 0; i < modelChain.length; i++) {
+    const currentModel = modelChain[i];
+    try {
+      return await retryWithBackoff(
+        () => operation(currentModel), 
+        `${operationName} [${currentModel}]`
+      );
+    } catch (error: any) {
+      lastError = error;
+      const msg = error?.message || error?.toString() || '';
+      
+      // If there's another model in the chain, log and continue
+      if (i < modelChain.length - 1) {
+        // If it's a safety block or non-retriable request error, don't fallback, just throw
+        // (Standard behavior: 429, 503, 500 etc. trigger fallback)
+        if (msg.includes('429') || msg.includes('503') || msg.includes('500') || msg.includes('Quota') || msg.includes('Overloaded') || msg.includes('Internal Server Error')) {
+          logger.warn(`⚠️ ${operationName}: Model ${currentModel} failed (${msg}). Switching to next: ${modelChain[i+1]}`);
+          continue;
+        }
+      }
+      throw error;
     }
-
-    // If it's a safety block or request error, don't retry with fallback, just throw
-    throw error;
   }
+  throw lastError;
 }
 
 /**
- * Robust wrapper for STREAMING with Fallback.
- * Note: Once a stream starts successfully, we can't fallback mid-stream easily.
- * This protects against the initial connection/handshake failing.
+ * Robust wrapper for STREAMING with Multi-tier Fallback.
  */
 async function runStreamWithFallback(
-  operation: (model: string) => Promise<any>,
-  operationName: string
+  operation: (modelId: string) => Promise<any>,
+  operationName: string,
+  modelChain: string[]
 ): Promise<any> {
-  try {
-    return await operation(PRIMARY_MODEL);
-  } catch (error: any) {
-    const msg = error?.message || error?.toString() || '';
-    if (msg.includes('429') || msg.includes('503') || msg.includes('Quota')) {
-      logger.warn(`⚠️ ${operationName}: Primary stream failed. Switching to fallback.`);
-      return await operation(FALLBACK_MODEL);
+  let lastError: any = new Error(`${operationName}: No models in chain`);
+
+  for (let i = 0; i < modelChain.length; i++) {
+    const currentModel = modelChain[i];
+    try {
+      return await operation(currentModel);
+    } catch (error: any) {
+      lastError = error;
+      const msg = error?.message || error?.toString() || '';
+      if (i < modelChain.length - 1) {
+        if (msg.includes('429') || msg.includes('503') || msg.includes('Quota')) {
+          logger.warn(`⚠️ ${operationName}: Stream connection to ${currentModel} failed. Switching to next.`);
+          continue;
+        }
+      }
+      throw error;
     }
-    throw error;
   }
+  throw lastError;
 }
 
 export const generatePersona = async (
@@ -203,9 +283,10 @@ export const generatePersona = async (
       (modelId) => ai.models.generateContent({
         model: modelId,
         contents: { parts: parts },
-        config: { safetySettings: safetySettings }
+        config: getModelConfig(modelId, { safetySettings: safetySettings })
       }),
-      'generatePersona'
+      'generatePersona',
+      THERAPIST_MODELS
     );
 
     let text = response.text;
@@ -382,13 +463,14 @@ export const simulateDraft = async (
   `;
 
   try {
-    const response = await retryWithBackoff(
-      () => ai.models.generateContent({
-        model: "gemini-flash-lite-latest",
+    const response = await runWithFallback(
+      (modelId) => ai.models.generateContent({
+        model: modelId,
         contents: prompt,
-        config: { safetySettings: safetySettings }
+        config: getModelConfig(modelId, { safetySettings: safetySettings })
       }),
-      'simulateDraft'
+      'simulateDraft',
+      THERAPIST_MODELS
     );
 
     let text = response.text;
@@ -514,13 +596,14 @@ export const analyzeSimulation = async (
   `;
 
   try {
-    const response = await retryWithBackoff(
-      () => ai.models.generateContent({
-        model: "gemini-flash-lite-latest",
+    const response = await runWithFallback(
+      (modelId) => ai.models.generateContent({
+        model: modelId,
         contents: prompt,
-        config: { safetySettings: safetySettings }
+        config: getModelConfig(modelId, { safetySettings: safetySettings })
       }),
-      'analyzeSimulation'
+      'analyzeSimulation',
+      THERAPIST_MODELS
     );
 
     let text = response.text;
@@ -849,9 +932,10 @@ export const getQuickAdvice = async (
       (modelId) => ai.models.generateContent({
         model: modelId,
         contents: parts,
-        config: { safetySettings: safetySettings }
+        config: getModelConfig(modelId, { safetySettings: safetySettings })
       }),
-      'getQuickAdvice'
+      'getQuickAdvice',
+      QUICK_MODE_MODELS
     );
 
     let text = response.text;
@@ -884,7 +968,8 @@ export const getQuickAdvice = async (
         bold: [fallbackOption, fallbackOption, fallbackOption],
         witty: [fallbackOption, fallbackOption, fallbackOption],
         authentic: [fallbackOption, fallbackOption, fallbackOption],
-        wait: null
+        yourStyle: [fallbackOption, fallbackOption, fallbackOption],
+        wait: undefined
       },
       proTip: "ngl couldn't read that one properly, try again",
       recommendedAction: 'MATCH'
@@ -995,16 +1080,17 @@ IMPORTANT:
 
   try {
     const model = ai.models;
-    const response = await retryWithBackoff(
-      () => model.generateContent({
-        model: "gemini-3-flash-preview",
+    const response = await runWithFallback(
+      (modelId) => ai.models.generateContent({
+        model: modelId,
         contents: [{ role: "user", parts }],
-        config: {
+        config: getModelConfig(modelId, {
           safetySettings,
-          temperature: 0.3, // Lower temp for more consistent analysis
-        },
+          temperature: 0.3,
+        }),
       }),
-      'extractUserStyle'
+      'extractUserStyle',
+      QUICK_MODE_MODELS
     );
 
     let text = response.text?.trim() || '';
@@ -1117,34 +1203,34 @@ const SESSION_ANALYSIS_TOOL = {
   name: "update_session_analysis",
   description: "Update the clinical notes with new observations about the user's relationship patterns, emotional state, and insights discovered during the session. Call this after every response.",
   parameters: {
-    type: "object",
+    type: Type.OBJECT,
     properties: {
       attachmentStyle: {
-        type: "string",
+        type: Type.STRING,
         enum: ["anxious", "avoidant", "secure", "fearful-avoidant", "unknown"],
         description: "The user's apparent attachment style based on conversation"
       },
       keyThemes: {
-        type: "array",
-        items: { type: "string" },
+        type: Type.ARRAY,
+        items: { type: Type.STRING },
         description: "Key relationship themes identified (e.g., 'trust issues', 'communication breakdown')"
       },
       emotionalState: {
-        type: "string",
+        type: Type.STRING,
         description: "The user's current emotional state (e.g., 'anxious', 'defensive', 'hopeful')"
       },
       relationshipDynamic: {
-        type: "string",
+        type: Type.STRING,
         description: "The dynamic between the user and their partner (e.g., 'pursuer-distancer')"
       },
       userInsights: {
-        type: "array",
-        items: { type: "string" },
+        type: Type.ARRAY,
+        items: { type: Type.STRING },
         description: "Key realizations the user has had during the session"
       },
       actionItems: {
-        type: "array",
-        items: { type: "string" },
+        type: Type.ARRAY,
+        items: { type: Type.STRING },
         description: "Suggested exercises or next steps for the user"
       }
     },
@@ -1157,15 +1243,15 @@ const ASSIGN_EXERCISE_TOOL = {
   name: "assign_exercise",
   description: "Assign an interactive exercise to help the user with a specific aspect of their relationship. Only use when the conversation naturally calls for structured reflection.",
   parameters: {
-    type: "object",
+    type: Type.OBJECT,
     properties: {
       type: {
-        type: "string",
+        type: Type.STRING,
         enum: ["boundary_builder", "needs_assessment", "attachment_quiz"],
         description: "The type of exercise to assign"
       },
       context: {
-        type: "string",
+        type: Type.STRING,
         description: "Brief explanation of why this exercise is being assigned (1-2 sentences)"
       }
     },
@@ -1178,10 +1264,10 @@ const LOG_EPIPHANY_TOOL = {
   name: "log_epiphany",
   description: "Log a major psychological breakthrough or 'Aha!' moment the user has had.",
   parameters: {
-    type: "object",
+    type: Type.OBJECT,
     properties: {
-      content: { type: "string", description: "The core realization" },
-      category: { type: "string", enum: ["self", "partner", "dynamic", "growth"] }
+      content: { type: Type.STRING, description: "The core realization" },
+      category: { type: Type.STRING, enum: ["self", "partner", "dynamic", "growth"] }
     },
     required: ["content", "category"]
   }
@@ -1192,10 +1278,10 @@ const PERSPECTIVE_BRIDGE_TOOL = {
   name: "show_perspective_bridge",
   description: "Provide a reconstruction of the partner's internal experience to build empathy.",
   parameters: {
-    type: "object",
+    type: Type.OBJECT,
     properties: {
-      partnerPerspective: { type: "string", description: "The reconstructed inner view of the partner" },
-      suggestedMotive: { type: "string", description: "The likely underlying need or wound" }
+      partnerPerspective: { type: Type.STRING, description: "The reconstructed inner view of the partner" },
+      suggestedMotive: { type: Type.STRING, description: "The likely underlying need or wound" }
     },
     required: ["partnerPerspective", "suggestedMotive"]
   }
@@ -1206,11 +1292,11 @@ const COMMUNICATION_INSIGHT_TOOL = {
   name: "show_communication_insight",
   description: "Provide psychological context for a specific behavior (e.g., Gottman patterns).",
   parameters: {
-    type: "object",
+    type: Type.OBJECT,
     properties: {
-      patternName: { type: "string", description: "The name of the behavior pattern" },
-      explanation: { type: "string", description: "Psychological reason why it happens" },
-      suggestion: { type: "string", description: "Healthy alternative or solution" }
+      patternName: { type: Type.STRING, description: "The name of the behavior pattern" },
+      explanation: { type: Type.STRING, description: "Psychological reason why it happens" },
+      suggestion: { type: Type.STRING, description: "Healthy alternative or solution" }
     },
     required: ["patternName", "explanation", "suggestion"]
   }
@@ -1221,10 +1307,10 @@ const FLAG_PROJECTION_TOOL = {
   name: "flag_projection",
   description: "Gently highlight a potential projection by the user.",
   parameters: {
-    type: "object",
+    type: Type.OBJECT,
     properties: {
-      behavior: { type: "string", description: "The behavior the user is criticizing" },
-      potentialRoot: { type: "string", description: "The user's own trait or fear that might be projected" }
+      behavior: { type: Type.STRING, description: "The behavior the user is criticizing" },
+      potentialRoot: { type: Type.STRING, description: "The user's own trait or fear that might be projected" }
     },
     required: ["behavior", "potentialRoot"]
   }
@@ -1235,11 +1321,11 @@ const CLOSURE_SCRIPT_TOOL = {
   name: "generate_closure_script",
   description: "Generate a drafted message for ending a situation or setting a hard boundary.",
   parameters: {
-    type: "object",
+    type: Type.OBJECT,
     properties: {
-      tone: { type: "string", enum: ["polite_distant", "firm_boundary", "warm_closure", "absolute_silence"] },
-      script: { type: "string", description: "The actual text to send" },
-      explanation: { type: "string", description: "Why this approach minimizes damage/regret" }
+      tone: { type: Type.STRING, enum: ["polite_distant", "firm_boundary", "warm_closure", "absolute_silence"] },
+      script: { type: Type.STRING, description: "The actual text to send" },
+      explanation: { type: Type.STRING, description: "Why this approach minimizes damage/regret" }
     },
     required: ["tone", "script", "explanation"]
   }
@@ -1250,19 +1336,19 @@ const SAFETY_INTERVENTION_TOOL = {
   name: "trigger_safety_intervention",
   description: "Trigger a safety protocol if abuse or crisis is detected.",
   parameters: {
-    type: "object",
+    type: Type.OBJECT,
     properties: {
-      level: { type: "string", enum: ["low", "medium", "high", "crisis"] },
-      reason: { type: "string", description: "Why safety is a concern" },
-      calmDownText: { type: "string", description: "Grounding text to help them breathe" },
+      level: { type: Type.STRING, enum: ["low", "medium", "high", "crisis"] },
+      reason: { type: Type.STRING, description: "Why safety is a concern" },
+      calmDownText: { type: Type.STRING, description: "Grounding text to help them breathe" },
       resources: {
-        type: "array",
+        type: Type.ARRAY,
         items: {
-          type: "object",
+          type: Type.OBJECT,
           properties: {
-            name: { type: "string" },
-            contact: { type: "string" },
-            url: { type: "string" }
+            name: { type: Type.STRING },
+            contact: { type: Type.STRING },
+            url: { type: Type.STRING }
           },
           required: ["name"]
         }
@@ -1277,12 +1363,12 @@ const PARENTAL_PATTERN_TOOL = {
   name: "log_parental_pattern",
   description: "Log a pattern where the partner mirrors a parent's trait.",
   parameters: {
-    type: "object",
+    type: Type.OBJECT,
     properties: {
-      parentTrait: { type: "string", description: "The parent's behavior/trait" },
-      partnerTrait: { type: "string", description: "The partner's mirroring behavior" },
-      dynamicName: { type: "string", description: "Name for this cycle (e.g. 'The Absent Father Cycle')" },
-      insight: { type: "string", description: "Psychological connecting insight" }
+      parentTrait: { type: Type.STRING, description: "The parent's behavior/trait" },
+      partnerTrait: { type: Type.STRING, description: "The partner's mirroring behavior" },
+      dynamicName: { type: Type.STRING, description: "Name for this cycle (e.g. 'The Absent Father Cycle')" },
+      insight: { type: Type.STRING, description: "Psychological connecting insight" }
     },
     required: ["parentTrait", "partnerTrait", "dynamicName", "insight"]
   }
@@ -1293,13 +1379,13 @@ const VALUES_MATRIX_TOOL = {
   name: "assign_values_matrix",
   description: "Assign a matrix to compare deep values.",
   parameters: {
-    type: "object",
+    type: Type.OBJECT,
     properties: {
-      userValues: { type: "array", items: { type: "string" }, description: "User's core values" },
-      partnerValues: { type: "array", items: { type: "string" }, description: "Partner's inferred values" },
-      alignmentScore: { type: "number", description: "Estimated 0-100 alignment" },
-      conflicts: { type: "array", items: { type: "string" } },
-      synergies: { type: "array", items: { type: "string" } }
+      userValues: { type: Type.ARRAY, items: { type: Type.STRING }, description: "User's core values" },
+      partnerValues: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Partner's inferred values" },
+      alignmentScore: { type: Type.NUMBER, description: "Estimated 0-100 alignment" },
+      conflicts: { type: Type.ARRAY, items: { type: Type.STRING } },
+      synergies: { type: Type.ARRAY, items: { type: Type.STRING } }
     },
     required: ["userValues", "partnerValues", "alignmentScore", "conflicts", "synergies"]
   }
@@ -1310,10 +1396,10 @@ const SAVE_MEMORY_TOOL = {
   name: "save_memory",
   description: "Save a significant fact, pattern, or insight about the user as a memory.",
   parameters: {
-    type: "object",
+    type: Type.OBJECT,
     properties: {
-      type: { type: "string", enum: ["GLOBAL", "SESSION"], description: "GLOBAL = Permanent fact/pattern. SESSION = Context for this convo only." },
-      content: { type: "string", description: "The content of the memory (e.g. 'Partner's name is Alex', 'User feels anxious when ignored')" }
+      type: { type: Type.STRING, enum: ["GLOBAL", "SESSION"], description: "GLOBAL = Permanent fact/pattern. SESSION = Context for this convo only." },
+      content: { type: Type.STRING, description: "The content of the memory (e.g. 'Partner's name is Alex', 'User feels anxious when ignored')" }
     },
     required: ["type", "content"]
   }
@@ -1409,29 +1495,33 @@ User's Own Notes: ${currentNotes.customNotes || 'none'}]
     // Add the user message
     parts.push({ text: userMessage });
 
-    const result = await ai.models.generateContentStream({
-      model: "gemini-flash-lite-latest",
-      contents: [{ role: "user", parts }],
-      config: {
-        systemInstruction: THERAPIST_SYSTEM_INSTRUCTION,
-        tools: [{
-          functionDeclarations: [
-            SESSION_ANALYSIS_TOOL,
-            ASSIGN_EXERCISE_TOOL,
-            LOG_EPIPHANY_TOOL,
-            PERSPECTIVE_BRIDGE_TOOL,
-            COMMUNICATION_INSIGHT_TOOL,
-            FLAG_PROJECTION_TOOL,
-            CLOSURE_SCRIPT_TOOL,
-            SAFETY_INTERVENTION_TOOL,
-            PARENTAL_PATTERN_TOOL,
-            VALUES_MATRIX_TOOL,
-            SAVE_MEMORY_TOOL
-          ]
-        }],
-        safetySettings: safetySettings,
-      }
-    });
+    const result = await runStreamWithFallback(
+      (modelId) => ai.models.generateContentStream({
+        model: modelId,
+        contents: [{ role: "user", parts }],
+        config: getModelConfig(modelId, {
+          systemInstruction: THERAPIST_SYSTEM_INSTRUCTION,
+          tools: [{
+            functionDeclarations: [
+              SESSION_ANALYSIS_TOOL,
+              ASSIGN_EXERCISE_TOOL,
+              LOG_EPIPHANY_TOOL,
+              PERSPECTIVE_BRIDGE_TOOL,
+              COMMUNICATION_INSIGHT_TOOL,
+              FLAG_PROJECTION_TOOL,
+              CLOSURE_SCRIPT_TOOL,
+              SAFETY_INTERVENTION_TOOL,
+              PARENTAL_PATTERN_TOOL,
+              VALUES_MATRIX_TOOL,
+              SAVE_MEMORY_TOOL
+            ]
+          }],
+          safetySettings: safetySettings,
+        })
+      }),
+      'streamTherapistAdvice',
+      THERAPIST_MODELS
+    );
 
     let fullText = "";
 
@@ -1492,17 +1582,18 @@ export const getTherapistAdvice = async (
 
     parts.push({ text: userMessage });
 
-    const result = await retryWithBackoff(
-      () => ai.models.generateContent({
-        model: "gemini-flash-lite-latest",
+    const result = await runWithFallback(
+      (modelId) => ai.models.generateContent({
+        model: modelId,
         contents: [{ role: "user", parts }],
-        config: {
+        config: getModelConfig(modelId, {
           systemInstruction: THERAPIST_SYSTEM_INSTRUCTION,
           tools: [{ functionDeclarations: [SESSION_ANALYSIS_TOOL] }],
           safetySettings: safetySettings,
-        }
+        })
       }),
-      'getTherapistAdvice'
+      'getTherapistAdvice',
+      THERAPIST_MODELS
     );
 
     const response = result;

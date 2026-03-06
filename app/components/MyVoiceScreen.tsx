@@ -307,7 +307,7 @@ export function MyVoiceScreen() {
     return (
       <div className="relative min-h-screen flex flex-col" style={{ backgroundColor: "#F5EFE6" }}>
         <GrainOverlay />
-        <div className="relative z-10 flex flex-col flex-1 max-w-[430px] mx-auto w-full px-5 pt-14">
+        <div className="relative z-10 flex flex-col flex-1 max-w-[430px] mx-auto w-full px-5 pt-6">
           <div className="relative flex items-center justify-center w-full min-h-[44px]">
             <button
               onClick={() => {
@@ -448,9 +448,9 @@ export function MyVoiceScreen() {
   }
 
   return (
-    <div className="relative min-h-screen pb-24" style={{ backgroundColor: "#F5EFE6" }}>
+    <div className="relative min-h-screen pb-6" style={{ backgroundColor: "#F5EFE6" }}>
       <GrainOverlay />
-      <div className="relative z-10 px-5 pt-14 max-w-[430px] mx-auto">
+      <div className="relative z-10 px-5 pt-6 max-w-[430px] mx-auto">
         <div className="flex items-center justify-between">
           <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 22, fontWeight: 600, color: "#1A1208" }}>
             My Voice

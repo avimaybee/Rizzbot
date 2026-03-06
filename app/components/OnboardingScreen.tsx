@@ -69,7 +69,7 @@ export function OnboardingScreen() {
       <GrainOverlay />
 
       {/* Skip */}
-      <div className="relative z-10 flex justify-end px-5 pt-14">
+      <div className="relative z-10 flex justify-end px-5 pt-6">
         {!isLast && (
           <button
             onClick={handleSkip}
@@ -188,7 +188,7 @@ export function OnboardingScreen() {
       </div>
 
       {/* Bottom */}
-      <div className="relative z-10 px-5 pb-24 max-w-[430px] mx-auto w-full">
+      <div className="relative z-10 px-5 pb-6 max-w-[430px] mx-auto w-full">
         {/* Progress dots */}
         <div className="flex justify-center gap-2 mb-6">
           {slides.map((_, i) => (

@@ -47,7 +47,7 @@ export function AdminPaymentsScreen() {
         <div className="min-h-screen pb-12" style={{ backgroundColor: "#F5EFE6" }}>
             <GrainOverlay />
 
-            <div className="relative z-10 px-6 pt-14 max-w-2xl mx-auto">
+            <div className="relative z-10 px-6 pt-6 max-w-2xl mx-auto">
                 <button onClick={() => navigate("/home")} className="flex items-center gap-2 text-[#1A1208]/60 font-medium mb-8">
                     <ChevronLeft size={18} /> Back to App
                 </button>

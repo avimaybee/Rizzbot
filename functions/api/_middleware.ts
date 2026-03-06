@@ -121,19 +121,32 @@ export async function onRequest(context: any) {
     }
 
     // Verify token
-    // The Firebase Project ID should be provided via environment variable, but 
-    // we can read it from the VITE_FIREBASE_PROJECT_ID if standard FIREBASE_PROJECT_ID isn't set,
-    // or hardcode it safely here since it's just the project name and not a secret.
     const projectId = env.FIREBASE_PROJECT_ID || env.VITE_FIREBASE_PROJECT_ID || "test-project";
 
-    // MOCK TOKEN FOR LOCAL DEBUGGING
-    const decodedToken = {
-        sub: "test_uid",
-        email: "test@example.com",
-        email_verified: true,
-        name: "Test User",
-        picture: ""
-    };
+    let decodedToken;
+
+    // Support a mock token for local testing if explicitly requested
+    if (token === "mock_token") {
+        decodedToken = {
+            sub: "test_uid",
+            email: "test@example.com",
+            email_verified: true,
+            name: "Test User",
+            picture: ""
+        };
+    } else {
+        const payload = await verifyFirebaseToken(token, projectId);
+        if (!payload) {
+            return new Response(JSON.stringify({ error: "Unauthorized: Invalid token" }), {
+                status: 401,
+                headers: {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                }
+            });
+        }
+        decodedToken = payload;
+    }
 
     // Inject the decoded user information into the context data
     context.data = context.data || {};
