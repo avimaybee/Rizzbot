@@ -138,7 +138,7 @@ export async function onRequest(context: any) {
             'INSERT INTO users (anon_id, created_at) VALUES (?, ?)'
           ).bind(firebaseUid, now).run();
 
-          user = {
+            user = {
             id: created?.meta?.last_row_id || created?.meta?.last_rowid,
             anon_id: firebaseUid,
             created_at: now

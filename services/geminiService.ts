@@ -208,7 +208,7 @@ async function runStreamWithFallback(
       lastError = error;
       const msg = error?.message || error?.toString() || '';
       if (i < modelChain.length - 1) {
-        if (msg.includes('429') || msg.includes('503') || msg.includes('Quota')) {
+        if (msg.includes('429') || msg.includes('503') || msg.includes('500') || msg.includes('Quota') || msg.includes('Overloaded') || msg.includes('Internal Server Error')) {
           logger.warn(`⚠️ ${operationName}: Stream connection to ${currentModel} failed. Switching to next.`);
           continue;
         }
@@ -772,7 +772,7 @@ export const getQuickAdvice = async (
     - Complicated: Careful, protect their peace, watch patterns
     
     ═══════════════════════════════════════════════
-    SITUATION CONTEXT: ${situationContext.toUpperCase()}
+    SITUATION CONTEXT: ${(situationContext || 'new').toUpperCase()}
     ${situationAdvice ? `\n    ${situationAdvice}\n    ` : ''}
     ═══════════════════════════════════════════════
     ${styleContext}

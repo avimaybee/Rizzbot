@@ -91,13 +91,13 @@ export async function onRequest(context: any) {
       `;
       const bindings = [verifiedUid, limit, offset];
 
-      const results = await db.prepare(query).bind(...bindings).all();
+      const results = (await db.prepare(query).bind(...bindings).all()) || { results: [] };
 
       // Also get total count for pagination
       const countQuery = 'SELECT COUNT(*) as total FROM sessions s JOIN users u ON s.user_id = u.id WHERE u.anon_id = ?';
       const countBindings = [verifiedUid];
 
-      const countResult = await db.prepare(countQuery).bind(...countBindings).all();
+      const countResult = (await db.prepare(countQuery).bind(...countBindings).all()) || { results: [] };
       const total = countResult.results?.[0]?.total || 0;
 
       return new Response(JSON.stringify({
@@ -116,7 +116,7 @@ export async function onRequest(context: any) {
         // Auto-provision basic user row if it doesn't exist yet so the session can link
         try {
           const created = await db.prepare('INSERT INTO users (anon_id) VALUES (?)').bind(verifiedUid).run();
-          dbUserId = created?.meta?.last_rowid || created?.meta?.last_row_id;
+          dbUserId = created?.meta?.last_row_id || created?.meta?.last_rowid;
         } catch (userErr: any) {
           console.error('[sessions.ts] Failed to create basic user for session:', userErr.message);
         }
@@ -135,7 +135,7 @@ export async function onRequest(context: any) {
         'INSERT INTO sessions (user_id, result, mode, persona_name, headline, ghost_risk, message_count) VALUES (?, ?, ?, ?, ?, ?, ?)'
       ).bind(dbUserId, result, mode, personaName, headline, ghostRisk, messageCount).run();
 
-      return new Response(JSON.stringify({ success: run.success, lastInsertId: run.meta?.last_rowid }), {
+      return new Response(JSON.stringify({ success: run.success, lastInsertId: run.meta?.last_row_id || run.meta?.last_rowid }), {
         headers: corsHeaders,
       });
     }

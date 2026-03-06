@@ -121,7 +121,7 @@ export async function onRequest(context: any) {
     }
 
     // Verify token
-    const projectId = env.FIREBASE_PROJECT_ID || env.VITE_FIREBASE_PROJECT_ID || "test-project";
+    const projectId = env.FIREBASE_PROJECT_ID || env.VITE_FIREBASE_PROJECT_ID || "rizzbot-auth";
 
     let decodedToken;
 

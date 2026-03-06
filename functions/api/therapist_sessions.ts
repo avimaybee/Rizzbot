@@ -94,8 +94,8 @@ export async function onRequest(context: any) {
             const countQuery = 'SELECT COUNT(*) as total FROM therapist_sessions ts JOIN users u ON ts.user_id = u.id WHERE u.anon_id = ?';
             const countBindings = [verifiedUid];
 
-            const results = await db.prepare(query).bind(...bindings).all();
-            const countResult = await db.prepare(countQuery).bind(...countBindings).all();
+            const results = (await db.prepare(query).bind(...bindings).all()) || { results: [] };
+            const countResult = (await db.prepare(countQuery).bind(...countBindings).all()) || { results: [] };
             const total = countResult.results?.[0]?.total || 0;
 
             return new Response(JSON.stringify({
@@ -114,10 +114,10 @@ export async function onRequest(context: any) {
                 // Auto-provision basic user row if it doesn't exist yet
                 try {
                     const created = await db.prepare('INSERT INTO users (anon_id) VALUES (?)').bind(verifiedUid).run();
-                    dbUserId = created?.meta?.last_rowid || created?.meta?.last_row_id;
+                    dbUserId = created?.meta?.last_row_id || created?.meta?.last_rowid;
                 } catch (userErr: any) {
                     console.error('[therapist_sessions] Failed to create basic user for session:', userErr.message);
-                    return new Response(JSON.stringify({ error: 'Failed to mapped user identity' }), { status: 500, headers: corsHeaders });
+                    return new Response(JSON.stringify({ error: 'Failed to map user identity' }), { status: 500, headers: corsHeaders });
                 }
             }
 
@@ -157,7 +157,7 @@ export async function onRequest(context: any) {
                     summary || null
                 ).run();
 
-                return new Response(JSON.stringify({ success: true, action: 'created', id: result.meta?.last_rowid }), { headers: corsHeaders });
+                return new Response(JSON.stringify({ success: true, action: 'created', id: result.meta?.last_row_id || result.meta?.last_rowid }), { headers: corsHeaders });
             }
         }
 

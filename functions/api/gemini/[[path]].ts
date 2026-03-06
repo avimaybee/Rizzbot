@@ -70,11 +70,18 @@ export async function onRequest(context: { env: any; request: Request; data?: an
     });
 
     // Forward the response, including status and headers
-    // This correctly handles streaming responses (SSE) for Gemini
+    // We sanitize headers to remove hop-by-hop and problematic encoding headers
+    const responseHeaders = new Headers(response.headers);
+    responseHeaders.delete('content-encoding');
+    responseHeaders.delete('content-length');
+    responseHeaders.delete('transfer-encoding');
+    responseHeaders.delete('connection');
+    responseHeaders.delete('keep-alive');
+
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
-      headers: response.headers,
+      headers: responseHeaders,
     });
   } catch (error: any) {
     console.error('Gemini Proxy Error:', error);
