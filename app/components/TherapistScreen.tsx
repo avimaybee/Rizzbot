@@ -3,12 +3,12 @@ import { useSessionState } from "../utils/useSessionState";
 import { useNavigate } from "react-router";
 import {
   ArrowRight,
+  Camera,
   ChevronDown,
   ChevronLeft,
   ChevronUp,
   Heart,
   History,
-  ImagePlus,
   Lightbulb,
   MemoryStick,
   Mic,
@@ -980,7 +980,7 @@ export function TherapistScreen() {
                         flexShrink: 0,
                       }}
                     >
-                      <ImagePlus size={20} />
+                      <Camera size={20} />
                     </button>
                     <textarea
                       value={inputValue}
@@ -1053,7 +1053,6 @@ export function TherapistScreen() {
           </div>
         </div>
 
-        <TabBar />
       </div>
 
       <AnimatePresence>

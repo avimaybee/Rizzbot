@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
 import { Bell, ChevronRight, Heart, LogOut, Mic, Sparkles, Target, Zap } from "lucide-react";
-import { TabBar } from "./TabBar";
 import { GrainOverlay } from "./GrainOverlay";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { PremiumModal } from "./PremiumModal";
@@ -165,7 +164,7 @@ export function HomeScreen() {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="relative min-h-screen pb-6" 
+      className="relative min-h-screen pb-[72px]"
       style={{ backgroundColor: "#F5EFE6" }}
     >
       <GrainOverlay />
@@ -508,7 +507,6 @@ export function HomeScreen() {
         </div>
       </div>
 
-      <TabBar />
 
       {/* Profile Sheet */}
       {showProfileSheet && (

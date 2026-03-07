@@ -1,5 +1,5 @@
 import React from "react";
-import { createBrowserRouter, Navigate } from "react-router";
+import { createBrowserRouter, Navigate, Outlet } from "react-router";
 import { SplashScreen } from "./components/SplashScreen";
 import { OnboardingScreen } from "./components/OnboardingScreen";
 import { AuthScreen } from "./components/AuthScreen";
@@ -13,12 +13,23 @@ import { MyVoiceScreen } from "./components/MyVoiceScreen";
 import { TacticalReportScreen } from "./components/TacticalReportScreen";
 import { AdminPaymentsScreen } from "./components/AdminPaymentsScreen";
 import { NotFoundScreen } from "./components/NotFoundScreen";
+import { TabBar } from "./components/TabBar";
 import { useAppContext } from "./app-context";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { authUser } = useAppContext();
   if (!authUser) return <Navigate to="/auth" replace />;
   return children;
+}
+
+/** Layout that persists the TabBar across all main authenticated pages */
+function TabBarLayout() {
+  return (
+    <>
+      <Outlet />
+      <TabBar />
+    </>
+  );
 }
 
 function ProtectedHome() {
@@ -97,14 +108,20 @@ export const router = createBrowserRouter([
   { path: "/", Component: SplashScreen },
   { path: "/onboarding", Component: OnboardingScreen },
   { path: "/auth", Component: AuthScreen },
-  { path: "/home", Component: ProtectedHome },
-  { path: "/quick", Component: ProtectedQuick },
-  { path: "/practice", Component: ProtectedPractice },
-  { path: "/tactical-report", Component: ProtectedTacticalReport },
-  { path: "/therapist", Component: ProtectedTherapistNew },
-  { path: "/therapist-close", Component: ProtectedTherapistClosing },
-  { path: "/history", Component: ProtectedHistoryNew },
-  { path: "/voice", Component: ProtectedVoiceNew },
-  { path: "/admin/payments", Component: ProtectedAdmin },
   { path: "*", Component: NotFoundScreen },
+  {
+    // Layout route: renders TabBar once, persists across all child pages
+    Component: TabBarLayout,
+    children: [
+      { path: "/home", Component: ProtectedHome },
+      { path: "/quick", Component: ProtectedQuick },
+      { path: "/practice", Component: ProtectedPractice },
+      { path: "/tactical-report", Component: ProtectedTacticalReport },
+      { path: "/therapist", Component: ProtectedTherapistNew },
+      { path: "/therapist-close", Component: ProtectedTherapistClosing },
+      { path: "/history", Component: ProtectedHistoryNew },
+      { path: "/voice", Component: ProtectedVoiceNew },
+      { path: "/admin/payments", Component: ProtectedAdmin },
+    ],
+  },
 ]);

@@ -12,7 +12,6 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { TabBar } from "./TabBar";
 import { GrainOverlay } from "./GrainOverlay";
 import { useToast } from "./ui/Toast";
 import { useAppContext } from "../app-context";
@@ -448,7 +447,7 @@ export function MyVoiceScreen() {
   }
 
   return (
-    <div className="relative min-h-screen pb-6" style={{ backgroundColor: "#F5EFE6" }}>
+    <div className="relative min-h-screen pb-[72px]" style={{ backgroundColor: "#F5EFE6" }}>
       <GrainOverlay />
       <div className="relative z-10 px-5 pt-6 max-w-[430px] mx-auto">
         <div className="flex items-center justify-between">
@@ -807,7 +806,6 @@ export function MyVoiceScreen() {
           {saving ? "Saving..." : "Save Voice Profile"}
         </button>
       </div>
-      <TabBar />
     </div>
   );
 }

@@ -475,7 +475,6 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
           </div>
         )}
       </div>
-      <TabBar />
     </div >
   );
 }
@@ -964,8 +963,6 @@ export function HistoryScreen() {
           </>
         )}
       </AnimatePresence>
-
-      <TabBar />
     </div >
   );
 }

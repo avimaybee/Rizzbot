@@ -417,8 +417,7 @@ export const simulateDraft = async (
 
   try {
     const response = await runWithFallback({
-      contents: prompt,
-      tools: [UPDATE_SIM_STATE_TOOL],
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
       safetySettings: safetySettings
     }, THERAPIST_MODELS);
 

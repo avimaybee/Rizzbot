@@ -277,7 +277,7 @@ export function QuickModeScreen() {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="relative min-h-screen pb-6"
+      className="relative min-h-screen pb-[72px]"
       style={{ backgroundColor: "#F5EFE6" }}
     >
       <GrainOverlay />
@@ -776,7 +776,6 @@ export function QuickModeScreen() {
           </div>
         )}
       </div>
-      <TabBar />
     </motion.div>
   );
 }

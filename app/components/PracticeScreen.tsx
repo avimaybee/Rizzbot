@@ -176,6 +176,20 @@ export function PracticeScreen() {
 
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [transcriptResult, setTranscriptResult] = useState<TranscriptionResponse | null>(null);
+  const [chatImages, setChatImages] = useState<string[]>([]);
+  const chatFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleChatImageUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    if (chatImages.length >= 3) { toast("Max 3 images per message.", "error"); return; }
+    const toProcess = Array.from(files).slice(0, 3 - chatImages.length);
+    try {
+      const encoded = await Promise.all(toProcess.map((f) => toDataUrl(f)));
+      setChatImages((prev) => [...prev, ...encoded]);
+    } catch {
+      toast("Failed to attach image.", "error");
+    }
+  };
 
   useEffect(() => {
     if (userId) {
@@ -642,7 +656,6 @@ export function PracticeScreen() {
             </div>
           </div>
         </div>
-        <TabBar />
       </motion.div >
     );
   }
@@ -653,7 +666,7 @@ export function PracticeScreen() {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="relative min-h-screen flex flex-col" 
+      className="relative min-h-screen flex flex-col pb-[72px]" 
       style={{ backgroundColor: "#F5EFE6" }}
     >
       <GrainOverlay />
@@ -667,20 +680,30 @@ export function PracticeScreen() {
               {persona?.name || "Practice"}
             </p>
           </div>
-          <button
-            onClick={() => setShowEndConfirm(true)}
-            style={{
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: 14,
-              fontWeight: 500,
-              color: "#C8522A",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            End
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowHintSheet(true)}
+              title="Hints"
+              className="cursor-pointer flex items-center justify-center fade-press"
+              style={{ width: 44, height: 44, borderRadius: 22, background: "#FDFAF5", border: "1px solid #E8E0D4", transition: "all 0.2s ease" }}
+            >
+              <Lightbulb size={18} color="rgba(26,18,8,0.6)" />
+            </button>
+            <button
+              onClick={() => setShowEndConfirm(true)}
+              style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 14,
+                fontWeight: 500,
+                color: "#C8522A",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              End
+            </button>
+          </div>
         </div>
 
         <div className="px-5 pb-3">
@@ -691,7 +714,7 @@ export function PracticeScreen() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 pb-[180px]">
+        <div className="flex-1 overflow-y-auto px-5 pb-[200px]">
           {messages.map((msg) => (
             <div key={msg.id} className={`flex mb-4 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
               {msg.sender === "ai" && (
@@ -725,68 +748,109 @@ export function PracticeScreen() {
           <div ref={chatEndRef} />
         </div>
 
-        <div className="fixed bottom-[80px] left-0 right-0 z-30" style={{ backgroundColor: "#FDFAF5", borderTop: "1px solid #E8E0D4" }}>
-          <div className="max-w-[430px] mx-auto flex items-end gap-2 px-4 py-3">
-            <div className="pb-[4px]">
-              <button
-                onClick={() => setShowHintSheet(true)}
-                className="cursor-pointer shrink-0 fade-press flex items-center justify-center gap-2"
-                title="Hints"
-                style={{
-                  backgroundColor: "#FDF0F0",
-                  border: "1px solid rgba(217,160,160,0.3)",
-                  borderRadius: 100,
-                  padding: "8px 14px",
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: "#C8522A"
-                }}
-              >
-                <Lightbulb size={16} strokeWidth={2} color="#C8522A" />
-                Hints
-              </button>
-            </div>
-            
-            <textarea
-              value={inputText}
-              onChange={(e) => {
-                setInputText(e.target.value);
-                const target = e.target as HTMLTextAreaElement;
-                target.style.height = "44px";
-                target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  void handleSend();
-                }
-              }}
-              placeholder="Type a message..."
-              className="flex-1 resize-none overflow-y-auto m-1 bg-[#F5EFE6] rounded-[22px] border border-transparent px-[18px] py-[10px] text-[15px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 outline-none leading-[24px]"
-              style={{
-                minHeight: 44,
-                maxHeight: 120,
-                fontFamily: "'DM Sans', sans-serif",
-              }}
-            />
-            
-            <div className="pb-[4px] flex items-center gap-2">
-              <button
-                onClick={() => setShowVoiceRecorder(true)}
-                className="cursor-pointer shrink-0 flex items-center justify-center"
-                title="Record voice note"
-                style={{ width: 40, height: 40, borderRadius: "50%", backgroundColor: "transparent", border: "none", color: "#C8522A" }}
-              >
-                <Mic size={20} />
-              </button>
-              <button
-                onClick={() => void handleSend()}
-                className="cursor-pointer shrink-0 flex items-center justify-center"
-                style={{ width: 40, height: 40, borderRadius: "50%", backgroundColor: "#C8522A", border: "none" }}
-              >
-                <ArrowRight size={18} strokeWidth={2} color="#FFFFFF" />
-              </button>
+        <input
+          ref={chatFileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          style={{ display: "none" }}
+          onChange={(e) => void handleChatImageUpload(e.target.files)}
+        />
+        {/* Fixed bottom composer - matches TherapistScreen */}
+        <div className="fixed left-0 right-0 z-30" style={{ bottom: 60 }}>
+          <div className="max-w-[430px] mx-auto">
+            {/* Input bar */}
+            <div style={{ backgroundColor: "#FDFAF5", borderTop: "1px solid #E8E0D4" }}>
+              <div className="px-4 py-3">
+                {chatImages.length > 0 && (
+                  <div className="mb-2 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    {chatImages.map((img, i) => (
+                      <div key={i} className="relative shrink-0">
+                        <img src={img} alt="" style={{ width: 54, height: 54, objectFit: "cover", borderRadius: 10, border: "1px solid #E8E0D4" }} />
+                        <button
+                          onClick={() => setChatImages((prev) => prev.filter((_, idx) => idx !== i))}
+                          style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#C8522A", color: "#FFFFFF", cursor: "pointer", fontSize: 10 }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex w-full items-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => chatFileInputRef.current?.click()}
+                    title="Attach image"
+                    style={{ width: 40, height: 44, borderRadius: 12, border: "none", backgroundColor: "transparent", color: "#C8522A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                  >
+                    <Camera size={20} />
+                  </button>
+                  <textarea
+                    value={inputText}
+                    onChange={(e) => {
+                      setInputText(e.target.value);
+                      e.currentTarget.style.height = "auto";
+                      e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 120)}px`;
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        void handleSend();
+                      }
+                    }}
+                    placeholder="Type a message..."
+                    rows={1}
+                    className="flex-1 w-full min-w-0 min-h-[44px] max-h-[120px] rounded-[22px] border border-transparent bg-[#F5EFE6] px-4 py-[11px] text-[15px] text-[#1A1208] outline-none resize-none overflow-y-auto transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20"
+                    style={{
+                      fontFamily: "'DM Sans', sans-serif",
+                      lineHeight: "1.4",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowVoiceRecorder(true)}
+                    title="Record voice note"
+                    style={{
+                      width: 40,
+                      height: 44,
+                      borderRadius: 12,
+                      border: "none",
+                      backgroundColor: "transparent",
+                      color: "#C8522A",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Mic size={20} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleSend()}
+                    disabled={!inputText.trim() || isTyping}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      border: "none",
+                      backgroundColor: "#C8522A",
+                      color: "#FFFFFF",
+                      cursor: !inputText.trim() || isTyping ? "not-allowed" : "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      opacity: !inputText.trim() || isTyping ? 0.4 : 1,
+                    }}
+                  >
+                    <ArrowRight size={18} strokeWidth={2} />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1096,7 +1160,6 @@ export function PracticeScreen() {
         )}
       </AnimatePresence>
 
-      <TabBar />
     </motion.div>
   );
 }
