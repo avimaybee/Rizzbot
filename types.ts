@@ -320,6 +320,7 @@ export interface TherapistMessage {
   content: string;
   timestamp: number;
   images?: string[]; // Optional attached images (base64)
+  inputType?: 'text' | 'voice';
   // New Interactive Elements
   perspective?: PerspectiveInsight;
   pattern?: PatternInsight;
@@ -399,14 +400,4 @@ export interface TherapistResponse {
   exercise?: TherapistExercise; // Optional interactive exercise assigned
 }
 
-export interface TherapistMessage {
-  role: 'user' | 'therapist';
-  content: string;
-  timestamp: number;
-  images?: string[]; // Optional attached images (base64)
-  exercise?: TherapistExercise; // Optional interactive exercise
-  perspective?: PerspectiveInsight; // Perspective Bridge result
-  pattern?: PatternInsight; // Masterclass insight
-  projection?: ProjectionInsight; // Shadow persona detection
-}
 

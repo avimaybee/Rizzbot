@@ -849,11 +849,9 @@ export function HistoryScreen() {
                             </div>
                           )}
                         </div>
-                        <ChevronRight size={16} color="rgba(26,18,8,0.2)" />
+                      <ChevronRight size={16} color="rgba(26,18,8,0.2)" />
                       </div>
-                    </div>
-                  </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 mt-3 pt-3" style={{ borderTop: "1px solid rgba(26,18,8,0.06)" }}>
                         <button
                           className="cursor-pointer shrink-0"
                           onClick={(e) => {
@@ -872,6 +870,7 @@ export function HistoryScreen() {
                         >
                           <Trash2 size={14} />
                         </button>
+                        <span className="flex-1" />
                         <span
                           style={{
                             fontFamily: "'DM Sans', sans-serif",

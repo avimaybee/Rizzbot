@@ -11,11 +11,14 @@ import {
   ImagePlus,
   Lightbulb,
   MemoryStick,
+  Mic,
   Send,
   Sparkles,
   Trash2,
   X,
 } from "lucide-react";
+import VoiceRecorder from "./VoiceRecorder";
+import { TranscriptionResponse } from "../../services/voiceService";
 import { AnimatePresence, motion } from "motion/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -43,6 +46,7 @@ type TherapistUiMessage = {
   content: string;
   timestamp: number;
   images?: string[];
+  inputType?: "text" | "voice";
   closureScript?: { tone: string; script: string; explanation: string };
   safetyIntervention?: { level: string; reason: string; calmDownText: string };
   parentalPattern?: { dynamicName: string; insight: string };
@@ -563,9 +567,11 @@ export function TherapistScreen() {
     }
   };
 
-  const handleSend = async (override?: { content: string; images?: string[] }) => {
+  const handleSend = async (override?: { content: string; images?: string[]; inputType?: "text" | "voice" }) => {
     const trimmed = normalizeMessageContent(override ? override.content : inputValue).trim();
     const outgoingImages = override ? [...(override.images || [])] : pendingImages;
+    const inputType = override?.inputType || "text";
+    
     if ((!trimmed && outgoingImages.length === 0) || isLoading || !authUser?.uid) return;
 
     const currentInteractionId = interactionId || `session_${Date.now()}`;
@@ -577,6 +583,7 @@ export function TherapistScreen() {
       content: userContent,
       timestamp: Date.now(),
       images: outgoingImages.length > 0 ? outgoingImages : undefined,
+      inputType,
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -704,6 +711,9 @@ export function TherapistScreen() {
     if (!lastUserTurn) return;
     void handleSend({ content: lastUserTurn.content, images: lastUserTurn.images });
   };
+
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+  const [transcriptResult, setTranscriptResult] = useState<TranscriptionResponse | null>(null);
 
   const isSendDisabled = isLoading || (!inputValue.trim() && pendingImages.length === 0);
 
@@ -994,6 +1004,26 @@ export function TherapistScreen() {
                         boxSizing: "border-box"
                       }}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowVoiceRecorder(true)}
+                      title="Record voice note"
+                      style={{
+                        width: 40,
+                        height: 44,
+                        borderRadius: 12,
+                        border: "none",
+                        backgroundColor: "transparent",
+                        color: "#C8522A",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Mic size={20} />
+                    </button>
                     <button
                       type="button"
                       onClick={() => void handleSend()}
@@ -1322,6 +1352,65 @@ export function TherapistScreen() {
           </>
         )}
       </AnimatePresence>
+      {/* Voice Recorder Overlay */}
+      {showVoiceRecorder && (
+        <VoiceRecorder
+          mode="therapist"
+          onCancel={() => setShowVoiceRecorder(false)}
+          onTranscriptionComplete={(result) => {
+            setTranscriptResult(result);
+            setShowVoiceRecorder(false);
+          }}
+        />
+      )}
+
+      {/* Transcript Review Modal */}
+      {transcriptResult && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col gap-4">
+            <h3 className="text-lg font-bold text-[#1A1208]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              Review Transcript
+            </h3>
+            
+            <textarea
+              className="w-full p-4 bg-[#F9F7F4] border border-[#E8E0D4] rounded-2xl text-[15px] text-[#1A1208] outline-none resize-none min-h-[120px]"
+              style={{ fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5 }}
+              value={transcriptResult.cleanedTranscript || transcriptResult.transcript}
+              onChange={(e) => setTranscriptResult({ ...transcriptResult, cleanedTranscript: e.target.value })}
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setTranscriptResult(null)}
+                className="flex-1 py-3 px-4 rounded-xl border border-[#E8E0D4] text-gray-500 font-bold text-sm"
+              >
+                Discard
+              </button>
+              <button
+                onClick={() => {
+                  setInputValue(transcriptResult.cleanedTranscript || transcriptResult.transcript);
+                  setTranscriptResult(null);
+                }}
+                className="flex-1 py-3 px-4 rounded-xl bg-white border border-[#C8522A] text-[#C8522A] font-bold text-sm"
+              >
+                Edit in Chat
+              </button>
+              <button
+                onClick={() => {
+                  void handleSend({ 
+                    content: transcriptResult.cleanedTranscript || transcriptResult.transcript,
+                    inputType: "voice"
+                  });
+                  setTranscriptResult(null);
+                }}
+                className="flex-[1.5] py-3 px-4 rounded-xl bg-[#C8522A] text-white font-bold text-sm shadow-lg shadow-[#C8522A]/20"
+              >
+                Send Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div >
   );
 }

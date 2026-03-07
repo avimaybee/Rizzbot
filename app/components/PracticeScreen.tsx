@@ -11,6 +11,7 @@ import {
   Lightbulb,
   MessageCircle,
   MessageSquare,
+  Mic,
   Pencil,
   Sparkles,
   Sparkles as SparklesIcon,
@@ -30,6 +31,8 @@ import { createPersona, createSession, getPersonas } from "../../services/dbServ
 import { logSession } from "../../services/feedbackService";
 import { Persona, SimResult } from "../../types";
 import { useScrollFade } from "../utils/useScrollFade";
+import VoiceRecorder from "./VoiceRecorder";
+import { TranscriptionResponse } from "../../services/voiceService";
 
 const personaOptions = [
   "The Ghoster",
@@ -52,6 +55,7 @@ type ChatMessage = {
   id: number;
   sender: "ai" | "user";
   text: string;
+  inputType?: "text" | "voice";
 };
 
 const toDataUrl = (file: File): Promise<string> =>
@@ -169,6 +173,9 @@ export function PracticeScreen() {
   const [savedPersonas, setSavedPersonas] = useState<Persona[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+  const [transcriptResult, setTranscriptResult] = useState<TranscriptionResponse | null>(null);
 
   useEffect(() => {
     if (userId) {
@@ -764,7 +771,15 @@ export function PracticeScreen() {
               }}
             />
             
-            <div className="pb-[4px]">
+            <div className="pb-[4px] flex items-center gap-2">
+              <button
+                onClick={() => setShowVoiceRecorder(true)}
+                className="cursor-pointer shrink-0 flex items-center justify-center"
+                title="Record voice note"
+                style={{ width: 40, height: 40, borderRadius: "50%", backgroundColor: "transparent", border: "none", color: "#C8522A" }}
+              >
+                <Mic size={20} />
+              </button>
               <button
                 onClick={() => void handleSend()}
                 className="cursor-pointer shrink-0 flex items-center justify-center"
@@ -973,6 +988,111 @@ export function PracticeScreen() {
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showVoiceRecorder && (
+          <VoiceRecorder
+            mode="practice"
+            onCancel={() => setShowVoiceRecorder(false)}
+            onTranscriptionComplete={(result) => {
+              setTranscriptResult(result);
+              setShowVoiceRecorder(false);
+            }}
+          />
+        )}
+
+        {transcriptResult && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col gap-4">
+              <h3 className="text-lg font-bold text-[#1A1208]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                Practice Integration
+              </h3>
+              
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Transcript</p>
+                <div className="p-3 bg-gray-50 rounded-xl text-sm border border-gray-100 max-h-24 overflow-y-auto italic">
+                  "{transcriptResult.transcript}"
+                </div>
+
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Detected Content</p>
+                <textarea
+                  className="w-full p-4 bg-[#F9F7F4] border border-[#E8E0D4] rounded-2xl text-[15px] text-[#1A1208] outline-none resize-none min-h-[100px]"
+                  style={{ fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5 }}
+                  value={transcriptResult.draftText || transcriptResult.contextSummary || transcriptResult.transcript}
+                  onChange={(e) => setTranscriptResult({ ...transcriptResult, draftText: e.target.value })}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setTranscriptResult(null)}
+                  className="flex-1 py-3 px-4 rounded-xl border border-[#E8E0D4] text-gray-500 font-bold text-sm"
+                >
+                  Discard
+                </button>
+                <button
+                  onClick={() => {
+                    setInputText(transcriptResult.draftText || transcriptResult.contextSummary || transcriptResult.transcript);
+                    setTranscriptResult(null);
+                  }}
+                  className="flex-1 py-3 px-4 rounded-xl bg-white border border-[#C8522A] text-[#C8522A] font-bold text-sm"
+                >
+                  Edit in Chat
+                </button>
+                <button
+                  onClick={() => {
+                    const finalInput = transcriptResult.draftText || transcriptResult.contextSummary || transcriptResult.transcript;
+                    if (!finalInput.trim() || !persona || !authUser?.uid) {
+                      setTranscriptResult(null);
+                      return;
+                    }
+                    
+                    void (async () => {
+                      haptics.light();
+                      setMessages((prev) => [...prev, { id: Date.now(), sender: "user", text: finalInput, inputType: "voice" }]);
+                      setIsTyping(true);
+                      try {
+                        const updatedPersona = { ...persona, mood: currentMood, familiarity };
+                        const result = await simulateDraft(authUser.uid, finalInput, updatedPersona, userProfile, simHistory);
+                        
+                        setLastResult(result);
+                        setSimHistory((prev) => [...prev, { draft: finalInput, result }]);
+
+                        if (result.updatedMood) setCurrentMood(result.updatedMood);
+                        if (typeof result.updatedFamiliarity === 'number') {
+                          const delta = result.updatedFamiliarity - familiarity;
+                          const cappedDelta = Math.max(-5, Math.min(5, delta));
+                          setFamiliarity(prev => Math.min(100, Math.max(0, prev + cappedDelta)));
+                        }
+
+                        const bubbles = (result.predictedReply || "...")
+                          .split("\n\n")
+                          .filter(b => b.trim().length > 0);
+
+                        for (let i = 0; i < bubbles.length; i++) {
+                          if (i > 0) await new Promise(r => setTimeout(r, 150));
+                          setMessages((prev) => [
+                            ...prev,
+                            { id: Date.now() + i + 1, sender: "ai", text: bubbles[i] },
+                          ]);
+                        }
+                      } catch (err) {
+                        toast("Simulation failed.", "error");
+                      } finally {
+                        setIsTyping(false);
+                      }
+                    })();
+                    setTranscriptResult(null);
+                  }}
+                  className="flex-[1.5] py-3 px-4 rounded-xl bg-[#C8522A] text-white font-bold text-sm shadow-lg shadow-[#C8522A]/20"
+                >
+                  Simulate Now
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </AnimatePresence>
 

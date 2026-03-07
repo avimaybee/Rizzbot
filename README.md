@@ -39,12 +39,14 @@ Trial your messages in a dynamic, high-fidelity practice dojo.
 A specialist mode for uncovering relationship blind spots and attachment patterns.
 *   **Clinical Notes Dashboard:** Real-time tracking of attachment styles, key themes, and emotional states.
 *   **Masterclass Exercises:** Interactive assignments (Boundary Builder, Needs Assessment) assigned by the AI.
+*   **Voice Notes Integration:** Record your thoughts directly when typing feels too heavy; Gemini extracts the core conflict and emotional tone for analysis.
 *   **Kill-Switch:** Dedicated safety resources for identifying and navigating unhealthy dynamics.
 
 ### 👤 My Voice (AI Voice Mirroring)
 Teach Rizzbot how *you* actually text so it never sounds like a bot.
 *   **Style Extraction:** Analyzes your raw message samples to extract quirks in capitalization, punctuation, and emoji usage.
 *   **Signature Patterns:** Captures your specific slang and openers to ensure "elevated authenticity."
+*   **Multi-Modal Input:** Use the microphone to record drafts or context; Rizzbot's transcription engine preserves your natural phrasing.
 
 ---
 
@@ -92,7 +94,8 @@ Teach Rizzbot how *you* actually text so it never sounds like a bot.
 - [x] **Phase 5:** Relationship Therapist & Clinical Notes Dashboard.
 - [x] **Phase 7:** Insights Dashboard & PWA Share Handler integration.
 - [x] **Service Hardening:** Multi-tier fallback, JSON resilience, and restored therapist context.
-- [ ] **Phase 8:** ML-driven wellbeing detection & long-term progress tracking.
+- [x] **Phase 8:** Multi-modal support with **Voice Notes** (Therapist & Practice modes).
+- [ ] **Phase 9:** ML-driven wellbeing detection & long-term progress tracking.
 
 ---
 
