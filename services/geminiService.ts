@@ -1,4 +1,4 @@
-import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from "@google/genai";
+import { HarmCategory, HarmBlockThreshold, Type } from "@google/genai";
 
 export enum ThinkingLevel {
   MINIMAL = "MINIMAL",
@@ -6,74 +6,15 @@ export enum ThinkingLevel {
   MEDIUM = "MEDIUM",
   HIGH = "HIGH",
 }
+
 import { SimResult, Persona, SimAnalysisResult, QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, StyleExtractionRequest, StyleExtractionResponse, AIExtractedStyleProfile } from "../types";
 import { getPromptBias } from "./feedbackService";
 import { getFirebaseToken } from "./firebaseService";
 import { logger } from "./logger";
 
-/**
- * SECURITY NOTE: The Gemini API key is no longer stored in the frontend bundle.
- * Instead, we proxy all requests through our own backend function at /api/gemini
- * which injects the key securely from an environment variable.
- */
-const originalFetch = window.fetch;
-window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-  const urlStr = typeof input === 'string'
-    ? input
-    : (input instanceof URL ? input.href : input.url);
+// We no longer use the GoogleGenAI SDK directly on the client.
+// All requests are now sent to /api/gemini/generate or /api/gemini/stream
 
-  let parsedUrl: URL;
-  try {
-    parsedUrl = new URL(urlStr);
-  } catch {
-    // If the URL can't be parsed (e.g., a relative or malformed URL), fall through to original fetch
-    return originalFetch(input, init);
-  }
-
-  if (parsedUrl.hostname === 'generativelanguage.googleapis.com') {
-    const proxyUrl = `/api/gemini${parsedUrl.pathname}${parsedUrl.search}`;
-    const token = await getFirebaseToken();
-
-    // Handle cases where input is a Request object to preserve headers, method, and body
-    if (typeof input !== 'string' && !(input instanceof URL)) {
-      const newHeaders = new Headers(input.headers);
-      if (token) newHeaders.set('Authorization', `Bearer ${token}`);
-
-      const requestOptions: RequestInit = {
-        method: input.method,
-        headers: newHeaders,
-        mode: input.mode,
-        credentials: input.credentials,
-        cache: input.cache,
-        redirect: input.redirect,
-        referrer: input.referrer,
-        integrity: input.integrity,
-      };
-
-      // In Node/some environments, body can't be set for GET/HEAD
-      if (input.method !== 'GET' && input.method !== 'HEAD') {
-        const clonedBody = input.clone();
-        // ReadableStream support body proxy
-        requestOptions.body = clonedBody.body;
-        // @ts-ignore - Duplex is required for streaming bodies in some fetch impls
-        requestOptions.duplex = 'half';
-      }
-
-      // Create a new Request based on the original but with the proxy URL
-      const modifiedRequest = new Request(proxyUrl, requestOptions);
-      return originalFetch(modifiedRequest);
-    }
-
-    const newHeaders = new Headers(init?.headers);
-    if (token) newHeaders.set('Authorization', `Bearer ${token}`);
-
-    return originalFetch(proxyUrl, { ...init, headers: newHeaders });
-  }
-  return originalFetch(input, init);
-};
-
-// Initialize with a placeholder. The actual key is handled by the backend proxy.
-const ai = new GoogleGenAI({ apiKey: 'PROXY_SECURED' });
 
 // SAFETY SETTINGS: BLOCK_NONE as requested for mature/unrestricted feedback
 const safetySettings = [
@@ -133,6 +74,7 @@ const THERAPIST_MODELS = [
   "gemini-2.5-flash-lite"
 ];
 
+
 /**
  * Helper to inject model-specific thinking configuration.
  */
@@ -154,70 +96,75 @@ const getModelConfig = (modelId: string, baseConfig: any) => {
 };
 
 /**
- * Robust wrapper for Gemini generation with Multi-tier Model Fallback.
- * Tries models in the provided chain one by one.
+ * Robust wrapper for Gemini generation with Multi-tier Model Fallback on the backend.
+ * POSTs to /api/gemini/generate which handles the fallback.
  */
 async function runWithFallback(
-  operation: (modelId: string) => Promise<any>,
-  operationName: string,
+  payload: {
+    contents: any;
+    systemInstruction?: string;
+    tools?: any[];
+    safetySettings?: any[];
+    config?: any;
+  },
   modelChain: string[]
 ): Promise<any> {
-  let lastError: any = new Error(`${operationName}: No models in chain`);
+  const token = await getFirebaseToken();
+  const response = await fetch('/api/gemini/generate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      ...payload,
+      modelChain,
+    }),
+  });
 
-  for (let i = 0; i < modelChain.length; i++) {
-    const currentModel = modelChain[i];
-    try {
-      return await retryWithBackoff(
-        () => operation(currentModel), 
-        `${operationName} [${currentModel}]`
-      );
-    } catch (error: any) {
-      lastError = error;
-      const msg = error?.message || error?.toString() || '';
-      
-      // If there's another model in the chain, log and continue
-      if (i < modelChain.length - 1) {
-        // If it's a safety block or non-retriable request error, don't fallback, just throw
-        // (Standard behavior: 429, 503, 500 etc. trigger fallback)
-        if (msg.includes('429') || msg.includes('503') || msg.includes('500') || msg.includes('Quota') || msg.includes('Overloaded') || msg.includes('Internal Server Error')) {
-          logger.warn(`⚠️ ${operationName}: Model ${currentModel} failed (${msg}). Switching to next: ${modelChain[i+1]}`);
-          continue;
-        }
-      }
-      throw error;
-    }
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error((errorData as any).message || `API Error: ${response.status}`);
   }
-  throw lastError;
+
+  return response.json();
 }
 
 /**
- * Robust wrapper for STREAMING with Multi-tier Fallback.
+ * Robust wrapper for STREAMING with Multi-tier Fallback on the backend.
+ * POSTs to /api/gemini/stream which handles the fallback and returns NDJSON.
  */
 async function runStreamWithFallback(
-  operation: (modelId: string) => Promise<any>,
-  operationName: string,
+  payload: {
+    contents: any;
+    systemInstruction?: string;
+    tools?: any[];
+    safetySettings?: any[];
+    config?: any;
+  },
   modelChain: string[]
-): Promise<any> {
-  let lastError: any = new Error(`${operationName}: No models in chain`);
+): Promise<Response> {
+  const token = await getFirebaseToken();
+  const response = await fetch('/api/gemini/stream', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      ...payload,
+      modelChain,
+    }),
+  });
 
-  for (let i = 0; i < modelChain.length; i++) {
-    const currentModel = modelChain[i];
-    try {
-      return await operation(currentModel);
-    } catch (error: any) {
-      lastError = error;
-      const msg = error?.message || error?.toString() || '';
-      if (i < modelChain.length - 1) {
-        if (msg.includes('429') || msg.includes('503') || msg.includes('500') || msg.includes('Quota') || msg.includes('Overloaded') || msg.includes('Internal Server Error')) {
-          logger.warn(`⚠️ ${operationName}: Stream connection to ${currentModel} failed. Switching to next.`);
-          continue;
-        }
-      }
-      throw error;
-    }
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error((errorData as any).message || `Stream Error: ${response.status}`);
   }
-  throw lastError;
+
+  return response;
 }
+
 
 export const generatePersona = async (
   description: string,
@@ -279,15 +226,10 @@ export const generatePersona = async (
   });
 
   try {
-    const response = await runWithFallback(
-      (modelId) => ai.models.generateContent({
-        model: modelId,
-        contents: { parts: parts },
-        config: getModelConfig(modelId, { safetySettings: safetySettings })
-      }),
-      'generatePersona',
-      THERAPIST_MODELS
-    );
+    const response = await runWithFallback({
+      contents: { parts: parts },
+      config: { safetySettings: safetySettings }
+    }, THERAPIST_MODELS);
 
     let text = response.text;
     if (!text) throw new Error("No data");
@@ -463,15 +405,10 @@ export const simulateDraft = async (
   `;
 
   try {
-    const response = await runWithFallback(
-      (modelId) => ai.models.generateContent({
-        model: modelId,
-        contents: prompt,
-        config: getModelConfig(modelId, { safetySettings: safetySettings })
-      }),
-      'simulateDraft',
-      THERAPIST_MODELS
-    );
+    const response = await runWithFallback({
+      contents: prompt,
+      config: { safetySettings: safetySettings }
+    }, THERAPIST_MODELS);
 
     let text = response.text;
     if (!text) throw new Error("Connection Lost");
@@ -596,15 +533,10 @@ export const analyzeSimulation = async (
   `;
 
   try {
-    const response = await runWithFallback(
-      (modelId) => ai.models.generateContent({
-        model: modelId,
-        contents: prompt,
-        config: getModelConfig(modelId, { safetySettings: safetySettings })
-      }),
-      'analyzeSimulation',
-      THERAPIST_MODELS
-    );
+    const response = await runWithFallback({
+      contents: prompt,
+      config: { safetySettings: safetySettings }
+    }, THERAPIST_MODELS);
 
     let text = response.text;
     if (!text) throw new Error("Connection Lost");
@@ -928,15 +860,10 @@ export const getQuickAdvice = async (
   }
 
   try {
-    const response = await runWithFallback(
-      (modelId) => ai.models.generateContent({
-        model: modelId,
-        contents: parts,
-        config: getModelConfig(modelId, { safetySettings: safetySettings })
-      }),
-      'getQuickAdvice',
-      QUICK_MODE_MODELS
-    );
+    const response = await runWithFallback({
+      contents: parts,
+      config: { safetySettings: safetySettings }
+    }, QUICK_MODE_MODELS);
 
     let text = response.text;
     if (!text) throw new Error("Connection Lost");
@@ -1079,19 +1006,13 @@ IMPORTANT:
   parts.push({ text: prompt });
 
   try {
-    const model = ai.models;
-    const response = await runWithFallback(
-      (modelId) => ai.models.generateContent({
-        model: modelId,
-        contents: [{ role: "user", parts }],
-        config: getModelConfig(modelId, {
-          safetySettings,
-          temperature: 0.3,
-        }),
-      }),
-      'extractUserStyle',
-      QUICK_MODE_MODELS
-    );
+    const response = await runWithFallback({
+      contents: parts,
+      config: { 
+        safetySettings,
+        temperature: 0.3 
+      }
+    }, QUICK_MODE_MODELS);
 
     let text = response.text?.trim() || '';
 
@@ -1406,35 +1327,6 @@ const SAVE_MEMORY_TOOL = {
 };
 
 
-// Helper to safely extract text from a chunk/response
-function getResponseText(response: any): string {
-  if (typeof response.text === 'function') {
-    return response.text();
-  } else if (typeof response.text === 'string') {
-    return response.text;
-  } else if (response.candidates?.[0]?.content?.parts?.[0]?.text) {
-    return response.candidates[0].content.parts[0].text;
-  }
-  return '';
-}
-
-// Helper to safely extract function calls from a chunk/response
-function getResponseFunctionCalls(response: any): any[] {
-  if (typeof response.functionCalls === 'function') {
-    return response.functionCalls();
-  } else if (Array.isArray(response.functionCalls)) {
-    return response.functionCalls;
-  } else if (response.candidates?.[0]?.content?.parts) {
-    const calls = [];
-    for (const part of response.candidates[0].content.parts) {
-      if (part.functionCall) {
-        calls.push(part.functionCall);
-      }
-    }
-    return calls;
-  }
-  return [];
-}
 
 /**
  * Stream therapist response with function calling for clinical notes and exercises.
@@ -1450,23 +1342,26 @@ export const streamTherapistAdvice = async (
   onToolCall?: (toolName: string, args: any) => void,
   memories?: { type: 'GLOBAL' | 'SESSION', content: string, created_at?: string }[]
 ): Promise<string> => {
-  try {
-    const parts: any[] = [];
+  let fullText = "";
+  let lastError: any = null;
+  let streamSuccessful = false;
 
-    // Add Memories Context
-    if (memories && memories.length > 0) {
-      const globalMems = memories.filter(m => m.type === 'GLOBAL').map(m => `- ${m.content}`).join('\n');
-      const sessionMems = memories.filter(m => m.type === 'SESSION').map(m => `- ${m.content}`).join('\n');
+  const parts: any[] = [];
 
-      parts.push({
-        text: `[EXISTING MEMORIES/CONTEXT]\n\nGLOBAL MEMORIES (Permanent Context):\n${globalMems || 'None'}\n\nSESSION MEMORIES (Current Context):\n${sessionMems || 'None'}\n\n`
-      });
-    }
+  // Add Memories Context
+  if (memories && memories.length > 0) {
+    const globalMems = memories.filter(m => m.type === 'GLOBAL').map(m => `- ${m.content}`).join('\n');
+    const sessionMems = memories.filter(m => m.type === 'SESSION').map(m => `- ${m.content}`).join('\n');
 
-    // Add current clinical notes context if available
-    if (currentNotes && (currentNotes.keyThemes?.length || currentNotes.customNotes)) {
-      parts.push({
-        text: `[CLINICAL NOTES CONTEXT - User has provided/confirmed these observations:
+    parts.push({
+      text: `[EXISTING MEMORIES/CONTEXT]\n\nGLOBAL MEMORIES (Permanent Context):\n${globalMems || 'None'}\n\nSESSION MEMORIES (Current Context):\n${sessionMems || 'None'}\n\n`
+    });
+  }
+
+  // Add current clinical notes context if available
+  if (currentNotes && (currentNotes.keyThemes?.length || currentNotes.customNotes)) {
+    parts.push({
+      text: `[CLINICAL NOTES CONTEXT - User has provided/confirmed these observations:
 Attachment Style: ${currentNotes.attachmentStyle || 'unknown'}
 Key Themes: ${currentNotes.keyThemes?.join(', ') || 'none identified yet'}
 Emotional State: ${currentNotes.emotionalState || 'not assessed'}
@@ -1475,76 +1370,72 @@ User Insights: ${currentNotes.userInsights?.join(', ') || 'none yet'}
 User's Own Notes: ${currentNotes.customNotes || 'none'}]
 
 `
-      });
-    }
+    });
+  }
 
-    // Add images if provided
-    if (images && images.length > 0) {
-      parts.push({ text: "The user has shared these conversation screenshots for context. Analyze them carefully:" });
-      images.forEach(base64 => {
-        const cleanBase64 = base64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
-        parts.push({
-          inlineData: {
-            data: cleanBase64,
-            mimeType: "image/png"
+  // Add the user message
+  parts.push({ text: userMessage });
+
+  try {
+    const response = await runStreamWithFallback({
+      contents: [{ role: "user", parts }],
+      systemInstruction: THERAPIST_SYSTEM_INSTRUCTION,
+      tools: [
+        SESSION_ANALYSIS_TOOL,
+        ASSIGN_EXERCISE_TOOL,
+        LOG_EPIPHANY_TOOL,
+        PERSPECTIVE_BRIDGE_TOOL,
+        COMMUNICATION_INSIGHT_TOOL,
+        FLAG_PROJECTION_TOOL,
+        CLOSURE_SCRIPT_TOOL,
+        SAFETY_INTERVENTION_TOOL,
+        PARENTAL_PATTERN_TOOL,
+        VALUES_MATRIX_TOOL,
+        SAVE_MEMORY_TOOL
+      ],
+      safetySettings: safetySettings,
+    }, THERAPIST_MODELS);
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("Stream body not available");
+
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const chunk = JSON.parse(line);
+
+          if (chunk.type === "metadata") {
+            logger.log(`Streaming via model: ${chunk.model}`);
+          } else if (chunk.type === "text") {
+            const text = chunk.content;
+            fullText += text;
+            onChunk(text);
+          } else if (chunk.type === "functionCalls") {
+            for (const fc of chunk.calls) {
+              if (fc.name === 'update_session_analysis' && fc.args) {
+                onNotesUpdate(fc.args as Partial<ClinicalNotes>);
+              } else if (fc.name === 'assign_exercise' && fc.args && onExerciseAssign) {
+                onExerciseAssign(fc.args as { type: string; context: string });
+              } else if (onToolCall && fc.args) {
+                onToolCall(fc.name, fc.args);
+              }
+            }
+          } else if (chunk.type === "error") {
+            throw new Error(chunk.message || "Stream error");
           }
-        });
-      });
-    }
-
-    // Add the user message
-    parts.push({ text: userMessage });
-
-    const result = await runStreamWithFallback(
-      (modelId) => ai.models.generateContentStream({
-        model: modelId,
-        contents: [{ role: "user", parts }],
-        config: getModelConfig(modelId, {
-          systemInstruction: THERAPIST_SYSTEM_INSTRUCTION,
-          tools: [{
-            functionDeclarations: [
-              SESSION_ANALYSIS_TOOL,
-              ASSIGN_EXERCISE_TOOL,
-              LOG_EPIPHANY_TOOL,
-              PERSPECTIVE_BRIDGE_TOOL,
-              COMMUNICATION_INSIGHT_TOOL,
-              FLAG_PROJECTION_TOOL,
-              CLOSURE_SCRIPT_TOOL,
-              SAFETY_INTERVENTION_TOOL,
-              PARENTAL_PATTERN_TOOL,
-              VALUES_MATRIX_TOOL,
-              SAVE_MEMORY_TOOL
-            ]
-          }],
-          safetySettings: safetySettings,
-        })
-      }),
-      'streamTherapistAdvice',
-      THERAPIST_MODELS
-    );
-
-    let fullText = "";
-
-    for await (const chunk of result) {
-      // Handle text chunks
-      const chunkText = getResponseText(chunk);
-      if (chunkText) {
-        fullText += chunkText;
-        onChunk(chunkText);
-      }
-
-      // Handle function calls
-      const functionCalls = getResponseFunctionCalls(chunk);
-      if (functionCalls && functionCalls.length > 0) {
-        for (const fc of functionCalls) {
-          if (fc.name === 'update_session_analysis' && fc.args) {
-            onNotesUpdate(fc.args as Partial<ClinicalNotes>);
-          } else if (fc.name === 'assign_exercise' && fc.args && onExerciseAssign) {
-            onExerciseAssign(fc.args as { type: string; context: string });
-          } else if (onToolCall && fc.args) {
-            // Generic handler for new therapeutic tools
-            onToolCall(fc.name, fc.args);
-          }
+        } catch (parseErr) {
+          console.error("Error parsing stream line:", parseErr, line);
         }
       }
     }
@@ -1582,28 +1473,21 @@ export const getTherapistAdvice = async (
 
     parts.push({ text: userMessage });
 
-    const result = await runWithFallback(
-      (modelId) => ai.models.generateContent({
-        model: modelId,
-        contents: [{ role: "user", parts }],
-        config: getModelConfig(modelId, {
-          systemInstruction: THERAPIST_SYSTEM_INSTRUCTION,
-          tools: [{ functionDeclarations: [SESSION_ANALYSIS_TOOL] }],
-          safetySettings: safetySettings,
-        })
-      }),
-      'getTherapistAdvice',
-      THERAPIST_MODELS
-    );
+    const result = await runWithFallback({
+      contents: [{ role: "user", parts }],
+      systemInstruction: THERAPIST_SYSTEM_INSTRUCTION,
+      tools: [SESSION_ANALYSIS_TOOL],
+      safetySettings: safetySettings,
+    }, THERAPIST_MODELS);
 
     const response = result;
-    const reply = getResponseText(response) || "i'm having trouble processing that. can you try rephrasing?";
+    const reply = response.text || "i'm having trouble processing that. can you try rephrasing?";
 
     // Extract clinical notes from any function calls
     let clinicalNotes: Partial<ClinicalNotes> | undefined;
-    const functionCalls = getResponseFunctionCalls(response);
+    const functionCalls = response.functionCalls;
     if (functionCalls && functionCalls.length > 0) {
-      const analysisCall = functionCalls.find(fc => fc.name === 'update_session_analysis');
+      const analysisCall = functionCalls.find((fc: any) => fc.name === 'update_session_analysis');
       if (analysisCall?.args) {
         clinicalNotes = analysisCall.args as Partial<ClinicalNotes>;
       }
