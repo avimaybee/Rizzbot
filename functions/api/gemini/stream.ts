@@ -78,10 +78,16 @@ export async function onRequest(context: { env: any; request: Request; data?: an
 
           let currentFunctionCalls: any[] = [];
 
+          let modelParts: any[] = [];
           for await (const chunk of result) {
             if (!streamStarted) {
               await sendChunk({ type: "metadata", model: modelId });
               streamStarted = true;
+            }
+
+            // Accumulate all parts for history reconstruction (fixes thought_signature error)
+            if (chunk.candidates?.[0]?.content?.parts) {
+              modelParts.push(...chunk.candidates[0].content.parts);
             }
 
             const text = chunk.text;
@@ -91,21 +97,22 @@ export async function onRequest(context: { env: any; request: Request; data?: an
 
             const functionCalls = chunk.functionCalls;
             if (functionCalls && functionCalls.length > 0) {
-              currentFunctionCalls.push(...functionCalls);
               await sendChunk({ type: "functionCalls", calls: functionCalls });
             }
           }
 
-          if (currentFunctionCalls.length > 0) {
-            // Reconstruct the history with the model's call and our auto-injected response
+          const functionCallsToExecute = modelParts.filter(p => !!p.functionCall).map(p => p.functionCall);
+
+          if (functionCallsToExecute.length > 0) {
+            // Reconstruct the history with the model's FULL response
             currentHistory.push({
               role: "model",
-              parts: currentFunctionCalls.map((fc: any) => ({ functionCall: fc }))
+              parts: modelParts
             });
             
             currentHistory.push({
               role: "user",
-              parts: currentFunctionCalls.map((fc: any) => ({
+              parts: functionCallsToExecute.map((fc: any) => ({
                 functionResponse: {
                   name: fc.name,
                   response: { status: "recorded" }

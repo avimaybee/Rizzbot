@@ -86,7 +86,7 @@ export function QuickModeScreen() {
   const { toast } = useToast();
   const { authUser, userProfile, userId, runWellbeingCheck } = useAppContext();
 
-  const [showResults, setShowResults] = useState(false);
+  const [showResults, setShowResults] = useSessionState("quick_showResults", false);
   const [isLoading, setIsLoading] = useState(false);
   const [theirMessage, setTheirMessage] = useSessionState("quick_theirMessage", "");
   const [yourDraft, setYourDraft] = useSessionState("quick_yourDraft", "");
@@ -94,7 +94,7 @@ export function QuickModeScreen() {
   const [activeTone, setActiveTone] = useSessionState<Tone>("quick_tone", "Smooth");
   const [showStyleTooltip, setShowStyleTooltip] = useState(false);
   const [screenshots, setScreenshots] = useSessionState<string[]>("quick_screenshots", []);
-  const [result, setResult] = useState<QuickAdviceResponse | null>(null);
+  const [result, setResult] = useSessionState<QuickAdviceResponse | null>("quick_result", null);
   const [feedbackGiven, setFeedbackGiven] = useState<"helpful" | "off" | null>(null);
   const [cursor, setCursor] = useState<Record<Tone, number>>({
     Smooth: 0,
@@ -161,9 +161,9 @@ export function QuickModeScreen() {
     let isStillLoading = true;
     const toastTimeout = setTimeout(() => {
       if (isStillLoading) {
-        toast("This is taking a bit longer than usual, stay with us...", "info");
+        toast("Give me a second, this one deserves a thoughtful response.", "info");
       }
-    }, 6000);
+    }, 12000);
 
     try {
       const response = await getQuickAdvice({
@@ -272,12 +272,12 @@ export function QuickModeScreen() {
   const showMessage = result?.extractedTargetMessage || theirMessage || "Conversation screenshot";
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="relative min-h-screen pb-6" 
+      className="relative min-h-screen pb-6"
       style={{ backgroundColor: "#F5EFE6" }}
     >
       <GrainOverlay />
@@ -349,7 +349,7 @@ export function QuickModeScreen() {
             </button>
 
             {screenshots.length > 0 && (
-              <div 
+              <div
                 ref={screenshotsFade.ref}
                 className="flex gap-3 w-full mt-4 overflow-x-auto pb-4 no-scrollbar"
                 style={screenshotsFade.style}
@@ -441,7 +441,7 @@ export function QuickModeScreen() {
                 <Tag size={14} color="#C8522A" />
                 Situation
               </label>
-              <div 
+              <div
                 ref={situationFade.ref}
                 className="flex gap-2 w-full overflow-x-auto pb-2 no-scrollbar"
                 style={situationFade.style}
@@ -587,7 +587,7 @@ export function QuickModeScreen() {
               <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.15em", color: "rgba(26, 18, 8, 0.55)", textTransform: "uppercase" }}>
                 Suggested replies
               </p>
-              <div 
+              <div
                 ref={toneFade.ref}
                 className="flex gap-2 mt-3 overflow-x-auto pb-1 no-scrollbar"
                 style={toneFade.style}

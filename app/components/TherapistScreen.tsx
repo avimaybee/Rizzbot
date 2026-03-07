@@ -410,6 +410,8 @@ export function TherapistScreen() {
   const [memoryType, setMemoryType] = useState<"GLOBAL" | "SESSION">("GLOBAL");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   const composerRef = useRef<HTMLDivElement | null>(null);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const pendingFade = useScrollFade();
@@ -438,11 +440,31 @@ export function TherapistScreen() {
     refreshMemories();
   }, [refreshMemories]);
 
+  const handleScroll = useCallback(() => {
+    const el = chatScrollRef.current;
+    if (!el) return;
+    const threshold = 150;
+    const atBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + threshold;
+    setIsAtBottom(atBottom);
+    
+    // Show button if we are NOT at bottom AND there is active content or multiple messages
+    setShowScrollButton(!atBottom && (isLoading || streamingContent.length > 0));
+  }, [isLoading, streamingContent]);
+
   useEffect(() => {
-    const chatScrollEl = chatScrollRef.current;
-    if (!chatScrollEl) return;
-    chatScrollEl.scrollTo({ top: chatScrollEl.scrollHeight, behavior: "smooth" });
-  }, [messages, streamingContent, pendingExercise]);
+    const el = chatScrollRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", handleScroll);
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [handleScroll]);
+
+  useEffect(() => {
+    if (isAtBottom) {
+      const el = chatScrollRef.current;
+      if (!el) return;
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    }
+  }, [messages, streamingContent, pendingExercise, isAtBottom]);
 
   useEffect(() => {
     const composerEl = composerRef.current;
@@ -568,22 +590,39 @@ export function TherapistScreen() {
     let isStillLoading = true;
     const toastTimeout = setTimeout(() => {
       if (isStillLoading) {
-        toast("This is taking a bit longer than usual, stay with us...", "info");
+        toast("This message is taking longer than usual...", "info");
       }
-    }, 6000);
+    }, 12000);
 
     const capturedInsights: Record<string, any> = {};
 
     try {
       let fullResponse = "";
+      let lastProcessedLength = 0;
+
       const newInteractionId = await streamTherapistAdvice(
         userContent === "📎 Screenshot" ? "Please analyze the attached screenshots and guide me." : userContent,
+        messages.map((m: any) => ({
+          role: (m.role === 'user' ? 'user' : 'model') as "user" | "model",
+          parts: [{ text: m.content }]
+        })),
         currentInteractionId,
         userMsg.images,
         clinicalNotes,
         (chunk) => {
           fullResponse += chunk;
-          setStreamingContent(fullResponse);
+          
+          // Only update streaming content if we have a significant chunk or if it's the end
+          // This avoids rendering empty bubbles or partial \n sequences
+          const splitPoint = fullResponse.lastIndexOf("\n\n");
+          if (splitPoint > lastProcessedLength) {
+             // We have at least one complete paragraph
+             setStreamingContent(fullResponse);
+             lastProcessedLength = splitPoint;
+          } else if (fullResponse.length > 0) {
+             // Always show initial content
+             setStreamingContent(fullResponse);
+          }
         },
         (noteDelta) => {
           setClinicalNotes((prev) => ({
@@ -611,21 +650,29 @@ export function TherapistScreen() {
         memories
       );
 
-      setMessages((prev) => [
-        ...prev,
-        {
+      const bubbles = fullResponse.split("\n\n").filter(b => b.trim().length > 0);
+      if (bubbles.length === 0) bubbles.push(fullResponse || "...");
+
+      const newMessages: TherapistUiMessage[] = bubbles.map((text, idx) => {
+        const isLast = idx === bubbles.length - 1;
+        return {
           role: "therapist",
-          content: fullResponse,
-          timestamp: Date.now(),
-          closureScript: capturedInsights["generate_closure_script"],
-          safetyIntervention: capturedInsights["trigger_safety_intervention"],
-          parentalPattern: capturedInsights["log_parental_pattern"],
-          valuesMatrix: capturedInsights["assign_values_matrix"],
-          perspective: capturedInsights["show_perspective_bridge"],
-          pattern: capturedInsights["show_communication_insight"],
-          projection: capturedInsights["flag_projection"],
-        },
-      ]);
+          content: text,
+          timestamp: Date.now() + idx,
+          // Only attach tool insights to the final bubble
+          ...(isLast ? {
+            closureScript: capturedInsights["generate_closure_script"],
+            safetyIntervention: capturedInsights["trigger_safety_intervention"],
+            parentalPattern: capturedInsights["log_parental_pattern"],
+            valuesMatrix: capturedInsights["assign_values_matrix"],
+            perspective: capturedInsights["show_perspective_bridge"],
+            pattern: capturedInsights["show_communication_insight"],
+            projection: capturedInsights["flag_projection"],
+          } : {})
+        };
+      });
+
+      setMessages((prev) => [...prev, ...newMessages]);
 
       if (newInteractionId) {
         setInteractionId(newInteractionId);
@@ -736,7 +783,29 @@ export function TherapistScreen() {
 
 
 
-        <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-5" style={{ paddingBottom: composerHeight + BOTTOM_NAV_HEIGHT + CHAT_BOTTOM_BUFFER }}>
+        <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-5 relative" style={{ paddingBottom: composerHeight + BOTTOM_NAV_HEIGHT + CHAT_BOTTOM_BUFFER }}>
+          <AnimatePresence>
+            {showScrollButton && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                onClick={() => {
+                  chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: "smooth" });
+                  setIsAtBottom(true);
+                }}
+                className="fixed left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg border border-[#E8E0D4]"
+                style={{ 
+                  bottom: composerHeight + BOTTOM_NAV_HEIGHT + 20,
+                  backgroundColor: "#C8522A",
+                  color: "#FFFFFF",
+                }}
+              >
+                <ChevronDown size={16} strokeWidth={3} />
+                <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600 }}>New Message</span>
+              </motion.button>
+            )}
+          </AnimatePresence>
           {messages.map((msg, idx) => {
             const normalizedContent = normalizeMessageContent(msg.content);
             const isTherapistError = msg.role === "therapist" && normalizedContent.startsWith("⚠️");

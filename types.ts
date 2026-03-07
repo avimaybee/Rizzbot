@@ -16,6 +16,9 @@ export interface Persona {
   conversationStarters?: string[]; // Natural, authentic openers
   thingsToAvoid?: string[]; // What would make them feel pressured
   theirLanguage?: string[]; // Words/phrases they use - helps speak their language
+  // Enhanced Behavioral Fields
+  mood?: string;
+  familiarity?: number; // 0-100
 }
 
 export interface SimResult {
@@ -29,6 +32,9 @@ export interface SimResult {
     spicy: string;
     you?: string; // User's authentic style, upgraded
   };
+  // Optional state updates (can also come via tools)
+  updatedMood?: string;
+  updatedFamiliarity?: number;
 }
 
 export interface SimAnalysisResult {

@@ -159,6 +159,11 @@ export function PracticeScreen() {
   const [inputText, setInputText] = useSessionState("practice_inputText", "");
   const [isTyping, setIsTyping] = useState(false);
   const [lastResult, setLastResult] = useSessionState<SimResult | null>("practice_lastResult", null);
+  
+  // Behavioral Session State
+  const [currentMood, setCurrentMood] = useSessionState<string>("practice_mood", "Neutral");
+  const [familiarity, setFamiliarity] = useSessionState<number>("practice_familiarity", 20);
+
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [showHintSheet, setShowHintSheet] = useState(false);
   const [savedPersonas, setSavedPersonas] = useState<Persona[]>([]);
@@ -234,9 +239,9 @@ export function PracticeScreen() {
     let isStillGenerating = true;
     const toastTimeout = setTimeout(() => {
       if (isStillGenerating) {
-        toast("This is taking a bit longer than usual, stay with us...", "info");
+        toast("This message is taking longer than usual...", "info");
       }
-    }, 6000);
+    }, 12000);
 
     try {
       let resolvedPersona: Persona;
@@ -268,6 +273,9 @@ export function PracticeScreen() {
       }
 
       setPersona(resolvedPersona);
+      setCurrentMood(resolvedPersona.mood || "Initial Curiosity");
+      setFamiliarity(resolvedPersona.familiarity || 20);
+      
       setMessages([
         {
           id: Date.now(),
@@ -299,23 +307,47 @@ export function PracticeScreen() {
     let isStillTyping = true;
     const toastTimeout = setTimeout(() => {
       if (isStillTyping) {
-        toast("This is taking a bit longer than usual, stay with us...", "info");
+        toast("This message is taking longer than usual...", "info");
       }
-    }, 6000);
+    }, 12000);
 
     try {
-      const result = await simulateDraft(authUser.uid, draft, persona, userProfile, simHistory);
+      // Pass the current mood and familiarity to the simulation service
+      const updatedPersona = { ...persona, mood: currentMood, familiarity };
+      const result = await simulateDraft(authUser.uid, draft, updatedPersona, userProfile, simHistory);
+      
       setLastResult(result);
       setSimHistory((prev) => [...prev, { draft, result }]);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          sender: "ai",
-          text: result.predictedReply || "...",
-        },
-      ]);
-    } catch {
+
+      // Handle Mood/Familiarity updates from tool calls if present
+      if (result.updatedMood) setCurrentMood(result.updatedMood);
+      if (typeof result.updatedFamiliarity === 'number') {
+        const delta = result.updatedFamiliarity - familiarity;
+        const cappedDelta = Math.max(-5, Math.min(5, delta));
+        setFamiliarity(prev => Math.min(100, Math.max(0, prev + cappedDelta)));
+      }
+
+      // Multi-Bubble Staggered Reply
+      const bubbles = (result.predictedReply || "...")
+        .split("\n\n")
+        .filter(b => b.trim().length > 0);
+
+      if (bubbles.length === 0) bubbles.push("...");
+
+      // Sequential dispatch with 150ms delay
+      for (let i = 0; i < bubbles.length; i++) {
+        if (i > 0) await new Promise(r => setTimeout(r, 150));
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now() + i + 1,
+            sender: "ai",
+            text: bubbles[i],
+          },
+        ]);
+      }
+    } catch (err) {
+      console.error("Simulation error:", err);
       toast("Simulation failed. Try again.", "error");
     } finally {
       isStillTyping = false;
@@ -687,31 +719,34 @@ export function PracticeScreen() {
         </div>
 
         <div className="fixed bottom-[80px] left-0 right-0 z-30" style={{ backgroundColor: "#FDFAF5", borderTop: "1px solid #E8E0D4" }}>
-          <div className="max-w-[430px] mx-auto flex items-center gap-2 px-4 py-3">
-            <button
-              onClick={() => setShowHintSheet(true)}
-              className="cursor-pointer shrink-0 fade-press flex items-center justify-center gap-2"
-              title="Hints"
-              style={{
-                backgroundColor: "#FDF0F0",
-                border: "1px solid rgba(217,160,160,0.3)",
-                borderRadius: 100,
-                padding: "8px 14px",
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: 13,
-                fontWeight: 600,
-                color: "#C8522A"
-              }}
-            >
-              <Lightbulb size={16} strokeWidth={2} color="#C8522A" />
-              Hints
-            </button>
+          <div className="max-w-[430px] mx-auto flex items-end gap-2 px-4 py-3">
+            <div className="pb-[4px]">
+              <button
+                onClick={() => setShowHintSheet(true)}
+                className="cursor-pointer shrink-0 fade-press flex items-center justify-center gap-2"
+                title="Hints"
+                style={{
+                  backgroundColor: "#FDF0F0",
+                  border: "1px solid rgba(217,160,160,0.3)",
+                  borderRadius: 100,
+                  padding: "8px 14px",
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#C8522A"
+                }}
+              >
+                <Lightbulb size={16} strokeWidth={2} color="#C8522A" />
+                Hints
+              </button>
+            </div>
+            
             <textarea
               value={inputText}
               onChange={(e) => {
                 setInputText(e.target.value);
                 const target = e.target as HTMLTextAreaElement;
-                target.style.height = "auto";
+                target.style.height = "44px";
                 target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
               }}
               onKeyDown={(e) => {
@@ -723,17 +758,21 @@ export function PracticeScreen() {
               placeholder="Type a message..."
               className="flex-1 resize-none overflow-y-auto m-1 bg-[#F5EFE6] rounded-[22px] border border-transparent px-[18px] py-[10px] text-[15px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 outline-none leading-[24px]"
               style={{
-                height: 44,
+                minHeight: 44,
+                maxHeight: 120,
                 fontFamily: "'DM Sans', sans-serif",
               }}
             />
-            <button
-              onClick={() => void handleSend()}
-              className="cursor-pointer shrink-0 flex items-center justify-center"
-              style={{ width: 40, height: 40, borderRadius: "50%", backgroundColor: "#C8522A", border: "none" }}
-            >
-              <ArrowRight size={18} strokeWidth={2} color="#FFFFFF" />
-            </button>
+            
+            <div className="pb-[4px]">
+              <button
+                onClick={() => void handleSend()}
+                className="cursor-pointer shrink-0 flex items-center justify-center"
+                style={{ width: 40, height: 40, borderRadius: "50%", backgroundColor: "#C8522A", border: "none" }}
+              >
+                <ArrowRight size={18} strokeWidth={2} color="#FFFFFF" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

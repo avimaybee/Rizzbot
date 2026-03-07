@@ -12,6 +12,7 @@ import {
   X,
   Zap,
   AlertCircle,
+  ChevronRight,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { TabBar } from "./TabBar";
@@ -44,9 +45,16 @@ const formatAgo = (isoDate?: string | null) => {
   const d = new Date(isoDate);
   if (isNaN(d.getTime())) return "";
   const delta = Date.now() - d.getTime();
-  const hours = Math.max(1, Math.floor(delta / (1000 * 60 * 60)));
+  
+  const seconds = Math.floor(delta / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (seconds < 60) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
   if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+  return `${days}d ago`;
 };
 
 const suggestionText = (suggestion: unknown): string => {
@@ -797,72 +805,83 @@ export function HistoryScreen() {
                         </div>
                         <span
                           style={{
-                            fontFamily: "'DM Sans', sans-serif",
-                            fontSize: 12,
-                            color: "rgba(26,18,8,0.55)",
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontSize: 11,
+                            color: "rgba(26,18,8,0.45)",
+                            fontWeight: 500,
                           }}
                         >
-                          {formatDate(session.created_at)}
+                          {formatAgo(session.created_at)}
                         </span>
                       </div>
                       <p
-                        className="mt-2 text-ellipsis line-clamp-2"
+                        className="mt-1 line-clamp-1"
                         style={{
-                          fontFamily: "'DM Sans', sans-serif",
-                          fontSize: 13,
-                          fontWeight: 400,
-                          color: "rgba(26,18,8,0.55)",
-                          lineHeight: 1.4,
+                          fontFamily: "'Cormorant Garamond', serif",
+                          fontSize: 20,
+                          fontStyle: "italic",
+                          color: "#1A1208",
+                          lineHeight: 1.2,
                         }}
                       >
-                        {session.headline ||
-                          session.parsedResult?.headline ||
-                          session.persona_name ||
-                          "Conversation session"}
+                        {session.headline || session.parsedResult?.headline || session.persona_name || "Conversation analysis"}
                       </p>
-                      <div className="mt-3 flex items-center justify-between">
-                        <span
-                          style={{
-                            borderRadius: 100,
-                            padding: "3px 10px",
-                            backgroundColor: "rgba(122,158,126,0.12)",
-                            fontFamily: "'JetBrains Mono', monospace",
-                            fontSize: 12,
-                            color: accent,
-                          }}
-                        >
-                          {risk}% risk
-                        </span>
+                      <div className="mt-2 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <button
-                            className="cursor-pointer shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              haptics.medium();
-                              setConfirmDeleteId(session.id);
-                            }}
-                            disabled={deletingId === session.id}
-                            style={{
-                              border: "none",
-                              background: "none",
-                              color: "rgba(26,18,8,0.3)",
-                              padding: 2,
-                              opacity: deletingId === session.id ? 0.4 : 1,
-                            }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
                           <span
                             style={{
-                              fontFamily: "'DM Sans', sans-serif",
-                              fontSize: 13,
-                              fontWeight: 500,
-                              color: "#C8522A",
+                              borderRadius: 999,
+                              padding: "2px 8px",
+                              backgroundColor: "rgba(122,158,126,0.1)",
+                              color: accent,
+                              fontFamily: "'JetBrains Mono', monospace",
+                              fontSize: 10,
+                              fontWeight: 600,
+                              border: `1px solid ${accent}20`
                             }}
                           >
-                            View →
+                            {risk}% risk
                           </span>
+                          {session.parsedResult?.request?.screenshots?.length > 0 && (
+                            <div className="flex items-center gap-1 opacity-40">
+                              <Image size={12} />
+                              <span style={{ fontSize: 10, fontFamily: "'DM Sans', sans-serif" }}>{session.parsedResult.request.screenshots.length}</span>
+                            </div>
+                          )}
                         </div>
+                        <ChevronRight size={16} color="rgba(26,18,8,0.2)" />
+                      </div>
+                    </div>
+                  </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          className="cursor-pointer shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            haptics.medium();
+                            setConfirmDeleteId(session.id);
+                          }}
+                          disabled={deletingId === session.id}
+                          style={{
+                            border: "none",
+                            background: "none",
+                            color: "rgba(26,18,8,0.3)",
+                            padding: 2,
+                            opacity: deletingId === session.id ? 0.4 : 1,
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                        <span
+                          style={{
+                            fontFamily: "'DM Sans', sans-serif",
+                            fontSize: 13,
+                            fontWeight: 500,
+                            color: "#C8522A",
+                          }}
+                        >
+                          View →
+                        </span>
                       </div>
                     </div>
                   </div>

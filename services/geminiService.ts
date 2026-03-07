@@ -1,11 +1,5 @@
 import { HarmCategory, HarmBlockThreshold, Type } from "@google/genai";
 
-export enum ThinkingLevel {
-  MINIMAL = "MINIMAL",
-  LOW = "LOW",
-  MEDIUM = "MEDIUM",
-  HIGH = "HIGH",
-}
 
 import { SimResult, Persona, SimAnalysisResult, QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, StyleExtractionRequest, StyleExtractionResponse, AIExtractedStyleProfile } from "../types";
 import { getPromptBias } from "./feedbackService";
@@ -75,25 +69,6 @@ const THERAPIST_MODELS = [
 ];
 
 
-/**
- * Helper to inject model-specific thinking configuration.
- */
-const getModelConfig = (modelId: string, baseConfig: any) => {
-  const config = { ...baseConfig };
-  
-  // Apply thinking configurations based on model series
-  if (modelId === "gemini-3.1-flash-lite-preview") {
-    config.thinkingConfig = {
-      thinkingLevel: ThinkingLevel.HIGH
-    };
-  } else if (modelId.includes("gemini-2.5")) {
-    config.thinkingConfig = {
-      thinkingBudget: 1024
-    };
-  }
-  
-  return config;
-};
 
 /**
  * Robust wrapper for Gemini generation with Multi-tier Model Fallback on the backend.
@@ -110,7 +85,7 @@ async function runWithFallback(
   modelChain: string[]
 ): Promise<any> {
   const token = await getFirebaseToken();
-  const response = await fetch('/api/gemini/generate', {
+  const response = await retryWithBackoff(() => fetch('/api/gemini/generate', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -120,7 +95,7 @@ async function runWithFallback(
       ...payload,
       modelChain,
     }),
-  });
+  }), 'runWithFallback');
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -128,6 +103,34 @@ async function runWithFallback(
   }
 
   return response.json();
+}
+
+/**
+ * Clean JSON response from AI markdown and whitespace
+ */
+function cleanJsonResponse(text: string): string {
+  if (!text) return "";
+  let cleaned = text.trim();
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```\s*/, '').replace(/\s*```$/, '');
+  }
+  return cleaned;
+}
+
+/**
+ * Clean and parse JSON from AI response, with robust handling of markdown artifacts.
+ */
+function safeParseJson<T>(text: string): T {
+  const cleaned = cleanJsonResponse(text);
+  if (!cleaned) throw new Error("Empty AI response");
+  try {
+    return JSON.parse(cleaned) as T;
+  } catch (err) {
+    console.error("Failed to parse AI JSON:", err, "\nContent:", cleaned);
+    throw new Error("Invalid format received from AI");
+  }
 }
 
 /**
@@ -145,7 +148,7 @@ async function runStreamWithFallback(
   modelChain: string[]
 ): Promise<Response> {
   const token = await getFirebaseToken();
-  const response = await fetch('/api/gemini/stream', {
+  const response = await retryWithBackoff(() => fetch('/api/gemini/stream', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -155,7 +158,7 @@ async function runStreamWithFallback(
       ...payload,
       modelChain,
     }),
-  });
+  }), 'runStreamWithFallback');
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -205,16 +208,18 @@ export const generatePersona = async (
     {
       "name": "string (Inferred from screenshots or description. Default 'The Target')",
       "tone": "string (e.g., 'Warm & Playful', 'Reserved at First', 'Direct & Honest', 'Dry Humor')",
+      "mood": "string (The current vibe inferred from the latest interaction, e.g., 'Initial Curiosity', 'Slightly Guarded')",
+      "familiarity": number (0-100 score based on how close they appear in screenshots. 0=Stranger, 50=Dating, 100=Soulmates),
       "style": "string (e.g., 'Lowercase casual', 'Thoughtful paragraphs', 'Quick bursts', 'Emoji-heavy')",
       "habits": "string (e.g., 'Takes time to respond thoughtfully', 'Prefers voice notes', 'Night owl texter')",
-      "redFlags": ["string", "string"] (List 2 ACTUAL concerning patterns - not just 'takes time to reply'. Examples: 'inconsistent hot/cold behavior', 'avoids direct questions about plans', 'only reaches out when convenient for them'),
-      "greenFlags": ["string", "string"] (List 2 positive signs you noticed - e.g., 'asks follow-up questions', 'remembers details', 'initiates conversations'),
+      "redFlags": ["string", "string"] (List 2 ACTUAL concerning patterns - not just 'takes time to reply'),
+      "greenFlags": ["string", "string"] (List 2 positive signs),
       "relationshipContext": "${relationshipContext || 'TALKING_STAGE'}",
       "harshnessLevel": ${harshnessLevel || 3},
-      "communicationTips": ["string", "string", "string"] (3 tips on how to build genuine connection with this persona - based on what they respond well to),
-      "conversationStarters": ["string", "string"] (2 natural, authentic openers that match their vibe - not tricks, genuine conversation starts),
-      "thingsToAvoid": ["string", "string"] (2 things that would make them feel pressured or disconnected),
-      "theirLanguage": ["string", "string"] (2-3 words/phrases they use often - helps user speak their language authentically)
+      "communicationTips": ["string", "string", "string"],
+      "conversationStarters": ["string", "string"],
+      "thingsToAvoid": ["string", "string"],
+      "theirLanguage": ["string", "string"]
     }
     
     COMMUNICATION TIPS should help build genuine rapport, not manipulate
@@ -228,14 +233,13 @@ export const generatePersona = async (
   try {
     const response = await runWithFallback({
       contents: { parts: parts },
-      config: { safetySettings: safetySettings }
+      safetySettings: safetySettings
     }, THERAPIST_MODELS);
 
-    let text = response.text;
-    if (!text) throw new Error("No data");
-    text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-
-    const data = JSON.parse(text);
+    const text = response.text;
+    if (!text) throw new Error("No data received");
+    
+    const data = safeParseJson<any>(text);
     return { ...data, id: Date.now().toString(), description };
   } catch (e) {
     logger.error("Persona Gen Failed", e);
@@ -366,11 +370,18 @@ export const simulateDraft = async (
     TARGET PERSONA:
     - Name: ${persona.name}
     - Tone: ${persona.tone}
+    - Current Mood: ${persona.mood || 'Neutral'}
+    - Familiarity: ${persona.familiarity || 20}/100
     - Style: ${persona.style}
     - Habits: ${persona.habits}
     - Red Flags: ${persona.redFlags.join(', ')}
     ${conversationContext}
     ${userStyleContext}
+    
+    SIMULATION RULES:
+    - Be HUMAN. If the user is being dry, be dry. If they're being intense, react accordingly.
+    - Mood & Familiarity shift gradually. Use the update_sim_state tool for changes.
+    - FAMILIARITY DELTA: Max ±5 per message.
     
     TASK: 
     1. Analyze the user's draft - Does it match their target's energy? Is it authentic?
@@ -407,20 +418,14 @@ export const simulateDraft = async (
   try {
     const response = await runWithFallback({
       contents: prompt,
-      config: { safetySettings: safetySettings }
+      tools: [UPDATE_SIM_STATE_TOOL],
+      safetySettings: safetySettings
     }, THERAPIST_MODELS);
 
-    let text = response.text;
+    const text = response.text;
     if (!text) throw new Error("Connection Lost");
 
-    text = text.trim();
-    if (text.startsWith('```json')) {
-      text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-    } else if (text.startsWith('```')) {
-      text = text.replace(/^```\s*/, '').replace(/\s*```$/, '');
-    }
-
-    return JSON.parse(text) as SimResult;
+    return safeParseJson<SimResult>(text);
 
   } catch (error) {
     logger.error("Sim Failed:", error);
@@ -535,20 +540,13 @@ export const analyzeSimulation = async (
   try {
     const response = await runWithFallback({
       contents: prompt,
-      config: { safetySettings: safetySettings }
+      safetySettings: safetySettings
     }, THERAPIST_MODELS);
 
-    let text = response.text;
+    const text = response.text;
     if (!text) throw new Error("Connection Lost");
 
-    text = text.trim();
-    if (text.startsWith('```json')) {
-      text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-    } else if (text.startsWith('```')) {
-      text = text.replace(/^```\s*/, '').replace(/\s*```$/, '');
-    }
-
-    return JSON.parse(text) as SimAnalysisResult;
+    return safeParseJson<SimAnalysisResult>(text);
 
   } catch (error) {
     logger.error("Analysis Failed:", error);
@@ -760,7 +758,7 @@ export const getQuickAdvice = async (
     TASK:
     1. Assess the vibe - what's the energy between them?
     2. ${request.yourDraft ? 'Analyze the draft - does it match their energy authentically?' : 'Think about responses that feel genuine and match the vibe'}
-    3. For EACH unreplied message, generate a reply in 4 DIFFERENT STYLES
+    3. For EACH unreplied message, generate a reply in 5 DIFFERENT STYLES
     4. Include a CONVERSATION HOOK with each option to keep things flowing
     5. Drop one psychology-backed insight (casual, empowering)
     6. Recommend an action that respects their authentic voice
@@ -777,10 +775,13 @@ export const getQuickAdvice = async (
            CRITICAL: Must be SMOOTH and CHARMING - NOT nerdy, NOT dad jokes, NOT cringe.
            Think "smirk in text form" - high IQ but chill. A hint, not a hammer.
     
-    AUTHENTIC: Matches the USER's natural texting vibe (based on their style profile).
-               CRITICAL: Use their profile as a GUIDE for voice (length, caps, emoji), 
-               but write NATURAL high-quality replies. DO NOT force their exact words/phrases.
-               Write like their BEST SELF - same vibe, just polished. Don't caricature them.
+    AUTHENTIC: Matches the general vibe of a high-quality conversation.
+               Elevated wingman style - natural, smooth, and effective.
+    
+    YOUR STYLE: Deep mimicry of the USER's specific texting quirks (based on their profile).
+                CRITICAL: Use their profile (capitalization, punctuation, emojis, slang)
+                to write replies that sound EXACTLY like them, just at their best.
+                This is for when they want a reply that fits their specific "voice".
     
     ═══════════════════════════════════════════════
     
@@ -817,6 +818,7 @@ export const getQuickAdvice = async (
         "bold": [ /* 3 distinct options, same structure as smooth */ ],
         "witty": [ /* 3 distinct options, same structure - SUBTLE cleverness, NOT cringe */ ],
         "authentic": [ /* 3 distinct options, same structure - user's elevated vibe */ ],
+        "yourStyle": [ /* 3 distinct options, same structure - deep voice mimicry */ ],
         "wait": "string OR null (if they should let them come to you, explain why. null if replying now is good)"
       },
       "proTip": "string (one insight - start with 'ngl', 'tbh', 'fr' - empowering not preachy)",
@@ -826,7 +828,7 @@ export const getQuickAdvice = async (
     }
     
     IMPORTANT FOR MULTI-BUBBLE REPLIES:
-    - YOU MUST PROVIDE EXACTLY 3 OPTIONS FOR EACH CATEGORY (Smooth, Bold, Witty, Authentic).
+    - YOU MUST PROVIDE EXACTLY 3 OPTIONS FOR EACH CATEGORY (Smooth, Bold, Witty, Authentic, Your Style).
     - Each OPTION in each category must have replies for ALL unreplied messages
     - Replies should be in the same chronological order as extractedUnrepliedMessages
     - The conversationHook comes AFTER all replies - it's the "keep it going" text
@@ -862,20 +864,13 @@ export const getQuickAdvice = async (
   try {
     const response = await runWithFallback({
       contents: parts,
-      config: { safetySettings: safetySettings }
+      safetySettings: safetySettings
     }, QUICK_MODE_MODELS);
 
-    let text = response.text;
+    const text = response.text;
     if (!text) throw new Error("Connection Lost");
 
-    text = text.trim();
-    if (text.startsWith('```json')) {
-      text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-    } else if (text.startsWith('```')) {
-      text = text.replace(/^```\s*/, '').replace(/\s*```$/, '');
-    }
-
-    return JSON.parse(text) as QuickAdviceResponse;
+    return safeParseJson<QuickAdviceResponse>(text);
 
   } catch (error) {
     logger.error("Quick Advice Failed:", error);
@@ -1008,22 +1003,16 @@ IMPORTANT:
   try {
     const response = await runWithFallback({
       contents: parts,
+      safetySettings: safetySettings,
       config: { 
-        safetySettings,
         temperature: 0.3 
       }
     }, QUICK_MODE_MODELS);
 
-    let text = response.text?.trim() || '';
+    const text = response.text;
+    if (!text) throw new Error("No data received");
 
-    // Clean JSON response
-    if (text.startsWith('```json')) {
-      text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-    } else if (text.startsWith('```')) {
-      text = text.replace(/^```\s*/, '').replace(/\s*```$/, '');
-    }
-
-    return JSON.parse(text) as StyleExtractionResponse;
+    return safeParseJson<StyleExtractionResponse>(text);
 
   } catch (error) {
     logger.error("Style Extraction Failed:", error);
@@ -1326,6 +1315,23 @@ const SAVE_MEMORY_TOOL = {
   }
 };
 
+// Tool for Updating Simulation State (Mood & Familiarity)
+const UPDATE_SIM_STATE_TOOL = {
+  name: "update_sim_state",
+  description: "Update the simulated persona's current mood and familiarity level based on the interaction.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      mood: { type: Type.STRING, description: "The person's current emotional state (e.g., 'Intrigued', 'Defensive', 'Playful', 'Bored')" },
+      familiarity_delta: { 
+        type: Type.NUMBER, 
+        description: "The change in familiarity/closeness level. Capped at ±5 per message. Keep it realistic." 
+      }
+    },
+    required: ["mood", "familiarity_delta"]
+  }
+};
+
 
 
 /**
@@ -1333,6 +1339,7 @@ const SAVE_MEMORY_TOOL = {
  */
 export const streamTherapistAdvice = async (
   userMessage: string,
+  history: { role: "user" | "model"; parts: any[] }[],
   _previousInteractionId: string | undefined,
   images: string[] | undefined,
   currentNotes: ClinicalNotes | undefined,
@@ -1373,12 +1380,28 @@ User's Own Notes: ${currentNotes.customNotes || 'none'}]
     });
   }
 
+  // Add Images if provided
+  if (images && images.length > 0) {
+    images.forEach(base64 => {
+      const cleanBase64 = base64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
+      parts.push({
+        inlineData: {
+          mimeType: "image/png",
+          data: cleanBase64
+        }
+      });
+    });
+  }
+
   // Add the user message
   parts.push({ text: userMessage });
 
   try {
     const response = await runStreamWithFallback({
-      contents: [{ role: "user", parts }],
+      contents: [
+        ...history,
+        { role: "user", parts }
+      ],
       systemInstruction: THERAPIST_SYSTEM_INSTRUCTION,
       tools: [
         SESSION_ANALYSIS_TOOL,
@@ -1437,6 +1460,30 @@ User's Own Notes: ${currentNotes.customNotes || 'none'}]
         } catch (parseErr) {
           console.error("Error parsing stream line:", parseErr, line);
         }
+      }
+    }
+
+    // Final buffer flush for trailing content without a newline
+    if (buffer.trim()) {
+      try {
+        const chunk = JSON.parse(buffer);
+        if (chunk.type === "text") {
+          const text = chunk.content;
+          fullText += text;
+          onChunk(text);
+        } else if (chunk.type === "functionCalls") {
+          for (const fc of chunk.calls) {
+            if (fc.name === 'update_session_analysis' && fc.args) {
+              onNotesUpdate(fc.args as Partial<ClinicalNotes>);
+            } else if (fc.name === 'assign_exercise' && fc.args && onExerciseAssign) {
+              onExerciseAssign(fc.args as { type: string; context: string });
+            } else if (onToolCall && fc.args) {
+              onToolCall(fc.name, fc.args);
+            }
+          }
+        }
+      } catch (e) {
+        logger.warn("Malformed final stream chunk in buffer:", buffer);
       }
     }
 
