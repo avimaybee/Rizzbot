@@ -1,11 +1,10 @@
 export async function onRequest(context: { env: any; request: Request; data?: any }) {
-  const { env, request, data } = context;
+  const { request } = context;
 
-  // CORS headers following the pattern used in other Pages Functions
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, x-goog-api-key, Authorization',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Content-Type': 'application/json',
   };
 
@@ -14,80 +13,11 @@ export async function onRequest(context: { env: any; request: Request; data?: an
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
-  // Ensure authenticated user exists in context
-  const authenticatedUser = data?.user;
-  if (!authenticatedUser) {
-    return new Response(JSON.stringify({ error: 'Unauthorized: No verified user context' }), {
-      status: 401,
-      headers: corsHeaders,
-    });
-  }
-
-  const url = new URL(request.url);
-
-  // Extract path for Google API
-  const path = url.pathname.replace(/^\/api\/gemini/, '');
-  if (!path || path === '/') {
-    return new Response(JSON.stringify({ error: 'Missing path' }), {
-      status: 400,
-      headers: corsHeaders,
-    });
-  }
-
-  const googleUrl = new URL(`https://generativelanguage.googleapis.com${path}`);
-
-  // Copy all existing query parameters
-  url.searchParams.forEach((v, k) => {
-    if (k !== 'key') googleUrl.searchParams.set(k, v);
+  // This generic Gemini proxy was an open reverse proxy to the Gemini API
+  // (any authenticated user could call arbitrary models on the shared key).
+  // All legitimate traffic goes through /api/gemini/generate and /api/gemini/stream.
+  return new Response(JSON.stringify({ error: 'Direct Gemini proxy is disabled.' }), {
+    status: 403,
+    headers: corsHeaders,
   });
-
-  // Inject the API key from backend environment
-  const apiKey = env.GEMINI_API_KEY;
-  if (!apiKey) {
-    console.error('GEMINI_API_KEY not found in backend environment');
-    return new Response(JSON.stringify({ error: 'GEMINI_API_KEY not configured in backend' }), {
-      status: 500,
-      headers: corsHeaders,
-    });
-  }
-  googleUrl.searchParams.set('key', apiKey);
-
-  // Prepare headers for forwarding
-  const headers = new Headers(request.headers);
-  headers.delete('host');
-  headers.delete('authorization'); // Remove Firebase token before sending to Google
-
-  // Always set x-goog-api-key to the backend API key to replace any placeholder value
-  headers.set('x-goog-api-key', apiKey);
-
-  try {
-    const response = await fetch(googleUrl.toString(), {
-      method: request.method,
-      headers: headers,
-      body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
-      // @ts-ignore
-      duplex: 'half',
-    });
-
-    // Forward the response, including status and headers
-    // We sanitize headers to remove hop-by-hop and problematic encoding headers
-    const responseHeaders = new Headers(response.headers);
-    responseHeaders.delete('content-encoding');
-    responseHeaders.delete('content-length');
-    responseHeaders.delete('transfer-encoding');
-    responseHeaders.delete('connection');
-    responseHeaders.delete('keep-alive');
-
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: responseHeaders,
-    });
-  } catch (error: any) {
-    console.error('Gemini Proxy Error:', error);
-    return new Response(JSON.stringify({ error: 'Proxy Error', message: error.message }), {
-      status: 500,
-      headers: corsHeaders,
-    });
-  }
 }

@@ -21,8 +21,6 @@ export async function onRequest(context: any) {
     console.error('[migrate.ts] D1 binding not found. Available env keys:', Object.keys(env));
     return new Response(JSON.stringify({
       error: 'D1 binding not found. Check your Pages project bindings.',
-      tried: ['RIZZBOT_DATA', 'RIZZBOT', 'RIZZBOT_DB', 'RIZZBOT_D1', 'RIZZBOT_DATASET', 'rizzbot data'],
-      availableBindings: Object.keys(env).filter(k => !k.startsWith('__')),
       hint: 'Go to Cloudflare Pages > Settings > Functions > D1 database bindings'
     }), {
       status: 500,
@@ -190,8 +188,7 @@ CREATE INDEX IF NOT EXISTS idx_feedback_user_id ON feedback(user_id);
   } catch (err: any) {
     console.error('[migrate.ts] Error:', err.message, err.stack);
     return new Response(JSON.stringify({
-      error: err.message || String(err),
-      stack: err.stack
+      error: 'Internal server error'
     }), {
       status: 500,
       headers: corsHeaders,

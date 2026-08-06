@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSessionState } from "../utils/useSessionState";
 import { useNavigate } from "react-router";
 import {
@@ -28,7 +28,7 @@ import { haptics } from "../utils/haptics";
 import { useAppContext } from "../app-context";
 import { analyzeSimulation, generatePersona, simulateDraft } from "../../services/geminiService";
 import { createPersona, createSession, getPersonas } from "../../services/dbService";
-import { logSession } from "../../services/feedbackService";
+import { logSession, saveFeedback } from "../../services/feedbackService";
 import { Persona, SimResult } from "../../types";
 import { useScrollFade } from "../utils/useScrollFade";
 import VoiceRecorder from "./VoiceRecorder";
@@ -97,7 +97,7 @@ const buildPresetPersona = (name: string): Persona => {
     },
   };
 
-  const pick = preset[name] || preset["Dry Texter"];
+  const pick = preset[name.replace(/^The\s+/, "")] || preset["Dry Texter"];
   return {
     id: `preset-${name}-${Date.now()}`,
     name,
@@ -173,11 +173,15 @@ export function PracticeScreen() {
   const [savedPersonas, setSavedPersonas] = useState<Persona[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
 
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [transcriptResult, setTranscriptResult] = useState<TranscriptionResponse | null>(null);
   const [chatImages, setChatImages] = useState<string[]>([]);
   const chatFileInputRef = useRef<HTMLInputElement | null>(null);
+  const composerRef = useRef<HTMLDivElement | null>(null);
+  const [composerHeight, setComposerHeight] = useState(76);
 
   const handleChatImageUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -207,14 +211,54 @@ export function PracticeScreen() {
   }, [activePersonaName, lastResult]);
 
   useEffect(() => {
+    const composerEl = composerRef.current;
+    if (!composerEl) return;
+    const sync = () => setComposerHeight(composerEl.offsetHeight);
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(composerEl);
+    return () => ro.disconnect();
+  }, [mode]);
+
+  useEffect(() => {
     if (mode === "chat") {
       runWellbeingCheck();
     }
   }, [mode, runWellbeingCheck]);
 
+  const handleChatScroll = useCallback(() => {
+    const el = chatScrollRef.current;
+    if (!el) return;
+    setIsAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 60);
+  }, []);
+
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+    const el = chatScrollRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", handleChatScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleChatScroll);
+  }, [handleChatScroll]);
+
+  useEffect(() => {
+    if (!isAtBottom) return;
+    const el = chatScrollRef.current;
+    if (el) {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    } else {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isTyping, isAtBottom]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowEndConfirm(false);
+        setShowHintSheet(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const screenshotFade = useScrollFade();
   const personaFade = useScrollFade();
@@ -250,6 +294,9 @@ export function PracticeScreen() {
     ]);
     setSimHistory([]);
     setLastResult(null);
+    setInputText("");
+    setCurrentMood(p.mood || "Neutral");
+    setFamiliarity(typeof p.familiarity === "number" ? p.familiarity : 20);
     setMode("chat");
   };
 
@@ -319,8 +366,11 @@ export function PracticeScreen() {
 
   const handleSend = async () => {
     if (!inputText.trim() || !persona || !authUser?.uid) return;
+    if (isTyping) return;
     const draft = inputText.trim();
+    const attachedImages = chatImages;
     setInputText("");
+    setChatImages([]);
     haptics.light();
     setMessages((prev) => [...prev, { id: Date.now(), sender: "user", text: draft }]);
     setIsTyping(true);
@@ -335,7 +385,7 @@ export function PracticeScreen() {
     try {
       // Pass the current mood and familiarity to the simulation service
       const updatedPersona = { ...persona, mood: currentMood, familiarity };
-      const result = await simulateDraft(authUser.uid, draft, updatedPersona, userProfile, simHistory);
+      const result = await simulateDraft(authUser.uid, draft, updatedPersona, userProfile, simHistory, attachedImages);
       
       setLastResult(result);
       setSimHistory((prev) => [...prev, { draft, result }]);
@@ -343,9 +393,10 @@ export function PracticeScreen() {
       // Handle Mood/Familiarity updates from tool calls if present
       if (result.updatedMood) setCurrentMood(result.updatedMood);
       if (typeof result.updatedFamiliarity === 'number') {
-        const delta = result.updatedFamiliarity - familiarity;
-        const cappedDelta = Math.max(-5, Math.min(5, delta));
-        setFamiliarity(prev => Math.min(100, Math.max(0, prev + cappedDelta)));
+        setFamiliarity(prev => {
+          const delta = Math.max(-5, Math.min(5, result.updatedFamiliarity! - prev));
+          return Math.min(100, Math.max(0, prev + delta));
+        });
       }
 
       // Multi-Bubble Staggered Reply
@@ -415,6 +466,19 @@ export function PracticeScreen() {
           analysis,
         },
       });
+
+      // Reset the session so the next visit lands on setup with a clean state
+      setMode("setup");
+      setPersona(null);
+      setMessages([]);
+      setSimHistory([]);
+      setLastResult(null);
+      setInputText("");
+      setCurrentMood("Neutral");
+      setFamiliarity(20);
+      setChatImages([]);
+      sessionStorage.removeItem("practice_mood");
+      sessionStorage.removeItem("practice_familiarity");
     } catch {
       toast("Could not finalize report", "error");
     }
@@ -714,7 +778,7 @@ export function PracticeScreen() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 pb-[200px]">
+        <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-5" style={{ paddingBottom: composerHeight + 40 }}>
           {messages.map((msg) => (
             <div key={msg.id} className={`flex mb-4 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
               {msg.sender === "ai" && (
@@ -757,7 +821,7 @@ export function PracticeScreen() {
           onChange={(e) => void handleChatImageUpload(e.target.files)}
         />
         {/* Fixed bottom composer - matches TherapistScreen */}
-        <div className="fixed left-0 right-0 z-30" style={{ bottom: 60 }}>
+        <div ref={composerRef} className="fixed left-0 right-0 z-30" style={{ bottom: "calc(60px + env(safe-area-inset-bottom))" }}>
           <div className="max-w-[430px] mx-auto">
             {/* Input bar */}
             <div style={{ backgroundColor: "#FDFAF5", borderTop: "1px solid #E8E0D4" }}>
@@ -874,17 +938,17 @@ export function PracticeScreen() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50"
+              className="fixed inset-0 z-[100]"
               style={{ backgroundColor: "rgba(26, 18, 8, 0.45)", backdropFilter: "blur(8px)" }}
               onClick={() => setShowEndConfirm(false)}
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
               transition={{ type: "spring", bounce: 0.3, duration: 0.4 }}
-              className="fixed inset-x-5 z-50 max-w-[360px] mx-auto"
-              style={{ top: "50%", transform: "translateY(-50%)" }}
+              className="fixed inset-x-5 top-1/2 z-[101] max-w-[360px] mx-auto"
+              style={{ translateY: "-50%" }}
             >
               <div style={{ backgroundColor: "#FDFAF5", borderRadius: 28, padding: 28, boxShadow: "0 20px 60px rgba(26,18,8,0.15)" }}>
                 <div className="flex items-center gap-3 mb-4">
@@ -946,7 +1010,7 @@ export function PracticeScreen() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50"
+              className="fixed inset-0 z-[99]"
               style={{ backgroundColor: "rgba(26, 18, 8, 0.45)", backdropFilter: "blur(8px)" }}
               onClick={() => setShowHintSheet(false)}
             />
@@ -955,7 +1019,14 @@ export function PracticeScreen() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 z-50"
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={0.1}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 100) setShowHintSheet(false);
+              }}
+              className="fixed bottom-0 left-0 right-0 z-[100]"
+              style={{ maxHeight: "85dvh" }}
             >
               <div
                 style={{
@@ -964,10 +1035,13 @@ export function PracticeScreen() {
                   borderTopRightRadius: 28,
                   padding: "20px 24px",
                   boxShadow: "0 -4px 30px rgba(26,18,8,0.08)",
+                  maxHeight: "85dvh",
+                  overflowY: "auto",
+                  WebkitOverflowScrolling: "touch",
                 }}
                 className="max-w-[430px] mx-auto pb-[96px]"
               >
-                <div className="flex justify-between items-center mb-5">
+                <div className="sticky top-0 flex justify-between items-center mb-5" style={{ backgroundColor: "#FDFAF5", paddingTop: 4, paddingBottom: 8, zIndex: 1 }}>
                   <div className="flex items-center gap-2">
                     <Lightbulb size={18} strokeWidth={1.8} color="#C8522A" />
                     <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
@@ -1038,6 +1112,13 @@ export function PracticeScreen() {
                           <div className="flex gap-2">
                             <button
                               onClick={() => {
+                                if (authUser?.uid) {
+                                  saveFeedback(authUser.uid, {
+                                    source: "practice",
+                                    suggestionType: (item.label.toLowerCase().replace(/\s+/g, "") as any) || "safe",
+                                    rating: "helpful",
+                                  });
+                                }
                                 toast("Thanks for the feedback!", "success");
                                 haptics.light();
                               }}
@@ -1045,6 +1126,13 @@ export function PracticeScreen() {
                             >👍</button>
                             <button
                               onClick={() => {
+                                if (authUser?.uid) {
+                                  saveFeedback(authUser.uid, {
+                                    source: "practice",
+                                    suggestionType: (item.label.toLowerCase().replace(/\s+/g, "") as any) || "safe",
+                                    rating: "off",
+                                  });
+                                }
                                 toast("Thanks for the feedback!", "info");
                                 haptics.light();
                               }}
@@ -1068,8 +1156,21 @@ export function PracticeScreen() {
 
       <AnimatePresence>
         {transcriptResult && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col gap-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            onClick={() => setTranscriptResult(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 12 }}
+              transition={{ type: "spring", bounce: 0.25, duration: 0.35 }}
+              className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col gap-4 max-h-[85dvh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
               <h3 className="text-lg font-bold text-[#1A1208]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
                 Practice Integration
               </h3>
@@ -1115,11 +1216,13 @@ export function PracticeScreen() {
                     
                     void (async () => {
                       haptics.light();
+                      const attachedImages = chatImages;
+                      setChatImages([]);
                       setMessages((prev) => [...prev, { id: Date.now(), sender: "user", text: finalInput, inputType: "voice" }]);
                       setIsTyping(true);
                       try {
                         const updatedPersona = { ...persona, mood: currentMood, familiarity };
-                        const result = await simulateDraft(authUser.uid, finalInput, updatedPersona, userProfile, simHistory);
+                        const result = await simulateDraft(authUser.uid, finalInput, updatedPersona, userProfile, simHistory, attachedImages);
                         
                         setLastResult(result);
                         setSimHistory((prev) => [...prev, { draft: finalInput, result }]);
@@ -1155,8 +1258,8 @@ export function PracticeScreen() {
                   Simulate Now
                 </button>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 

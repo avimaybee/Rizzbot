@@ -32,7 +32,6 @@ export async function onRequest(context: any) {
     console.error('[feedback.ts] D1 binding not found. Available env keys:', Object.keys(env));
     return new Response(JSON.stringify({
       error: 'D1 binding not found',
-      availableBindings: Object.keys(env).filter(k => !k.startsWith('__')),
       hint: 'Check Cloudflare Pages > Settings > Functions > D1 database bindings'
     }), {
       status: 500,
@@ -88,10 +87,11 @@ export async function onRequest(context: any) {
 
       // We ignore client-provided user IDs and use the verified user context
       if (!dbUserId) {
-        // Auto-provision basic user row if it doesn't exist yet
+        // Auto-provision basic user row if it doesn't exist yet (race-safe)
         try {
-          const created = await db.prepare('INSERT INTO users (anon_id) VALUES (?)').bind(verifiedUid).run();
-          dbUserId = created?.meta?.last_rowid || created?.meta?.last_row_id;
+          await db.prepare('INSERT OR IGNORE INTO users (anon_id) VALUES (?)').bind(verifiedUid).run();
+          const row = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(verifiedUid).first();
+          dbUserId = row?.id;
         } catch (userErr: any) {
           console.error('[feedback.ts] Failed to create basic user for feedback:', userErr.message);
           return new Response(JSON.stringify({ error: 'Failed to mapped user identity' }), { status: 500, headers: corsHeaders });

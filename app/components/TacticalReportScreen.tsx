@@ -38,8 +38,61 @@ export function TacticalReportScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const partialReport = (location.state || {}) as Partial<ReportData>;
+  const analysis = partialReport.analysis;
+
+  if (!analysis) {
+    return (
+      <div className="relative min-h-screen pb-[72px]" style={{ backgroundColor: "#F5EFE6" }}>
+        <GrainOverlay />
+        <div className="relative z-10 px-5 pt-6 max-w-[430px] mx-auto">
+          <div className="flex items-center justify-between">
+            <button onClick={() => navigate("/practice")} className="cursor-pointer p-1">
+              <ChevronLeft size={24} strokeWidth={1.8} color="#1A1208" />
+            </button>
+            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 17, fontWeight: 600, color: "#1A1208" }}>
+              Tactical Report
+            </p>
+            <div style={{ width: 32 }} />
+          </div>
+          <div
+            className="mt-16 flex flex-col items-center text-center"
+            style={{ backgroundColor: "#FDFAF5", borderRadius: 24, padding: "40px 24px" }}
+          >
+            <Target size={28} strokeWidth={1.6} color="#C8522A" />
+            <p
+              className="mt-4"
+              style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontStyle: "italic", color: "#1A1208", lineHeight: 1.2 }}
+            >
+              No report yet
+            </p>
+            <p className="mt-2" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "rgba(26,18,8,0.55)", lineHeight: 1.5 }}>
+              Complete a Practice session to generate your tactical report.
+            </p>
+            <button
+              onClick={() => navigate("/practice")}
+              className="mt-6"
+              style={{
+                height: 48,
+                padding: "0 28px",
+                borderRadius: 100,
+                border: "none",
+                backgroundColor: "#C8522A",
+                color: "#FFFFFF",
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Start a session
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const report: ReportData = { ...defaultReport, ...partialReport };
-  const analysis = report.analysis || defaultReport.analysis!;
 
   const confidence = clampScore(100 - analysis.ghostRisk);
   const engagement = clampScore(analysis.vibeMatch);
@@ -71,7 +124,7 @@ export function TacticalReportScreen() {
   ];
 
   return (
-    <div className="relative min-h-screen pb-6" style={{ backgroundColor: "#F5EFE6" }}>
+    <div className="relative min-h-screen pb-[72px]" style={{ backgroundColor: "#F5EFE6" }}>
       <GrainOverlay />
       <div className="relative z-10 px-5 pt-6 max-w-[430px] mx-auto">
         <div className="flex items-center justify-between">

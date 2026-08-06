@@ -125,8 +125,8 @@ export async function onRequest(context: any) {
 
     let decodedToken;
 
-    // Support a mock token for local testing if explicitly requested
-    if (token === "mock_token") {
+    // Support a mock token for local testing ONLY (explicitly gated by env flag)
+    if (token === "mock_token" && env.ENVIRONMENT === "local") {
         decodedToken = {
             sub: "test_uid",
             email: "test@example.com",

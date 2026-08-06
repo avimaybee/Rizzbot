@@ -92,7 +92,7 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
   const accent = getAccentColor(risk);
 
   return (
-    <div className="relative min-h-screen pb-6" style={{ backgroundColor: "#F5EFE6" }}>
+    <div className="relative min-h-screen pb-[72px]" style={{ backgroundColor: "#F5EFE6" }}>
       <GrainOverlay />
       <div className="relative z-10 px-5 pt-6 max-w-[430px] mx-auto">
         <div className="flex items-center justify-between">
@@ -533,7 +533,7 @@ export function HistoryScreen() {
   }
 
   return (
-    <div className="relative min-h-screen pb-6" style={{ backgroundColor: "#F5EFE6" }}>
+    <div className="relative min-h-screen pb-[72px]" style={{ backgroundColor: "#F5EFE6" }}>
       <GrainOverlay />
       <div className="relative z-10 px-5 pt-6 max-w-[430px] mx-auto">
         <div className="flex items-center justify-between">
@@ -897,17 +897,17 @@ export function HistoryScreen() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50"
+              className="fixed inset-0 z-[100]"
               style={{ backgroundColor: "rgba(26, 18, 8, 0.45)", backdropFilter: "blur(8px)" }}
               onClick={() => setConfirmDeleteId(null)}
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
               transition={{ type: "spring", bounce: 0.3, duration: 0.4 }}
-              className="fixed inset-x-5 z-50 max-w-[360px] mx-auto"
-              style={{ top: "50%", transform: "translateY(-50%)" }}
+              className="fixed inset-x-5 top-1/2 z-[101] max-w-[360px] mx-auto"
+              style={{ translateY: "-50%" }}
             >
               <div style={{ backgroundColor: "#FDFAF5", borderRadius: 28, padding: 28, boxShadow: "0 20px 60px rgba(26,18,8,0.15)" }}>
                 <div className="flex items-center gap-3 mb-4">

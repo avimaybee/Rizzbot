@@ -110,10 +110,12 @@ export const calculateFeedbackStats = (userId: string): FeedbackStats => {
     totalFeedback: entries.length,
     smoothRatings: { helpful: 0, mid: 0, off: 0 },
     boldRatings: { helpful: 0, mid: 0, off: 0 },
+    wittyRatings: { helpful: 0, mid: 0, off: 0 },
     authenticRatings: { helpful: 0, mid: 0, off: 0 },
     safeRatings: { helpful: 0, mid: 0, off: 0 },
     spicyRatings: { helpful: 0, mid: 0, off: 0 },
     youRatings: { helpful: 0, mid: 0, off: 0 },
+    yourStyleRatings: { helpful: 0, mid: 0, off: 0 },
     prefersBold: false,
     prefersConservative: false,
     authenticWorks: false,
@@ -125,10 +127,12 @@ export const calculateFeedbackStats = (userId: string): FeedbackStats => {
     const typeMap: Record<string, keyof FeedbackStats> = {
       smooth: 'smoothRatings',
       bold: 'boldRatings',
+      witty: 'wittyRatings',
       authentic: 'authenticRatings',
       safe: 'safeRatings',
       spicy: 'spicyRatings',
       you: 'youRatings',
+      yourStyle: 'yourStyleRatings',
     };
 
     const ratingKey = typeMap[entry.suggestionType];
@@ -155,10 +159,14 @@ export const calculateFeedbackStats = (userId: string): FeedbackStats => {
     stats.prefersConservative = safeHelpfulRate > spicyHelpfulRate;
   }
 
-  // Authentic/you style working
+  // Authentic/you style working (check both "you" and "yourStyle" buckets)
   const youTotal = stats.youRatings.helpful + stats.youRatings.mid + stats.youRatings.off;
-  if (youTotal >= minSamples) {
-    stats.authenticWorks = stats.youRatings.helpful > (stats.youRatings.mid + stats.youRatings.off);
+  const yourStyleTotal = stats.yourStyleRatings.helpful + stats.yourStyleRatings.mid + stats.yourStyleRatings.off;
+  const styleTotal = youTotal + yourStyleTotal;
+  if (styleTotal >= minSamples) {
+    const styleHelpful = stats.youRatings.helpful + stats.yourStyleRatings.helpful;
+    const styleNonHelpful = (stats.youRatings.mid + stats.youRatings.off) + (stats.yourStyleRatings.mid + stats.yourStyleRatings.off);
+    stats.authenticWorks = styleHelpful > styleNonHelpful;
   }
 
   return stats;

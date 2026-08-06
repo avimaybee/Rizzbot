@@ -33,8 +33,6 @@ export async function onRequest(context: any) {
     console.error('[sessions.ts] D1 binding not found. Available env keys:', Object.keys(env));
     return new Response(JSON.stringify({
       error: 'D1 binding not found. Check your Pages project bindings.',
-      tried: ['RIZZBOT_DATA', 'RIZZBOT', 'RIZZBOT_DB', 'RIZZBOT_D1', 'RIZZBOT_DATASET', 'rizzbot data'],
-      availableBindings: Object.keys(env).filter(k => !k.startsWith('__')),
       hint: 'Go to Cloudflare Pages > Settings > Functions > D1 database bindings'
     }), {
       status: 500,
@@ -111,12 +109,13 @@ export async function onRequest(context: any) {
     if (request.method === 'POST') {
       const body = await request.json();
 
-      // We ignore client-provided anon_id or user_id. Always use the verified context.
+      // Auto-provision basic user row if it doesn't exist yet so the session can link
+      // INSERT OR IGNORE is race-safe: concurrent first requests can't double-insert
       if (!dbUserId) {
-        // Auto-provision basic user row if it doesn't exist yet so the session can link
         try {
-          const created = await db.prepare('INSERT INTO users (anon_id) VALUES (?)').bind(verifiedUid).run();
-          dbUserId = created?.meta?.last_row_id || created?.meta?.last_rowid;
+          await db.prepare('INSERT OR IGNORE INTO users (anon_id) VALUES (?)').bind(verifiedUid).run();
+          const row = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(verifiedUid).first();
+          dbUserId = row?.id;
         } catch (userErr: any) {
           console.error('[sessions.ts] Failed to create basic user for session:', userErr.message);
         }
@@ -128,8 +127,8 @@ export async function onRequest(context: any) {
       const mode = body.mode || 'simulator';
       const personaName = body.persona_name || null;
       const headline = body.headline || null;
-      const ghostRisk = body.ghost_risk || null;
-      const messageCount = body.message_count || 0;
+      const ghostRisk = body.ghost_risk ?? null; // `??` so a legitimate 0 is stored as 0, not NULL
+      const messageCount = body.message_count ?? 0;
 
       const run = await db.prepare(
         'INSERT INTO sessions (user_id, result, mode, persona_name, headline, ghost_risk, message_count) VALUES (?, ?, ?, ?, ?, ?, ?)'
@@ -171,9 +170,7 @@ export async function onRequest(context: any) {
   } catch (err: any) {
     console.error('[sessions.ts] Error:', err.message, err.stack);
     return new Response(JSON.stringify({
-      error: err.message || String(err),
-      stack: err.stack,
-      hint: 'If this is a schema error, try calling /api/migrate first'
+      error: 'Internal server error'
     }), {
       status: 500,
       headers: corsHeaders,

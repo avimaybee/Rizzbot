@@ -42,7 +42,9 @@ export function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
             const res = await submitUtrPayment(utr);
             if (res.success) {
                 await updatePremiumStatus();
-                alert("Success! Your Premium access is now active.");
+                alert(res.status === 'PENDING_RECONCILIATION'
+                    ? "Payment submitted! Premium activates once verified (usually within a few hours)."
+                    : "Success! Your Premium access is now active.");
                 onClose();
             }
         } catch (err: any) {
@@ -153,9 +155,9 @@ export function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
                                         {!loading && <ArrowRight size={18} />}
                                     </button>
 
-                                    <p className="mt-4 text-[10px] text-[#1A1208]/40 uppercase tracking-widest font-bold">
-                                        Access is granted instantly after submission
-                                    </p>
+                    <p className="mt-4 text-[10px] text-[#1A1208]/40 uppercase tracking-widest font-bold">
+                        Access activates after manual verification (usually within a few hours)
+                    </p>
                                 </motion.div>
                             )}
                         </div>

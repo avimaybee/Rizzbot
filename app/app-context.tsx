@@ -72,6 +72,10 @@ const mapDbProfileToUserProfile = (profile: Record<string, unknown>): UserStyleP
   aiSummary: (profile.ai_summary as string | undefined) || undefined,
   favoriteEmojis: parseJsonArray(profile.favorite_emojis),
   rawSamples: parseJsonArray(profile.raw_samples),
+  responseSpeed: (profile.response_speed as UserStyleProfile["responseSpeed"] | undefined) || undefined,
+  flirtLevel: (profile.flirt_level as UserStyleProfile["flirtLevel"] | undefined) || undefined,
+  humorStyle: (profile.humor_style as UserStyleProfile["humorStyle"] | undefined) || undefined,
+  energy: (profile.energy as UserStyleProfile["energy"] | undefined) || undefined,
 });
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -118,7 +122,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (profile) {
           setUserProfile(mapDbProfileToUserProfile(profile as unknown as Record<string, unknown>));
         } else {
-          const local = localStorage.getItem("userStyleProfile");
+          const local = localStorage.getItem(`userStyleProfile_${authUser.uid}`);
           if (local) {
             try {
               setUserProfile(JSON.parse(local) as UserStyleProfile);
@@ -129,7 +133,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         logScreenView("home");
       } catch {
-        // Keep the app usable even when DB sync fails.
+        // DB sync failed (offline/error) — fall back to the cached local profile
+        const local = localStorage.getItem(`userStyleProfile_${authUser.uid}`);
+        if (local) {
+          try {
+            setUserProfile(JSON.parse(local) as UserStyleProfile);
+          } catch {
+            setUserProfile(null);
+          }
+        }
       }
     };
 
@@ -168,11 +180,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         raw_samples: profile.rawSamples,
         ai_summary: profile.aiSummary,
         favorite_emojis: profile.favoriteEmojis,
+        response_speed: profile.responseSpeed,
+        flirt_level: profile.flirtLevel,
+        humor_style: profile.humorStyle,
+        energy: profile.energy,
       });
-      localStorage.setItem("userStyleProfile", JSON.stringify(profile));
+      try {
+        localStorage.setItem(`userStyleProfile_${authUser?.uid || "anon"}`, JSON.stringify(profile));
+      } catch {
+        // Quota exceeded — DB copy is the source of truth
+      }
       setUserProfile(profile);
     },
-    [userId]
+    [userId, authUser?.uid]
   );
 
   const signOut = useCallback(async () => {

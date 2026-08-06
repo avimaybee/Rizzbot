@@ -16,10 +16,9 @@ export async function onRequest(context: any) {
     }
 
     const authenticatedUser = data?.user;
-    // Simple Admin Check: For now, we'll use a hardcoded email or just allow the owner's UID if known.
-    // Ideally, this should be a role in the DB.
-    // For this quick project, we'll check if the email belongs to the user who provided it.
-    const isAdmin = authenticatedUser?.email === 'avimaybe7@gmail.com'; // Placeholder for Avi's email based on UPI
+    const adminEmail = env.ADMIN_EMAIL || 'avimaybe7@gmail.com';
+    // Require a verified email matching the configured admin address
+    const isAdmin = !!authenticatedUser?.email_verified && authenticatedUser?.email === adminEmail;
 
     if (!isAdmin) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 403, headers: corsHeaders });
@@ -44,17 +43,33 @@ export async function onRequest(context: any) {
         if (request.method === 'POST') {
             const { payment_id, status } = await request.json();
 
-            // Update status (e.g. COMPLETED or REJECTED)
+            // Validate status against allowlist
+            if (!['COMPLETED', 'REJECTED', 'PENDING_RECONCILIATION'].includes(status)) {
+                return new Response(JSON.stringify({ error: 'Invalid status.' }), { status: 400, headers: corsHeaders });
+            }
+
+            const payment = await db.prepare('SELECT user_id FROM payments WHERE id = ?').bind(payment_id).first();
+            if (!payment) {
+                return new Response(JSON.stringify({ error: 'Payment not found.' }), { status: 404, headers: corsHeaders });
+            }
+
+            // Update status
             await db.prepare('UPDATE payments SET status = ? WHERE id = ?')
                 .bind(status, payment_id)
                 .run();
 
-            // If rejected, remove premium
-            if (status === 'REJECTED') {
-                const payment = await db.prepare('SELECT user_id FROM payments WHERE id = ?').bind(payment_id).first();
-                if (payment) {
-                    await db.prepare('UPDATE users SET is_premium = 0 WHERE id = ?').bind(payment.user_id).run();
-                }
+            if (status === 'COMPLETED') {
+                // Grant premium + activate subscription
+                await db.prepare('UPDATE users SET is_premium = 1 WHERE id = ?').bind(payment.user_id).run();
+                await db.prepare(
+                    'INSERT INTO subscriptions (user_id, tier, status) VALUES (?, ?, ?)'
+                ).bind(payment.user_id, 'LIFETIME', 'ACTIVE').run();
+            } else if (status === 'REJECTED') {
+                // Revoke premium + deactivate subscription
+                await db.prepare('UPDATE users SET is_premium = 0 WHERE id = ?').bind(payment.user_id).run();
+                await db.prepare(
+                    "UPDATE subscriptions SET status = 'CANCELLED' WHERE user_id = ? AND status = 'ACTIVE'"
+                ).bind(payment.user_id).run();
             }
 
             return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });

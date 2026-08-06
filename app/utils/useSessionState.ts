@@ -13,7 +13,11 @@ export function useSessionState<T>(key: string, initialValue: T | (() => T)): [T
     });
 
     useEffect(() => {
-        sessionStorage.setItem(key, JSON.stringify(state));
+        try {
+            sessionStorage.setItem(key, JSON.stringify(state));
+        } catch {
+            // Quota exceeded (large base64 payloads) — drop silently, state still works in memory
+        }
     }, [key, state]);
 
     return [state, setState];

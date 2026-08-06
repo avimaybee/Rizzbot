@@ -128,12 +128,20 @@ const ensureSchemaInternal = async (db: D1Database): Promise<void> => {
       raw_samples TEXT,
       ai_summary TEXT,
       favorite_emojis TEXT,
+      response_speed TEXT,
+      flirt_level TEXT,
+      humor_style TEXT,
+      energy TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`
   );
 
   await runSchemaStatement(db, `ALTER TABLE style_profiles ADD COLUMN ai_summary TEXT`);
   await runSchemaStatement(db, `ALTER TABLE style_profiles ADD COLUMN favorite_emojis TEXT`);
+  await runSchemaStatement(db, `ALTER TABLE style_profiles ADD COLUMN response_speed TEXT`);
+  await runSchemaStatement(db, `ALTER TABLE style_profiles ADD COLUMN flirt_level TEXT`);
+  await runSchemaStatement(db, `ALTER TABLE style_profiles ADD COLUMN humor_style TEXT`);
+  await runSchemaStatement(db, `ALTER TABLE style_profiles ADD COLUMN energy TEXT`);
 
   await runSchemaStatement(
     db,

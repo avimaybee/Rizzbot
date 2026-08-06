@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 export interface UseVoiceRecorderReturn {
   isRecording: boolean;
@@ -136,6 +136,30 @@ export const useVoiceRecorder = (): UseVoiceRecorderReturn => {
     setAudioBlob(null);
     setRecordingTime(0);
     setError(null);
+  }, []);
+
+  // Release the microphone, timers, and audio context if the hook unmounts mid-recording
+  useEffect(() => {
+    return () => {
+      const recorder = mediaRecorderRef.current;
+      if (recorder && recorder.state === "recording") {
+        recorder.stop();
+      }
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(console.error);
+        audioContextRef.current = null;
+      }
+    };
   }, []);
 
   return {

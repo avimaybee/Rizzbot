@@ -86,7 +86,7 @@ export function QuickModeScreen() {
   const { toast } = useToast();
   const { authUser, userProfile, userId, runWellbeingCheck } = useAppContext();
 
-  const [showResults, setShowResults] = useSessionState("quick_showResults", false);
+  const [showResults, setShowResults] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [theirMessage, setTheirMessage] = useSessionState("quick_theirMessage", "");
   const [yourDraft, setYourDraft] = useSessionState("quick_yourDraft", "");
@@ -94,7 +94,7 @@ export function QuickModeScreen() {
   const [activeTone, setActiveTone] = useSessionState<Tone>("quick_tone", "Smooth");
   const [showStyleTooltip, setShowStyleTooltip] = useState(false);
   const [screenshots, setScreenshots] = useSessionState<string[]>("quick_screenshots", []);
-  const [result, setResult] = useSessionState<QuickAdviceResponse | null>("quick_result", null);
+  const [result, setResult] = useState<QuickAdviceResponse | null>(null);
   const [feedbackGiven, setFeedbackGiven] = useState<"helpful" | "off" | null>(null);
   const [cursor, setCursor] = useState<Record<Tone, number>>({
     Smooth: 0,
@@ -104,15 +104,20 @@ export function QuickModeScreen() {
     "Your Style": 0,
   });
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const copyTimerRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     runWellbeingCheck();
   }, [runWellbeingCheck]);
-
-  useEffect(() => {
-    setContext("new");
-  }, [setContext]);
 
   const selectedOptions = useMemo(() => {
     if (!result) return [];
@@ -125,7 +130,7 @@ export function QuickModeScreen() {
     ? selectedOptions[cursor[activeTone] % selectedOptions.length]
     : null;
 
-  const ghostRisk = result ? Math.max(0, 100 - (result.vibeCheck?.interestLevel || 50)) : 0;
+  const ghostRisk = result ? Math.max(0, 100 - (result.vibeCheck?.interestLevel ?? 50)) : 0;
   const riskColor = ghostRisk > 65 ? "#C8522A" : ghostRisk > 35 ? "#D4A853" : "#7A9E7E";
   const riskLabel = ghostRisk > 65 ? "High" : ghostRisk > 35 ? "Medium" : "Low";
 
@@ -145,10 +150,13 @@ export function QuickModeScreen() {
       toast(`${encoded.length} screenshot(s) attached`, "success");
     } catch {
       toast("Could not read one or more screenshots", "error");
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
   const handleAnalyze = async () => {
+    if (isLoading) return;
     if (!theirMessage.trim() && screenshots.length === 0) {
       toast("Add a message or screenshot first", "error");
       return;
@@ -156,6 +164,8 @@ export function QuickModeScreen() {
 
     setIsLoading(true);
     setShowResults(false);
+    setFeedbackGiven(null);
+    setCursor({ Smooth: 0, Bold: 0, Witty: 0, Authentic: 0, "Your Style": 0 });
     haptics.medium();
 
     let isStillLoading = true;
@@ -174,8 +184,9 @@ export function QuickModeScreen() {
         userStyle: userProfile || undefined,
         userId: authUser?.uid,
       });
-      const derivedGhostRisk = Math.max(0, 100 - (response.vibeCheck?.interestLevel || 50));
+      const derivedGhostRisk = Math.max(0, 100 - (response.vibeCheck?.interestLevel ?? 50));
 
+      if (!mountedRef.current) return;
       setResult(response);
       setShowResults(true);
       runWellbeingCheck();
@@ -183,7 +194,7 @@ export function QuickModeScreen() {
 
       if (authUser?.uid) {
         logSession(authUser.uid, "quick", undefined, derivedGhostRisk);
-        await createSession(
+        void createSession(
           authUser.uid,
           {
             request: {
@@ -200,7 +211,9 @@ export function QuickModeScreen() {
             ghost_risk: derivedGhostRisk,
             message_count: response.extractedUnrepliedMessages?.length || 1,
           }
-        );
+        ).catch((sessionErr) => {
+          console.error("Failed to save session:", sessionErr);
+        });
       }
 
       toast("Analysis complete", "success");
@@ -231,25 +244,31 @@ export function QuickModeScreen() {
   const personaFade = useScrollFade();
   const screenshotsFade = useScrollFade();
 
-  const handleCopy = (text: string, key: string) => {
+  const handleCopy = async (text: string, key: string) => {
     if (!text) return;
-    navigator.clipboard.writeText(text);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      toast("Could not copy — copy manually?", "error");
+      return;
+    }
     setCopiedKey(key);
     haptics.success();
     toast("Copied to clipboard", "success");
-    setTimeout(() => setCopiedKey(null), 1500);
+    if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = window.setTimeout(() => setCopiedKey(null), 1500);
   };
 
   const handleFeedback = (rating: "helpful" | "off") => {
-    if (!authUser?.uid || !result) return;
+    if (!authUser?.uid || !result || feedbackGiven) return;
     setFeedbackGiven(rating);
     const suggestionType = feedbackTypeMap[activeTone] as any;
     saveFeedback(authUser.uid, {
       source: "quick",
       suggestionType,
       rating,
-      context: "talking",
-      theirEnergy: result.vibeCheck.theirEnergy,
+      context,
+      theirEnergy: result.vibeCheck?.theirEnergy,
       recommendedAction: result.recommendedAction,
     });
 
@@ -263,6 +282,8 @@ export function QuickModeScreen() {
           tone: activeTone,
           recommendedAction: result.recommendedAction,
         },
+      }).catch((err) => {
+        console.error("Failed to submit feedback:", err);
       });
     }
 
@@ -549,16 +570,16 @@ export function QuickModeScreen() {
               {[
                 {
                   label: "Energy",
-                  value: result?.vibeCheck.theirEnergy || "neutral",
-                  level: result?.vibeCheck.theirEnergy === "hot" ? 1.0 :
-                    result?.vibeCheck.theirEnergy === "warm" ? 0.8 :
-                      result?.vibeCheck.theirEnergy === "cold" ? 0.2 : 0.5,
+                  value: result?.vibeCheck?.theirEnergy || "neutral",
+                  level: result?.vibeCheck?.theirEnergy === "hot" ? 1.0 :
+                    result?.vibeCheck?.theirEnergy === "warm" ? 0.8 :
+                      result?.vibeCheck?.theirEnergy === "cold" ? 0.2 : 0.5,
                   color: "#C8522A"
                 },
                 {
                   label: "Interest",
-                  value: `${result?.vibeCheck.interestLevel || 50}/100`,
-                  level: Math.max(0.05, (result?.vibeCheck.interestLevel || 50) / 100),
+                  value: `${result?.vibeCheck?.interestLevel ?? 50}/100`,
+                  level: Math.max(0.05, (result?.vibeCheck?.interestLevel ?? 50) / 100),
                   color: "#C8522A",
                 },
                 { label: "Ghost Risk", value: `${riskLabel} (${ghostRisk}%)`, level: Math.max(0.05, ghostRisk / 100), color: riskColor },
@@ -649,7 +670,7 @@ export function QuickModeScreen() {
                     transition={{ duration: 0.25 }}
                     className="space-y-4"
                   >
-                    {selectedOption?.replies.map((replyItem, idx) => {
+                    {selectedOption?.replies?.length ? selectedOption.replies.map((replyItem, idx) => {
                       const replyKey = `reply-${activeTone}-${cursor[activeTone]}-${idx}`;
                       const isCopied = copiedKey === replyKey;
                       return (
@@ -680,7 +701,18 @@ export function QuickModeScreen() {
                           </button>
                         </div>
                       );
-                    })}
+                    }) : null}
+
+                    {!selectedOption && (
+                      <div
+                        className="py-8 flex flex-col items-center justify-center text-center"
+                        style={{ backgroundColor: "#F9F7F4", borderRadius: 16 }}
+                      >
+                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.5)" }}>
+                          No {activeTone} replies for this one — try another style.
+                        </p>
+                      </div>
+                    )}
 
                     {selectedOption?.conversationHook && (
                       <div className="relative mt-2">

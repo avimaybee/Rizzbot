@@ -17,7 +17,8 @@ export function TabBar() {
     <div
       className="fixed bottom-0 left-0 right-0 z-50"
       style={{
-        height: 60,
+        height: "calc(60px + env(safe-area-inset-bottom))",
+        paddingBottom: "env(safe-area-inset-bottom)",
         backgroundColor: "#FDFAF5",
         borderTop: "1px solid #E8E0D4",
       }}

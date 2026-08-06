@@ -7,19 +7,29 @@ const API_BASE = typeof window === 'undefined' ? '' : '';
 /**
  * Custom fetch wrapper that automatically attaches the Firebase ID token
  * to the Authorization header for secure backend endpoints.
+ * On a 401 (expired token), refreshes the token once and retries.
  */
 async function authenticatedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const token = await getFirebaseToken();
+  let token = await getFirebaseToken();
 
-  const headers = new Headers(init?.headers);
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
+  const build = (tok: string | null) => {
+    const headers = new Headers(init?.headers);
+    if (tok) {
+      headers.set('Authorization', `Bearer ${tok}`);
+    }
+    return { ...init, headers };
+  };
+
+  let response = await fetch(input, build(token));
+  if (response.status === 401 && token) {
+    // Token expired — force-refresh and retry once
+    const refreshed = await getFirebaseToken(true).catch(() => null);
+    if (refreshed && refreshed !== token) {
+      response = await fetch(input, build(refreshed));
+    }
   }
 
-  return fetch(input, {
-    ...init,
-    headers,
-  });
+  return response;
 }
 
 // Reduce console spam in development when DB is unavailable
@@ -190,7 +200,7 @@ export interface PaymentVerificationRequest {
 /**
  * Verify payment (Razorpay or UPI UTR) and upgrade user status
  */
-export async function verifyPayment(paymentData: PaymentVerificationRequest): Promise<{ success: boolean; is_premium: boolean }> {
+export async function verifyPayment(paymentData: PaymentVerificationRequest): Promise<{ success: boolean; is_premium: boolean; status?: string; message?: string }> {
   const res = await authenticatedFetch('/api/payments/verify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -206,9 +216,9 @@ export async function verifyPayment(paymentData: PaymentVerificationRequest): Pr
 }
 
 /**
- * Submit UPI UTR for automated verification
+ * Submit UPI UTR for verification (admin reconciles; premium activates after approval)
  */
-export async function submitUtrPayment(utr: string): Promise<{ success: boolean; is_premium: boolean }> {
+export async function submitUtrPayment(utr: string): Promise<{ success: boolean; is_premium: boolean; status?: string; message?: string }> {
   return verifyPayment({
     payment_method: 'upi',
     utr,
@@ -612,10 +622,12 @@ export async function getStreak(firebaseUid: string): Promise<StreakData> {
 
 export async function recordActivity(firebaseUid: string): Promise<StreakData> {
   try {
+    // Send the client's UTC offset so streaks track the user's LOCAL day, not UTC
+    const tzOffsetMin = -new Date().getTimezoneOffset();
     const res = await authenticatedFetch('/api/streaks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ anon_id: firebaseUid })
+      body: JSON.stringify({ anon_id: firebaseUid, tz_offset_min: tzOffsetMin })
     });
     if (!res.ok) return { current_streak: 0, longest_streak: 0, last_active_date: null };
     const data = await res.json();

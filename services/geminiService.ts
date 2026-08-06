@@ -1,7 +1,7 @@
 import { HarmCategory, HarmBlockThreshold, Type } from "@google/genai";
 
 
-import { SimResult, Persona, SimAnalysisResult, QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, StyleExtractionRequest, StyleExtractionResponse, AIExtractedStyleProfile } from "../types";
+import { SimResult, Persona, SimAnalysisResult, QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, StyleExtractionRequest, StyleExtractionResponse, AIExtractedStyleProfile, SuggestionOption } from "../types";
 import { getPromptBias } from "./feedbackService";
 import { getFirebaseToken } from "./firebaseService";
 import { logger } from "./logger";
@@ -179,7 +179,10 @@ export const generatePersona = async (
 
   if (screenshotsBase64 && screenshotsBase64.length > 0) {
     screenshotsBase64.forEach(base64 => {
-      parts.push({ inlineData: { mimeType: "image/png", data: base64 } });
+      const mimeMatch = base64.match(/^data:([^;]+);base64,/);
+      const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
+      const cleanBase64 = base64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
+      parts.push({ inlineData: { mimeType, data: cleanBase64 } });
     });
     parts.push({ text: "Use these screenshots to infer the person's tone, style, and habits." });
   }
@@ -260,7 +263,8 @@ export const simulateDraft = async (
   draft: string,
   persona: Persona,
   userStyle?: UserStyleProfile | null,
-  conversationHistory?: { draft: string, result: SimResult }[]
+  conversationHistory?: { draft: string, result: SimResult }[],
+  images?: string[]
 ): Promise<SimResult> => {
 
   // Build conversation context from history
@@ -416,8 +420,17 @@ export const simulateDraft = async (
   `;
 
   try {
+    const parts: any[] = [{ text: prompt }];
+    if (images && images.length > 0) {
+      images.forEach(base64 => {
+        const mimeMatch = base64.match(/^data:([^;]+);base64,/);
+        const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
+        const cleanBase64 = base64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
+        parts.push({ inlineData: { data: cleanBase64, mimeType } });
+      });
+    }
     const response = await runWithFallback({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      contents: [{ role: "user", parts }],
       safetySettings: safetySettings
     }, THERAPIST_MODELS);
 
@@ -595,6 +608,7 @@ export const getQuickAdvice = async (
     'talking': 'been talking for a while / talking stage',
     'dating': 'officially dating / in a relationship',
     'complicated': 'it\'s complicated / on-off situation',
+    'friends': 'long-standing friends / friendship',
     'ex': 'ex situation / trying to reconnect'
   };
 
@@ -604,6 +618,7 @@ export const getQuickAdvice = async (
     'talking': 'TALKING STAGE RULES: Build real connection through consistent engagement. Share about yourself too (mutual self-disclosure). Look for reciprocity - are they matching your energy?',
     'dating': 'RELATIONSHIP RULES: You can be more direct and vulnerable. Deeper conversations welcomed. Authentic > playing it cool. Keep growing the connection.',
     'complicated': 'COMPLICATED RULES: Prioritize your peace. Look for consistent patterns, not just good moments. Honest communication > guessing games. Know your worth.',
+    'friends': 'FRIENDS RULES: The friendship already exists - keep the vibe natural and low-pressure. Playful teasing is fine, but dont blur lines unless they show clear interest. Read their signals before escalating.',
     'ex': 'EX RULES: Be honest about what you want. Dont pretend to be unbothered if you care. But also respect yourself - if theyre not showing up, thats information.'
   };
 
@@ -849,12 +864,14 @@ export const getQuickAdvice = async (
 
   if (request.screenshots && request.screenshots.length > 0) {
     request.screenshots.forEach(base64 => {
-      // Remove data URL prefix if present
+      // Extract mime type from the data URL (or default to png for raw base64)
+      const mimeMatch = base64.match(/^data:([^;]+);base64,/);
+      const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
       const cleanBase64 = base64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
       parts.push({
         inlineData: {
           data: cleanBase64,
-          mimeType: "image/png"
+          mimeType
         }
       });
     });
@@ -869,7 +886,28 @@ export const getQuickAdvice = async (
     const text = response.text;
     if (!text) throw new Error("Connection Lost");
 
-    return safeParseJson<QuickAdviceResponse>(text);
+    const parsed = safeParseJson<QuickAdviceResponse>(text);
+    const normalize = (list: any): SuggestionOption[] =>
+      Array.isArray(list) ? list.filter((o: any) => o && Array.isArray(o.replies) && o.replies.length > 0) : [];
+    return {
+      ...parsed,
+      vibeCheck: parsed.vibeCheck || {
+        theirEnergy: 'neutral',
+        interestLevel: 50,
+        redFlags: [],
+        greenFlags: []
+      },
+      suggestions: {
+        smooth: normalize(parsed.suggestions?.smooth),
+        bold: normalize(parsed.suggestions?.bold),
+        witty: normalize(parsed.suggestions?.witty),
+        authentic: normalize(parsed.suggestions?.authentic),
+        yourStyle: normalize(parsed.suggestions?.yourStyle),
+        wait: parsed.suggestions?.wait ?? null,
+      },
+      proTip: parsed.proTip || "ngl couldn't read that one properly, try again",
+      recommendedAction: parsed.recommendedAction || 'MATCH',
+    };
 
   } catch (error) {
     logger.error("Quick Advice Failed:", error);
@@ -909,10 +947,13 @@ export const extractUserStyle = async (request: StyleExtractionRequest): Promise
   // Add screenshots if provided (uses Gemini vision)
   if (request.screenshots && request.screenshots.length > 0) {
     request.screenshots.forEach(base64 => {
+      const mimeMatch = base64.match(/^data:([^;]+);base64,/);
+      const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
+      const cleanBase64 = base64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
       parts.push({
         inlineData: {
-          mimeType: "image/png",
-          data: base64
+          mimeType,
+          data: cleanBase64
         }
       });
     });
@@ -1382,10 +1423,12 @@ User's Own Notes: ${currentNotes.customNotes || 'none'}]
   // Add Images if provided
   if (images && images.length > 0) {
     images.forEach(base64 => {
+      const mimeMatch = base64.match(/^data:([^;]+);base64,/);
+      const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
       const cleanBase64 = base64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
       parts.push({
         inlineData: {
-          mimeType: "image/png",
+          mimeType,
           data: cleanBase64
         }
       });
@@ -1434,30 +1477,34 @@ User's Own Notes: ${currentNotes.customNotes || 'none'}]
 
       for (const line of lines) {
         if (!line.trim()) continue;
+        let chunk: any;
         try {
-          const chunk = JSON.parse(line);
-
-          if (chunk.type === "metadata") {
-            logger.log(`Streaming via model: ${chunk.model}`);
-          } else if (chunk.type === "text") {
-            const text = chunk.content;
-            fullText += text;
-            onChunk(text);
-          } else if (chunk.type === "functionCalls") {
-            for (const fc of chunk.calls) {
-              if (fc.name === 'update_session_analysis' && fc.args) {
-                onNotesUpdate(fc.args as Partial<ClinicalNotes>);
-              } else if (fc.name === 'assign_exercise' && fc.args && onExerciseAssign) {
-                onExerciseAssign(fc.args as { type: string; context: string });
-              } else if (onToolCall && fc.args) {
-                onToolCall(fc.name, fc.args);
-              }
-            }
-          } else if (chunk.type === "error") {
-            throw new Error(chunk.message || "Stream error");
-          }
+          chunk = JSON.parse(line);
         } catch (parseErr) {
           console.error("Error parsing stream line:", parseErr, line);
+          continue;
+        }
+
+        if (chunk.type === "error") {
+          throw new Error(chunk.message || "Stream error");
+        }
+
+        if (chunk.type === "metadata") {
+          logger.log(`Streaming via model: ${chunk.model}`);
+        } else if (chunk.type === "text") {
+          const text = chunk.content;
+          fullText += text;
+          onChunk(text);
+        } else if (chunk.type === "functionCalls") {
+          for (const fc of chunk.calls) {
+            if (fc.name === 'update_session_analysis' && fc.args) {
+              onNotesUpdate(fc.args as Partial<ClinicalNotes>);
+            } else if (fc.name === 'assign_exercise' && fc.args && onExerciseAssign) {
+              onExerciseAssign(fc.args as { type: string; context: string });
+            } else if (onToolCall && fc.args) {
+              onToolCall(fc.name, fc.args);
+            }
+          }
         }
       }
     }
@@ -1486,13 +1533,13 @@ User's Own Notes: ${currentNotes.customNotes || 'none'}]
       }
     }
 
-    // Return a simple session ID based on timestamp
-    return `session_${Date.now()}`;
+    // Reuse the existing session ID when one is supplied (keeps History consolidated);
+    // only mint a new one for a fresh session
+    return _previousInteractionId || `session_${Date.now()}`;
 
   } catch (error) {
     logger.error("Streaming Therapist Advice Failed:", error);
-    onChunk("something went wrong. let's try that again?");
-    return "";
+    throw error;
   }
 };
 
@@ -1510,9 +1557,11 @@ export const getTherapistAdvice = async (
     if (images && images.length > 0) {
       parts.push({ text: "The user has shared these conversation screenshots:" });
       images.forEach(base64 => {
+        const mimeMatch = base64.match(/^data:([^;]+);base64,/);
+        const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
         const cleanBase64 = base64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
         parts.push({
-          inlineData: { data: cleanBase64, mimeType: "image/png" }
+          inlineData: { data: cleanBase64, mimeType }
         });
       });
     }

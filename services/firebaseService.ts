@@ -195,13 +195,14 @@ export const getCurrentUser = (): AuthUser | null => {
 
 /**
  * Get the current user's Firebase ID Token for API authenticaton
+ * Pass forceRefresh=true to bypass the cache (used when a request 401s).
  */
-export const getFirebaseToken = async (): Promise<string | null> => {
+export const getFirebaseToken = async (forceRefresh = false): Promise<string | null> => {
   const user = auth.currentUser;
   if (!user) return null;
 
   try {
-    return await user.getIdToken();
+    return await user.getIdToken(forceRefresh);
   } catch (error) {
     logger.error('Error fetching Firebase token:', error);
     return null;

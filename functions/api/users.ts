@@ -103,6 +103,7 @@ export async function onRequest(context: any) {
 
       // Check if user exists
       let user;
+      let created = false;
       try {
         user = await db.prepare(
           'SELECT id, anon_id, email, display_name, photo_url, provider, is_premium, premium_until, created_at FROM users WHERE anon_id = ?'
@@ -115,15 +116,19 @@ export async function onRequest(context: any) {
       }
 
       if (!user) {
-        // Create new user - try with extended columns first, fall back to basic
+        // Create new user - race-safe: INSERT OR IGNORE prevents double-insert on concurrent first requests
+        created = true;
         const now = new Date().toISOString();
         try {
-          const created = await db.prepare(
-            'INSERT INTO users (anon_id, email, display_name, photo_url, provider, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+          await db.prepare(
+            'INSERT OR IGNORE INTO users (anon_id, email, display_name, photo_url, provider, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
           ).bind(firebaseUid, email, displayName, photoUrl, provider, now, now).run();
 
-          user = {
-            id: created?.meta?.last_row_id || created?.meta?.last_rowid,
+          const row = await db.prepare(
+            'SELECT id, anon_id, email, display_name, photo_url, provider, is_premium, premium_until, created_at FROM users WHERE anon_id = ?'
+          ).bind(firebaseUid).first();
+          user = row || {
+            id: undefined,
             anon_id: firebaseUid,
             email,
             display_name: displayName,
@@ -134,19 +139,22 @@ export async function onRequest(context: any) {
         } catch (extendedError: any) {
           // Fall back to basic insert
           console.warn('[users.ts] Extended insert failed, trying basic:', extendedError.message);
-          const created = await db.prepare(
-            'INSERT INTO users (anon_id, created_at) VALUES (?, ?)'
+          await db.prepare(
+            'INSERT OR IGNORE INTO users (anon_id, created_at) VALUES (?, ?)'
           ).bind(firebaseUid, now).run();
 
-            user = {
-            id: created?.meta?.last_row_id || created?.meta?.last_rowid,
+          const basicRow = await db.prepare(
+            'SELECT id, anon_id, created_at FROM users WHERE anon_id = ?'
+          ).bind(firebaseUid).first();
+          user = basicRow || {
+            id: undefined,
             anon_id: firebaseUid,
             created_at: now
           };
         }
       }
 
-      return new Response(JSON.stringify({ user, created: true }), {
+      return new Response(JSON.stringify({ user, created }), {
         headers: corsHeaders,
       });
     }
@@ -213,9 +221,7 @@ export async function onRequest(context: any) {
   } catch (err: any) {
     console.error('[users.ts] Error:', err.message, err.stack);
     return new Response(JSON.stringify({
-      error: err.message || String(err),
-      stack: err.stack,
-      hint: 'If this is a schema error, try calling /api/migrate first'
+      error: 'Internal server error'
     }), {
       status: 500,
       headers: corsHeaders,

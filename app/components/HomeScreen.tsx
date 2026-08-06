@@ -67,7 +67,10 @@ type ActivityItem = {
 
 const formatHoursAgo = (isoDate: string): string => {
   const delta = Date.now() - new Date(isoDate).getTime();
-  const hours = Math.max(1, Math.floor(delta / (1000 * 60 * 60)));
+  if (delta < 60 * 1000) return "just now";
+  const minutes = Math.floor(delta / (1000 * 60));
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(delta / (1000 * 60 * 60));
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
 };
@@ -108,9 +111,7 @@ export function HomeScreen() {
         if (!alive) return;
         const sessions = response.sessions || [];
         const recent = sessions.slice(0, 4).map((session) => ({
-          mode:
-            toModeCardName(session.mode) ||
-            "Therapist",
+          mode: toModeCardName(session.mode) || "Session",
           time: formatHoursAgo(session.created_at),
           risk:
             typeof session.ghost_risk === "number"
@@ -375,8 +376,8 @@ export function HomeScreen() {
           })}
         </div>
 
-        {/* Premium Banner (Temporarily Hidden) */}
-        {false && !isPremium && (
+        {/* Premium Banner */}
+        {!isPremium && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

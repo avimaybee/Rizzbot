@@ -62,12 +62,14 @@ const questions: QuizQuestion[] = [
 ];
 
 const profileFromAnswers = (answers: number[]): UserStyleProfile => {
+  // Q0 (reply speed) → responseSpeed; Q1 (emojis) → emojiUsage; Q2 (one-word reply) → averageLength
+  // Q3 (crush double-texts) → flirtLevel; Q4 (go-to opener) → humorStyle; Q5 (closing) → preferredTone
   const emojiUsage = ["heavy", "moderate", "minimal", "none"][answers[1] ?? 1] as UserStyleProfile["emojiUsage"];
   const averageLength = ["short", "medium", "short", "long"][answers[2] ?? 1] as UserStyleProfile["averageLength"];
-  const preferredTone = ["chill", "direct", "sweet", "playful"][answers[0] ?? 1] as UserStyleProfile["preferredTone"];
+  const preferredTone = ["casual", "warm", "direct", "playful"][answers[5] ?? 1] as UserStyleProfile["preferredTone"];
   const responseSpeed = ["normal", "normal", "slow", "instant"][answers[0] ?? 1] as UserStyleProfile["responseSpeed"];
-  const flirtLevel = ["moderate", "subtle", "subtle", "bold"][answers[3] ?? 1] as UserStyleProfile["flirtLevel"];
-  const humorStyle = ["dry", "playful", "sarcastic", "wholesome"][answers[4] ?? 1] as UserStyleProfile["humorStyle"];
+  const flirtLevel = ["bold", "moderate", "subtle", "moderate"][answers[3] ?? 1] as UserStyleProfile["flirtLevel"];
+  const humorStyle = ["wholesome", "dry", "sarcastic", "playful"][answers[4] ?? 1] as UserStyleProfile["humorStyle"];
 
   const signaturePatterns = [
     questions[4].options[answers[4] ?? 0],
@@ -139,9 +141,7 @@ const toDataUrl = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
-      const base64 = result.split(",")[1];
-      if (base64) resolve(base64);
+      if (typeof reader.result === "string") resolve(reader.result);
       else reject(new Error("Invalid image"));
     };
     reader.onerror = () => reject(reader.error || new Error("Unable to read file"));
@@ -277,7 +277,7 @@ export function MyVoiceScreen() {
             Start Quiz
           </button>
           <button
-            onClick={() => setMode("result")}
+            onClick={() => navigate("/home")}
             className="mt-5 fade-press cursor-pointer flex items-center justify-center gap-2"
             style={{
               backgroundColor: "#FDFAF5",
@@ -421,7 +421,13 @@ export function MyVoiceScreen() {
               {isLast ? "Finish →" : "Next →"}
             </button>
             <button
-              onClick={() => setMode("result")}
+              onClick={() => {
+                if (canAnalyze) {
+                  void analyzeWithAI();
+                } else {
+                  setMode("result");
+                }
+              }}
               className="cursor-pointer fade-press flex items-center justify-center gap-2"
               style={{
                 width: "100%",
@@ -438,7 +444,7 @@ export function MyVoiceScreen() {
               }}
             >
               <Sparkles size={16} color="#C8522A" />
-              Let AI analyze my texts instead
+              {isAnalyzing ? "Analyzing…" : "Let AI analyze my texts instead"}
             </button>
           </div>
         </div>
@@ -731,7 +737,7 @@ export function MyVoiceScreen() {
               {screenshots.map((img, idx) => (
                 <div key={idx} className="relative">
                   <img
-                    src={`data:image/png;base64,${img}`}
+                    src={img}
                     alt=""
                     style={{
                       width: "100%",

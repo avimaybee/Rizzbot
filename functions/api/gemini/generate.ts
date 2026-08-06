@@ -67,8 +67,11 @@ export async function onRequest(context: { env: any; request: Request; data?: an
 
       const isQuotaError = err?.status === 429 || String(err?.message).toLowerCase().includes("quota") || String(err?.message).toLowerCase().includes("resource_exhausted");
       const isOverloaded = err?.status === 503 || String(err?.message).toLowerCase().includes("overloaded") || String(err?.message).toLowerCase().includes("unavailable");
+      const isModelUnavailable = err?.status === 404 || String(err?.message).toLowerCase().includes("not found") || String(err?.message).toLowerCase().includes("model");
 
-      if (isQuotaError || isOverloaded) {
+      // Try the next model in the chain on quota/overload AND when a model is
+      // missing/deprecated (a renamed model should not kill the whole feature)
+      if (isQuotaError || isOverloaded || isModelUnavailable) {
         continue;
       }
 

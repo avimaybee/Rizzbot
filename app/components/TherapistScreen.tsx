@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import {
   ArrowRight,
   Camera,
+  CheckCircle,
   ChevronDown,
   ChevronLeft,
   ChevronUp,
@@ -379,9 +380,11 @@ export function TherapistScreen() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { authUser } = useAppContext();
+  // Keys are user-scoped so another account on the same device can't inherit this chat
+  const storagePrefix = `therapist_${authUser?.uid || "anon"}`;
   const [messages, setMessages] = useState<TherapistUiMessage[]>(() => {
     try {
-      const saved = localStorage.getItem("therapist_messages");
+      const saved = localStorage.getItem(`${storagePrefix}_messages`);
       if (saved) return normalizeMessages(JSON.parse(saved) as TherapistUiMessage[]);
     } catch {
       // ignore invalid cache
@@ -390,7 +393,7 @@ export function TherapistScreen() {
   });
   const [clinicalNotes, setClinicalNotes] = useState<ClinicalNotes>(() => {
     try {
-      const saved = localStorage.getItem("therapist_notes");
+      const saved = localStorage.getItem(`${storagePrefix}_notes`);
       if (saved) return JSON.parse(saved) as ClinicalNotes;
     } catch {
       // ignore invalid cache
@@ -398,7 +401,7 @@ export function TherapistScreen() {
     return DEFAULT_NOTES;
   });
   const [interactionId, setInteractionId] = useState<string | undefined>(
-    () => localStorage.getItem("therapist_interaction_id") || undefined
+    () => localStorage.getItem(`${storagePrefix}_interaction_id`) || undefined
   );
   const [inputValue, setInputValue] = useSessionState("therapist_input", "");
   const [pendingImages, setPendingImages] = useSessionState<string[]>("therapist_images", []);
@@ -481,16 +484,31 @@ export function TherapistScreen() {
     return () => resizeObserver.disconnect();
   }, []);
 
+  // Debounced persistence: save to localStorage + D1 at most once every 2s,
+  // and only when there are actual messages (skip the initial welcome-only state)
+  const saveTimerRef = useRef<number | null>(null);
   useEffect(() => {
-    localStorage.setItem("therapist_messages", JSON.stringify(messages));
-    localStorage.setItem("therapist_notes", JSON.stringify(clinicalNotes));
-    if (interactionId) {
-      localStorage.setItem("therapist_interaction_id", interactionId);
-    }
-    if (authUser?.uid && interactionId) {
-      void saveTherapistSession(authUser.uid, interactionId, messages, clinicalNotes);
-    }
-  }, [messages, clinicalNotes, interactionId, authUser?.uid]);
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(() => {
+      try {
+        localStorage.setItem(`${storagePrefix}_messages`, JSON.stringify(messages));
+        localStorage.setItem(`${storagePrefix}_notes`, JSON.stringify(clinicalNotes));
+      } catch {
+        // Quota exceeded — persist in-memory only
+      }
+      if (interactionId) {
+        try {
+          localStorage.setItem(`${storagePrefix}_interaction_id`, interactionId);
+        } catch { /* ignore */ }
+      }
+      if (authUser?.uid && interactionId && messages.some((m) => m.role === "user")) {
+        void saveTherapistSession(authUser.uid, interactionId, messages, clinicalNotes).catch(() => {});
+      }
+    }, 1500);
+    return () => {
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+    };
+  }, [messages, clinicalNotes, interactionId, authUser?.uid, storagePrefix]);
 
   const activeMemories = useMemo(
     () => ({
@@ -507,11 +525,30 @@ export function TherapistScreen() {
     setPendingExercise(null);
     setInputValue("");
     setPendingImages([]);
-    localStorage.removeItem("therapist_messages");
-    localStorage.removeItem("therapist_notes");
-    localStorage.removeItem("therapist_interaction_id");
+    localStorage.removeItem(`${storagePrefix}_messages`);
+    localStorage.removeItem(`${storagePrefix}_notes`);
+    localStorage.removeItem(`${storagePrefix}_interaction_id`);
     setShowSessionSheet(false);
     toast("Started a fresh session", "success");
+  };
+
+  const handleEndSession = () => {
+    if (authUser?.uid && interactionId) {
+      void saveTherapistSession(authUser.uid, interactionId, messages, clinicalNotes).catch(() => {});
+    }
+    localStorage.removeItem(`${storagePrefix}_messages`);
+    localStorage.removeItem(`${storagePrefix}_notes`);
+    localStorage.removeItem(`${storagePrefix}_interaction_id`);
+    setShowSessionSheet(false);
+    navigate("/therapist-close", {
+      state: {
+        workedOn: clinicalNotes.keyThemes?.length
+          ? clinicalNotes.keyThemes.map((t) => `Explored: ${t}`)
+          : undefined,
+        insight: clinicalNotes.customNotes || undefined,
+        attachmentStyle: clinicalNotes.attachmentStyle || undefined,
+      },
+    });
   };
 
   const handleLoadSession = (session: TherapistSession) => {
@@ -793,7 +830,7 @@ export function TherapistScreen() {
 
 
 
-        <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-5 relative" style={{ paddingBottom: composerHeight + BOTTOM_NAV_HEIGHT + CHAT_BOTTOM_BUFFER }}>
+        <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-5 relative" style={{ paddingBottom: `calc(${composerHeight + BOTTOM_NAV_HEIGHT + CHAT_BOTTOM_BUFFER}px + env(safe-area-inset-bottom))` }}>
           <AnimatePresence>
             {showScrollButton && (
               <motion.button
@@ -806,7 +843,7 @@ export function TherapistScreen() {
                 }}
                 className="fixed left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg border border-[#E8E0D4]"
                 style={{ 
-                  bottom: composerHeight + BOTTOM_NAV_HEIGHT + 20,
+                  bottom: `calc(${composerHeight + BOTTOM_NAV_HEIGHT + 20}px + env(safe-area-inset-bottom))`,
                   backgroundColor: "#C8522A",
                   color: "#FFFFFF",
                 }}
@@ -872,7 +909,12 @@ export function TherapistScreen() {
               onSkip={() => setPendingExercise(null)}
               onComplete={(payload) => {
                 setPendingExercise((prev) => (prev ? { ...prev, completed: true, result: payload } : prev));
-                setInputValue(`[Completed ${pendingExercise.type}] ${JSON.stringify(payload)}`);
+                // Send a clean summary instead of raw JSON so the conversation stays human
+                const summary =
+                  Array.isArray(payload)
+                    ? `I completed the ${pendingExercise.type.replace("_", " ")} exercise. Here's what I came up with: ${(payload as string[]).join(", ")}`
+                    : `I completed the ${pendingExercise.type.replace("_", " ")} exercise. Here's what I came up with: ${typeof payload === "object" && payload ? JSON.stringify(payload) : String(payload || "")}`;
+                void handleSend({ content: summary, inputType: "text" });
               }}
             />
           )}
@@ -913,7 +955,7 @@ export function TherapistScreen() {
         </div>
 
         {/* Fixed bottom area */}
-        <div ref={composerRef} className="fixed left-0 right-0 z-30" style={{ bottom: BOTTOM_NAV_HEIGHT }}>
+        <div ref={composerRef} className="fixed left-0 right-0 z-30" style={{ bottom: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom))` }}>
           <div className="max-w-[430px] mx-auto">
             {/* Input bar */}
             <div style={{ backgroundColor: "#FDFAF5", borderTop: "1px solid #E8E0D4" }}>
@@ -1140,6 +1182,25 @@ export function TherapistScreen() {
                       Start Fresh Session
                     </button>
 
+                    <button
+                      onClick={handleEndSession}
+                      className="w-full flex items-center justify-center gap-2 mb-4"
+                      style={{
+                        backgroundColor: "transparent",
+                        color: "#1A1208",
+                        borderRadius: 16,
+                        padding: "12px 16px",
+                        border: "1px solid #E8E0D4",
+                        fontFamily: "'DM Sans', sans-serif",
+                        fontSize: 14,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <CheckCircle size={16} color="#7A9E7E" />
+                      End Session
+                    </button>
+
                     <div className="space-y-3">
                       {sessions.slice().reverse().map((session) => {
                         const dateStr = session.created_at ? new Date(session.created_at).toLocaleDateString() : "Unknown Date";
@@ -1364,8 +1425,21 @@ export function TherapistScreen() {
       </AnimatePresence>
       {/* Transcript Review Modal */}
       {transcriptResult && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col gap-4">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          onClick={() => setTranscriptResult(null)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 12 }}
+            transition={{ type: "spring", bounce: 0.25, duration: 0.35 }}
+            className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col gap-4 max-h-[85dvh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="text-lg font-bold text-[#1A1208]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
               Review Transcript
             </h3>
@@ -1406,8 +1480,8 @@ export function TherapistScreen() {
                 Send Now
               </button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
     </motion.div >
   );

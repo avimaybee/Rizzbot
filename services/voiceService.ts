@@ -1,3 +1,5 @@
+import { getFirebaseToken } from "./firebaseService";
+
 export interface TranscriptionResponse {
   transcript: string;
   cleanedTranscript?: string;
@@ -18,8 +20,10 @@ export const transcribeAudio = async (
   formData.append('audio', audioBlob, 'recording.webm');
   formData.append('mode', mode);
 
+  const token = await getFirebaseToken();
   const response = await fetch('/api/voice/transcribe', {
     method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     body: formData,
   });
 

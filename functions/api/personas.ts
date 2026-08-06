@@ -32,7 +32,6 @@ export async function onRequest(context: any) {
     console.error('[personas.ts] D1 binding not found. Available env keys:', Object.keys(env));
     return new Response(JSON.stringify({
       error: 'D1 binding not found',
-      availableBindings: Object.keys(env).filter(k => !k.startsWith('__')),
       hint: 'Check Cloudflare Pages > Settings > Functions > D1 database bindings'
     }), {
       status: 500,

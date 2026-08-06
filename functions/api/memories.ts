@@ -94,10 +94,11 @@ export async function onRequest(context: any) {
 
             // We ignore client-provided user IDs and use the verified user context
             if (!dbUserId) {
-                // Auto-provision basic user row if it doesn't exist yet
+                // Auto-provision basic user row if it doesn't exist yet (race-safe)
                 try {
-                    const created = await db.prepare('INSERT INTO users (anon_id) VALUES (?)').bind(verifiedUid).run();
-                    dbUserId = created?.meta?.last_rowid || created?.meta?.last_row_id;
+                    await db.prepare('INSERT OR IGNORE INTO users (anon_id) VALUES (?)').bind(verifiedUid).run();
+                    const row = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(verifiedUid).first();
+                    dbUserId = row?.id;
                 } catch (userErr: any) {
                     console.error('[memories] Failed to create basic user for memory:', userErr.message);
                     return new Response(JSON.stringify({ error: 'Failed to mapped user identity' }), { status: 500, headers: corsHeaders });

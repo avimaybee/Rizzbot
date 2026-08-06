@@ -62,9 +62,18 @@ export async function onRequest(context: { env: any; request: Request; data?: an
         }
 
         let generationFinished = false;
+        let toolRounds = 0;
+        const MAX_TOOL_ROUNDS = 4;
 
         // Loop handles the case where Gemini returns a functionCall and waits for a response
         while (!generationFinished) {
+          if (toolRounds >= MAX_TOOL_ROUNDS) {
+            // A model that keeps emitting tool calls would otherwise loop forever
+            generationFinished = true;
+            break;
+          }
+          toolRounds++;
+
           const result = await ai.models.generateContentStream({
             model: modelId,
             contents: currentHistory,
@@ -134,8 +143,9 @@ export async function onRequest(context: { env: any; request: Request; data?: an
 
         const isQuotaError = err?.status === 429 || String(err?.message).toLowerCase().includes("quota") || String(err?.message).toLowerCase().includes("resource_exhausted");
         const isOverloaded = err?.status === 503 || String(err?.message).toLowerCase().includes("overloaded") || String(err?.message).toLowerCase().includes("unavailable");
+        const isModelUnavailable = err?.status === 404 || String(err?.message).toLowerCase().includes("not found") || String(err?.message).toLowerCase().includes("model");
 
-        if (!streamStarted && (isQuotaError || isOverloaded)) {
+        if (!streamStarted && (isQuotaError || isOverloaded || isModelUnavailable)) {
           continue; 
         }
 

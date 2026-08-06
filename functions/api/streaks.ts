@@ -78,26 +78,37 @@ export const onRequestPost = async (context: any) => {
   try {
     await ensureAppSchema(db);
 
+    // Compute the user's local calendar date (defaults to UTC when offset is absent)
+    const getLocalDate = (offsetMin: number): string => {
+      const now = new Date();
+      const utcMs = now.getTime() + now.getTimezoneOffset() * 60 * 1000;
+      const local = new Date(utcMs + offsetMin * 60 * 1000);
+      return local.toISOString().split('T')[0];
+    };
+
+    const body: any = await context.request.json().catch(() => ({}));
+    const tzOffsetMin = parseInt(body.tz_offset_min || '0', 10) || 0;
+
     const user = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(verifiedUid).first();
     if (!user) {
-      const todayForNewUser = new Date().toISOString().split('T')[0];
-      await db.prepare('INSERT INTO users (anon_id) VALUES (?)').bind(verifiedUid).run();
+      const todayForNewUser = getLocalDate(tzOffsetMin);
+      await db.prepare('INSERT OR IGNORE INTO users (anon_id) VALUES (?)').bind(verifiedUid).run();
       const newUser = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(verifiedUid).first();
       if (!newUser) {
         throw new Error(`Failed to create user for anon_id: ${verifiedUid}`);
       }
       await db
-        .prepare('INSERT INTO streaks (user_id, current_streak, longest_streak, last_active_date) VALUES (?, 1, 1, ?)')
+        .prepare('INSERT OR IGNORE INTO streaks (user_id, current_streak, longest_streak, last_active_date) VALUES (?, 1, 1, ?)')
         .bind(newUser.id, todayForNewUser)
         .run();
       return new Response(JSON.stringify({ streak: { current_streak: 1, longest_streak: 1, last_active_date: todayForNewUser } }), { headers: corsHeaders });
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDate(tzOffsetMin);
     const existing = await db.prepare('SELECT current_streak, longest_streak, last_active_date FROM streaks WHERE user_id = ?').bind(user.id).first() as any;
 
     if (!existing) {
-      await db.prepare('INSERT INTO streaks (user_id, current_streak, longest_streak, last_active_date) VALUES (?, 1, 1, ?)').bind(user.id, today).run();
+      await db.prepare('INSERT OR IGNORE INTO streaks (user_id, current_streak, longest_streak, last_active_date) VALUES (?, 1, 1, ?)').bind(user.id, today).run();
       return new Response(JSON.stringify({ streak: { current_streak: 1, longest_streak: 1, last_active_date: today } }), { headers: corsHeaders });
     }
 
@@ -105,9 +116,9 @@ export const onRequestPost = async (context: any) => {
       return new Response(JSON.stringify({ streak: existing }), { headers: corsHeaders });
     }
 
-    const lastDate = new Date(existing.last_active_date);
-    const todayDate = new Date(today);
-    const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+    const lastDate = new Date(existing.last_active_date + 'T00:00:00Z');
+    const todayDate = new Date(today + 'T00:00:00Z');
+    const diffDays = Math.max(0, Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)));
 
     let newStreak: number;
     if (diffDays === 1) {

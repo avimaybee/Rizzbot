@@ -242,10 +242,12 @@ export interface FeedbackStats {
   // Per-type ratings
   smoothRatings: { helpful: number; mid: number; off: number };
   boldRatings: { helpful: number; mid: number; off: number };
+  wittyRatings: { helpful: number; mid: number; off: number };
   authenticRatings: { helpful: number; mid: number; off: number };
   safeRatings: { helpful: number; mid: number; off: number };
   spicyRatings: { helpful: number; mid: number; off: number };
   youRatings: { helpful: number; mid: number; off: number };
+  yourStyleRatings: { helpful: number; mid: number; off: number };
   // Derived insights
   prefersBold: boolean; // Bold suggestions rated helpful more than off
   prefersConservative: boolean; // Safe suggestions rated higher than spicy
