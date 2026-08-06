@@ -777,6 +777,16 @@ export function PracticeScreen() {
                     ))}
                   </div>
                 )}
+                {showVoiceRecorder ? (
+                  <VoiceRecorder
+                    mode="practice"
+                    onCancel={() => setShowVoiceRecorder(false)}
+                    onTranscriptionComplete={(result) => {
+                      setTranscriptResult(result);
+                      setShowVoiceRecorder(false);
+                    }}
+                  />
+                ) : (
                 <div className="flex w-full items-end gap-2">
                   <button
                     type="button"
@@ -850,6 +860,7 @@ export function PracticeScreen() {
                     <ArrowRight size={18} strokeWidth={2} />
                   </button>
                 </div>
+                )}
               </div>
             </div>
           </div>
@@ -1056,17 +1067,6 @@ export function PracticeScreen() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {showVoiceRecorder && (
-          <VoiceRecorder
-            mode="practice"
-            onCancel={() => setShowVoiceRecorder(false)}
-            onTranscriptionComplete={(result) => {
-              setTranscriptResult(result);
-              setShowVoiceRecorder(false);
-            }}
-          />
-        )}
-
         {transcriptResult && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
             <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col gap-4">

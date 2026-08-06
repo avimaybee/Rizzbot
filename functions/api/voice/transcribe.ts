@@ -50,7 +50,7 @@ export async function onRequest(context: { env: any; request: Request }) {
       practice: `Transcribe this voice note accurately. If the user is brainstorming a text reply, extract the intended message as draftText. If the user is venting or explaining context, return contextSummary. Return JSON with: transcript, draftText, contextSummary, confidenceNote, needsUserConfirmation.`
     };
 
-    const MODELS = ["gemini-2.0-flash-lite", "gemini-2.0-flash"];
+    const MODELS = ["gemini-3.5-flash-lite", "gemini-3.5-flash-lite"];
     let lastError: any = null;
 
     for (const modelId of MODELS) {

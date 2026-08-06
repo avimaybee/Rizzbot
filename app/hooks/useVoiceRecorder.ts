@@ -7,7 +7,7 @@ export interface UseVoiceRecorderReturn {
   error: string | null;
   volume: number;
   startRecording: () => Promise<void>;
-  stopRecording: () => void;
+  stopRecording: () => Promise<Blob | null>;
   clearRecording: () => void;
 }
 
@@ -19,6 +19,8 @@ export const useVoiceRecorder = (): UseVoiceRecorderReturn => {
   const [volume, setVolume] = useState(0);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const mimeTypeRef = useRef<string>('audio/webm');
   const timerRef = useRef<number | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -27,10 +29,10 @@ export const useVoiceRecorder = (): UseVoiceRecorderReturn => {
 
   const updateVolume = useCallback(() => {
     if (!analyserRef.current || !mediaRecorderRef.current) return;
-    
+
     const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
     analyserRef.current.getByteFrequencyData(dataArray);
-    
+
     let sum = 0;
     for (let i = 0; i < dataArray.length; i++) {
         sum += dataArray[i];
@@ -38,7 +40,7 @@ export const useVoiceRecorder = (): UseVoiceRecorderReturn => {
     const average = sum / dataArray.length;
     // Map average amplitude to 0-100
     setVolume(Math.min(100, (average / 128) * 100));
-    
+
     animationFrameRef.current = requestAnimationFrame(updateVolume);
   }, []);
 
@@ -49,11 +51,13 @@ export const useVoiceRecorder = (): UseVoiceRecorderReturn => {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
+      streamRef.current = stream;
+
       // Determine supported MIME type
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
         : 'audio/mp4';
+      mimeTypeRef.current = mimeType;
 
       const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
@@ -64,17 +68,10 @@ export const useVoiceRecorder = (): UseVoiceRecorderReturn => {
         }
       };
 
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        setAudioBlob(blob);
-        // Stop all tracks to release the microphone
-        stream.getTracks().forEach(track => track.stop());
-      };
-
       mediaRecorder.start();
       setIsRecording(true);
       setRecordingTime(0);
-      
+
       // Setup Volume Monitoring
       const AudioContextClass = (window.AudioContext || (window as any).webkitAudioContext);
       const audioContext = new AudioContextClass();
@@ -98,27 +95,42 @@ export const useVoiceRecorder = (): UseVoiceRecorderReturn => {
         setError('Could not access microphone');
       }
     }
-  }, []);
+  }, [updateVolume]);
 
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
+  const stopRecording = useCallback((): Promise<Blob | null> => {
+    return new Promise((resolve) => {
+      const recorder = mediaRecorderRef.current;
+      if (!recorder || !isRecording) {
+        resolve(audioBlob ?? null);
+        return;
+      }
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: mimeTypeRef.current });
+        setAudioBlob(blob);
+        // Stop all tracks to release the microphone
+        streamRef.current?.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
+        }
+        if (audioContextRef.current) {
+          audioContextRef.current.close().catch(console.error);
+          audioContextRef.current = null;
+        }
+        setVolume(0);
+        resolve(blob);
+      };
+
+      recorder.stop();
       setIsRecording(false);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close().catch(console.error);
-        audioContextRef.current = null;
-      }
-      setVolume(0);
-    }
-  }, [isRecording]);
+    });
+  }, [isRecording, audioBlob]);
 
   const clearRecording = useCallback(() => {
     setAudioBlob(null);

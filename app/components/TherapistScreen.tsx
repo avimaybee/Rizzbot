@@ -950,6 +950,16 @@ export function TherapistScreen() {
                   </div>
                 )}
 
+                {showVoiceRecorder ? (
+                  <VoiceRecorder
+                    mode="therapist"
+                    onCancel={() => setShowVoiceRecorder(false)}
+                    onTranscriptionComplete={(result) => {
+                      setTranscriptResult(result);
+                      setShowVoiceRecorder(false);
+                    }}
+                  />
+                ) : (
                 <div className="flex w-full items-center gap-2">
                   <input
                     ref={fileInputRef}
@@ -1048,6 +1058,7 @@ export function TherapistScreen() {
                     </button>
                   </div>
                 </div>
+                )}
               </div>
             </div>
           </div>
@@ -1351,18 +1362,6 @@ export function TherapistScreen() {
           </>
         )}
       </AnimatePresence>
-      {/* Voice Recorder Overlay */}
-      {showVoiceRecorder && (
-        <VoiceRecorder
-          mode="therapist"
-          onCancel={() => setShowVoiceRecorder(false)}
-          onTranscriptionComplete={(result) => {
-            setTranscriptResult(result);
-            setShowVoiceRecorder(false);
-          }}
-        />
-      )}
-
       {/* Transcript Review Modal */}
       {transcriptResult && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">

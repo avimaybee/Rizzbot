@@ -27,7 +27,7 @@ export async function onRequest(context: { env: any; request: Request; data?: an
   const body = await request.json() as any;
   const { modelChain, contents, systemInstruction, tools, safetySettings, config: incomingConfig } = body;
 
-  const MODELS = modelChain || ["gemini-3.1-flash-lite-preview", "gemini-2.5-flash-lite"];
+  const MODELS = modelChain || ["gemini-3.5-flash-lite", "gemini-2.5-flash-lite"];
 
   let lastError: any = null;
 

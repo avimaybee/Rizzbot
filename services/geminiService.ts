@@ -58,13 +58,13 @@ async function retryWithBackoff<T>(
 
 // --- MODEL CHAINS ---
 const QUICK_MODE_MODELS = [
+  "gemini-3.5-flash-lite", 
   "gemini-3-flash-preview", 
-  "gemini-3.1-flash-lite-preview", 
   "gemini-2.5-flash"
 ];
 
 const THERAPIST_MODELS = [
-  "gemini-3.1-flash-lite-preview", 
+  "gemini-3.5-flash-lite", 
   "gemini-2.5-flash-lite"
 ];
 

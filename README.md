@@ -53,7 +53,7 @@ Teach Rizzbot how *you* actually text so it never sounds like a bot.
 ## 🛠️ Technical Stack
 *   **Frontend:** React 19, TypeScript, Vite.
 *   **Styling:** Modern Vanilla CSS + Tailwind CSS utilities.
-*   **AI Engine:** Google Gemini SDK (`gemini-3-flash-preview`).
+*   **AI Engine:** Google Gemini SDK (`gemini-3.5-flash-lite`).
 *   **Infrastructure:** Cloudflare Pages (Hosting) + Cloudflare Workers (API Layer).
 *   **AI Architecture:** Multi-tier Model Fallback (Flash Lite → Flash → Pro) with automated `retryWithBackoff` (Exponential/Jitter).
 *   **Storage:** Cloudflare D1 (SQLite) for high-performance session persistence.
