@@ -604,6 +604,7 @@ export const getQuickAdvice = async (
 
   // Build context description with specific guidance
   const contextMap: Record<string, string> = {
+    'stranger': 'cold open / just met / no prior connection',
     'new': 'just started talking / early stages',
     'talking': 'been talking for a while / talking stage',
     'dating': 'officially dating / in a relationship',
@@ -614,6 +615,7 @@ export const getQuickAdvice = async (
 
   // Situation-specific advice guidelines
   const situationGuidelines: Record<string, string> = {
+    'stranger': 'STRANGER RULES: Cold open / just met with zero investment. Keep it low-pressure and playful — they owe you nothing yet. Lead with a light hook or a genuine observation, dont over-invest, and give them an easy lane to respond. Spark curiosity without expecting a reply.',
     'new': 'EARLY STAGE RULES: Get to know them genuinely. Show real curiosity. Be yourself - its the only way to find out if you actually vibe. First impressions should be authentic you.',
     'talking': 'TALKING STAGE RULES: Build real connection through consistent engagement. Share about yourself too (mutual self-disclosure). Look for reciprocity - are they matching your energy?',
     'dating': 'RELATIONSHIP RULES: You can be more direct and vulnerable. Deeper conversations welcomed. Authentic > playing it cool. Keep growing the connection.',

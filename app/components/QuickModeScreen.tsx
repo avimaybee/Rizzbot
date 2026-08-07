@@ -57,6 +57,7 @@ const feedbackTypeMap: Record<Tone, string> = {
 };
 
 const contextOptions = [
+  { value: "stranger", label: "STRANGER" },
   { value: "new", label: "NEW" },
   { value: "talking", label: "TALKING" },
   { value: "dating", label: "DATING" },

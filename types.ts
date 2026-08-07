@@ -119,7 +119,7 @@ export interface StyleExtractionResponse {
 export interface QuickAdviceRequest {
   theirMessage: string; // What they sent
   yourDraft?: string; // Optional: what you're thinking of saying
-  context?: 'new' | 'talking' | 'dating' | 'complicated' | 'ex' | 'friends';
+  context?: 'stranger' | 'new' | 'talking' | 'dating' | 'complicated' | 'ex' | 'friends';
   userStyle?: UserStyleProfile; // If available from onboarding
   screenshots?: string[]; // Optional: screenshots of the conversation
   userId?: string; // Optional: user ID for feedback biasing
