@@ -44,9 +44,9 @@ export function TacticalReportScreen() {
     return (
       <div className="relative min-h-screen pb-[72px]" style={{ backgroundColor: "#F5EFE6" }}>
         <GrainOverlay />
-        <div className="relative z-10 px-5 pt-6 max-w-[430px] mx-auto">
+        <div className="relative z-10 px-5 pt-4 max-w-[430px] mx-auto">
           <div className="flex items-center justify-between">
-            <button onClick={() => navigate("/practice")} className="cursor-pointer p-1">
+            <button onClick={() => navigate("/practice")} className="cursor-pointer flex items-center justify-center" style={{ width: 44, height: 44 }}>
               <ChevronLeft size={24} strokeWidth={1.8} color="#1A1208" />
             </button>
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 17, fontWeight: 600, color: "#1A1208" }}>
@@ -55,13 +55,13 @@ export function TacticalReportScreen() {
             <div style={{ width: 32 }} />
           </div>
           <div
-            className="mt-16 flex flex-col items-center text-center"
-            style={{ backgroundColor: "#FDFAF5", borderRadius: 24, padding: "40px 24px" }}
+            className="mt-8 flex flex-col items-center text-center"
+            style={{ backgroundColor: "#FDFAF5", borderRadius: 20, padding: "28px 20px" }}
           >
-            <Target size={28} strokeWidth={1.6} color="#C8522A" />
+            <Target size={24} strokeWidth={1.6} color="#C8522A" />
             <p
-              className="mt-4"
-              style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontStyle: "italic", color: "#1A1208", lineHeight: 1.2 }}
+              className="mt-3"
+              style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontStyle: "italic", color: "#1A1208", lineHeight: 1.2 }}
             >
               No report yet
             </p>
@@ -70,10 +70,10 @@ export function TacticalReportScreen() {
             </p>
             <button
               onClick={() => navigate("/practice")}
-              className="mt-6"
+              className="mt-5"
               style={{
-                height: 48,
-                padding: "0 28px",
+                height: 44,
+                padding: "0 24px",
                 borderRadius: 100,
                 border: "none",
                 backgroundColor: "#C8522A",
@@ -126,9 +126,9 @@ export function TacticalReportScreen() {
   return (
     <div className="relative min-h-screen pb-[72px]" style={{ backgroundColor: "#F5EFE6" }}>
       <GrainOverlay />
-      <div className="relative z-10 px-5 pt-6 max-w-[430px] mx-auto">
+      <div className="relative z-10 px-5 pt-4 max-w-[430px] mx-auto">
         <div className="flex items-center justify-between">
-          <button onClick={() => navigate("/practice")} className="cursor-pointer p-1">
+          <button onClick={() => navigate("/practice")} className="cursor-pointer flex items-center justify-center" style={{ width: 44, height: 44 }}>
             <ChevronLeft size={24} strokeWidth={1.8} color="#1A1208" />
           </button>
           <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 17, fontWeight: 600, color: "#1A1208" }}>
@@ -141,13 +141,13 @@ export function TacticalReportScreen() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="mt-8 flex flex-col items-center"
+          className="mt-6 flex flex-col items-center"
         >
           <div
             className="flex flex-col items-center justify-center"
             style={{
-              width: 120,
-              height: 120,
+              width: 104,
+              height: 104,
               borderRadius: "50%",
               backgroundColor: "#F5E8E0",
               border: "3px solid #C8522A",
@@ -156,7 +156,7 @@ export function TacticalReportScreen() {
             <p
               style={{
                 fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 36,
+                fontSize: 32,
                 fontWeight: 500,
                 color: "#C8522A",
                 lineHeight: 1,
@@ -169,7 +169,7 @@ export function TacticalReportScreen() {
             </p>
           </div>
 
-          <p className="mt-4" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 700, fontStyle: "italic", color: "#1A1208" }}>
+          <p className="mt-3" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 700, fontStyle: "italic", color: "#1A1208" }}>
             {analysis.headline}
           </p>
 
@@ -191,18 +191,18 @@ export function TacticalReportScreen() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.15 }}
-          className="mt-6"
+          className="mt-5"
           style={{
             backgroundColor: "#FDFAF5",
             borderRadius: 20,
             boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)",
-            padding: 20,
+            padding: 16,
           }}
         >
-          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.15em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase", marginBottom: 16 }}>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.15em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase", marginBottom: 12 }}>
             Breakdown
           </p>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             {scores.map((score, i) => (
               <div key={score.label}>
                 <div className="flex items-center justify-between mb-2">
@@ -230,22 +230,22 @@ export function TacticalReportScreen() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="mt-4"
+          className="mt-3"
           style={{
             backgroundColor: "#FDFAF5",
             borderRadius: 20,
             boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)",
-            padding: 20,
+            padding: 16,
           }}
         >
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-2">
             <CheckCircle size={16} strokeWidth={1.8} color="#7A9E7E" />
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.15em", color: "#7A9E7E", textTransform: "uppercase" }}>
               What worked
             </p>
           </div>
           {wins.map((win, i) => (
-            <p key={i} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "#1A1208", marginBottom: 8, lineHeight: 1.5 }}>
+            <p key={i} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "#1A1208", marginBottom: 6, lineHeight: 1.5 }}>
               • {win}
             </p>
           ))}
@@ -255,22 +255,22 @@ export function TacticalReportScreen() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="mt-4"
+          className="mt-3"
           style={{
             backgroundColor: "#FDFAF5",
             borderRadius: 20,
             boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)",
-            padding: 20,
+            padding: 16,
           }}
         >
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-2">
             <TrendingUp size={16} strokeWidth={1.8} color="#C8522A" />
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.15em", color: "#C8522A", textTransform: "uppercase" }}>
               Next improvements
             </p>
           </div>
           {improvements.map((tip, i) => (
-            <p key={i} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "#1A1208", marginBottom: 8, lineHeight: 1.5 }}>
+            <p key={i} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "#1A1208", marginBottom: 6, lineHeight: 1.5 }}>
               • {tip}
             </p>
           ))}
@@ -280,12 +280,12 @@ export function TacticalReportScreen() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.6 }}
-          className="mt-6 flex flex-col gap-3"
+          className="mt-5 flex flex-col gap-2"
         >
           <button
             onClick={() => navigate("/practice")}
             style={{
-              height: 56,
+              height: 52,
               borderRadius: 100,
               backgroundColor: "#C8522A",
               color: "#FFFFFF",
@@ -301,7 +301,7 @@ export function TacticalReportScreen() {
           <button
             onClick={() => navigate("/therapist")}
             style={{
-              height: 56,
+              height: 52,
               borderRadius: 100,
               backgroundColor: "transparent",
               border: "1px solid #C8522A",

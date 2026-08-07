@@ -3,6 +3,7 @@ import { ChevronLeft, Check, X, Shield, AlertCircle, Search } from "lucide-react
 import { useNavigate } from "react-router";
 import { getAdminPayments, updatePaymentStatus } from "../../services/dbService";
 import { GrainOverlay } from "./GrainOverlay";
+import { formatTimeAgo } from "../utils/formatTime";
 
 export function AdminPaymentsScreen() {
     const navigate = useNavigate();
@@ -114,7 +115,7 @@ export function AdminPaymentsScreen() {
                                     <div>
                                         <p className="text-xs text-[#1A1208]/60 font-medium">{p.user_email}</p>
                                         <p className="text-[10px] text-[#1A1208]/40 font-bold mt-0.5">
-                                            {new Date(p.created_at).toLocaleString()}
+                                            {formatTimeAgo(p.created_at)}
                                         </p>
                                     </div>
 

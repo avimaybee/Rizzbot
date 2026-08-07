@@ -41,6 +41,7 @@ import {
 import { streamTherapistAdvice } from "../../services/geminiService";
 import { ClinicalNotes, ExerciseType, TherapistExercise } from "../../types";
 import { useScrollFade } from "../utils/useScrollFade";
+import { formatShortDate, formatTimeAgo } from "../utils/formatTime";
 
 type TherapistUiMessage = {
   role: "user" | "therapist";
@@ -106,20 +107,15 @@ const toDataUrl = (file: File): Promise<string> =>
     reader.readAsDataURL(file);
   });
 
-const formatAgo = (isoDate: string) => {
-  const delta = Date.now() - new Date(isoDate).getTime();
-  const hours = Math.max(1, Math.floor(delta / (1000 * 60 * 60)));
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-};
+const formatAgo = (isoDate: string) => formatTimeAgo(isoDate);
 
 function InsightCard({ title, body }: { title: string; body: string }) {
   return (
-    <div className="my-3 overflow-hidden" style={{ backgroundColor: '#FDFAF5', borderRadius: 20, boxShadow: '0 2px 16px rgba(26,18,8,0.07)' }}>
+    <div className="my-2 overflow-hidden" style={{ backgroundColor: '#FDFAF5', borderRadius: 18, boxShadow: '0 2px 16px rgba(26,18,8,0.07)' }}>
       <div className="flex">
         <div style={{ width: 3, backgroundColor: '#C8522A', flexShrink: 0 }} />
-        <div className="p-4 flex-1">
-          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#C8522A', marginBottom: 8 }}>
+        <div className="p-3 flex-1">
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#C8522A', marginBottom: 6 }}>
             {title}
           </p>
           <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: '#1A1208', lineHeight: 1.5 }}>
@@ -767,7 +763,7 @@ export function TherapistScreen() {
 
       <div className="relative z-10 max-w-[430px] mx-auto flex flex-col min-h-screen w-full">
         {/* Sticky Header */}
-        <div className="sticky top-0 z-40 flex items-center justify-between px-5 pt-6 pb-2 relative" style={{ backgroundColor: "#F5EFE6" }}>
+        <div className="sticky top-0 z-40 flex items-center justify-between px-5 pt-4 pb-2 relative" style={{ backgroundColor: "#F5EFE6" }}>
           <button
             onClick={() => navigate("/home")}
             className="cursor-pointer flex items-center justify-center fade-press relative z-10"
@@ -823,7 +819,7 @@ export function TherapistScreen() {
           <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 22, fontWeight: 400, color: "rgba(26,18,8,0.55)", lineHeight: 1.3 }}>
             What's on
           </p>
-          <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, fontWeight: 700, fontStyle: "italic", color: "#1A1208", lineHeight: 1.2 }}>
+          <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 700, fontStyle: "italic", color: "#1A1208", lineHeight: 1.2 }}>
             your mind?
           </p>
         </div>
@@ -959,7 +955,7 @@ export function TherapistScreen() {
           <div className="max-w-[430px] mx-auto">
             {/* Input bar */}
             <div style={{ backgroundColor: "#FDFAF5", borderTop: "1px solid #E8E0D4" }}>
-              <div className="px-4 py-3">
+              <div className="px-3 py-2">
                 {pendingImages.length > 0 && (
                   <div 
                     ref={pendingFade.ref}
@@ -1049,7 +1045,7 @@ export function TherapistScreen() {
                       }}
                       placeholder="Type a message..."
                       rows={1}
-                      className="flex-1 w-full min-w-0 min-h-[44px] max-h-[120px] rounded-[22px] border border-transparent bg-[#F5EFE6] px-4 py-[11px] text-[15px] text-[#1A1208] outline-none resize-none overflow-y-auto transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20"
+                      className="flex-1 w-full min-w-0 min-h-[44px] max-h-[120px] rounded-[22px] border border-transparent bg-[#F5EFE6] px-3 py-2 text-[15px] text-[#1A1208] outline-none resize-none overflow-y-auto transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20"
                       style={{
                         fontFamily: "'DM Sans', sans-serif",
                         lineHeight: "1.4",
@@ -1137,8 +1133,8 @@ export function TherapistScreen() {
                 className="max-w-[430px] mx-auto flex flex-col h-full"
                 style={{
                   backgroundColor: "#FDFAF5",
-                  borderTopLeftRadius: 32,
-                  borderTopRightRadius: 32,
+                  borderTopLeftRadius: 24,
+                  borderTopRightRadius: 24,
                   boxShadow: "0 -8px 40px rgba(26,18,8,0.15)",
                   maxHeight: "85vh",
                 }}
@@ -1147,8 +1143,8 @@ export function TherapistScreen() {
                   <div style={{ width: 36, height: 4, borderRadius: 100, backgroundColor: "rgba(26,18,8,0.12)" }} />
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-5 pb-6">
-                  <div className="flex items-center justify-between py-4 mb-2 sticky top-0 bg-[#FDFAF5] z-10">
+                <div className="flex-1 overflow-y-auto px-5 pb-4">
+                  <div className="flex items-center justify-between py-3 mb-1 sticky top-0 bg-[#FDFAF5] z-10">
                     <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 18, fontWeight: 600, color: "#1A1208" }}>
                       Session History
                     </p>
@@ -1161,15 +1157,15 @@ export function TherapistScreen() {
                     </button>
                   </div>
 
-                  <div className="mb-4">
+                  <div className="mb-3">
                     <button
                       onClick={handleNewSession}
-                      className="w-full flex items-center justify-center gap-2 mb-4"
+                      className="w-full flex items-center justify-center gap-2 mb-3"
                       style={{
                         backgroundColor: "#C8522A",
                         color: "#FFFFFF",
                         borderRadius: 16,
-                        padding: "14px 16px",
+                        padding: "12px 16px",
                         border: "none",
                         fontFamily: "'DM Sans', sans-serif",
                         fontSize: 15,
@@ -1184,12 +1180,12 @@ export function TherapistScreen() {
 
                     <button
                       onClick={handleEndSession}
-                      className="w-full flex items-center justify-center gap-2 mb-4"
+                      className="w-full flex items-center justify-center gap-2 mb-3"
                       style={{
                         backgroundColor: "transparent",
                         color: "#1A1208",
                         borderRadius: 16,
-                        padding: "12px 16px",
+                        padding: "10px 16px",
                         border: "1px solid #E8E0D4",
                         fontFamily: "'DM Sans', sans-serif",
                         fontSize: 14,
@@ -1201,9 +1197,9 @@ export function TherapistScreen() {
                       End Session
                     </button>
 
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {sessions.slice().reverse().map((session) => {
-                        const dateStr = session.created_at ? new Date(session.created_at).toLocaleDateString() : "Unknown Date";
+                        const dateStr = session.created_at ? formatShortDate(session.created_at) : "Unknown Date";
                         const msgCount = Array.isArray(session.messages) ? session.messages.filter((m: any) => m.role === "user").length : 0;
                         const isCurrent = session.interaction_id === interactionId;
                         const notes = session.clinical_notes as ClinicalNotes | undefined;
@@ -1216,8 +1212,8 @@ export function TherapistScreen() {
                             style={{
                               backgroundColor: isCurrent ? "#FDF0F0" : "#FFFFFF",
                               border: isCurrent ? "1px solid #C8522A" : "1px solid #E8E0D4",
-                              borderRadius: 16,
-                              padding: "14px 16px",
+                              borderRadius: 14,
+                              padding: "12px 14px",
                               cursor: "pointer",
                             }}
                           >
@@ -1281,8 +1277,8 @@ export function TherapistScreen() {
                 className="max-w-[430px] mx-auto flex flex-col h-full"
                 style={{
                   backgroundColor: "#FDFAF5",
-                  borderTopLeftRadius: 32,
-                  borderTopRightRadius: 32,
+                  borderTopLeftRadius: 24,
+                  borderTopRightRadius: 24,
                   boxShadow: "0 -8px 40px rgba(26,18,8,0.15)",
                   maxHeight: "85vh",
                 }}
@@ -1292,9 +1288,9 @@ export function TherapistScreen() {
                   <div style={{ width: 36, height: 4, borderRadius: 100, backgroundColor: "rgba(26,18,8,0.12)" }} />
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-5 pb-6">
+                <div className="flex-1 overflow-y-auto px-5 pb-4">
                   {/* Drawer Title & Header */}
-                  <div className="flex items-center justify-between py-4 mb-2 sticky top-0 bg-[#FDFAF5] z-10">
+                  <div className="flex items-center justify-between py-3 mb-1 sticky top-0 bg-[#FDFAF5] z-10">
                     <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 18, fontWeight: 600, color: "#1A1208" }}>
                       Session Insights
                     </p>
@@ -1308,11 +1304,11 @@ export function TherapistScreen() {
                   </div>
 
                   {/* Snapshot Section */}
-                  <div className="mb-8 p-4 cursor-pointer" onClick={() => setInsightsOpen(true)} style={{ backgroundColor: "#FFFFFF", border: "1px solid #E8E0D4", borderRadius: 20 }}>
-                    <p className="mb-3" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(26,18,8,0.4)" }}>
+                  <div className="mb-6 p-4 cursor-pointer" onClick={() => setInsightsOpen(true)} style={{ backgroundColor: "#FFFFFF", border: "1px solid #E8E0D4", borderRadius: 18 }}>
+                    <p className="mb-2" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(26,18,8,0.4)" }}>
                       Current Context
                     </p>
-                    <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="grid grid-cols-2 gap-2 mb-3">
                       <div className="p-3" style={{ backgroundColor: "#FDF0F0", borderRadius: 14 }}>
                         <p style={{ fontSize: 11, color: "rgba(212,131,138,0.7)" }}>Attachment Style</p>
                         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: "#1A1208", textTransform: "capitalize" }}>
@@ -1341,8 +1337,8 @@ export function TherapistScreen() {
                   </div>
 
                   {/* Memories Section */}
-                  <div className="mb-8">
-                    <div className="flex items-center justify-between mb-4">
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <MemoryStick size={16} color="#C8522A" />
                         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
@@ -1354,12 +1350,12 @@ export function TherapistScreen() {
                       </span>
                     </div>
 
-                    <div className="space-y-4 mb-4">
+                    <div className="space-y-3 mb-3">
                       <textarea
                         value={memoryDraft}
                         onChange={(e) => setMemoryDraft(e.target.value)}
                         placeholder="Save a key fact or pattern..."
-                        className="w-full min-h-[80px] rounded-[16px] border border-[#E8E0D4] p-3.5 text-[15px] bg-[#FFFFFF] outline-none resize-none transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
+                        className="w-full min-h-[64px] rounded-[16px] border border-[#E8E0D4] p-3 text-[15px] bg-[#FFFFFF] outline-none resize-none transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
                         style={{ fontFamily: "'DM Sans', sans-serif", lineHeight: "1.4" }}
                       />
                       <div className="flex items-center gap-2">
@@ -1368,7 +1364,7 @@ export function TherapistScreen() {
                           disabled={!memoryDraft.trim()}
                           style={{
                             flex: 1,
-                            height: 48,
+                            height: 44,
                             borderRadius: 100,
                             border: "none",
                             backgroundColor: "#C8522A",
@@ -1386,7 +1382,7 @@ export function TherapistScreen() {
                       </div>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {memories.slice().reverse().map((memory) => (
                         <MemoryItem key={memory.id} memory={memory} onUpdate={handleUpdateMemory} onDelete={handleDeleteMemory} />
                       ))}
@@ -1395,8 +1391,8 @@ export function TherapistScreen() {
 
                   {/* Insights Section */}
                   {clinicalNotes.actionItems.length > 0 && (
-                    <div className="pb-10">
-                      <div className="flex items-center gap-2 mb-4">
+                    <div className="pb-6">
+                      <div className="flex items-center gap-2 mb-3">
                         <Sparkles size={16} color="#C8522A" />
                         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
                           Suggested Focus
@@ -1437,7 +1433,7 @@ export function TherapistScreen() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 12 }}
             transition={{ type: "spring", bounce: 0.25, duration: 0.35 }}
-            className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col gap-4 max-h-[85dvh] overflow-y-auto"
+            className="bg-white rounded-3xl p-5 w-full max-w-md shadow-2xl flex flex-col gap-3 max-h-[85dvh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-bold text-[#1A1208]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
@@ -1445,7 +1441,7 @@ export function TherapistScreen() {
             </h3>
             
             <textarea
-              className="w-full p-4 bg-[#F9F7F4] border border-[#E8E0D4] rounded-2xl text-[15px] text-[#1A1208] outline-none resize-none min-h-[120px]"
+              className="w-full p-3 bg-[#F9F7F4] border border-[#E8E0D4] rounded-2xl text-[15px] text-[#1A1208] outline-none resize-none min-h-[80px]"
               style={{ fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5 }}
               value={transcriptResult.cleanedTranscript || transcriptResult.transcript}
               onChange={(e) => setTranscriptResult({ ...transcriptResult, cleanedTranscript: e.target.value })}

@@ -247,16 +247,16 @@ export function MyVoiceScreen() {
 
   if (mode === "intro") {
     return (
-      <div className="relative min-h-screen flex flex-col justify-center items-center px-6" style={{ backgroundColor: "#F5EFE6" }}>
+      <div className="relative min-h-screen flex flex-col justify-center items-center px-5" style={{ backgroundColor: "#F5EFE6" }}>
         <GrainOverlay />
         <div className="relative z-10 w-full max-w-[430px] mx-auto text-center flex flex-col items-center">
-          <div className="flex items-center justify-center mb-6" style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: "#F5E8E0" }}>
-            <Sparkles size={32} color="#C8522A" strokeWidth={1.5} />
+          <div className="flex items-center justify-center mb-5" style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: "#F5E8E0" }}>
+            <Sparkles size={28} color="#C8522A" strokeWidth={1.5} />
           </div>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, fontWeight: 700, color: "#1A1208", lineHeight: 1.1, marginBottom: 12 }}>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, fontWeight: 700, color: "#1A1208", lineHeight: 1.1, marginBottom: 10 }}>
             Find Your Voice
           </h1>
-          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: "rgba(26,18,8,0.6)", lineHeight: 1.5, marginBottom: 32, maxWidth: 280 }}>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: "rgba(26,18,8,0.6)", lineHeight: 1.5, marginBottom: 24, maxWidth: 280 }}>
             Take a quick 6-question quiz so Rizzbot matches your unique texting style and tone.
           </p>
           <button
@@ -266,7 +266,7 @@ export function MyVoiceScreen() {
               backgroundColor: "#C8522A",
               color: "#FFFFFF",
               borderRadius: 100,
-              padding: "16px 24px",
+              padding: "14px 20px",
               fontFamily: "'DM Sans', sans-serif",
               fontSize: 16,
               fontWeight: 600,
@@ -278,7 +278,7 @@ export function MyVoiceScreen() {
           </button>
           <button
             onClick={() => navigate("/home")}
-            className="mt-5 fade-press cursor-pointer flex items-center justify-center gap-2"
+            className="mt-4 fade-press cursor-pointer flex items-center justify-center gap-2"
             style={{
               backgroundColor: "#FDFAF5",
               color: "rgba(26,18,8,0.6)",
@@ -292,7 +292,7 @@ export function MyVoiceScreen() {
           >
             Skip for now
           </button>
-          <div className="mt-8 flex flex-col items-center gap-2">
+          <div className="mt-6 flex flex-col items-center gap-2">
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.35)" }}>
               ✨ You can always redo this later
             </p>
@@ -306,7 +306,7 @@ export function MyVoiceScreen() {
     return (
       <div className="relative min-h-screen flex flex-col" style={{ backgroundColor: "#F5EFE6" }}>
         <GrainOverlay />
-        <div className="relative z-10 flex flex-col flex-1 max-w-[430px] mx-auto w-full px-5 pt-6">
+        <div className="relative z-10 flex flex-col flex-1 max-w-[430px] mx-auto w-full px-5 pt-4">
           <div className="relative flex items-center justify-center w-full min-h-[44px]">
             <button
               onClick={() => {
@@ -357,10 +357,10 @@ export function MyVoiceScreen() {
                 <Icon size={24} strokeWidth={1.8} color="#C8522A" />
               </div>
               <p
-                className="mt-6 text-center"
+                className="mt-5 text-center"
                 style={{
                   fontFamily: "'Cormorant Garamond', serif",
-                  fontSize: 28,
+                  fontSize: 26,
                   fontWeight: 700,
                   color: "#1A1208",
                   lineHeight: 1.3,
@@ -369,14 +369,14 @@ export function MyVoiceScreen() {
               >
                 {question.question}
               </p>
-              <div className="w-full mt-8 flex flex-col gap-3">
+              <div className="w-full mt-6 flex flex-col gap-2">
                 {question.options.map((option, i) => (
                   <button
                     key={i}
                     onClick={() => setSelectedOption(i)}
                     className="cursor-pointer hover-scale fade-press"
                     style={{
-                      minHeight: 56,
+                      minHeight: 48,
                       borderRadius: 16,
                       backgroundColor: selectedOption === i ? "rgba(200,82,42,0.08)" : "#FDFAF5",
                       border: selectedOption === i ? "2px solid #C8522A" : "1px solid #E8E0D4",
@@ -385,7 +385,7 @@ export function MyVoiceScreen() {
                       fontSize: 15,
                       fontWeight: selectedOption === i ? 600 : 500,
                       textAlign: "center",
-                      padding: "16px 20px",
+                      padding: "12px 16px",
                       transition: "all 0.2s ease",
                     }}
                   >
@@ -396,13 +396,13 @@ export function MyVoiceScreen() {
             </motion.div>
           </AnimatePresence>
 
-          <div className="pb-8">
+          <div className="pb-6">
             <button
               onClick={handleNext}
               className="fade-press cursor-pointer"
               style={{
                 width: "100%",
-                height: 56,
+                height: 52,
                 borderRadius: 100,
                 backgroundColor: selectedOption !== null ? "#C8522A" : "rgba(26, 18, 8, 0.06)",
                 color: selectedOption !== null ? "#FFFFFF" : "rgba(26, 18, 8, 0.3)",
@@ -455,7 +455,7 @@ export function MyVoiceScreen() {
   return (
     <div className="relative min-h-screen pb-[72px]" style={{ backgroundColor: "#F5EFE6" }}>
       <GrainOverlay />
-      <div className="relative z-10 px-5 pt-6 max-w-[430px] mx-auto">
+      <div className="relative z-10 px-5 pt-4 max-w-[430px] mx-auto">
         <div className="flex items-center justify-between">
           <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 22, fontWeight: 600, color: "#1A1208" }}>
             My Voice
@@ -466,14 +466,14 @@ export function MyVoiceScreen() {
               setSelectedOption(null);
               setMode("quiz");
             }}
-            className="cursor-pointer p-1"
-            style={{ border: "none", background: "none" }}
+            className="cursor-pointer flex items-center justify-center"
+            style={{ border: "none", background: "none", width: 44, height: 44 }}
           >
             <Pencil size={20} strokeWidth={1.8} color="rgba(26,18,8,0.55)" />
           </button>
         </div>
 
-        <div className="mt-8">
+        <div className="mt-6">
           <p
             style={{
               fontFamily: "'DM Sans', sans-serif",
@@ -488,7 +488,7 @@ export function MyVoiceScreen() {
           <p
             style={{
               fontFamily: "'Cormorant Garamond', serif",
-              fontSize: 64,
+              fontSize: 44,
               fontWeight: 800,
               color: "#1A1208",
               lineHeight: 1,
@@ -497,15 +497,15 @@ export function MyVoiceScreen() {
           >
             DNA
           </p>
-          <div style={{ width: 48, height: 3, backgroundColor: "#C8522A", borderRadius: 100, marginTop: 8 }} />
+          <div style={{ width: 48, height: 3, backgroundColor: "#C8522A", borderRadius: 100, marginTop: 6 }} />
         </div>
 
         <div
-          className="mt-6"
+          className="mt-4"
           style={{
             backgroundColor: "#F5E8E0",
-            borderRadius: 24,
-            padding: "24px 20px",
+            borderRadius: 20,
+            padding: "20px 16px",
             boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)",
           }}
         >
@@ -692,7 +692,7 @@ export function MyVoiceScreen() {
                   setSampleTexts((prev) => prev.map((value, i) => (i === idx ? e.target.value : value)))
                 }
                 placeholder={`Text sample ${idx + 1}`}
-                className="w-full min-h-[56px] rounded-[12px] border border-[#E8E0D4] p-3 text-[13px] text-[#1A1208] outline-none resize-y transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
+                className="w-full min-h-[48px] rounded-[12px] border border-[#E8E0D4] p-3 text-[13px] text-[#1A1208] outline-none resize-y transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
                 style={{ fontFamily: "'DM Sans', sans-serif" }}
               />
             ))}

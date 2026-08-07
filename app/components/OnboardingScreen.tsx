@@ -69,7 +69,7 @@ export function OnboardingScreen() {
       <GrainOverlay />
 
       {/* Skip */}
-      <div className="relative z-10 flex justify-end px-5 pt-6">
+      <div className="relative z-10 flex justify-end px-5 pt-4">
         {!isLast && (
           <button
             onClick={handleSkip}
@@ -89,7 +89,7 @@ export function OnboardingScreen() {
       </div>
 
       {/* Slide content */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8 max-w-[430px] mx-auto w-full">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 max-w-[430px] mx-auto w-full">
         <AnimatePresence mode="wait">
           <motion.div
             key={index}
@@ -101,15 +101,15 @@ export function OnboardingScreen() {
           >
             {/* Icon */}
             <div
-              className="flex items-center justify-center mb-8"
+              className="flex items-center justify-center mb-6"
               style={{
-                width: 72,
-                height: 72,
+                width: 64,
+                height: 64,
                 borderRadius: "50%",
                 backgroundColor: slide.iconBg,
               }}
             >
-              <Icon size={32} strokeWidth={1.8} color={slide.iconColor} />
+              <Icon size={28} strokeWidth={1.8} color={slide.iconColor} />
             </div>
 
             {/* Eyebrow */}
@@ -121,7 +121,7 @@ export function OnboardingScreen() {
                 letterSpacing: "0.15em",
                 color: "rgba(26,18,8,0.45)",
                 textTransform: "uppercase",
-                marginBottom: 12,
+                marginBottom: 8,
               }}
             >
               {slide.eyebrow}
@@ -131,7 +131,7 @@ export function OnboardingScreen() {
             <h1
               style={{
                 fontFamily: "'Cormorant Garamond', serif",
-                fontSize: 40,
+                fontSize: 36,
                 fontWeight: 700,
                 fontStyle: "italic",
                 color: "#1A1208",
@@ -144,7 +144,7 @@ export function OnboardingScreen() {
 
             {/* Body */}
             <p
-              className="mt-5"
+              className="mt-4"
               style={{
                 fontFamily: "'DM Sans', sans-serif",
                 fontSize: 15,
@@ -160,7 +160,7 @@ export function OnboardingScreen() {
             {/* Research Note */}
             {slide.researchNote && (
               <div
-                className="mt-6 px-4 py-3 rounded-2xl flex items-start gap-3 text-left"
+                className="mt-5 px-4 py-3 rounded-2xl flex items-start gap-3 text-left"
                 style={{
                   backgroundColor: "rgba(200, 82, 42, 0.05)",
                   border: "1px solid rgba(200, 82, 42, 0.1)",
@@ -190,7 +190,7 @@ export function OnboardingScreen() {
       {/* Bottom */}
       <div className="relative z-10 px-5 pb-6 max-w-[430px] mx-auto w-full">
         {/* Progress dots */}
-        <div className="flex justify-center gap-2 mb-6">
+        <div className="flex justify-center gap-2 mb-4">
           {slides.map((_, i) => (
             <motion.div
               key={i}
@@ -208,7 +208,7 @@ export function OnboardingScreen() {
           onClick={handleNext}
           className="w-full cursor-pointer"
           style={{
-            height: 56,
+            height: 52,
             borderRadius: 100,
             backgroundColor: "#C8522A",
             color: "#FFFFFF",

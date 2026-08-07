@@ -491,12 +491,12 @@ export function PracticeScreen() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
-        className="relative min-h-screen pb-40" 
+        className="relative min-h-screen pb-28" 
         style={{ backgroundColor: "#F5EFE6" }}
       >
         <GrainOverlay />
         <div className="relative z-10 max-w-[430px] mx-auto">
-          <div className="flex items-center justify-between px-5 pt-6">
+          <div className="flex items-center justify-between px-5 pt-4">
             <button onClick={() => navigate("/home")} className="cursor-pointer flex items-center justify-center fade-press" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#FDFAF5", border: "1px solid #E8E0D4" }}>
               <ChevronLeft size={22} strokeWidth={1.8} color="#1A1208" />
             </button>
@@ -507,14 +507,14 @@ export function PracticeScreen() {
           </div>
 
           <div className="px-5">
-            <div className="mt-6">
-              <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, fontStyle: "italic", fontWeight: 600, color: "#1A1208", lineHeight: 1.2 }}>
+            <div className="mt-4">
+              <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontStyle: "italic", fontWeight: 600, color: "#1A1208", lineHeight: 1.2 }}>
                 Set the scene.
               </p>
             </div>
 
-            <div className="mt-6" style={{ backgroundColor: "#FDFAF5", borderRadius: 24, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)", padding: 20 }}>
-              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.15em", color: "rgba(26, 18, 8, 0.55)", textTransform: "uppercase", marginBottom: 12 }}>
+            <div className="mt-5" style={{ backgroundColor: "#FDFAF5", borderRadius: 20, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)", padding: 16 }}>
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.15em", color: "rgba(26, 18, 8, 0.55)", textTransform: "uppercase", marginBottom: 10 }}>
                 Who are you talking to?
               </p>
               <div
@@ -555,7 +555,7 @@ export function PracticeScreen() {
                     placeholder="Describe their tone, habits, and context..."
                     className="w-full mt-3 resize-none bg-[#FFFFFF] rounded-[14px] border border-[#E8E0D4] p-3 text-[14px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm outline-none"
                     style={{
-                      minHeight: 80,
+                      minHeight: 64,
                       fontFamily: "'DM Sans', sans-serif",
                     }}
                   />
@@ -619,8 +619,8 @@ export function PracticeScreen() {
             </div>
 
             {savedPersonas.length > 0 && (
-              <div className="mt-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 24, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)", padding: 20 }}>
-                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.15em", color: "rgba(26, 18, 8, 0.55)", textTransform: "uppercase", marginBottom: 12 }}>
+              <div className="mt-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 20, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)", padding: 16 }}>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.15em", color: "rgba(26, 18, 8, 0.55)", textTransform: "uppercase", marginBottom: 10 }}>
                   Saved Partners
                 </p>
                 <div className="flex flex-col gap-2">
@@ -630,11 +630,11 @@ export function PracticeScreen() {
                       onClick={() => handleLoadPersona(p)}
                       className="flex items-center justify-between text-left cursor-pointer transition-all hover-scale fade-press"
                       style={{
-                        padding: "16px",
-                        borderRadius: 16,
+                        padding: "12px 14px",
+                        borderRadius: 14,
                         backgroundColor: "#FDFAF5",
                         border: "1px solid #E8E0D4",
-                        minHeight: 64,
+                        minHeight: 56,
                       }}
                     >
                       <div>
@@ -648,7 +648,7 @@ export function PracticeScreen() {
               </div>
             )}
 
-            <div className="mt-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 24, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)", padding: 20 }}>
+            <div className="mt-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 20, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)", padding: 16 }}>
               <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.15em", color: "rgba(26, 18, 8, 0.55)", textTransform: "uppercase" }}>
                 Your goal this session
               </p>
@@ -656,13 +656,13 @@ export function PracticeScreen() {
                 value={goalText}
                 onChange={(e) => setGoalText(e.target.value)}
                 placeholder="What are you trying to achieve?"
-                className="w-full mt-3 resize-none bg-transparent rounded-[14px] border border-transparent p-3 text-[14px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-none outline-none focus:bg-white"
+                className="w-full mt-2 resize-none bg-transparent rounded-[14px] border border-transparent p-2 text-[14px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-none outline-none focus:bg-white"
                 style={{
-                  minHeight: 60,
+                  minHeight: 48,
                   fontFamily: "'DM Sans', sans-serif",
                 }}
               />
-              <div className="flex gap-2 mt-3 flex-wrap">
+              <div className="flex gap-2 mt-2 flex-wrap">
                 {vibeGoals.map((goal) => (
                   <button
                     key={goal}
@@ -688,7 +688,7 @@ export function PracticeScreen() {
               </div>
             </div>
             {activePersonaName !== "Custom..." && (
-              <div className="mt-12" style={{ backgroundColor: "#F5E8E0", borderRadius: 16, padding: "12px 16px" }}>
+              <div className="mt-6" style={{ backgroundColor: "#F5E8E0", borderRadius: 16, padding: "10px 16px" }}>
                 <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.65)", textAlign: "center" }}>
                   Practicing with {activePersonaName}{activeGoal || goalText ? ` — ${activeGoal || goalText}` : ""}
                 </p>
@@ -696,14 +696,14 @@ export function PracticeScreen() {
             )}
           </div>
 
-          <div className="fixed bottom-24 left-0 right-0 px-5 z-30">
+          <div className="fixed bottom-20 left-0 right-0 px-5 z-30">
             <div className="max-w-[430px] mx-auto">
               <button
                 onClick={() => void handleStartSession()}
                 disabled={isGenerating}
                 style={{
                   width: "100%",
-                  height: 56,
+                  height: 52,
                   borderRadius: 100,
                   backgroundColor: "#C8522A",
                   color: "#FFFFFF",
@@ -735,7 +735,7 @@ export function PracticeScreen() {
     >
       <GrainOverlay />
       <div className="relative z-10 flex flex-col flex-1 max-w-[430px] mx-auto w-full">
-        <div className="flex items-center justify-between px-5 pt-6 pb-3">
+        <div className="flex items-center justify-between px-5 pt-4 pb-2">
           <button onClick={() => setMode("setup")} className="cursor-pointer flex items-center justify-center fade-press" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#FDFAF5", border: "1px solid #E8E0D4" }}>
             <ChevronLeft size={22} strokeWidth={1.8} color="#1A1208" />
           </button>
@@ -770,8 +770,8 @@ export function PracticeScreen() {
           </div>
         </div>
 
-        <div className="px-5 pb-3">
-          <div style={{ backgroundColor: "#FEF3E2", borderRadius: 16, padding: "10px 16px" }}>
+        <div className="px-5 pb-2">
+          <div style={{ backgroundColor: "#FEF3E2", borderRadius: 14, padding: "8px 14px" }}>
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontStyle: "italic", color: "rgba(26, 18, 8, 0.55)", lineHeight: 1.4 }}>
               {tacticalTip}
             </p>
@@ -780,7 +780,7 @@ export function PracticeScreen() {
 
         <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-5" style={{ paddingBottom: composerHeight + 40 }}>
           {messages.map((msg) => (
-            <div key={msg.id} className={`flex mb-4 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
+            <div key={msg.id} className={`flex mb-3 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
               {msg.sender === "ai" && (
                 <div
                   className="shrink-0 mr-2 flex items-center justify-center mt-auto mb-1"
@@ -825,7 +825,7 @@ export function PracticeScreen() {
           <div className="max-w-[430px] mx-auto">
             {/* Input bar */}
             <div style={{ backgroundColor: "#FDFAF5", borderTop: "1px solid #E8E0D4" }}>
-              <div className="px-4 py-3">
+              <div className="px-3 py-2">
                 {chatImages.length > 0 && (
                   <div className="mb-2 flex gap-2 overflow-x-auto no-scrollbar pb-1">
                     {chatImages.map((img, i) => (
@@ -875,7 +875,7 @@ export function PracticeScreen() {
                     }}
                     placeholder="Type a message..."
                     rows={1}
-                    className="flex-1 w-full min-w-0 min-h-[44px] max-h-[120px] rounded-[22px] border border-transparent bg-[#F5EFE6] px-4 py-[11px] text-[15px] text-[#1A1208] outline-none resize-none overflow-y-auto transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20"
+                    className="flex-1 w-full min-w-0 min-h-[44px] max-h-[120px] rounded-[22px] border border-transparent bg-[#F5EFE6] px-3 py-2 text-[15px] text-[#1A1208] outline-none resize-none overflow-y-auto transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20"
                     style={{
                       fontFamily: "'DM Sans', sans-serif",
                       lineHeight: "1.4",
@@ -950,8 +950,8 @@ export function PracticeScreen() {
               className="fixed inset-x-5 top-1/2 z-[101] max-w-[360px] mx-auto"
               style={{ translateY: "-50%" }}
             >
-              <div style={{ backgroundColor: "#FDFAF5", borderRadius: 28, padding: 28, boxShadow: "0 20px 60px rgba(26,18,8,0.15)" }}>
-                <div className="flex items-center gap-3 mb-4">
+              <div style={{ backgroundColor: "#FDFAF5", borderRadius: 24, padding: 20, boxShadow: "0 20px 60px rgba(26,18,8,0.15)" }}>
+                <div className="flex items-center gap-3 mb-3">
                   <div style={{ width: 40, height: 40, borderRadius: "50%", backgroundColor: "#F5E8E0", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <AlertCircle size={20} strokeWidth={1.8} color="#C8522A" />
                   </div>
@@ -959,7 +959,7 @@ export function PracticeScreen() {
                     End this session?
                   </p>
                 </div>
-                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "rgba(26,18,8,0.6)", lineHeight: 1.5, marginBottom: 24 }}>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "rgba(26,18,8,0.6)", lineHeight: 1.5, marginBottom: 20 }}>
                   You will get a Tactical Report with your performance and next move.
                 </p>
                 <div className="flex gap-3">
@@ -1033,15 +1033,15 @@ export function PracticeScreen() {
                   backgroundColor: "#FDFAF5",
                   borderTopLeftRadius: 28,
                   borderTopRightRadius: 28,
-                  padding: "20px 24px",
+                  padding: "16px 20px",
                   boxShadow: "0 -4px 30px rgba(26,18,8,0.08)",
                   maxHeight: "85dvh",
                   overflowY: "auto",
                   WebkitOverflowScrolling: "touch",
                 }}
-                className="max-w-[430px] mx-auto pb-[96px]"
+                className="max-w-[430px] mx-auto pb-8"
               >
-                <div className="sticky top-0 flex justify-between items-center mb-5" style={{ backgroundColor: "#FDFAF5", paddingTop: 4, paddingBottom: 8, zIndex: 1 }}>
+                <div className="sticky top-0 flex justify-between items-center mb-4" style={{ backgroundColor: "#FDFAF5", paddingTop: 4, paddingBottom: 8, zIndex: 1 }}>
                   <div className="flex items-center gap-2">
                     <Lightbulb size={18} strokeWidth={1.8} color="#C8522A" />
                     <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
@@ -1054,7 +1054,7 @@ export function PracticeScreen() {
                 </div>
 
                 {tacticalTip && (
-                  <div className="mb-6 p-4" style={{ backgroundColor: "#F5E8E0", borderRadius: 16, border: "1px solid #E8E0D4" }}>
+                  <div className="mb-4 p-4" style={{ backgroundColor: "#F5E8E0", borderRadius: 16, border: "1px solid #E8E0D4" }}>
                     <div className="flex items-center gap-2 mb-2">
                       <Zap size={16} color="#C8522A" />
                       <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: "#1A1208", textTransform: "uppercase", letterSpacing: "0.05em" }}>Strategic Insight</p>

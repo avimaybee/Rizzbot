@@ -21,6 +21,7 @@ import { useToast } from "./ui/Toast";
 import { haptics } from "../utils/haptics";
 import { useAppContext } from "../app-context";
 import { deleteSession, getSessions, Session } from "../../services/dbService";
+import { formatShortDate, formatTimeAgo } from "../utils/formatTime";
 
 const filterOptions = ["All", "Quick Mode", "Practice"] as const;
 
@@ -30,32 +31,9 @@ const toMode = (mode?: string) =>
 const getAccentColor = (risk: number) =>
   risk > 65 ? "#C8522A" : risk > 35 ? "#D4A853" : "#7A9E7E";
 
-const formatDate = (isoDate?: string | null) => {
-  if (!isoDate) return "Unknown date";
-  const d = new Date(isoDate);
-  if (isNaN(d.getTime())) return "Unknown date";
-  return d.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
-};
+const formatDate = (isoDate?: string | null) => formatShortDate(isoDate);
 
-const formatAgo = (isoDate?: string | null) => {
-  if (!isoDate) return "";
-  const d = new Date(isoDate);
-  if (isNaN(d.getTime())) return "";
-  const delta = Date.now() - d.getTime();
-  
-  const seconds = Math.floor(delta / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  if (seconds < 60) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  return `${days}d ago`;
-};
+const formatAgo = (isoDate?: string | null) => formatTimeAgo(isoDate);
 
 const suggestionText = (suggestion: unknown): string => {
   if (!suggestion) return "";
@@ -94,12 +72,12 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
   return (
     <div className="relative min-h-screen pb-[72px]" style={{ backgroundColor: "#F5EFE6" }}>
       <GrainOverlay />
-      <div className="relative z-10 px-5 pt-6 max-w-[430px] mx-auto">
+      <div className="relative z-10 px-5 pt-4 max-w-[430px] mx-auto">
         <div className="flex items-center justify-between">
           <button
             onClick={onBack}
-            className="cursor-pointer p-1"
-            style={{ color: "rgba(26,18,8,0.7)" }}
+            className="cursor-pointer flex items-center justify-center"
+            style={{ color: "rgba(26,18,8,0.7)", width: 44, height: 44 }}
           >
             <ArrowLeft size={21} />
           </button>
@@ -535,7 +513,7 @@ export function HistoryScreen() {
   return (
     <div className="relative min-h-screen pb-[72px]" style={{ backgroundColor: "#F5EFE6" }}>
       <GrainOverlay />
-      <div className="relative z-10 px-5 pt-6 max-w-[430px] mx-auto">
+      <div className="relative z-10 px-5 pt-4 max-w-[430px] mx-auto">
         <div className="flex items-center justify-between">
           <p
             style={{
@@ -594,7 +572,7 @@ export function HistoryScreen() {
               className="overflow-hidden"
             >
               <div
-                className="mt-3 flex items-center gap-2 bg-[#FDFAF5] rounded-[100px] border border-[#E8E0D4] px-4 h-[44px] transition-all duration-300 focus-within:border-[#C8522A] focus-within:ring-[3px] focus-within:ring-[#C8522A]/20 shadow-sm"
+                className="mt-2 flex items-center gap-2 bg-[#FDFAF5] rounded-[100px] border border-[#E8E0D4] px-3 h-[40px] transition-all duration-300 focus-within:border-[#C8522A] focus-within:ring-[3px] focus-within:ring-[#C8522A]/20 shadow-sm"
               >
                 <Search size={16} strokeWidth={1.8} color="rgba(26,18,8,0.4)" />
                 <input
@@ -626,11 +604,11 @@ export function HistoryScreen() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
-              className="mt-3"
+              className="mt-2"
               style={{
                 backgroundColor: "#FDFAF5",
-                borderRadius: 20,
-                padding: "14px 16px",
+                borderRadius: 18,
+                padding: "12px 14px",
                 boxShadow: "0 4px 20px rgba(26,18,8,0.08)",
               }}
             >
@@ -677,9 +655,9 @@ export function HistoryScreen() {
           )}
         </AnimatePresence>
 
-        <div className="mt-5 flex flex-col gap-3">
+        <div className="mt-4 flex flex-col gap-2">
           {loading ? (
-            <div style={{ backgroundColor: "#FDFAF5", borderRadius: 20, padding: 20 }}>
+            <div style={{ backgroundColor: "#FDFAF5", borderRadius: 18, padding: 16 }}>
               <p
                 style={{
                   fontFamily: "'DM Sans', sans-serif",
@@ -693,15 +671,15 @@ export function HistoryScreen() {
           ) : filtered.length === 0 ? (
             <div className="flex flex-col mt-2">
               <div
-                className="flex flex-col items-center justify-center py-12 px-6"
+                className="flex flex-col items-center justify-center py-8 px-6"
                 style={{
                   backgroundColor: "#FDFAF5",
                   borderRadius: 20,
                   border: "1px dashed rgba(26,18,8,0.15)",
                 }}
               >
-                <div className="mb-4 flex items-center justify-center" style={{ width: 72, height: 72, borderRadius: "50%", backgroundColor: "rgba(200,82,42,0.14)" }}>
-                  <MessageSquare size={48} strokeWidth={1.5} color="#C8522A" />
+                <div className="mb-3 flex items-center justify-center" style={{ width: 56, height: 56, borderRadius: "50%", backgroundColor: "rgba(200,82,42,0.14)" }}>
+                  <MessageSquare size={28} strokeWidth={1.5} color="#C8522A" />
                 </div>
                 <p
                   style={{
@@ -709,7 +687,7 @@ export function HistoryScreen() {
                     fontSize: 16,
                     fontWeight: 600,
                     color: "#1A1208",
-                    marginBottom: 8,
+                    marginBottom: 6,
                     textAlign: "center"
                   }}
                 >
@@ -723,7 +701,7 @@ export function HistoryScreen() {
                     fontSize: 14,
                     color: "rgba(26,18,8,0.5)",
                     textAlign: "center",
-                    marginBottom: 24,
+                    marginBottom: 16,
                   }}
                 >
                   {query || activeFilter !== "All"
@@ -742,7 +720,7 @@ export function HistoryScreen() {
                       width: "100%",
                       maxWidth: 280,
                       margin: "0 auto",
-                      padding: "14px 24px",
+                      padding: "12px 20px",
                       fontFamily: "'DM Sans', sans-serif",
                       fontSize: 15,
                       fontWeight: 600,
@@ -778,7 +756,7 @@ export function HistoryScreen() {
                   tabIndex={0}
                   style={{
                     backgroundColor: "#FDFAF5",
-                    borderRadius: 20,
+                    borderRadius: 18,
                     boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)",
                     width: "100%",
                     textAlign: "left",
@@ -786,8 +764,8 @@ export function HistoryScreen() {
                   }}
                 >
                   <div className="flex">
-                    <div style={{ width: 4, borderRadius: "20px 0 0 20px", backgroundColor: accent }} />
-                    <div className="p-4 flex-1">
+                    <div style={{ width: 4, borderRadius: "18px 0 0 18px", backgroundColor: accent }} />
+                    <div className="p-3 flex-1">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Zap size={15} color="#C8522A" />
@@ -850,7 +828,7 @@ export function HistoryScreen() {
                         </div>
                       <ChevronRight size={16} color="rgba(26,18,8,0.2)" />
                       </div>
-                      <div className="flex items-center gap-3 mt-3 pt-3" style={{ borderTop: "1px solid rgba(26,18,8,0.06)" }}>
+                      <div className="flex items-center gap-3 mt-2 pt-2" style={{ borderTop: "1px solid rgba(26,18,8,0.06)" }}>
                         <button
                           className="cursor-pointer shrink-0"
                           onClick={(e) => {
@@ -909,8 +887,8 @@ export function HistoryScreen() {
               className="fixed inset-x-5 top-1/2 z-[101] max-w-[360px] mx-auto"
               style={{ translateY: "-50%" }}
             >
-              <div style={{ backgroundColor: "#FDFAF5", borderRadius: 28, padding: 28, boxShadow: "0 20px 60px rgba(26,18,8,0.15)" }}>
-                <div className="flex items-center gap-3 mb-4">
+              <div style={{ backgroundColor: "#FDFAF5", borderRadius: 24, padding: 20, boxShadow: "0 20px 60px rgba(26,18,8,0.15)" }}>
+                <div className="flex items-center gap-3 mb-3">
                   <div style={{ width: 40, height: 40, borderRadius: "50%", backgroundColor: "#F5E8E0", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <AlertCircle size={20} strokeWidth={1.8} color="#C8522A" />
                   </div>
@@ -918,7 +896,7 @@ export function HistoryScreen() {
                     Delete Session?
                   </p>
                 </div>
-                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "rgba(26,18,8,0.6)", lineHeight: 1.5, marginBottom: 24 }}>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "rgba(26,18,8,0.6)", lineHeight: 1.5, marginBottom: 20 }}>
                   This session will be permanently removed from your history.
                 </p>
                 <div className="flex gap-3">

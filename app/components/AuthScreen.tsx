@@ -103,7 +103,7 @@ export function AuthScreen() {
     >
       <GrainOverlay />
 
-      <div className="relative w-full" style={{ height: "42%" }}>
+      <div className="relative w-full" style={{ height: "38%" }}>
         {photos.map((photo, i) => (
           <div
             key={i}
@@ -142,7 +142,7 @@ export function AuthScreen() {
           borderTopLeftRadius: 28,
           borderTopRightRadius: 28,
           boxShadow: "0 -4px 30px rgba(26, 18, 8, 0.08)",
-          minHeight: "58%",
+          minHeight: "52%",
         }}
       >
         <div className="flex justify-center pt-3">
@@ -156,8 +156,8 @@ export function AuthScreen() {
           />
         </div>
 
-        <div className="px-5 pt-8 pb-8 flex flex-col items-center">
-          <img src="/logo.png" alt="Rizzbot" style={{ width: 44, height: 44, borderRadius: 10, marginBottom: 20 }} />
+        <div className="px-5 pt-6 pb-6 flex flex-col items-center">
+          <img src="/logo.png" alt="Rizzbot" style={{ width: 40, height: 40, borderRadius: 10, marginBottom: 16 }} />
           <p
             style={{
               fontFamily: "'DM Sans', sans-serif",
@@ -184,7 +184,7 @@ export function AuthScreen() {
             connection
           </h1>
           <p
-            className="mt-3 text-center px-4"
+            className="mt-2 text-center px-4"
             style={{
               fontFamily: "'DM Sans', sans-serif",
               fontSize: 14,
@@ -196,13 +196,13 @@ export function AuthScreen() {
             Your personal AI dating coach is ready to help.
           </p>
 
-          <div className="w-full mt-7 flex flex-col gap-3">
+          <div className="w-full mt-5 flex flex-col gap-2">
             <button
               onClick={handleGoogle}
               disabled={loading}
               className="w-full flex items-center justify-center gap-3 cursor-pointer"
               style={{
-                height: 56,
+                height: 52,
                 borderRadius: 100,
                 border: "1px solid #E8E0D4",
                 backgroundColor: "#FFFFFF",
@@ -239,7 +239,7 @@ export function AuthScreen() {
               disabled={loading}
               className="w-full flex items-center justify-center gap-3 cursor-pointer transition-colors"
               style={{
-                height: 56,
+                height: 52,
                 borderRadius: 100,
                 backgroundColor: "#C8522A",
                 fontFamily: "'DM Sans', sans-serif",
@@ -257,12 +257,12 @@ export function AuthScreen() {
 
           {showEmailForm && (
             <div
-              className="w-full mt-4"
+              className="w-full mt-3"
               style={{
                 backgroundColor: "#FFFFFF",
                 borderRadius: 20,
                 border: "1px solid #E8E0D4",
-                padding: 16,
+                padding: 14,
               }}
             >
               <div className="flex gap-2 mb-3">

@@ -68,7 +68,7 @@ export function TherapistClosingScreen() {
           <p
             style={{
               fontFamily: "'Cormorant Garamond', serif",
-              fontSize: 36,
+              fontSize: 32,
               fontWeight: 700,
               fontStyle: "italic",
               color: "#1A1208",
@@ -98,15 +98,15 @@ export function TherapistClosingScreen() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.35 }}
-          className="w-full mt-8"
+          className="w-full mt-6"
           style={{
             backgroundColor: "#FDFAF5",
-            borderRadius: 24,
+            borderRadius: 20,
             boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)",
-            padding: 20,
+            padding: 16,
           }}
         >
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-3">
             <BookOpen size={16} strokeWidth={1.8} color="#C8522A" />
             <p
               style={{
@@ -152,11 +152,11 @@ export function TherapistClosingScreen() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.5 }}
-          className="w-full mt-4"
+          className="w-full mt-3"
           style={{
             backgroundColor: "#F5E8E0",
-            borderRadius: 20,
-            padding: "16px 20px",
+            borderRadius: 18,
+            padding: "14px 16px",
           }}
         >
           <div className="flex items-start gap-3">
@@ -182,13 +182,13 @@ export function TherapistClosingScreen() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.6 }}
-        className="relative z-10 px-5 pb-[72px] max-w-[430px] mx-auto w-full flex flex-col gap-3"
+        className="relative z-10 px-5 pb-[72px] max-w-[430px] mx-auto w-full flex flex-col gap-2"
       >
         <button
           onClick={() => navigate("/home")}
           className="w-full cursor-pointer"
           style={{
-            height: 56,
+            height: 52,
             borderRadius: 100,
             backgroundColor: "#C8522A",
             color: "#FFFFFF",
@@ -204,7 +204,7 @@ export function TherapistClosingScreen() {
           onClick={() => navigate("/history")}
           className="w-full cursor-pointer"
           style={{
-            height: 56,
+            height: 52,
             borderRadius: 100,
             backgroundColor: "transparent",
             border: "1px solid #E8E0D4",

@@ -303,7 +303,7 @@ export function QuickModeScreen() {
     >
       <GrainOverlay />
       <div className="relative z-10 max-w-[430px] mx-auto">
-        <div className="flex items-center justify-between px-5 pt-6 pb-2 relative">
+        <div className="flex items-center justify-between px-5 pt-4 pb-2 relative">
           <button onClick={() => navigate("/home")} className="cursor-pointer flex items-center justify-center fade-press relative z-10" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#FDFAF5", border: "1px solid #E8E0D4" }}>
             <ChevronLeft size={22} strokeWidth={1.8} color="#1A1208" />
           </button>
@@ -331,9 +331,9 @@ export function QuickModeScreen() {
         </div>
 
         {!showResults && !isLoading ? (
-          <div className="px-5 pb-[180px]">
+          <div className="px-5 pb-[140px]">
             <div className="mt-4">
-              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, fontWeight: 700, fontStyle: "italic", color: "#1A1208", lineHeight: 1.2 }}>
+              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 700, fontStyle: "italic", color: "#1A1208", lineHeight: 1.2 }}>
                 Drop their message.
               </h2>
             </div>
@@ -351,17 +351,17 @@ export function QuickModeScreen() {
 
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="mt-6 w-full flex flex-col items-center justify-center cursor-pointer hover-scale fade-press"
+              className="mt-5 w-full flex flex-col items-center justify-center cursor-pointer hover-scale fade-press"
               style={{
-                height: 160,
+                height: 140,
                 border: "2px dashed #B8AFA6",
                 backgroundColor: "#FDFAF5",
-                borderRadius: 24,
+                borderRadius: 20,
                 boxShadow: "inset 0 2px 8px rgba(26,18,8,0.03)",
               }}
             >
-              <Camera size={28} strokeWidth={1.8} color="#C8522A" />
-              <p className="mt-3" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
+              <Camera size={26} strokeWidth={1.8} color="#C8522A" />
+              <p className="mt-2" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
                 {screenshots.length > 0 ? `${screenshots.length} screenshot(s) attached` : "Upload screenshot(s)"}
               </p>
               <p className="mt-1" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.45)" }}>
@@ -429,15 +429,15 @@ export function QuickModeScreen() {
                   e.target.style.height = `${e.target.scrollHeight}px`;
                 }}
                 placeholder={screenshots.length > 0 ? "Any backstory? e.g., 'We haven't talked in 2 weeks'" : "Paste their message or add context here..."}
-                className="w-full resize-none outline-none overflow-hidden bg-[#FDFAF5] rounded-[14px] border border-[#E8E0D4] p-4 text-[15px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
+                className="w-full resize-none outline-none overflow-hidden bg-[#FDFAF5] rounded-[14px] border border-[#E8E0D4] p-3 text-[15px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
                 style={{
-                  minHeight: 100,
+                  minHeight: 80,
                   fontFamily: "'DM Sans', sans-serif",
                 }}
               />
             </div>
 
-            <div className="mt-4 relative">
+            <div className="mt-3 relative">
               <label className="block mb-1.5" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>
                 Your Potential Reply <span style={{ color: "rgba(26,18,8,0.35)", textTransform: "lowercase", letterSpacing: "normal" }}>(optional)</span>
               </label>
@@ -449,15 +449,15 @@ export function QuickModeScreen() {
                   e.target.style.height = `${e.target.scrollHeight}px`;
                 }}
                 placeholder="What are you thinking of saying?"
-                className="w-full resize-none outline-none overflow-hidden bg-[#FDFAF5] rounded-[14px] border border-[#E8E0D4] p-4 text-[15px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
+                className="w-full resize-none outline-none overflow-hidden bg-[#FDFAF5] rounded-[14px] border border-[#E8E0D4] p-3 text-[15px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
                 style={{
-                  minHeight: 100,
+                  minHeight: 80,
                   fontFamily: "'DM Sans', sans-serif",
                 }}
               />
             </div>
 
-            <div className="mt-5">
+            <div className="mt-4">
               <label className="block mb-2 flex items-center gap-1.5" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>
                 <Tag size={14} color="#C8522A" />
                 Situation
@@ -476,9 +476,9 @@ export function QuickModeScreen() {
                     }}
                     className="cursor-pointer transition-colors"
                     style={{
-                      height: 48,
+                      height: 44,
                       borderRadius: 12,
-                      padding: "0 16px",
+                      padding: "0 14px",
                       backgroundColor: context === opt.value ? "#1A1208" : "transparent",
                       color: context === opt.value ? "#FFFFFF" : "rgba(26, 18, 8, 0.55)",
                       border: context === opt.value ? "1px solid #1A1208" : "1px solid #E8E0D4",
@@ -495,14 +495,14 @@ export function QuickModeScreen() {
               </div>
             </div>
 
-            <div className="fixed bottom-24 left-0 right-0 px-5 z-30 pointer-events-none">
+            <div className="fixed bottom-20 left-0 right-0 px-5 z-30 pointer-events-none">
               <div className="max-w-[430px] mx-auto pointer-events-auto">
                 <button
                   onClick={() => void handleAnalyze()}
                   disabled={!theirMessage.trim() && screenshots.length === 0}
                   className="w-full transition-colors fade-press"
                   style={{
-                    height: 56,
+                    height: 52,
                     borderRadius: 100,
                     backgroundColor: (!theirMessage.trim() && screenshots.length === 0) ? "#E8E0D4" : "#C8522A",
                     color: (!theirMessage.trim() && screenshots.length === 0) ? "rgba(26,18,8,0.35)" : "#FFFFFF",
@@ -542,11 +542,11 @@ export function QuickModeScreen() {
           <div className="px-5 pb-8">
             <div
               className="mt-4 overflow-hidden"
-              style={{ backgroundColor: "#FDFAF5", borderRadius: 24, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)" }}
+              style={{ backgroundColor: "#FDFAF5", borderRadius: 20, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)" }}
             >
               <div className="flex">
                 <div style={{ width: 3, backgroundColor: "#C8522A", borderRadius: "3px 0 0 3px", flexShrink: 0 }} />
-                <div className="p-5 flex-1">
+                <div className="p-4 flex-1">
                   <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.15em", color: "rgba(26, 18, 8, 0.55)", textTransform: "uppercase" }}>
                     Their message
                   </p>
@@ -559,13 +559,13 @@ export function QuickModeScreen() {
 
             <div
               className="mt-4"
-              style={{ backgroundColor: "#FDFAF5", borderRadius: 24, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)", padding: 20 }}
+              style={{ backgroundColor: "#FDFAF5", borderRadius: 20, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)", padding: 16 }}
             >
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-3">
                 <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>Vibe Check</p>
                 <Share2 size={16} strokeWidth={1.8} color="rgba(26,18,8,0.4)" />
               </div>
-              <div className="mb-4" style={{ height: 1, backgroundColor: "#E8E0D4" }} />
+              <div className="mb-3" style={{ height: 1, backgroundColor: "#E8E0D4" }} />
 
               {[
                 {
@@ -584,8 +584,8 @@ export function QuickModeScreen() {
                 },
                 { label: "Ghost Risk", value: `${riskLabel} (${ghostRisk}%)`, level: Math.max(0.05, ghostRisk / 100), color: riskColor },
               ].map((metric) => (
-                <div key={metric.label} className="mb-4">
-                  <div className="flex items-center justify-between mb-2">
+                <div key={metric.label} className="mb-3">
+                  <div className="flex items-center justify-between mb-1.5">
                     <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "rgba(26, 18, 8, 0.55)" }}>{metric.label}</span>
                     <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: metric.color }}>{metric.value}</span>
                   </div>
@@ -596,15 +596,15 @@ export function QuickModeScreen() {
               ))}
 
               {result?.proTip && (
-                <div className="mt-2" style={{ backgroundColor: "#F5E8E0", borderRadius: 12, padding: "14px 16px" }}>
-                  <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontStyle: "italic", color: "#1A1208", lineHeight: 1.4 }}>
+                <div className="mt-2" style={{ backgroundColor: "#F5E8E0", borderRadius: 12, padding: "12px 14px" }}>
+                  <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, fontStyle: "italic", color: "#1A1208", lineHeight: 1.4 }}>
                     "{result.proTip}"
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="mt-5">
+            <div className="mt-4">
               <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.15em", color: "rgba(26, 18, 8, 0.55)", textTransform: "uppercase" }}>
                 Suggested replies
               </p>
@@ -659,7 +659,7 @@ export function QuickModeScreen() {
 
               <div
                 className="mt-3 overflow-hidden"
-                style={{ backgroundColor: "#FDFAF5", borderRadius: 24, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)", padding: 20 }}
+                style={{ backgroundColor: "#FDFAF5", borderRadius: 20, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)", padding: 16 }}
               >
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -668,7 +668,7 @@ export function QuickModeScreen() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.25 }}
-                    className="space-y-4"
+                    className="space-y-3"
                   >
                     {selectedOption?.replies?.length ? selectedOption.replies.map((replyItem, idx) => {
                       const replyKey = `reply-${activeTone}-${cursor[activeTone]}-${idx}`;
@@ -681,8 +681,8 @@ export function QuickModeScreen() {
                             style={{
                               backgroundColor: "#FFFFFF",
                               border: "1px solid #E8E0D4",
-                              borderRadius: 16,
-                              padding: "16px",
+                              borderRadius: 14,
+                              padding: "12px 14px",
                             }}
                           >
                             <div className="flex justify-between items-start gap-3 mb-2">
@@ -715,15 +715,15 @@ export function QuickModeScreen() {
                     )}
 
                     {selectedOption?.conversationHook && (
-                      <div className="relative mt-2">
+                      <div className="relative mt-1">
                         <button
                           onClick={() => handleCopy(selectedOption.conversationHook!, `hook-${activeTone}-${cursor[activeTone]}`)}
                           className="w-full text-left cursor-pointer transition-all"
                           style={{
                             backgroundColor: "#F5E8E0",
                             border: "1px solid #E8E0D4",
-                            borderRadius: 16,
-                            padding: "16px",
+                            borderRadius: 14,
+                            padding: "12px 14px",
                           }}
                         >
                           <div className="flex justify-between items-center mb-2">
@@ -745,7 +745,7 @@ export function QuickModeScreen() {
                   </motion.div>
                 </AnimatePresence>
 
-                <div className="flex items-center justify-end mt-4 pt-3" style={{ borderTop: "1px solid #E8E0D4" }}>
+                <div className="flex items-center justify-end mt-3 pt-3" style={{ borderTop: "1px solid #E8E0D4" }}>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleFeedback("helpful")}
@@ -764,7 +764,7 @@ export function QuickModeScreen() {
               </div>
 
               {selectedOptions.length > 0 && (
-                <div className="flex items-center justify-between mt-5 pt-4" style={{ borderTop: "1px solid #E8E0D4" }}>
+                <div className="flex items-center justify-between mt-4 pt-3" style={{ borderTop: "1px solid #E8E0D4" }}>
                   <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, color: "rgba(26,18,8,0.55)" }}>
                     Variation {(cursor[activeTone] % selectedOptions.length) + 1} of {selectedOptions.length}
                   </span>

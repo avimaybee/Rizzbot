@@ -8,6 +8,7 @@ import { PremiumModal } from "./PremiumModal";
 import { useAppContext } from "../app-context";
 import { getSessions, recordActivity, type StreakData } from "../../services/dbService";
 import { useScrollFade } from "../utils/useScrollFade";
+import { formatTimeAgo, parseDbDate } from "../utils/formatTime";
 
 const modeCards = [
   {
@@ -65,15 +66,7 @@ type ActivityItem = {
   risk?: number;
 };
 
-const formatHoursAgo = (isoDate: string): string => {
-  const delta = Date.now() - new Date(isoDate).getTime();
-  if (delta < 60 * 1000) return "just now";
-  const minutes = Math.floor(delta / (1000 * 60));
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(delta / (1000 * 60 * 60));
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-};
+const formatHoursAgo = (isoDate: string): string => formatTimeAgo(isoDate);
 
 const toModeCardName = (mode?: string): string | null => {
   if (mode === "quick") return "Quick Mode";
@@ -122,9 +115,9 @@ export function HomeScreen() {
         sessions.forEach((session) => {
           const mode = toModeCardName(session.mode);
           if (!mode || !session.created_at) return;
-          const nextTime = new Date(session.created_at).getTime();
+          const nextTime = parseDbDate(session.created_at).getTime();
           const prevTime = latestByMode[mode]
-            ? new Date(latestByMode[mode]).getTime()
+            ? parseDbDate(latestByMode[mode]).getTime()
             : 0;
           if (!Number.isNaN(nextTime) && nextTime > prevTime) {
             latestByMode[mode] = session.created_at;
@@ -169,7 +162,7 @@ export function HomeScreen() {
       style={{ backgroundColor: "#F5EFE6" }}
     >
       <GrainOverlay />
-      <div className="relative z-10 px-5 pt-6 max-w-[430px] mx-auto">
+      <div className="relative z-10 px-5 pt-4 max-w-[430px] mx-auto">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="Rizzbot" style={{ width: 32, height: 32, borderRadius: 8, filter: "invert(1)" }} />
@@ -307,7 +300,7 @@ export function HomeScreen() {
         )}
 
         <motion.div
-          className="mt-8"
+          className="mt-5"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
@@ -315,7 +308,7 @@ export function HomeScreen() {
           <h2
             style={{
               fontFamily: "'Cormorant Garamond', serif",
-              fontSize: 36,
+              fontSize: 30,
               fontWeight: 700,
               fontStyle: "italic",
               color: "#1A1208",
@@ -326,7 +319,7 @@ export function HomeScreen() {
           </h2>
         </motion.div>
 
-        <div className="mt-6 flex flex-col gap-3">
+        <div className="mt-4 flex flex-col gap-2">
           {modeCards.map((card, idx) => {
             const Icon = card.icon;
             const isVoiceCard = card.name === "My Voice";
@@ -342,9 +335,9 @@ export function HomeScreen() {
                 onClick={() => navigate(card.path)}
                 className="w-full relative flex items-center cursor-pointer text-left hover-scale fade-press active:scale-[0.97] active:brightness-95 transition-all duration-100"
                 style={{
-                  height: 80,
+                  height: 72,
                   backgroundColor: card.tint,
-                  borderRadius: 24,
+                  borderRadius: 20,
                   boxShadow: "0 1px 4px rgba(26,18,8,0.06), 0 0 0 1px rgba(26,18,8,0.03)",
                   border: "none",
                   padding: "0 20px",
@@ -353,11 +346,11 @@ export function HomeScreen() {
               >
                 <div
                   className="flex items-center justify-center shrink-0"
-                  style={{ width: 44, height: 44, borderRadius: "50%", backgroundColor: bgTintColor }}
+                  style={{ width: 42, height: 42, borderRadius: "50%", backgroundColor: bgTintColor }}
                 >
-                  <Icon size={22} strokeWidth={1.8} color={iconColor} />
+                  <Icon size={21} strokeWidth={1.8} color={iconColor} />
                 </div>
-                <div className="ml-4 flex-1 min-w-0">
+                <div className="ml-3 flex-1 min-w-0">
                   <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
                     {card.name}
                   </p>
@@ -367,7 +360,7 @@ export function HomeScreen() {
                 </div>
                 <ChevronRight size={16} strokeWidth={1.8} color="rgba(26,18,8,0.35)" />
                 {usedTime && (
-                  <span style={{ position: "absolute", right: 20, bottom: 10, fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, color: "rgba(26, 18, 8, 0.45)" }}>
+                  <span style={{ position: "absolute", right: 20, bottom: 8, fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, color: "rgba(26, 18, 8, 0.45)" }}>
                     Used {usedTime}
                   </span>
                 )}
@@ -382,7 +375,7 @@ export function HomeScreen() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             onClick={() => setIsPremiumModalOpen(true)}
-            className="mt-8 p-6 rounded-[28px] bg-[#1A1208] text-white relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all"
+            className="mt-6 p-5 rounded-[24px] bg-[#1A1208] text-white relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all"
           >
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-1">
@@ -392,7 +385,7 @@ export function HomeScreen() {
                 <Sparkles size={12} className="text-[#C8522A]" />
               </div>
               <h3 className="text-xl font-bold mb-1">Get Lifetime Access</h3>
-              <p className="text-sm text-white/60 mb-4">
+              <p className="text-sm text-white/60 mb-3">
                 Unlimited AI advice, practice sessions & more. Just ₹500.
               </p>
               <div className="inline-flex items-center gap-2 text-sm font-bold text-[#C8522A]">
@@ -405,7 +398,7 @@ export function HomeScreen() {
           </motion.div>
         )}
 
-        <div className="mt-8">
+        <div className="mt-6">
           <div className="flex items-center justify-between">
             <p
               style={{
@@ -437,7 +430,7 @@ export function HomeScreen() {
           {activity.length > 0 ? (
             <div 
               ref={activityFade.ref}
-              className="mt-3 flex gap-3 w-full overflow-x-auto pb-2 -mx-1 px-1 no-scrollbar"
+              className="mt-3 flex gap-2 w-full overflow-x-auto pb-2 -mx-1 px-1 no-scrollbar"
               style={activityFade.style}
             >
               {activity.map((item, i) => (
@@ -449,7 +442,7 @@ export function HomeScreen() {
                     backgroundColor: "#FDFAF5",
                     borderRadius: 100,
                     border: "1px solid #E8E0D4",
-                    padding: "10px 16px",
+                    padding: "8px 14px",
                   }}
                 >
                   <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500, color: "#1A1208" }}>
@@ -468,16 +461,16 @@ export function HomeScreen() {
             </div>
           ) : (
             <div
-              className="mt-3 w-full flex flex-col items-center gap-3 text-center"
+              className="mt-3 w-full flex flex-col items-center gap-2 text-center"
               style={{
                 backgroundColor: "#FDFAF5",
                 borderRadius: 20,
                 border: "1px dashed rgba(26,18,8,0.15)",
-                padding: "24px 16px",
+                padding: "18px 16px",
               }}
             >
-              <div style={{ padding: 12, borderRadius: 14, backgroundColor: "#F5E8E0" }}>
-                <Zap size={22} color="#C8522A" strokeWidth={1.8} />
+              <div style={{ padding: 10, borderRadius: 14, backgroundColor: "#F5E8E0" }}>
+                <Zap size={20} color="#C8522A" strokeWidth={1.8} />
               </div>
               <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>
                 No sessions yet
@@ -493,7 +486,7 @@ export function HomeScreen() {
                   color: "#FFFFFF",
                   border: "none",
                   borderRadius: 100,
-                  padding: "12px 24px",
+                  padding: "10px 22px",
                   fontFamily: "'DM Sans', sans-serif",
                   fontSize: 14,
                   fontWeight: 600,
@@ -525,15 +518,15 @@ export function HomeScreen() {
             style={{
               backgroundColor: "#FDFAF5",
               borderRadius: "24px 24px 0 0",
-              padding: "24px 20px 40px",
+              padding: "16px 20px calc(24px + env(safe-area-inset-bottom))",
               maxWidth: 430,
               margin: "0 auto",
             }}
           >
-            <div className="flex justify-center mb-4">
+            <div className="flex justify-center mb-3">
               <div style={{ width: 36, height: 4, borderRadius: 100, backgroundColor: "#E8E0D4" }} />
             </div>
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-4">
               <div style={{ width: 48, height: 48, borderRadius: "50%", backgroundColor: "#F5E8E0", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 18, color: "#C8522A" }}>
                 {firstName.slice(0, 1).toUpperCase()}
               </div>
@@ -545,7 +538,7 @@ export function HomeScreen() {
             <button
               onClick={() => { setShowProfileSheet(false); navigate("/voice"); }}
               className="w-full flex items-center gap-3 cursor-pointer fade-press"
-              style={{ backgroundColor: "transparent", border: "1px solid #E8E0D4", borderRadius: 16, padding: "14px 16px", marginBottom: 8, fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500, color: "#1A1208", textAlign: "left" }}
+              style={{ backgroundColor: "transparent", border: "1px solid #E8E0D4", borderRadius: 16, padding: "12px 16px", marginBottom: 8, fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500, color: "#1A1208", textAlign: "left" }}
             >
               <Mic size={18} color="#C8522A" />
               My Voice Profile
@@ -553,7 +546,7 @@ export function HomeScreen() {
             <button
               onClick={() => { setShowProfileSheet(false); signOut(); }}
               className="w-full flex items-center gap-3 cursor-pointer fade-press"
-              style={{ backgroundColor: "transparent", border: "1px solid rgba(200,82,42,0.2)", borderRadius: 16, padding: "14px 16px", fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500, color: "#C8522A", textAlign: "left" }}
+              style={{ backgroundColor: "transparent", border: "1px solid rgba(200,82,42,0.2)", borderRadius: 16, padding: "12px 16px", fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500, color: "#C8522A", textAlign: "left" }}
             >
               <LogOut size={18} color="#C8522A" />
               Sign out
