@@ -22,54 +22,6 @@ const safetySettings = [
 const MAX_RETRIES = 3;
 const INITIAL_DELAY_MS = 1000;
 
-/**
- * Shared instruction block: how real people actually text.
- * This is the anti-AI filter for ALL generated replies. It describes the
- * texture of real texting (rhythm, messiness, omission) rather than a
- * vocabulary list, so the model can produce human-shaped output instead of
- * polished essay-shaped output that happens to contain slang.
- */
-const HUMAN_TEXTING_RULES = `
-HOW REAL PEOPLE TEXT (READ THIS CAREFULLY - THIS IS THE MOST IMPORTANT RULE):
-Real people do not write like an essay. They write like someone thinking with their phone in their hand. Every reply below must pass this test: "would a normal person actually send this, or does it sound like it was workshopped?"
-
-THE NUMBER ONE TELL OF FAKE TEXTING: PERFECT COMPLETENESS.
-- Every sentence is tidy, every thought is finished, nothing is left hanging.
-- Real people leave thoughts half-finished. They trail off. They send "so anyway" or "ngl" as a complete message. They send a second message to correct the first.
-- If a reply feels too complete, too balanced, too "wrapped up" - it reads as AI. Cut it down.
-
-SENTENCE RHYTHM (MOST IMPORTANT):
-- Vary length chaotically. One word. A fragment. A 25-word run-on. Do NOT write sentences of similar length in a row.
-- Fragments are complete thoughts: "not even close.", "which is insane.", "every single time."
-- Start sentences with "And", "But", "So", "Because" when the thought does.
-- Repeat a word on purpose if it's the right word. Don't swap in a synonym to look smart.
-
-WHAT REAL TEXTING NEVER DOES:
-- No announcing: never "here's the thing", "let's be real", "honestly", "to be fair" as a setup word. Just say the thing.
-- No hedging: no "it's important to note", "it's worth mentioning", "I think it's interesting". Make the claim or don't.
-- No summary endings: never end a reply by restating what it already said. End at the moment of impact, or trail off ("idk tho", "so yeah", "ig").
-- No essay structure: no topic sentence -> three supports -> mini-conclusion. Never.
-- No rule-of-three unless it earns it: don't list exactly three things because three feels balanced.
-- No fake pivot: "but here's the thing", "and yet", "that said" as paragraph starters. If the thought turns, just turn.
-- No perfect parallelism: real people don't write three items in identical grammatical form on purpose.
-- No resolving everything: it's fine for a reply to end with ambiguity or a question. Closure feels scripted.
-
-LANGUAGE:
-- Use the most ordinary word for the thing. "he left me on read for 3 days" beats "his communication was notably inconsistent".
-- Specific beats vague, every time. A concrete detail carries the feeling - never tell them what to feel.
-- Never: "delve", "leverage", "navigate", "harness", "utilise", "elevate", "empower", "robust", "seamless", "holistic", "comprehensive", "transformative", "game-changer", "unlock the potential", "at its core", "ultimately", "furthermore", "moreover", "in conclusion".
-- No "it's not just X, it's Y" constructions. No "so what does this mean for you?" No "why is this important? because".
-
-PUNCTUATION IS FEELING:
-- Lowercase is default. CAPS when the feeling is actually big. The dash is a gear shift, not glue. The ellipsis is a pause, not decoration.
-- "??" and "...." and "lol" carry real meaning. Use them like a person would, not like a writer demonstrating them.
-
-MATCH THE PERSON YOU'RE TEXTING:
-- Mirror their message length, energy, and emoji use. Do not out-text a dry texter. Do not under-text someone who's excited.
-- If they send one word, you don't send a paragraph back. If they send three excited messages, you match that.
-`;
-
-
 async function retryWithBackoff<T>(
   operation: () => Promise<T>,
   operationName: string
@@ -379,7 +331,6 @@ export const simulateDraft = async (
     - If the other person's message is weird or too much, react like a real person would — that might mean pulling back.
     - You may occasionally send more than one message in a row (double text) if that's who you are.
     - Your reply must match your familiarity level and mood. A dry texter stays dry. A ghoster pulls away.
-    ${HUMAN_TEXTING_RULES}
 
     THE OTHER PERSON JUST SAID: "${draft}"
 
@@ -566,7 +517,6 @@ export const analyzeSimulation = async (
     CHAT TRANSCRIPT:
     ${transcript}
     ${objectiveStats}
-    ${HUMAN_TEXTING_RULES}
     OUTPUT FORMAT (RAW JSON ONLY):
     {
       "ghostRisk": number (0-100),
@@ -748,7 +698,7 @@ export const getQuickAdvice = async (
     - 🤭 = playful/flirty, 🫣 = embarrassed, 🫶 = affection
     - ✨ = emphasis, 💅 = confident, 🤝 = solidarity
     - 🫡 = respect, 🤠 = chaos energy
-    ${HUMAN_TEXTING_RULES}
+    
     YOUR VOICE:
     - Like texting ur emotionally intelligent best friend
     - Supportive but honest ("this is actually cute" OR "ngl u can do better")
@@ -1167,14 +1117,6 @@ COMMUNICATION STYLE:
 - Avoid being preachy or lecture-y. this is a conversation, not a ted talk.
 - you can use light slang naturally (ngl, tbh) but keep it professional-ish
 - **DO NOT USE HTML TAGS** (like <small>, <br>, etc). Use standard Markdown only. Use *italics* for asides.
-
-ANTI-THERAPY-BOT RULES (READ THIS):
-- Never sound like a self-help article. No "it's important to remember", "research shows", "studies suggest", "the key is to", "what this means is".
-- Never summarize the user's situation back at them in a tidy paragraph and then hand them a lesson. That's a blog post.
-- Vary sentence length. Short, plain sentences land harder than polished ones. "That's not okay." beats "This pattern may indicate an unhealthy dynamic."
-- Ask the question. Don't announce the question ("I'd like to ask you something important"). Just ask.
-- No forced warmth. No "I'm here for you" filler unless it's earned. The care should live in how you listen, not in reassurances.
-- Mirror their language back lightly (if they text lowercase and short, don't reply in paragraphs).
 
 WHAT YOU UNCOVER:
 - Attachment styles at play

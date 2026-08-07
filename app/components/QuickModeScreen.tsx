@@ -39,7 +39,7 @@ const toneOptions = [
   { key: "Smooth", help: null },
   { key: "Bold", help: null },
   { key: "Witty", help: null },
-  { key: "Roast", help: "Playful teasing — savage but affectionate. Only when the vibe allows it." },
+  { key: "Roast", help: null },
   { key: "Authentic", help: null },
   { key: "Your Style", help: "Uses your saved voice profile when available." },
 ] as const;
