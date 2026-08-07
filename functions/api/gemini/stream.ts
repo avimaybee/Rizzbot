@@ -27,7 +27,7 @@ export async function onRequest(context: { env: any; request: Request; data?: an
 
   const ai = new GoogleGenAI({ apiKey });
   const body = await request.json() as any;
-  const { modelChain, contents, systemInstruction, tools, safetySettings } = body;
+  const { modelChain, contents, systemInstruction, tools, safetySettings, config: incomingConfig } = body;
 
   const MODELS = modelChain || ["gemini-3.5-flash-lite", "gemini-2.5-flash-lite"];
 
@@ -53,12 +53,15 @@ export async function onRequest(context: { env: any; request: Request; data?: an
 
     for (const modelId of MODELS) {
       try {
-        const config: any = {};
-        if (modelId.startsWith("gemini-3")) {
-          config.thinkingConfig = { thinkingLevel: "HIGH" };
-        } else if (modelId.startsWith("gemini-2.5")) {
-          // Gemini 2.5 uses an exact token budget instead of High/Low levels
-          config.thinkingConfig = { thinkingBudget: 4096 };
+        const config: any = { ...(incomingConfig || {}) };
+        // Only apply default thinking config if the client didn't specify one
+        if (!config.thinkingConfig) {
+          if (modelId.startsWith("gemini-3")) {
+            config.thinkingConfig = { thinkingLevel: "HIGH" };
+          } else if (modelId.startsWith("gemini-2.5")) {
+            // Gemini 2.5 uses an exact token budget instead of High/Low levels
+            config.thinkingConfig = { thinkingBudget: 4096 };
+          }
         }
 
         let generationFinished = false;

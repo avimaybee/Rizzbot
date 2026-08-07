@@ -33,11 +33,15 @@ export async function onRequest(context: { env: any; request: Request; data?: an
 
   for (const modelId of MODELS) {
     try {
-      const config: any = { ...incomingConfig };
-      if (modelId.startsWith("gemini-3")) {
-        config.thinkingConfig = { thinkingLevel: "HIGH" };
-      } else if (modelId.startsWith("gemini-2.5")) {
-        config.thinkingConfig = { thinkingBudget: 4096 };
+      const config: any = { ...(incomingConfig || {}) };
+      // Only apply default thinking config if the client didn't specify one —
+      // role-play/lite tasks may prefer LOW or no thinking.
+      if (!config.thinkingConfig) {
+        if (modelId.startsWith("gemini-3")) {
+          config.thinkingConfig = { thinkingLevel: "HIGH" };
+        } else if (modelId.startsWith("gemini-2.5")) {
+          config.thinkingConfig = { thinkingBudget: 4096 };
+        }
       }
 
       const response = await ai.models.generateContent({
@@ -50,10 +54,22 @@ export async function onRequest(context: { env: any; request: Request; data?: an
           tools: tools ? [{ functionDeclarations: tools }] : undefined,
         }
       });
-      
+
+      const text = response.text;
+      const functionCalls = response.functionCalls;
+
+      // Empty generation (e.g. thinking consumed the whole budget, or a block)
+      // is a retryable failure — try the next model in the chain.
+      if (!text && (!functionCalls || functionCalls.length === 0)) {
+        const finish = (response as any).finishReason || (response as any).candidates?.[0]?.finishReason || 'unknown';
+        lastError = new Error(`Empty response from ${modelId} (finishReason: ${finish})`);
+        console.error(`[generate.ts] Empty generation from ${modelId}:`, finish);
+        continue;
+      }
+
       return new Response(JSON.stringify({
-        text: response.text,
-        functionCalls: response.functionCalls,
+        text,
+        functionCalls,
         model: modelId
       }), {
         headers: {

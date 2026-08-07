@@ -495,6 +495,8 @@ export const simulateDraft = async (
 
   try {
     // ---- ACTOR CALL: get the persona's genuine reply ----
+    // LOW thinking: role-play replies don't need deep reasoning, and
+    // HIGH thinking on lite models can exhaust the budget with zero visible text.
     const actorParts: any[] = [{ text: actorPrompt }];
     if (images && images.length > 0) {
       images.forEach(base64 => {
@@ -505,23 +507,67 @@ export const simulateDraft = async (
       });
     }
 
-    const actorResponse = await runWithFallback({
-      contents: [{ role: "user", parts: actorParts }],
-      safetySettings: safetySettings,
-    }, THERAPIST_MODELS);
+    let actorReply = "";
+    try {
+      const actorResponse = await runWithFallback({
+        contents: [{ role: "user", parts: actorParts }],
+        safetySettings: safetySettings,
+        config: { thinkingConfig: { thinkingLevel: "LOW" } },
+      }, THERAPIST_MODELS);
+      actorReply = (actorResponse.text || "").trim();
+    } catch (actorErr) {
+      logger.warn("Actor call failed, retrying with plain prompt:", actorErr);
+    }
 
-    const actorText = actorResponse.text;
-    if (!actorText) throw new Error("Connection Lost");
-    const actorReply = actorText.trim();
+    // Retry once with a minimal prompt if the role-lock version returned nothing
+    if (!actorReply) {
+      const plainActorPrompt = `
+You are ${persona.name}. A real person texting, not an assistant.
+Tone: ${persona.tone}. Style: ${persona.style}. Mood: ${persona.mood || 'Neutral'}.
+Familiarity: ${persona.familiarity || 20}/100. Habits: ${persona.habits}.
+Red flags: ${persona.redFlags.join(', ') || 'none'}.
+${conversationContext}
+The other person just said: "${draft}"
+Reply exactly as ${persona.name} would — short, in character, no narration, no quotes around it.`;
+      const retryResponse = await runWithFallback({
+        contents: [{ role: "user", parts: [{ text: plainActorPrompt }] }],
+        safetySettings: safetySettings,
+        config: { thinkingConfig: { thinkingLevel: "LOW" } },
+      }, THERAPIST_MODELS);
+      actorReply = (retryResponse.text || "").trim();
+    }
+
+    if (!actorReply) throw new Error("Connection Lost");
 
     // ---- COACH CALL: analyze the draft + the persona's real reply ----
-    const coachResponse = await runWithFallback({
-      contents: [{ role: "user", parts: [{ text: buildCoachPrompt(actorReply) }] }],
-      safetySettings: safetySettings,
-    }, THERAPIST_MODELS);
+    let coachText = "";
+    try {
+      const coachResponse = await runWithFallback({
+        contents: [{ role: "user", parts: [{ text: buildCoachPrompt(actorReply) }] }],
+        safetySettings: safetySettings,
+        config: { thinkingConfig: { thinkingLevel: "LOW" } },
+      }, THERAPIST_MODELS);
+      coachText = coachResponse.text || "";
+    } catch (coachErr) {
+      logger.warn("Coach call failed:", coachErr);
+    }
 
-    const coachText = coachResponse.text;
-    if (!coachText) throw new Error("Connection Lost");
+    // If the coach returns nothing, fall back to a minimal result so the
+    // user still gets the persona's reply instead of "..." (degraded but usable)
+    if (!coachText) {
+      return {
+        regretLevel: 40,
+        verdict: "The target replied.",
+        feedback: ["Reply landed.", "Keep it natural."],
+        predictedReply: actorReply,
+        rewrites: {
+          safe: actorReply,
+          bold: actorReply,
+          spicy: actorReply,
+          you: actorReply,
+        },
+      };
+    }
 
     const parsed = safeParseJson<SimResult>(coachText);
     // The persona's reply comes from the actor — the coach never authored it
@@ -1634,6 +1680,9 @@ User's Own Notes: ${currentNotes.customNotes || 'none'}]
         SAVE_MEMORY_TOOL
       ],
       safetySettings: safetySettings,
+      // LOW thinking: therapist replies stream as text + tool calls; deep
+      // thinking risks empty/truncated streams on lite models
+      config: { thinkingConfig: { thinkingLevel: "LOW" } },
     }, THERAPIST_MODELS);
 
     const reader = response.body?.getReader();
