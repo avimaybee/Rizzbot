@@ -91,10 +91,23 @@ export interface SessionResult {
   request?: {
     screenshots?: string[];
     theirMessage?: string;
+    yourDraft?: string;
+    context?: string;
   };
   response?: {
     vibeCheck?: any;
     suggestions?: any;
+    proTip?: string;
+    recommendedAction?: string;
+    timingRecommendation?: string;
+    interestSignal?: number;
+    wait?: string | null;
+    extractedUnrepliedMessages?: string[];
+    extractedTargetMessage?: string;
+    conversationContext?: string;
+    draftAnalysis?: any;
+    detectedMeta?: any;
+    context?: string;
   };
 }
 

@@ -200,6 +200,8 @@ export function QuickModeScreen() {
             request: {
               screenshots,
               theirMessage,
+              yourDraft,
+              context,
             },
             response,
             vibeCheck: response.vibeCheck,

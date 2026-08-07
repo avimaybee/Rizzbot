@@ -1,18 +1,25 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import {
   ArrowLeft,
+  Check,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
   Clock,
+  Copy,
+  CornerDownRight,
   Image,
+  Link2,
   MessageSquare,
   Search,
   SlidersHorizontal,
   Sparkles,
+  Timer,
   Trash2,
   X,
   Zap,
   AlertCircle,
-  ChevronRight,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { TabBar } from "./TabBar";
@@ -20,7 +27,7 @@ import { GrainOverlay } from "./GrainOverlay";
 import { useToast } from "./ui/Toast";
 import { haptics } from "../utils/haptics";
 import { useAppContext } from "../app-context";
-import { deleteSession, getSessions, Session } from "../../services/dbService";
+import { deleteSession, getSessions, Session, SessionResult } from "../../services/dbService";
 import { formatShortDate, formatTimeAgo } from "../utils/formatTime";
 
 const filterOptions = ["All", "Quick Mode", "Practice"] as const;
@@ -35,18 +42,6 @@ const formatDate = (isoDate?: string | null) => formatShortDate(isoDate);
 
 const formatAgo = (isoDate?: string | null) => formatTimeAgo(isoDate);
 
-const suggestionText = (suggestion: unknown): string => {
-  if (!suggestion) return "";
-  const option = Array.isArray(suggestion) ? suggestion[0] : suggestion;
-  if (typeof option === "string") return option;
-  if (!option || typeof option !== "object") return "";
-  const maybe = option as { replies?: Array<{ reply?: string }>; conversationHook?: string };
-  const replyText = Array.isArray(maybe.replies)
-    ? maybe.replies.map((r) => r.reply || "").filter(Boolean).join(" ")
-    : "";
-  return [replyText, maybe.conversationHook || ""].filter(Boolean).join(" ").trim();
-};
-
 const getRisk = (session: Session) =>
   typeof session.ghost_risk === "number"
     ? session.ghost_risk
@@ -59,15 +54,93 @@ const getScreenshots = (session: Session): string[] => {
 };
 
 function SessionDetail({ session, onBack }: { session: Session; onBack: () => void }) {
+  const { toast } = useToast();
   const parsed = session.parsedResult || {};
   const screenshots = getScreenshots(session);
   const vibeCheck = parsed.vibeCheck || parsed.response?.vibeCheck;
   const suggestions = parsed.suggestions || parsed.response?.suggestions;
+  const response = parsed.response as SessionResult["response"] | undefined;
   const history = parsed.history || [];
   const analysis = parsed.analysis;
   const theirMessage = parsed.request?.theirMessage;
   const risk = getRisk(session);
   const accent = getAccentColor(risk);
+  const isQuick = session.mode === "quick";
+
+  const parsedAny = parsed as any;
+
+  const toneLabels: Record<string, string> = {
+    smooth: "Smooth",
+    bold: "Bold",
+    witty: "Witty",
+    authentic: "Authentic",
+    yourStyle: "Your Style",
+  };
+
+  const toneOrder = ["smooth", "bold", "witty", "authentic", "yourStyle"];
+
+  const [activeTone, setActiveTone] = useState<string>(() => {
+    const firstAvailable = toneOrder.find((t) => {
+      const list = (parsed.suggestions || parsed.response?.suggestions)?.[t];
+      return Array.isArray(list) && list.length > 0;
+    });
+    return firstAvailable || "smooth";
+  });
+  const [toneCursor, setToneCursor] = useState<Record<string, number>>({});
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const copyTimerRef = useRef<number | null>(null);
+
+  const optionsForTone = (tone: string): any[] => {
+    const list = suggestions?.[tone];
+    return Array.isArray(list) ? list.filter((o: any) => o && Array.isArray(o.replies) && o.replies.length > 0) : [];
+  };
+
+  const activeOptions = optionsForTone(activeTone);
+  const cursor = toneCursor[activeTone] ?? 0;
+  const selectedOption = activeOptions.length ? activeOptions[cursor % activeOptions.length] : null;
+
+  const handleCopy = async (text: string, key: string) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      toast("Could not copy", "error");
+      return;
+    }
+    setCopiedKey(key);
+    haptics.success();
+    toast("Copied to clipboard", "success");
+    if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = window.setTimeout(() => setCopiedKey(null), 1500);
+  };
+
+  const actionLabel: Record<string, { label: string; color: string; bg: string }> = {
+    SEND: { label: "Send it", color: "#7A9E7E", bg: "rgba(122,158,126,0.12)" },
+    WAIT: { label: "Wait", color: "#D4A853", bg: "rgba(212,168,83,0.12)" },
+    CALL: { label: "Call / voice note", color: "#C8522A", bg: "rgba(200,82,42,0.1)" },
+    MATCH: { label: "Match their energy", color: "#7A9E7E", bg: "rgba(122,158,126,0.12)" },
+    PULL_BACK: { label: "Pull back", color: "#D4A853", bg: "rgba(212,168,83,0.12)" },
+    ABORT: { label: "Walk away", color: "#C8522A", bg: "rgba(200,82,42,0.1)" },
+  };
+
+  const nextMove = (response?.recommendedAction || parsedAny.recommendedAction) as string | undefined;
+  const timing = response?.timingRecommendation || parsedAny.timingRecommendation;
+  const interestSignal = response?.interestSignal ?? parsedAny.interestSignal;
+  const waitReason = response?.wait ?? suggestions?.wait ?? parsedAny.wait;
+  const proTip = response?.proTip || parsedAny.proTip;
+  const unreplied = response?.extractedUnrepliedMessages || parsedAny.extractedUnrepliedMessages;
+  const conversationContext = response?.conversationContext || parsedAny.conversationContext;
+  const draftAnalysis = response?.draftAnalysis || parsedAny.draftAnalysis;
+  const detectedMeta = response?.detectedMeta || parsedAny.detectedMeta;
+  const yourDraft = parsed.request?.yourDraft || parsedAny.yourDraft;
+
+  const labelStyle: React.CSSProperties = {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 11,
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+    color: "rgba(26,18,8,0.55)",
+  };
 
   return (
     <div className="relative min-h-screen pb-[72px]" style={{ backgroundColor: "#F5EFE6" }}>
@@ -172,15 +245,7 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
           <div className="mt-4 p-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 20 }}>
             <div className="flex items-center gap-2 mb-3">
               <Image size={15} color="#C8522A" />
-              <p
-                style={{
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 11,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  color: "rgba(26,18,8,0.55)",
-                }}
-              >
+              <p style={labelStyle}>
                 Uploaded screenshots
               </p>
             </div>
@@ -205,16 +270,7 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
 
         {theirMessage && (
           <div className="mt-4 p-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 20 }}>
-            <p
-              style={{
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: 11,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                color: "rgba(26,18,8,0.55)",
-                marginBottom: 8,
-              }}
-            >
+            <p style={{ ...labelStyle, marginBottom: 8 }}>
               Their message
             </p>
             <p
@@ -230,24 +286,214 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
           </div>
         )}
 
-        {vibeCheck && (
-          <div className="mt-4 p-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 20 }}>
+        {yourDraft && (
+          <div className="mt-3 p-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 20 }}>
+            <p style={{ ...labelStyle, marginBottom: 8 }}>
+              Your draft
+            </p>
             <p
               style={{
                 fontFamily: "'DM Sans', sans-serif",
-                fontSize: 11,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                color: "rgba(26,18,8,0.55)",
-                marginBottom: 8,
+                fontSize: 14,
+                color: "rgba(26,18,8,0.75)",
+                fontStyle: "italic",
+                lineHeight: 1.55,
               }}
             >
+              "{yourDraft}"
+            </p>
+          </div>
+        )}
+
+        {isQuick && nextMove && (
+          <div className="mt-4 p-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 20 }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles size={15} color="#C8522A" />
+              <p style={labelStyle}>Next move</p>
+            </div>
+            {(() => {
+              const a = actionLabel[nextMove] || { label: nextMove, color: "#1A1208", bg: "rgba(26,18,8,0.06)" };
+              return (
+                <div className="flex flex-wrap items-center gap-3">
+                  <span
+                    style={{
+                      borderRadius: 999,
+                      padding: "5px 12px",
+                      backgroundColor: a.bg,
+                      color: a.color,
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontSize: 13,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {a.label}
+                  </span>
+                  {typeof interestSignal === "number" && (
+                    <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.55)" }}>
+                      Interest: {interestSignal}/100
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
+            {timing && (
+              <div className="mt-3 flex items-start gap-2">
+                <Timer size={14} strokeWidth={1.8} color="rgba(26,18,8,0.4)" style={{ marginTop: 2, flexShrink: 0 }} />
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.65)", lineHeight: 1.5 }}>
+                  {timing}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {isQuick && waitReason && (
+          <div className="mt-3 p-4" style={{ backgroundColor: "#FEF3E2", borderRadius: 20, border: "1px solid rgba(212,168,83,0.25)" }}>
+            <div className="flex items-center gap-2 mb-2">
+              <Clock size={15} color="#D4A853" />
+              <p style={{ ...labelStyle, color: "#B8860B" }}>Don't reply yet</p>
+            </div>
+            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.7)", lineHeight: 1.5 }}>
+              {waitReason}
+            </p>
+          </div>
+        )}
+
+        {isQuick && proTip && (
+          <div className="mt-3 p-4" style={{ backgroundColor: "#F5E8E0", borderRadius: 20 }}>
+            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontStyle: "italic", color: "#1A1208", lineHeight: 1.45 }}>
+              "{proTip}"
+            </p>
+          </div>
+        )}
+
+        {isQuick && conversationContext && (
+          <div className="mt-3 p-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 20 }}>
+            <p style={{ ...labelStyle, marginBottom: 6 }}>Conversation context</p>
+            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.7)", lineHeight: 1.5 }}>
+              {conversationContext}
+            </p>
+          </div>
+        )}
+
+        {isQuick && Array.isArray(unreplied) && unreplied.length > 0 && (
+          <div className="mt-3 p-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 20 }}>
+            <p style={{ ...labelStyle, marginBottom: 8 }}>Messages to reply to</p>
+            <div className="space-y-2">
+              {unreplied.map((msg: string, i: number) => (
+                <div key={i} className="flex items-start gap-2">
+                  <CornerDownRight size={13} strokeWidth={2} color="#C8522A" style={{ marginTop: 3, flexShrink: 0 }} />
+                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.75)", lineHeight: 1.5 }}>
+                    "{msg}"
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {isQuick && detectedMeta && (
+          <div className="mt-3 p-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 20 }}>
+            <p style={{ ...labelStyle, marginBottom: 8 }}>Detected from screenshots</p>
+            <div className="flex flex-wrap gap-2">
+              {detectedMeta.platform && detectedMeta.platform !== "unknown" && (
+                <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "#F5E8E0", color: "#C8522A", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+                  {detectedMeta.platform}
+                </span>
+              )}
+              {detectedMeta.deliveryStatus && detectedMeta.deliveryStatus !== "unknown" && (
+                <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "#F5EFE6", border: "1px solid #E8E0D4", color: "rgba(26,18,8,0.6)", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+                  {detectedMeta.deliveryStatus === "read" ? "✓✓ read" : detectedMeta.deliveryStatus}
+                </span>
+              )}
+              {detectedMeta.timestamp && (
+                <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "#F5EFE6", border: "1px solid #E8E0D4", color: "rgba(26,18,8,0.6)", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+                  {detectedMeta.timestamp}
+                </span>
+              )}
+              {detectedMeta.groupName && (
+                <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "#F5EFE6", border: "1px solid #E8E0D4", color: "rgba(26,18,8,0.6)", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+                  {detectedMeta.groupName}
+                </span>
+              )}
+              {detectedMeta.isMessageRequest === true && (
+                <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "rgba(200,82,42,0.1)", color: "#C8522A", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+                  message request
+                </span>
+              )}
+              {Array.isArray(detectedMeta.reactions) && detectedMeta.reactions.length > 0 && (
+                <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "#F5EFE6", border: "1px solid #E8E0D4", color: "rgba(26,18,8,0.6)", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+                  {detectedMeta.reactions.join(" ")}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {isQuick && draftAnalysis && (
+          <div className="mt-4 p-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 20 }}>
+            <p style={{ ...labelStyle, marginBottom: 8 }}>Draft analysis</p>
+            {draftAnalysis.verdict && (
+              <p
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontSize: 17,
+                  fontStyle: "italic",
+                  color: "#1A1208",
+                  lineHeight: 1.45,
+                  marginBottom: 8,
+                }}
+              >
+                "{draftAnalysis.verdict}"
+              </p>
+            )}
+            {typeof draftAnalysis.confidenceScore === "number" && (
+              <div className="mb-3">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.55)" }}>Confidence</span>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "#1A1208" }}>{draftAnalysis.confidenceScore}/100</span>
+                </div>
+                <div className="w-full overflow-hidden" style={{ height: 6, borderRadius: 100, backgroundColor: "#E8E0D4" }}>
+                  <div style={{ width: `${draftAnalysis.confidenceScore}%`, height: "100%", borderRadius: 100, backgroundColor: "#7A9E7E" }} />
+                </div>
+              </div>
+            )}
+            {Array.isArray(draftAnalysis.strengths) && draftAnalysis.strengths.length > 0 && (
+              <div className="mb-2">
+                <p style={{ fontSize: 11, color: "#7A9E7E", marginBottom: 5, fontFamily: "'DM Sans', sans-serif" }}>Strengths</p>
+                <div className="flex flex-wrap gap-2">
+                  {draftAnalysis.strengths.map((s: string, i: number) => (
+                    <span key={i} style={{ borderRadius: 999, padding: "3px 9px", backgroundColor: "rgba(122,158,126,0.12)", color: "#58745A", fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {Array.isArray(draftAnalysis.issues) && draftAnalysis.issues.length > 0 && (
+              <div>
+                <p style={{ fontSize: 11, color: "#C8522A", marginBottom: 5, fontFamily: "'DM Sans', sans-serif" }}>Could improve</p>
+                <div className="flex flex-wrap gap-2">
+                  {draftAnalysis.issues.map((s: string, i: number) => (
+                    <span key={i} style={{ borderRadius: 999, padding: "3px 9px", backgroundColor: "rgba(200,82,42,0.12)", color: "#C8522A", fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {vibeCheck && (
+          <div className="mt-4 p-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 20 }}>
+            <p style={{ ...labelStyle, marginBottom: 8 }}>
               Vibe check
             </p>
             <div className="grid grid-cols-2 gap-2 mb-3">
               <div style={{ backgroundColor: "#FFFFFF", borderRadius: 12, padding: 10, border: "1px solid #E8E0D4" }}>
                 <p style={{ fontSize: 11, color: "rgba(26,18,8,0.5)", marginBottom: 4 }}>Energy</p>
-                <p style={{ fontSize: 14, color: "#1A1208", fontFamily: "'DM Sans', sans-serif" }}>{vibeCheck.theirEnergy || "N/A"}</p>
+                <p style={{ fontSize: 14, color: "#1A1208", fontFamily: "'DM Sans', sans-serif", textTransform: "capitalize" }}>{vibeCheck.theirEnergy || "N/A"}</p>
               </div>
               <div style={{ backgroundColor: "#FFFFFF", borderRadius: 12, padding: 10, border: "1px solid #E8E0D4" }}>
                 <p style={{ fontSize: 11, color: "rgba(26,18,8,0.5)", marginBottom: 4 }}>Interest</p>
@@ -299,68 +545,150 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
           </div>
         )}
 
-        {suggestions && (
+        {isQuick && suggestions && toneOrder.some((t) => optionsForTone(t).length > 0) && (
           <div className="mt-4 p-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 20 }}>
-            <p
-              style={{
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: 11,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                color: "rgba(26,18,8,0.55)",
-                marginBottom: 8,
-              }}
-            >
-              Suggestions
-            </p>
-            <div className="space-y-2">
-              {(["smooth", "bold", "witty", "authentic"] as const).map((tone) => {
-                const text = suggestionText((suggestions as Record<string, unknown>)[tone]);
-                if (!text) return null;
+            <div className="flex items-center gap-2 mb-3">
+              <Zap size={15} color="#C8522A" />
+              <p style={labelStyle}>Suggested replies</p>
+            </div>
+
+            <div className="flex gap-1.5 overflow-x-auto pb-2 no-scrollbar" style={{ marginLeft: -2, marginRight: -2, paddingLeft: 2, paddingRight: 2 }}>
+              {toneOrder.filter((t) => optionsForTone(t).length > 0).map((tone) => {
+                const isActive = activeTone === tone;
                 return (
-                  <div
+                  <button
                     key={tone}
+                    onClick={() => {
+                      setActiveTone(tone);
+                      haptics.light();
+                    }}
+                    className="cursor-pointer shrink-0"
                     style={{
-                      borderRadius: 12,
-                      backgroundColor: "#FFFFFF",
-                      border: "1px solid #E8E0D4",
-                      padding: 10,
+                      borderRadius: 100,
+                      padding: "7px 13px",
+                      backgroundColor: isActive ? "#C8522A" : "transparent",
+                      color: isActive ? "#FFFFFF" : "rgba(26,18,8,0.55)",
+                      border: isActive ? "1px solid #C8522A" : "1px solid #E8E0D4",
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontSize: 12,
+                      fontWeight: 500,
+                      transition: "all 0.2s ease",
                     }}
                   >
-                    <p
-                      style={{
-                        fontFamily: "'DM Sans', sans-serif",
-                        fontSize: 10,
-                        letterSpacing: "0.1em",
-                        textTransform: "uppercase",
-                        color: "rgba(26,18,8,0.45)",
-                        marginBottom: 4,
-                      }}
-                    >
-                      {tone}
-                    </p>
-                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#1A1208", lineHeight: 1.5 }}>
-                      {text}
-                    </p>
-                  </div>
+                    {toneLabels[tone]}
+                  </button>
                 );
               })}
             </div>
+
+            {selectedOption ? (
+              <>
+                <div className="space-y-3 mt-3">
+                  {selectedOption.replies.map((replyItem: any, idx: number) => {
+                    const key = `replay-${activeTone}-${cursor}-${idx}`;
+                    const isCopied = copiedKey === key;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => handleCopy(replyItem.reply, key)}
+                        className="w-full text-left cursor-pointer transition-all active:scale-[0.99]"
+                        style={{
+                          backgroundColor: "#FFFFFF",
+                          border: "1px solid #E8E0D4",
+                          borderRadius: 14,
+                          padding: "12px 14px",
+                        }}
+                      >
+                        {replyItem.originalMessage ? (
+                          <div className="flex items-start gap-1.5 mb-2">
+                            <CornerDownRight size={13} strokeWidth={2} color="rgba(26,18,8,0.35)" style={{ marginTop: 3, flexShrink: 0 }} />
+                            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontStyle: "italic", color: "rgba(26,18,8,0.55)", lineHeight: 1.4 }}>
+                              "{replyItem.originalMessage}"
+                            </span>
+                          </div>
+                        ) : null}
+                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14.5, color: "#1A1208", lineHeight: 1.5, paddingLeft: 12, borderLeft: "2px solid #C8522A" }}>
+                          {replyItem.reply}
+                        </p>
+                        <div className="mt-2 flex items-center gap-1.5" style={{ color: isCopied ? "#7A9E7E" : "rgba(26,18,8,0.4)", fontFamily: "'DM Sans', sans-serif", fontSize: 10, textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.05em" }}>
+                          {isCopied ? <Check size={13} /> : <Copy size={13} />}
+                          <span>{isCopied ? "Copied" : "Copy"}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {selectedOption.conversationHook && (
+                  <button
+                    onClick={() => handleCopy(selectedOption.conversationHook, `replay-hook-${activeTone}-${cursor}`)}
+                    className="w-full text-left cursor-pointer transition-all active:scale-[0.99] mt-2"
+                    style={{
+                      backgroundColor: "#F5E8E0",
+                      border: "1px solid #E8E0D4",
+                      borderRadius: 14,
+                      padding: "12px 14px",
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <Link2 size={13} strokeWidth={2} color="#C8522A" />
+                      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "#C8522A" }}>
+                        Conversation hook
+                      </span>
+                    </div>
+                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13.5, color: "#1A1208", lineHeight: 1.5 }}>
+                      {selectedOption.conversationHook}
+                    </p>
+                  </button>
+                )}
+              </>
+            ) : (
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.5)", marginTop: 12 }}>
+                No replies saved for this style.
+              </p>
+            )}
+
+            {activeOptions.length > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-3" style={{ borderTop: "1px solid #E8E0D4" }}>
+                <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, color: "rgba(26,18,8,0.55)" }}>
+                  Variation {(cursor % activeOptions.length) + 1} of {activeOptions.length}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      haptics.light();
+                      setToneCursor((prev) => ({
+                        ...prev,
+                        [activeTone]: cursor > 0 ? cursor - 1 : activeOptions.length - 1,
+                      }));
+                    }}
+                    className="cursor-pointer flex items-center justify-center"
+                    style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: "#F5E8E0", border: "1px solid #E8E0D4", color: "#C8522A" }}
+                  >
+                    <ChevronLeft size={15} strokeWidth={2.5} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      haptics.light();
+                      setToneCursor((prev) => ({
+                        ...prev,
+                        [activeTone]: (cursor + 1) % activeOptions.length,
+                      }));
+                    }}
+                    className="cursor-pointer flex items-center justify-center"
+                    style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: "#F5E8E0", border: "1px solid #E8E0D4", color: "#C8522A" }}
+                  >
+                    <ChevronRight size={15} strokeWidth={2.5} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         {history.length > 0 && (
           <div className="mt-4 p-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 20 }}>
-            <p
-              style={{
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: 11,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                color: "rgba(26,18,8,0.55)",
-                marginBottom: 8,
-              }}
-            >
+            <p style={{ ...labelStyle, marginBottom: 8 }}>
               Practice turns
             </p>
             <div className="space-y-3">
@@ -394,6 +722,22 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
                       <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#1A1208" }}>
                         {turn.result?.predictedReply || "No prediction recorded"}
                       </p>
+                      {turn.result?.rewrites && (
+                        <div className="mt-2 pt-2 space-y-1" style={{ borderTop: "1px solid rgba(26,18,8,0.06)" }}>
+                          {(["safe", "bold", "spicy", "you"] as const)
+                            .filter((k) => turn.result.rewrites?.[k])
+                            .map((k) => (
+                              <div key={k} className="flex items-start gap-1.5">
+                                <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600, color: "#C8522A", fontFamily: "'DM Sans', sans-serif", marginTop: 2, flexShrink: 0, width: 38 }}>
+                                  {k}
+                                </span>
+                                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.65)", lineHeight: 1.4 }}>
+                                  {turn.result.rewrites[k]}
+                                </p>
+                              </div>
+                            ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -404,16 +748,7 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
 
         {analysis && (
           <div className="mt-4 mb-8 p-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 20 }}>
-            <p
-              style={{
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: 11,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                color: "rgba(26,18,8,0.55)",
-                marginBottom: 8,
-              }}
-            >
+            <p style={{ ...labelStyle, marginBottom: 8 }}>
               Session analysis
             </p>
             <div className="grid grid-cols-3 gap-2 mb-3">
