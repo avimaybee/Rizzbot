@@ -94,7 +94,15 @@ export async function onRequest(context: any) {
         redFlags,
         greenFlags,
         theirLanguage,
+        // Accept snake_case aliases too (client historically sends these)
+        red_flags,
+        green_flags,
+        their_language,
       } = body;
+
+      const redFlagsFinal = redFlags ?? red_flags;
+      const greenFlagsFinal = greenFlags ?? green_flags;
+      const theirLanguageFinal = theirLanguage ?? their_language;
 
       if (!name) {
         return new Response(JSON.stringify({ error: 'name required' }), {
@@ -119,9 +127,9 @@ export async function onRequest(context: any) {
           tone || null,
           style || null,
           habits || null,
-          typeof redFlags === 'string' ? redFlags : JSON.stringify(redFlags || []),
-          typeof greenFlags === 'string' ? greenFlags : JSON.stringify(greenFlags || []),
-          typeof theirLanguage === 'string' ? theirLanguage : JSON.stringify(theirLanguage || [])
+          typeof redFlagsFinal === 'string' ? redFlagsFinal : JSON.stringify(redFlagsFinal || []),
+          typeof greenFlagsFinal === 'string' ? greenFlagsFinal : JSON.stringify(greenFlagsFinal || []),
+          typeof theirLanguageFinal === 'string' ? theirLanguageFinal : JSON.stringify(theirLanguageFinal || [])
         )
         .run();
 
@@ -132,7 +140,11 @@ export async function onRequest(context: any) {
 
     if (request.method === 'PUT') {
       const body = await request.json();
-      const { id, name, relationship_context, harshness_level, communication_tips, conversation_starters, things_to_avoid, tone, style, habits, redFlags, greenFlags, theirLanguage } = body;
+      const { id, name, relationship_context, harshness_level, communication_tips, conversation_starters, things_to_avoid, tone, style, habits, redFlags, greenFlags, theirLanguage, red_flags, green_flags, their_language } = body;
+
+      const redFlagsFinal = redFlags ?? red_flags;
+      const greenFlagsFinal = greenFlags ?? green_flags;
+      const theirLanguageFinal = theirLanguage ?? their_language;
 
       if (!id) {
         return new Response(JSON.stringify({ error: 'id required' }), {
@@ -165,9 +177,9 @@ export async function onRequest(context: any) {
           tone || null,
           style || null,
           habits || null,
-          typeof redFlags === 'string' ? redFlags : JSON.stringify(redFlags || []),
-          typeof greenFlags === 'string' ? greenFlags : JSON.stringify(greenFlags || []),
-          typeof theirLanguage === 'string' ? theirLanguage : JSON.stringify(theirLanguage || []),
+          typeof redFlagsFinal === 'string' ? redFlagsFinal : JSON.stringify(redFlagsFinal || []),
+          typeof greenFlagsFinal === 'string' ? greenFlagsFinal : JSON.stringify(greenFlagsFinal || []),
+          typeof theirLanguageFinal === 'string' ? theirLanguageFinal : JSON.stringify(theirLanguageFinal || []),
           id,
           dbUserId
         )

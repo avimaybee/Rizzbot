@@ -113,7 +113,7 @@ const QUICK_MODE_MODELS = [
 
 const THERAPIST_MODELS = [
   "gemini-3.5-flash-lite", 
-  "gemini-2.5-flash-lite"
+  "gemini-2.5-flash"
 ];
 
 
@@ -312,18 +312,33 @@ export const simulateDraft = async (
   persona: Persona,
   userStyle?: UserStyleProfile | null,
   conversationHistory?: { draft: string, result: SimResult }[],
-  images?: string[]
+  images?: string[],
+  options?: {
+    goal?: string;
+    sessionMemory?: string;
+    escalationPhase?: 'warmup' | 'probe' | 'deep' | 'close';
+  }
 ): Promise<SimResult> => {
+  const goal = options?.goal?.trim() || '';
+  const personaSessionMemory = options?.sessionMemory?.trim() || '';
+  const escalationPhase = options?.escalationPhase || (conversationHistory?.length ? 'probe' : 'warmup');
 
-  // Build conversation context from history
+  // Build conversation context from history (ring buffer: last 12 turns max)
   let conversationContext = '';
   if (conversationHistory && conversationHistory.length > 0) {
-    const transcript = conversationHistory.map((turn, idx) => {
+    const recent = conversationHistory.slice(-12);
+    const transcript = recent.map((turn, idx) => {
       return `Turn ${idx + 1}:\n  User: "${turn.draft}"\n  ${persona.name}: "${turn.result.predictedReply}"`;
     }).join('\n\n');
 
-    conversationContext = `\n\n═══════════════════════════════════════════════\nCONVERSATION HISTORY (for context):\n═══════════════════════════════════════════════\n${transcript}\n\n`;
+    conversationContext = `\n\n═══════════════════════════════════════════════\nCONVERSATION HISTORY (recent, for context):\n═══════════════════════════════════════════════\n${transcript}\n\n`;
   }
+
+  const escalationContext =
+    escalationPhase === 'warmup' ? 'This is the very start of the conversation. Keep it light and casual — you are still figuring each other out.'
+    : escalationPhase === 'probe' ? 'You have been talking a bit. You are testing how they respond, asking occasional questions, still a little cautious.'
+    : escalationPhase === 'deep' ? 'You have been talking for a while now. You are comfortable, more open, willing to share real things and tease them.'
+    : 'The conversation is winding down. You are wrapping up naturally — a good note to end on or a real plan.';
 
   // Build user style context if available
   let userStyleContext = '';
@@ -355,7 +370,54 @@ export const simulateDraft = async (
   // Get feedback-based prompt bias (only when userId is available)
   const feedbackBias = userId ? getPromptBias(userId) : '';
 
-  const prompt = `
+  // ============ CALL 1: THE ACTOR (plays the persona, never critiques) ============
+  const actorPrompt = `
+    SYSTEM IDENTITY: YOU ARE ${persona.name}.
+    You are a real person texting. Not an assistant, not a coach, not a simulator. You are ${persona.name}.
+    You do not know you are being analyzed. You have no awareness of "the user" as a user — you are talking to a real person you know.
+    Your entire reality is this conversation and who you are. Stay in character, always.
+
+    WHO YOU ARE:
+    - Name: ${persona.name}
+    - Tone: ${persona.tone}
+    - Current mood: ${persona.mood || 'Neutral'}
+    - Familiarity: ${persona.familiarity || 20}/100 (0 = stranger, 100 = soulmates)
+    - Style: ${persona.style}
+    - Habits: ${persona.habits}
+    - Red flags: ${persona.redFlags.join(', ') || 'none'}
+    - Green flags: ${persona.greenFlags?.join(', ') || 'none'}
+    - Relationship stage: ${persona.relationshipContext || 'TALKING_STAGE'}
+    - Things to avoid: ${persona.thingsToAvoid?.join(', ') || 'none'}
+    - Your language quirks: ${persona.theirLanguage?.join(', ') || 'none'}
+
+    HOW YOU ACT BY FAMILIARITY (this is a real spectrum, follow it):
+    - Familiarity under 30: you're guarded. Short replies, few questions, you don't volunteer info. You might take a while to warm up.
+    - Familiarity 30-70: you mirror their energy. You ask questions, you match message length, you're getting comfortable.
+    - Familiarity above 70: you're fully comfortable. You initiate, you tease, you reference inside jokes, you text more freely.
+
+    HOW YOUR MOOD SHIFTS YOUR TEXTING:
+    - The mood you're in changes how you text. A guarded/bored mood means shorter, slower, fewer questions. An intrigued/playful mood means you engage more. Stay consistent with your mood — don't act warmer than your mood allows.
+
+    WHERE THE CONVERSATION IS AT: ${escalationContext}
+    ${goal ? `WHAT THE OTHER PERSON IS TRYING TO DO THIS SESSION: "${goal}" — this might change how open or guarded you feel. Respond naturally to what they do, not to what they want.` : ''}
+    ${conversationContext}
+    ${personaSessionMemory ? `THINGS YOU REMEMBER ABOUT THEM: ${personaSessionMemory}` : ''}
+
+    RULES:
+    - You are ${persona.name}. Reply exactly how THEY would, not how a coach would. Your words are YOURS.
+    - NEVER break character. NEVER comment on the conversation itself. NEVER give advice to the other person.
+    - If the other person's message is weird or too much, react like a real person would — that might mean pulling back.
+    - You may occasionally send more than one message in a row (double text) if that's who you are.
+    - Your reply must match your familiarity level and mood. A dry texter stays dry. A ghoster pulls away.
+    ${HUMAN_TEXTING_RULES}
+
+    THE OTHER PERSON JUST SAID: "${draft}"
+
+    REPLY AS ${persona.name}. Reply with what you actually send — nothing else, no narration, no thinking out loud. You are a real person texting them back.
+  `;
+
+  // ============ CALL 2: THE COACH (analyzes, never speaks as the persona) ============
+  const buildCoachPrompt = (predictedReply: string) => `
     SYSTEM IDENTITY: THE WINGMAN
     You're that friend who's effortlessly good at texting. Authentic, smooth, emotionally intelligent.
     You help people communicate genuinely - not play games. Real connection > calculated coolness.
@@ -385,84 +447,40 @@ export const simulateDraft = async (
     
     ⚠️ IMPORTANT: Being expressive is NOT cringe. Showing enthusiasm when appropriate is healthy.
     CAPS for genuine excitement is valid: "NO WAY", "REALLYY??", "WAIT WHAT"
-    
-    ═══════════════════════════════════════════════
-    LINGUISTIC STYLE RULES
-    ═══════════════════════════════════════════════
-    
-    NATURAL PATTERNS (not rigid rules):
-    - Lowercase is standard but caps for emphasis/excitement is valid
-    - No periods at end = softer tone ("Sure." vs "sure")
-    - Extended letters for emphasis: "nooo", "pleaseee", "stopp"
-    - Keysmash for overwhelm: "aksjdfh" (use sparingly)
-    
-    ABBREVIATIONS (natural usage):
-    - "you" → "u", "ur" when casual
-    - "want to" → "wanna", "gonna", "bc"
-    - Match their abbreviation level
-    
-    🚫 ACTUALLY BANNED (reads as fake/boomer):
-    - 😂 🤣 😃 😄 (outdated reaction emojis)
-    - "awesome", "epic", "buddy", "hilarious", "adventure"
-    - "adulting", "all the feels", "living my best life"
-    - 🙂 (reads passive aggressive)
-    
-    ✅ GEN-Z APPROVED VOCABULARY:
-    - Verifiers: "fr", "no cap", "bet", "ong", "lowkey", "highkey", "icl", "bffr"
-    - Group terms: "gng" = gang/friends (NOT "going"), "the boys", "the girls", "bestie"
-    - Status: "valid", "cooked", "ate", "slay", "based", "real"
-    - Reactions: "unhinged", "delulu", "the ick", "rent free"
-    - Softeners: "ngl", "tbh", "idk", "tho", "lol", "lmao"
-    - Era talk: "in my ___ era", "giving ___", "its giving ___"
-    
-    ✅ APPROVED EMOJIS:
-    - 💀 = dead/funny, 😭 = overwhelmed (often for laughing)
-    - 👀 = intrigued, 🫠 = melting, 🥹 = touched
-    - 🤭 = flirty, 🫣 = embarrassed, 🫶 = affection
-    - ✨ = emphasis, 💅 = unbothered, 🤝 = agreement
     ${HUMAN_TEXTING_RULES}
-    ═══════════════════════════════════════════════
-    
-    TARGET PERSONA:
-    - Name: ${persona.name}
-    - Tone: ${persona.tone}
-    - Current Mood: ${persona.mood || 'Neutral'}
+
+    THE SITUATION:
+    - The target is: ${persona.name} (tone: ${persona.tone}, style: ${persona.style}, habits: ${persona.habits})
+    - Their current mood: ${persona.mood || 'Neutral'}
     - Familiarity: ${persona.familiarity || 20}/100
-    - Style: ${persona.style}
-    - Habits: ${persona.habits}
-    - Red Flags: ${persona.redFlags.join(', ')}
     ${conversationContext}
     ${userStyleContext}
-    
-    SIMULATION RULES:
-    - Be HUMAN. If the user is being dry, be dry. If they're being intense, react accordingly.
-    - Mood & Familiarity shift gradually. Use the update_sim_state tool for changes.
-    - FAMILIARITY DELTA: Max ±5 per message.
+    ${personaSessionMemory ? `PERSONA REMEMBERS: ${personaSessionMemory}` : ''}
 
-    IMPORTANT: After generating the reply, use the update_sim_state tool to update
-    the persona's mood and familiarity_delta (±5 max) based on how this interaction
-    would realistically move them. Return the JSON below AND the tool call.
+    THE USER'S DRAFT: "${draft}"
+
+    WHAT THE TARGET ACTUALLY REPLIED (this is real, analyze it):
+    "${predictedReply}"
 
     TASK: 
     1. Analyze the user's draft - Does it match their target's energy? Is it authentic?
     2. Calculate "Regret Level" (0-100) - would they cringe at this later?
-    3. PREDICT how the Persona would reply (match their exact vibe).
+    3. Judge whether the target's real reply suggests the draft worked or backfired.
     4. SUGGEST 3 follow-up options for after the predicted reply.
-    
+
     ANALYSIS FRAMEWORK:
     - Does it match THEIR energy? (reciprocity principle)
     - Does it sound authentic or calculated?
     - Is it responsive to what they said?
     - Is it appropriate for the relationship stage?
 
-    INPUT DRAFT: "${draft}"
-
     OUTPUT FORMAT (RAW JSON ONLY):
     {
       "regretLevel": number (0-100),
       "verdict": "string (Your take - supportive OR honest. e.g. 'actually this is cute', 'ur trying too hard', 'they wont get this')",
       "feedback": ["string", "string", "string"] (3 specific observations - be real but constructive),
-      "predictedReply": "string (What ${persona.name} sends back. MUST follow their style exactly. If they're dry: max 5 words, no questions. If engaged: match energy.)",
+      "updatedMood": "string (How the target's mood shifted because of this exchange, e.g. 'Intrigued', 'Slightly Guarded', 'Playful', 'Bored'. Keep continuity with their prior mood.)",
+      "familiarityDelta": number (-5 to +5, how much closer or further this exchange moved them. A great message that landed: +3 to +5. A neutral one: 0 to +1. A message that backfired: -1 to -5.)",
       "rewrites": {
         "safe": "string (authentic, cant go wrong - matches their energy)",
         "bold": "string (confident, shows genuine interest)", 
@@ -476,36 +494,43 @@ export const simulateDraft = async (
   `;
 
   try {
-    const parts: any[] = [{ text: prompt }];
+    // ---- ACTOR CALL: get the persona's genuine reply ----
+    const actorParts: any[] = [{ text: actorPrompt }];
     if (images && images.length > 0) {
       images.forEach(base64 => {
         const mimeMatch = base64.match(/^data:([^;]+);base64,/);
         const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
         const cleanBase64 = base64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
-        parts.push({ inlineData: { data: cleanBase64, mimeType } });
+        actorParts.push({ inlineData: { data: cleanBase64, mimeType } });
       });
     }
-    const response = await runWithFallback({
-      contents: [{ role: "user", parts }],
+
+    const actorResponse = await runWithFallback({
+      contents: [{ role: "user", parts: actorParts }],
       safetySettings: safetySettings,
-      tools: [UPDATE_SIM_STATE_TOOL],
     }, THERAPIST_MODELS);
 
-    const text = response.text;
-    if (!text) throw new Error("Connection Lost");
+    const actorText = actorResponse.text;
+    if (!actorText) throw new Error("Connection Lost");
+    const actorReply = actorText.trim();
 
-    const parsed = safeParseJson<SimResult>(text);
+    // ---- COACH CALL: analyze the draft + the persona's real reply ----
+    const coachResponse = await runWithFallback({
+      contents: [{ role: "user", parts: [{ text: buildCoachPrompt(actorReply) }] }],
+      safetySettings: safetySettings,
+    }, THERAPIST_MODELS);
 
-    // Extract sim-state updates from any function calls the model made
-    const calls = Array.isArray(response.functionCalls) ? response.functionCalls : [];
-    const simCall = calls.find((fc: any) => fc.name === "update_sim_state");
-    if (simCall?.args) {
-      if (typeof simCall.args.mood === "string") {
-        parsed.updatedMood = simCall.args.mood;
-      }
-      if (typeof simCall.args.familiarity_delta === "number") {
-        parsed.updatedFamiliarity = simCall.args.familiarity_delta;
-      }
+    const coachText = coachResponse.text;
+    if (!coachText) throw new Error("Connection Lost");
+
+    const parsed = safeParseJson<SimResult>(coachText);
+    // The persona's reply comes from the actor — the coach never authored it
+    parsed.predictedReply = actorReply;
+    // Map the coach's state judgments into the SimResult contract
+    const coachRaw = parsed as SimResult & { familiarityDelta?: number };
+    if (typeof coachRaw.familiarityDelta === "number") {
+      parsed.updatedFamiliarity = coachRaw.familiarityDelta;
+      delete coachRaw.familiarityDelta;
     }
 
     return parsed;
@@ -530,11 +555,32 @@ export const simulateDraft = async (
 export const analyzeSimulation = async (
   history: { draft: string, result: SimResult }[],
   persona: Persona,
-  userStyle?: UserStyleProfile | null
+  userStyle?: UserStyleProfile | null,
+  goal?: string
 ): Promise<SimAnalysisResult> => {
   const transcript = history.map((h, i) =>
     `Turn ${i + 1}:\nUser: "${h.draft}"\nTarget (${persona.name}): "${h.result.predictedReply}"`
   ).join('\n\n');
+
+  // Objective conversation features computed from the actual exchange
+  const userMsgs = history.map((h) => h.draft);
+  const targetMsgs = history.map((h) => h.result.predictedReply);
+  const userWords = userMsgs.reduce((acc, m) => acc + m.split(/\s+/).filter(Boolean).length, 0);
+  const targetWords = targetMsgs.reduce((acc, m) => acc + m.split(/\s+/).filter(Boolean).length, 0);
+  const userQuestions = userMsgs.reduce((acc, m) => acc + (m.match(/\?/g)?.length || 0), 0);
+  const targetQuestions = targetMsgs.reduce((acc, m) => acc + (m.match(/\?/g)?.length || 0), 0);
+  const avgRegret = Math.round(history.reduce((acc, h) => acc + (h.result.regretLevel || 50), 0) / Math.max(1, history.length));
+
+  const objectiveStats = `
+    OBJECTIVE SESSION STATS (computed from the actual exchange — weigh these alongside your judgment):
+    - Turns: ${history.length}
+    - User words total: ${userWords} | Target words total: ${targetWords}
+    - User questions: ${userQuestions} | Target questions: ${targetQuestions}
+    - Average regret score: ${avgRegret}/100 (lower = user's messages landed better)
+    - ${userWords > targetWords * 1.3 ? 'The user is writing notably more than the target — possible over-investment.' : ''}
+    - ${targetQuestions === 0 && history.length >= 3 ? 'The target asked zero questions — low curiosity signal.' : ''}
+    ${goal ? `- SESSION GOAL: "${goal}" — grade whether the user actually moved toward it.` : ''}
+  `;
 
   // Add user style context for better analysis
   let styleInsight = '';
@@ -589,6 +635,7 @@ export const analyzeSimulation = async (
 
     CHAT TRANSCRIPT:
     ${transcript}
+    ${objectiveStats}
     ${HUMAN_TEXTING_RULES}
     OUTPUT FORMAT (RAW JSON ONLY):
     {
@@ -1276,10 +1323,15 @@ const SESSION_ANALYSIS_TOOL = {
       actionItems: {
         type: Type.ARRAY,
         items: { type: Type.STRING },
-        description: "Suggested exercises or next steps for the user"
+        description: "Suggested exercises or next steps for the user. When you send the full array, it REPLACES the previous list — include outstanding items from before plus new ones."
+      },
+      customNotes: {
+        type: Type.STRING,
+        description: "A short plain-language summary of the user's situation as you understand it now (not therapy-speak)."
       }
     },
-    required: ["keyThemes"]
+    // emotionalState required so the therapist's tone adaptation has data
+    required: ["keyThemes", "emotionalState"]
   }
 };
 
@@ -1482,13 +1534,40 @@ export const streamTherapistAdvice = async (
   onNotesUpdate: (notes: Partial<ClinicalNotes>) => void,
   onExerciseAssign?: (exercise: { type: string; context: string }) => void,
   onToolCall?: (toolName: string, args: any) => void,
-  memories?: { type: 'GLOBAL' | 'SESSION', content: string, created_at?: string }[]
+  memories?: { type: 'GLOBAL' | 'SESSION', content: string, created_at?: string }[],
+  pastSessions?: { created_at?: string; clinical_notes?: any; messages?: any[]; summary?: string }[]
 ): Promise<string> => {
   let fullText = "";
   let lastError: any = null;
   let streamSuccessful = false;
 
   const parts: any[] = [];
+
+  // Add Previous-Session Continuity (the therapist remembers past work)
+  if (pastSessions && pastSessions.length > 0) {
+    const pastBlock = pastSessions.slice(0, 5).map((s, i) => {
+      const notes = s.clinical_notes || {};
+      const themes = Array.isArray(notes.keyThemes) ? notes.keyThemes.join(', ') : 'not recorded';
+      const state = notes.emotionalState || 'not recorded';
+      const summary = typeof s.summary === 'string' && s.summary ? s.summary : '';
+      const userMsgs = Array.isArray(s.messages)
+        ? s.messages.filter((m: any) => m.role === 'user').map((m: any) => m.content).slice(-3).join(' | ')
+        : '';
+      return `Session ${i + 1} (${s.created_at ? new Date(s.created_at).toLocaleDateString() : 'earlier'}):
+  - Key themes: ${themes}
+  - Emotional state then: ${state}
+  ${summary ? `- Summary: ${summary}` : ''}
+  ${userMsgs ? `- Last things user said: ${userMsgs}` : ''}`;
+    }).join('\n\n');
+
+    parts.push({
+      text: `[PREVIOUS SESSIONS - the user has worked with you before. Reference these when relevant — they are the user's own history. Do NOT restate them back at the user; use them to show continuity, follow up on what was worked on, and notice recurrence.]
+
+${pastBlock}
+
+`
+    });
+  }
 
   // Add Memories Context
   if (memories && memories.length > 0) {
@@ -1500,8 +1579,8 @@ export const streamTherapistAdvice = async (
     });
   }
 
-  // Add current clinical notes context if available
-  if (currentNotes && (currentNotes.keyThemes?.length || currentNotes.customNotes)) {
+  // Add current clinical notes context if available (always inject once notes exist)
+  if (currentNotes && (currentNotes.keyThemes?.length || currentNotes.customNotes || currentNotes.emotionalState || currentNotes.attachmentStyle)) {
     parts.push({
       text: `[CLINICAL NOTES CONTEXT - User has provided/confirmed these observations:
 Attachment Style: ${currentNotes.attachmentStyle || 'unknown'}
@@ -1509,6 +1588,7 @@ Key Themes: ${currentNotes.keyThemes?.join(', ') || 'none identified yet'}
 Emotional State: ${currentNotes.emotionalState || 'not assessed'}
 Relationship Dynamic: ${currentNotes.relationshipDynamic || 'not assessed'}
 User Insights: ${currentNotes.userInsights?.join(', ') || 'none yet'}
+Pending Action Items (homework from previous sessions — follow up on these): ${currentNotes.actionItems?.join(', ') || 'none outstanding'}
 User's Own Notes: ${currentNotes.customNotes || 'none'}]
 
 `
@@ -1635,5 +1715,64 @@ User's Own Notes: ${currentNotes.customNotes || 'none'}]
   } catch (error) {
     logger.error("Streaming Therapist Advice Failed:", error);
     throw error;
+  }
+};
+
+/**
+ * Generate a compact summary + closing insight for a therapist session.
+ * Feeds the closing screen (G4) and the next session's continuity context (G1/G2).
+ */
+export const generateSessionClosure = async (
+  messages: { role: string; content: string }[],
+  clinicalNotes: ClinicalNotes | undefined
+): Promise<{ summary: string; insight: string; workedOn: string[]; nextStep: string }> => {
+  const transcript = messages
+    .filter((m) => m.content && !m.content.startsWith("⚠️"))
+    .slice(-40)
+    .map((m) => `${m.role === "user" ? "User" : "Therapist"}: ${m.content.slice(0, 600)}`)
+    .join("\n");
+
+  const notesBlock = clinicalNotes
+    ? `Attachment: ${clinicalNotes.attachmentStyle || 'unknown'}\nThemes: ${clinicalNotes.keyThemes?.join(', ') || 'none'}\nEmotional state: ${clinicalNotes.emotionalState || 'not assessed'}\nInsights: ${clinicalNotes.userInsights?.join(', ') || 'none'}\nAction items: ${clinicalNotes.actionItems?.join(', ') || 'none'}`
+    : "No clinical notes recorded.";
+
+  const prompt = `You are writing a private therapist's session note — not a chat message. Be warm, specific, honest. No AI-flavored filler, no "overall, this was" summaries, no forced lessons. Plain human language.
+
+SESSION TRANSCRIPT:
+${transcript}
+
+CLINICAL NOTES:
+${notesBlock}
+
+OUTPUT RAW JSON ONLY:
+{
+  "summary": "2-3 sentence plain-language recap of what this session was actually about and where things landed",
+  "insight": "One real, specific insight from this session — the kind a thoughtful friend would actually say. No clichés.",
+  "workedOn": ["3 short items the user actually worked on this session, phrased as things done, not topics listed"],
+  "nextStep": "One concrete, small next step to carry forward — something they can actually do"
+}`;
+
+  try {
+    const response = await runWithFallback({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      safetySettings: safetySettings,
+    }, THERAPIST_MODELS);
+    const text = response.text;
+    if (!text) throw new Error("Empty closure");
+    const parsed = safeParseJson<any>(text);
+    return {
+      summary: typeof parsed.summary === "string" ? parsed.summary : "",
+      insight: typeof parsed.insight === "string" ? parsed.insight : "",
+      workedOn: Array.isArray(parsed.workedOn) ? parsed.workedOn.filter((w: any) => typeof w === "string").slice(0, 3) : [],
+      nextStep: typeof parsed.nextStep === "string" ? parsed.nextStep : "",
+    };
+  } catch (error) {
+    logger.error("Closure generation failed:", error);
+    return {
+      summary: "",
+      insight: "",
+      workedOn: [],
+      nextStep: "",
+    };
   }
 };

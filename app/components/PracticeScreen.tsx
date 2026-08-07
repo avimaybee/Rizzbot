@@ -16,6 +16,7 @@ import {
   Sparkles,
   Sparkles as SparklesIcon,
   Target,
+  Trash2,
   User,
   X,
   Zap,
@@ -27,7 +28,7 @@ import { useToast } from "./ui/Toast";
 import { haptics } from "../utils/haptics";
 import { useAppContext } from "../app-context";
 import { analyzeSimulation, generatePersona, simulateDraft } from "../../services/geminiService";
-import { createPersona, createSession, getPersonas, recordActivity } from "../../services/dbService";
+import { createPersona, createSession, deletePersona, getPersonas, recordActivity } from "../../services/dbService";
 import { logSession, saveFeedback } from "../../services/feedbackService";
 import { Persona, SimResult } from "../../types";
 import { useScrollFade } from "../utils/useScrollFade";
@@ -300,6 +301,17 @@ export function PracticeScreen() {
     setMode("chat");
   };
 
+  const handleDeletePersona = async (p: Persona) => {
+    if (typeof p.id !== "number" || p.id <= 0) return;
+    try {
+      await deletePersona(p.id);
+      setSavedPersonas((prev) => prev.filter((x) => x.id !== p.id));
+      toast("Persona deleted", "info");
+    } catch {
+      toast("Could not delete persona", "error");
+    }
+  };
+
   const handleStartSession = async () => {
     haptics.medium();
     setIsGenerating(true);
@@ -388,46 +400,55 @@ export function PracticeScreen() {
       if (isStillTyping) {
         toast("This message is taking longer than usual...", "info");
       }
-    }, 12000);
+    }, 20000);
 
     try {
-      // Pass the current mood and familiarity to the simulation service
+      // Pass the current mood/familiarity + session goal + escalation phase
       const updatedPersona = { ...persona, mood: currentMood, familiarity };
-      const result = await simulateDraft(authUser.uid, draft, updatedPersona, userProfile, simHistory, attachedImages);
+      const escalationPhase = simHistory.length === 0 ? "warmup" : simHistory.length < 4 ? "probe" : simHistory.length < 8 ? "deep" : "close";
+      const result = await simulateDraft(authUser.uid, draft, updatedPersona, userProfile, simHistory, attachedImages, {
+        goal: activeGoal || goalText || undefined,
+        escalationPhase,
+      });
       
       setLastResult(result);
       setSimHistory((prev) => [...prev, { draft, result }]);
 
-      // Handle Mood/Familiarity updates from tool calls if present
+      // Handle Mood/Familiarity updates (now deltas from the coach call)
       if (result.updatedMood) setCurrentMood(result.updatedMood);
       if (typeof result.updatedFamiliarity === 'number') {
-        setFamiliarity(prev => {
-          const delta = Math.max(-5, Math.min(5, result.updatedFamiliarity! - prev));
-          return Math.min(100, Math.max(0, prev + delta));
-        });
+        // updatedFamiliarity is a DELTA (±5 max) — apply it to the current value
+        const delta = Math.max(-5, Math.min(5, result.updatedFamiliarity));
+        setFamiliarity((prev) => Math.min(100, Math.max(0, prev + delta)));
       }
 
-      // Multi-Bubble Staggered Reply
-      const bubbles = (result.predictedReply || "...")
-        .split("\n\n")
-        .filter(b => b.trim().length > 0);
+      // Multi-Bubble Staggered Reply: prefer structured bubbles if provided
+      const structured = Array.isArray((result as any).bubbles) ? (result as any).bubbles : null;
+      const bubbles = structured && structured.length
+        ? structured.map((b: any) => ({ text: String(b.text || "").trim(), delay: Number(b.delayMs) || 800 }))
+        : (result.predictedReply || "...")
+            .split("\n\n")
+            .filter(b => b.trim().length > 0)
+            .map((b, i) => ({ text: b.trim(), delay: i === 0 ? 900 : 600 }));
 
-      if (bubbles.length === 0) bubbles.push("...");
+      if (bubbles.length === 0) bubbles.push({ text: "...", delay: 900 });
 
-      // Sequential dispatch with 150ms delay
+      // Sequential dispatch with persona-plausible delays
       for (let i = 0; i < bubbles.length; i++) {
-        if (i > 0) await new Promise(r => setTimeout(r, 150));
+        if (i > 0) await new Promise(r => setTimeout(r, bubbles[i].delay));
         setMessages((prev) => [
           ...prev,
           {
             id: Date.now() + i + 1,
             sender: "ai",
-            text: bubbles[i],
+            text: bubbles[i].text,
           },
         ]);
       }
     } catch (err) {
       console.error("Simulation error:", err);
+      // Roll back the dangling user message so a failed turn doesn't poison the chat
+      setMessages((prev) => prev.filter((m) => !(m.sender === "user" && m.text === draft)));
       toast("Simulation failed. Try again.", "error");
     } finally {
       isStillTyping = false;
@@ -447,7 +468,7 @@ export function PracticeScreen() {
     haptics.success();
 
     try {
-      const analysis = await analyzeSimulation(simHistory, persona, userProfile);
+      const analysis = await analyzeSimulation(simHistory, persona, userProfile, activeGoal || goalText || undefined);
       logSession(authUser.uid, "practice", persona.name, analysis.ghostRisk);
 
       await createSession(
@@ -650,7 +671,19 @@ export function PracticeScreen() {
                         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: "#1A1208" }}>{p.name}</p>
                         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26, 18, 8, 0.6)", textTransform: "capitalize" }}>{p.relationshipContext ? p.relationshipContext.toLowerCase().replace('_', ' ') : p.tone || "Custom"}</p>
                       </div>
-                      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, color: "#C8522A" }}>Load →</span>
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        {typeof p.id === "number" && p.id > 0 && (
+                          <button
+                            onClick={() => void handleDeletePersona(p)}
+                            className="cursor-pointer flex items-center justify-center"
+                            style={{ border: "none", background: "none", color: "rgba(26,18,8,0.3)", width: 32, height: 32 }}
+                            title="Delete saved persona"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, color: "#C8522A" }}>Load →</span>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -1260,30 +1293,42 @@ export function PracticeScreen() {
                       setIsTyping(true);
                       try {
                         const updatedPersona = { ...persona, mood: currentMood, familiarity };
-                        const result = await simulateDraft(authUser.uid, finalInput, updatedPersona, userProfile, simHistory, attachedImages);
+                        const escalationPhase = simHistory.length === 0 ? "warmup" : simHistory.length < 4 ? "probe" : simHistory.length < 8 ? "deep" : "close";
+                        const result = await simulateDraft(authUser.uid, finalInput, updatedPersona, userProfile, simHistory, attachedImages, {
+                          goal: activeGoal || goalText || undefined,
+                          escalationPhase,
+                        });
                         
                         setLastResult(result);
                         setSimHistory((prev) => [...prev, { draft: finalInput, result }]);
 
                         if (result.updatedMood) setCurrentMood(result.updatedMood);
                         if (typeof result.updatedFamiliarity === 'number') {
-                          const delta = result.updatedFamiliarity - familiarity;
-                          const cappedDelta = Math.max(-5, Math.min(5, delta));
+                          // DELTA (±5 max) applied to current value
+                          const cappedDelta = Math.max(-5, Math.min(5, result.updatedFamiliarity));
                           setFamiliarity(prev => Math.min(100, Math.max(0, prev + cappedDelta)));
                         }
 
-                        const bubbles = (result.predictedReply || "...")
-                          .split("\n\n")
-                          .filter(b => b.trim().length > 0);
+                        const structured = Array.isArray((result as any).bubbles) ? (result as any).bubbles : null;
+                        const bubbles = structured && structured.length
+                          ? structured.map((b: any) => ({ text: String(b.text || "").trim(), delay: Number(b.delayMs) || 800 }))
+                          : (result.predictedReply || "...")
+                              .split("\n\n")
+                              .filter(b => b.trim().length > 0)
+                              .map((b, i) => ({ text: b.trim(), delay: i === 0 ? 900 : 600 }));
+
+                        if (bubbles.length === 0) bubbles.push({ text: "...", delay: 900 });
 
                         for (let i = 0; i < bubbles.length; i++) {
-                          if (i > 0) await new Promise(r => setTimeout(r, 150));
+                          if (i > 0) await new Promise(r => setTimeout(r, bubbles[i].delay));
                           setMessages((prev) => [
                             ...prev,
-                            { id: Date.now() + i + 1, sender: "ai", text: bubbles[i] },
+                            { id: Date.now() + i + 1, sender: "ai", text: bubbles[i].text },
                           ]);
                         }
                       } catch (err) {
+                        console.error("Simulation error:", err);
+                        setMessages((prev) => prev.filter((m) => !(m.sender === "user" && m.text === finalInput)));
                         toast("Simulation failed.", "error");
                       } finally {
                         setIsTyping(false);

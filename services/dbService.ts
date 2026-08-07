@@ -274,7 +274,7 @@ export async function getPersonas(userId: number): Promise<Persona[]> {
   const data = await res.json();
 
   return (data || []).map((p: any) => ({
-    id: String(p.id),
+    id: p.id,
     name: p.name,
     description: "", // Description wasn't in schema, but we can infer or leave empty
     tone: p.tone || "Unknown",
@@ -288,6 +288,8 @@ export async function getPersonas(userId: number): Promise<Persona[]> {
     conversationStarters: p.conversation_starters ? JSON.parse(p.conversation_starters) : [],
     thingsToAvoid: p.things_to_avoid ? JSON.parse(p.things_to_avoid) : [],
     theirLanguage: p.their_language ? JSON.parse(p.their_language) : [],
+    mood: p.mood || undefined,
+    familiarity: typeof p.familiarity === "number" ? p.familiarity : undefined,
   }));
 }
 
@@ -301,6 +303,30 @@ export async function createPersona(persona: Persona): Promise<{ id: number }> {
     body: JSON.stringify(persona),
   });
   if (!res.ok) throw new Error(`Failed to create persona: ${res.statusText}`);
+  return res.json();
+}
+
+/**
+ * Update persona
+ */
+export async function updatePersona(id: number, updates: Partial<Persona>): Promise<{ success: boolean }> {
+  const res = await authenticatedFetch(`/api/personas`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, ...updates }),
+  });
+  if (!res.ok) throw new Error(`Failed to update persona: ${res.statusText}`);
+  return res.json();
+}
+
+/**
+ * Delete persona
+ */
+export async function deletePersona(id: number): Promise<{ success: boolean }> {
+  const res = await authenticatedFetch(`/api/personas?id=${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error(`Failed to delete persona: ${res.statusText}`);
   return res.json();
 }
 
@@ -487,6 +513,7 @@ export interface TherapistSession {
   interaction_id: string;
   messages: any[];
   clinical_notes: any; // ClinicalNotes type
+  summary?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -498,7 +525,8 @@ export async function saveTherapistSession(
   firebaseUid: string,
   interactionId: string,
   messages: any[],
-  clinicalNotes: any
+  clinicalNotes: any,
+  summary?: string
 ): Promise<{ success: boolean; id?: number }> {
   const res = await authenticatedFetch('/api/therapist_sessions', {
     method: 'POST',
@@ -507,7 +535,8 @@ export async function saveTherapistSession(
       user_anon_id: firebaseUid,
       interaction_id: interactionId,
       messages,
-      clinical_notes: clinicalNotes
+      clinical_notes: clinicalNotes,
+      summary: summary || undefined
     })
   });
   if (!res.ok) throw new Error(`Failed to save therapist session: ${res.statusText}`);
@@ -527,6 +556,17 @@ export async function getTherapistSessions(firebaseUid: string): Promise<Therapi
     messages: typeof s.messages === 'string' ? JSON.parse(s.messages) : s.messages,
     clinical_notes: typeof s.clinical_notes === 'string' ? JSON.parse(s.clinical_notes) : s.clinical_notes
   }));
+}
+
+/**
+ * Delete a therapist session by interaction ID
+ */
+export async function deleteTherapistSession(firebaseUid: string, interactionId: string): Promise<{ success: boolean }> {
+  const res = await authenticatedFetch(`/api/therapist_sessions?interaction_id=${encodeURIComponent(interactionId)}&anon_id=${encodeURIComponent(firebaseUid)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error(`Failed to delete therapist session: ${res.statusText}`);
+  return res.json();
 }
 
 // ===== Therapist Memories API =====

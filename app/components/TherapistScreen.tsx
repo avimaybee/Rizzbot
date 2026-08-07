@@ -39,7 +39,7 @@ import {
   TherapistSession,
   updateMemory,
 } from "../../services/dbService";
-import { streamTherapistAdvice } from "../../services/geminiService";
+import { generateSessionClosure, streamTherapistAdvice } from "../../services/geminiService";
 import { ClinicalNotes, ExerciseType, TherapistExercise } from "../../types";
 import { logSession } from "../../services/feedbackService";
 import { useScrollFade } from "../utils/useScrollFade";
@@ -52,11 +52,11 @@ type TherapistUiMessage = {
   images?: string[];
   inputType?: "text" | "voice";
   closureScript?: { tone: string; script: string; explanation: string };
-  safetyIntervention?: { level: string; reason: string; calmDownText: string };
-  parentalPattern?: { dynamicName: string; insight: string };
-  valuesMatrix?: { alignmentScore: number };
-  perspective?: { suggestedMotive?: string };
-  pattern?: { patternName?: string; explanation?: string };
+  safetyIntervention?: { level: string; reason: string; calmDownText: string; resources?: string };
+  parentalPattern?: { dynamicName: string; insight: string; parentTrait?: string; partnerTrait?: string };
+  valuesMatrix?: { alignmentScore: number; alignedValues?: string; conflicts?: string; synergies?: string };
+  perspective?: { suggestedMotive?: string; partnerPerspective?: string };
+  pattern?: { patternName?: string; explanation?: string; suggestion?: string };
   projection?: { behavior?: string; potentialRoot?: string };
 };
 
@@ -109,9 +109,33 @@ const toDataUrl = (file: File): Promise<string> =>
     reader.readAsDataURL(file);
   });
 
+// Downscale images before sending so long sessions don't blow the context window
+const downscaleImage = (dataUrl: string, maxWidth = 900): Promise<string> =>
+  new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return resolve(dataUrl);
+      ctx.drawImage(img, 0, 0, w, h);
+      try {
+        resolve(canvas.toDataURL("image/jpeg", 0.8));
+      } catch {
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+
 const formatAgo = (isoDate: string) => formatTimeAgo(isoDate);
 
-function InsightCard({ title, body }: { title: string; body: string }) {
+function InsightCard({ title, body, detail }: { title: string; body: string; detail?: string }) {
   return (
     <div className="my-2 overflow-hidden" style={{ backgroundColor: '#FDFAF5', borderRadius: 18, boxShadow: '0 2px 16px rgba(26,18,8,0.07)' }}>
       <div className="flex">
@@ -123,9 +147,11 @@ function InsightCard({ title, body }: { title: string; body: string }) {
           <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: '#1A1208', lineHeight: 1.5 }}>
             {body}
           </p>
-          <p className="mt-1" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, color: '#C8522A' }}>
-            Explore this →
-          </p>
+          {detail && (
+            <p className="mt-1.5" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'rgba(26,18,8,0.65)', lineHeight: 1.5, borderTop: '1px solid rgba(26,18,8,0.06)', paddingTop: 8 }}>
+              {detail}
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -143,6 +169,33 @@ function ExerciseCard({
 }) {
   const [boundaries, setBoundaries] = useState(["", "", ""]);
   const [needs, setNeeds] = useState({ safety: 50, connection: 50, autonomy: 50 });
+  // Real attachment-quiz questions (simplified Hazan & Shaver style)
+  const [quizStep, setQuizStep] = useState(0);
+  const [quizAnswers, setQuizAnswers] = useState<number[]>([]);
+  const quizQuestions = [
+    { q: "When someone you like gets close, how do you usually feel?", options: ["Easier to trust and open up", "A little anxious — I worry they'll leave", "Crowded — I need space"] },
+    { q: "When a partner needs reassurance, you tend to:", options: ["Show up and reassure them", "Reassure, but keep doubting it's enough", "Reassure, then pull back a bit"] },
+    { q: "After a fight, your first instinct is to:", options: ["Talk it through together", "Text them to check if we're okay — often", "Wait for things to cool off on their own"] },
+    { q: "Your biggest pattern in relationships is:", options: ["I'm usually steady and consistent", "I overthink signs of distance", "I go hot and cold without meaning to"] },
+  ];
+  const quizOptions = quizQuestions[Math.min(quizStep, quizQuestions.length - 1)];
+
+  const handleQuizAnswer = (optionIdx: number) => {
+    const next = [...quizAnswers];
+    next[quizStep] = optionIdx;
+    setQuizAnswers(next);
+    if (quizStep + 1 < quizQuestions.length) {
+      setQuizStep((s) => s + 1);
+    } else {
+      // Score: mostly 0 = secure, mostly 1 = anxious, mostly 2 = avoidant
+      const counts = [0, 0, 0];
+      next.forEach((a) => { if (counts[a] !== undefined) counts[a]++; });
+      const style = counts[0] >= counts[1] && counts[0] >= counts[2]
+        ? "secure"
+        : counts[1] >= counts[2] ? "anxious" : "avoidant";
+      onComplete({ attachmentStyle: style, answers: next });
+    }
+  };
 
   return (
     <div
@@ -222,6 +275,38 @@ function ExerciseCard({
         </div>
       )}
 
+      {exercise.type === "attachment_quiz" && (
+        <div className="mt-3">
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: "#1A1208", lineHeight: 1.4 }}>
+            {quizOptions.q}
+          </p>
+          <div className="mt-3 space-y-2">
+            {quizOptions.options.map((opt, i) => (
+              <button
+                key={i}
+                onClick={() => handleQuizAnswer(i)}
+                className="w-full text-left cursor-pointer"
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  border: quizAnswers[quizStep] === i ? "2px solid #C8522A" : "1px solid #E8E0D4",
+                  backgroundColor: quizAnswers[quizStep] === i ? "rgba(200,82,42,0.08)" : "#FFFFFF",
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 13,
+                  color: "#1A1208",
+                  lineHeight: 1.4,
+                }}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+          <p style={{ marginTop: 8, fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: "rgba(26,18,8,0.45)" }}>
+            {quizStep + 1} of {quizQuestions.length}
+          </p>
+        </div>
+      )}
+
       <div className="mt-4 flex gap-2">
         <button
           onClick={onSkip}
@@ -239,31 +324,33 @@ function ExerciseCard({
         >
           Skip
         </button>
-        <button
-          onClick={() => {
-            if (exercise.type === "boundary_builder") {
-              onComplete({ boundaries: boundaries.filter((b) => b.trim()) });
-            } else if (exercise.type === "needs_assessment") {
-              onComplete(needs);
-            } else {
-              onComplete({ completed: true });
-            }
-          }}
-          style={{
-            flex: 1,
-            height: 42,
-            borderRadius: 999,
-            border: "none",
-            backgroundColor: "#C8522A",
-            color: "#FFFFFF",
-            fontFamily: "'DM Sans', sans-serif",
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          Complete
-        </button>
+        {exercise.type !== "attachment_quiz" && (
+          <button
+            onClick={() => {
+              if (exercise.type === "boundary_builder") {
+                onComplete({ boundaries: boundaries.filter((b) => b.trim()) });
+              } else if (exercise.type === "needs_assessment") {
+                onComplete(needs);
+              } else {
+                onComplete({ completed: true });
+              }
+            }}
+            style={{
+              flex: 1,
+              height: 42,
+              borderRadius: 999,
+              border: "none",
+              backgroundColor: "#C8522A",
+              color: "#FFFFFF",
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Complete
+          </button>
+        )}
       </div>
     </div>
   );
@@ -406,6 +493,7 @@ export function TherapistScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [pendingExercise, setPendingExercise] = useState<TherapistExercise | null>(null);
+  const [crisisPanel, setCrisisPanel] = useState<{ reason: string; calmDownText: string; resources: string } | null>(null);
 
   const [sessions, setSessions] = useState<TherapistSession[]>([]);
   const [memories, setMemories] = useState<TherapistMemory[]>([]);
@@ -510,6 +598,22 @@ export function TherapistScreen() {
     };
   }, [messages, clinicalNotes, interactionId, authUser?.uid, storagePrefix]);
 
+  // Flush the pending save immediately when the tab is hidden/closed,
+  // so the last turn(s) aren't lost to the debounce window (G10)
+  useEffect(() => {
+    const flush = () => {
+      if (authUser?.uid && interactionId && messages.some((m) => m.role === "user")) {
+        void saveTherapistSession(authUser.uid, interactionId, messages, clinicalNotes).catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", flush);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", flush);
+      window.removeEventListener("pagehide", flush);
+    };
+  }, [authUser?.uid, interactionId, messages, clinicalNotes]);
+
   const activeMemories = useMemo(
     () => ({
       global: memories.filter((m) => m.type === "GLOBAL"),
@@ -532,9 +636,22 @@ export function TherapistScreen() {
     toast("Started a fresh session", "success");
   };
 
-  const handleEndSession = () => {
+  const handleEndSession = async () => {
+    // Generate a real closure (summary + insight + next step) before leaving
+    let closure = { summary: "", insight: "", workedOn: [] as string[], nextStep: "" };
+    try {
+      closure = await generateSessionClosure(messages, clinicalNotes);
+    } catch {
+      // closure stays empty — the closing screen will fall back gracefully
+    }
+
     if (authUser?.uid && interactionId) {
-      void saveTherapistSession(authUser.uid, interactionId, messages, clinicalNotes).catch(() => {});
+      void saveTherapistSession(
+        authUser.uid,
+        interactionId,
+        messages,
+        { ...clinicalNotes, summary: closure.summary || clinicalNotes.summary }
+      ).catch(() => {});
     }
     localStorage.removeItem(`${storagePrefix}_messages`);
     localStorage.removeItem(`${storagePrefix}_notes`);
@@ -542,11 +659,15 @@ export function TherapistScreen() {
     setShowSessionSheet(false);
     navigate("/therapist-close", {
       state: {
-        workedOn: clinicalNotes.keyThemes?.length
-          ? clinicalNotes.keyThemes.map((t) => `Explored: ${t}`)
-          : undefined,
-        insight: clinicalNotes.customNotes || undefined,
+        workedOn: closure.workedOn.length
+          ? closure.workedOn
+          : clinicalNotes.keyThemes?.length
+            ? clinicalNotes.keyThemes.map((t) => `Explored: ${t}`)
+            : undefined,
+        insight: closure.insight || clinicalNotes.customNotes || undefined,
         attachmentStyle: clinicalNotes.attachmentStyle || undefined,
+        summary: closure.summary || undefined,
+        nextStep: closure.nextStep || undefined,
       },
     });
   };
@@ -563,7 +684,7 @@ export function TherapistScreen() {
     if (!files || files.length === 0) return;
     const picked = Array.from(files).slice(0, 4);
     try {
-      const encoded = await Promise.all(picked.map((file) => toDataUrl(file)));
+      const encoded = await Promise.all(picked.map(async (file) => downscaleImage(await toDataUrl(file))));
       setPendingImages((prev) => [...prev, ...encoded].slice(0, 4));
       toast(`${encoded.length} image(s) attached`, "success");
     } catch {
@@ -605,6 +726,7 @@ export function TherapistScreen() {
   };
 
   const handleSend = async (override?: { content: string; images?: string[]; inputType?: "text" | "voice" }) => {
+    const isRetry = Boolean(override?.content && (override as any).retry);
     const trimmed = normalizeMessageContent(override ? override.content : inputValue).trim();
     const outgoingImages = override ? [...(override.images || [])] : pendingImages;
     const inputType = override?.inputType || "text";
@@ -627,7 +749,17 @@ export function TherapistScreen() {
       inputType,
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages((prev) => {
+      if (isRetry) {
+        // Remove trailing ⚠️ error bubbles, then replace the last user message
+        const withoutErrors = [...prev].filter((m) => !(m.role === "therapist" && m.content.startsWith("⚠️")));
+        // Drop the last user message so the retry doesn't duplicate it
+        const lastUserIdx = [...withoutErrors].map((m) => m.role).lastIndexOf("user");
+        const trimmed = lastUserIdx >= 0 ? withoutErrors.slice(0, lastUserIdx) : withoutErrors;
+        return [...trimmed, userMsg];
+      }
+      return [...prev, userMsg];
+    });
     if (!override) {
       setInputValue("");
       setPendingImages([]);
@@ -650,7 +782,8 @@ export function TherapistScreen() {
 
       const newInteractionId = await streamTherapistAdvice(
         userContent === "📎 Screenshot" ? "Please analyze the attached screenshots and guide me." : userContent,
-        messages.map((m: any) => ({
+        // Window the history: last 20 turns max so long sessions don't blow the context window
+        messages.slice(-20).map((m: any) => ({
           role: (m.role === 'user' ? 'user' : 'model') as "user" | "model",
           parts: [{ text: m.content }]
         })),
@@ -673,13 +806,17 @@ export function TherapistScreen() {
           }
         },
         (noteDelta) => {
-          setClinicalNotes((prev) => ({
-            ...prev,
-            ...noteDelta,
-            keyThemes: ensureUnique([...(prev.keyThemes || []), ...(noteDelta.keyThemes || [])]),
-            userInsights: ensureUnique([...(prev.userInsights || []), ...(noteDelta.userInsights || [])]),
-            actionItems: ensureUnique([...(prev.actionItems || []), ...(noteDelta.actionItems || [])]),
-          }));
+          setClinicalNotes((prev) => {
+            // REPLACE array fields the model explicitly sent (fresh judgment),
+            // rather than append-only — lets the AI revise/remove stale themes.
+            return {
+              ...prev,
+              ...noteDelta,
+              keyThemes: Array.isArray(noteDelta.keyThemes) ? noteDelta.keyThemes : prev.keyThemes,
+              userInsights: Array.isArray(noteDelta.userInsights) ? noteDelta.userInsights : prev.userInsights,
+              actionItems: Array.isArray(noteDelta.actionItems) ? noteDelta.actionItems : prev.actionItems,
+            };
+          });
         },
         (exercise) =>
           setPendingExercise({
@@ -695,13 +832,46 @@ export function TherapistScreen() {
             });
           }
           if (toolName === "log_epiphany" && args?.content && authUser?.uid) {
-            // Persist AI-captured epiphanies as SESSION memories so they aren't lost
+            // Persist AI-captured epiphanies as SESSION memories + track in notes
             void saveMemory(authUser.uid, "SESSION", args.content, currentInteractionId, "AI").then(() => {
               void refreshMemories();
             });
+            setClinicalNotes((prev) => ({
+              ...prev,
+              epiphanies: [...(prev.epiphanies || []), {
+                id: `eph-${Date.now()}`,
+                content: args.content,
+                category: args.category || "growth",
+                timestamp: Date.now(),
+              }],
+            }));
+          }
+          if (toolName === "trigger_safety_intervention" && args?.level === "critical") {
+            // Surface a blocking crisis panel with resources + escalation help
+            setCrisisPanel({
+              reason: args.reason || "You're going through something heavy right now.",
+              calmDownText: args.calmDownText || "Take a slow breath. You don't have to figure this out alone or right now.",
+              resources: args.resources || "India: iCall (9152987821) · AASRA (91-22-27546669) · KIRAN (1800-599-0019) · International: findahelpline.com",
+            });
+          }
+          // Tool results persist into notes so later turns of the SAME conversation
+          // (and future sessions) can build on them instead of being display-only
+          if (toolName === "show_communication_insight" && args?.patternName) {
+            setClinicalNotes((prev) => ({
+              ...prev,
+              userInsights: Array.from(new Set([...(prev.userInsights || []), `Pattern spotted: ${args.patternName}`])),
+            }));
+          }
+          if (toolName === "show_perspective_bridge" && args?.suggestedMotive) {
+            setClinicalNotes((prev) => ({
+              ...prev,
+              userInsights: Array.from(new Set([...(prev.userInsights || []), `Their possible motive: ${args.suggestedMotive}`])),
+            }));
           }
         },
-        memories
+        memories,
+        // Past sessions for continuity: exclude the current one
+        sessions.filter((s) => s.interaction_id !== currentInteractionId)
       );
 
       const bubbles = fullResponse.split("\n\n").filter(b => b.trim().length > 0);
@@ -756,7 +926,7 @@ export function TherapistScreen() {
 
   const handleRetryLastTurn = () => {
     if (!lastUserTurn) return;
-    void handleSend({ content: lastUserTurn.content, images: lastUserTurn.images });
+    void handleSend({ content: lastUserTurn.content, images: lastUserTurn.images, retry: true } as any);
   };
 
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
@@ -897,15 +1067,49 @@ export function TherapistScreen() {
                           Retry
                         </button>
                       )}
-                      {msg.pattern?.patternName && <InsightCard title="Pattern Insight" body={msg.pattern.patternName} />}
-                      {msg.perspective?.suggestedMotive && <InsightCard title="Perspective Bridge" body={msg.perspective.suggestedMotive} />}
-                      {msg.projection?.behavior && <InsightCard title="Projection Check" body={`${msg.projection.behavior} ↔ ${msg.projection.potentialRoot || ""}`} />}
-                      {msg.closureScript?.script && <InsightCard title="Closure Script" body={msg.closureScript.script} />}
-                      {msg.parentalPattern?.insight && <InsightCard title="Generational Pattern" body={msg.parentalPattern.insight} />}
-                      {typeof msg.valuesMatrix?.alignmentScore === "number" && (
-                        <InsightCard title="Values Alignment" body={`${msg.valuesMatrix.alignmentScore}% alignment score`} />
+                      {msg.pattern?.patternName && (
+                        <InsightCard
+                          title="Pattern Insight"
+                          body={msg.pattern.patternName}
+                          detail={[msg.pattern.explanation, msg.pattern.suggestion].filter(Boolean).join(" · ")}
+                        />
                       )}
-                      {msg.safetyIntervention?.reason && <InsightCard title="Safety Flag" body={msg.safetyIntervention.reason} />}
+                      {msg.perspective?.suggestedMotive && (
+                        <InsightCard
+                          title="Perspective Bridge"
+                          body={msg.perspective.suggestedMotive}
+                          detail={msg.perspective.partnerPerspective}
+                        />
+                      )}
+                      {msg.projection?.behavior && <InsightCard title="Projection Check" body={`${msg.projection.behavior} ↔ ${msg.projection.potentialRoot || ""}`} />}
+                      {msg.closureScript?.script && (
+                        <InsightCard
+                          title="Closure Script"
+                          body={msg.closureScript.script}
+                          detail={msg.closureScript.tone ? `Tone: ${msg.closureScript.tone}` : undefined}
+                        />
+                      )}
+                      {msg.parentalPattern?.insight && (
+                        <InsightCard
+                          title="Generational Pattern"
+                          body={msg.parentalPattern.insight}
+                          detail={[msg.parentalPattern.dynamicName, msg.parentalPattern.parentTrait, msg.parentalPattern.partnerTrait].filter(Boolean).join(" · ")}
+                        />
+                      )}
+                      {typeof msg.valuesMatrix?.alignmentScore === "number" && (
+                        <InsightCard
+                          title="Values Alignment"
+                          body={`${msg.valuesMatrix.alignmentScore}% alignment score`}
+                          detail={[msg.valuesMatrix.alignedValues, msg.valuesMatrix.conflicts, msg.valuesMatrix.synergies].filter(Boolean).join(" · ")}
+                        />
+                      )}
+                      {msg.safetyIntervention?.reason && (
+                        <InsightCard
+                          title="Safety Flag"
+                          body={msg.safetyIntervention.reason}
+                          detail={[msg.safetyIntervention.calmDownText, msg.safetyIntervention.resources].filter(Boolean).join(" · ")}
+                        />
+                      )}
                     </div>
                   )}
                 </div>
@@ -919,11 +1123,22 @@ export function TherapistScreen() {
               onSkip={() => setPendingExercise(null)}
               onComplete={(payload) => {
                 setPendingExercise((prev) => (prev ? { ...prev, completed: true, result: payload } : prev));
-                // Send a clean summary instead of raw JSON so the conversation stays human
-                const summary =
-                  Array.isArray(payload)
-                    ? `I completed the ${pendingExercise.type.replace("_", " ")} exercise. Here's what I came up with: ${(payload as string[]).join(", ")}`
-                    : `I completed the ${pendingExercise.type.replace("_", " ")} exercise. Here's what I came up with: ${typeof payload === "object" && payload ? JSON.stringify(payload) : String(payload || "")}`;
+                // Send a clean prose summary (never raw JSON) so the conversation stays human
+                let summary: string;
+                if (pendingExercise.type === "attachment_quiz" && payload && typeof payload === "object" && !Array.isArray(payload) && (payload as any).attachmentStyle) {
+                  summary = `I completed the attachment quiz. My result came back as ${(payload as any).attachmentStyle}.`;
+                } else if (pendingExercise.type === "boundary_builder" && Array.isArray(payload)) {
+                  summary = `I completed the boundary builder exercise. Boundaries I set: ${(payload as string[]).filter(Boolean).join(", ") || "none yet"}.`;
+                } else if (pendingExercise.type === "needs_assessment" && payload && typeof payload === "object" && !Array.isArray(payload)) {
+                  const p = payload as Record<string, number>;
+                  summary = `I completed the needs assessment. My needs scores: safety ${p.safety ?? "?"}%, connection ${p.connection ?? "?"}%, autonomy ${p.autonomy ?? "?"}%.`;
+                } else if (Array.isArray(payload)) {
+                  summary = `I completed the ${pendingExercise.type.replace("_", " ")} exercise. Here's what I came up with: ${(payload as string[]).join(", ")}`;
+                } else if (payload && typeof payload === "object") {
+                  summary = `I completed the ${pendingExercise.type.replace("_", " ")} exercise. Here's what I came up with: ${Object.entries(payload as Record<string, unknown>).map(([k, v]) => `${k}: ${String(v)}`).join(", ")}`;
+                } else {
+                  summary = `I completed the ${pendingExercise.type.replace("_", " ")} exercise.`;
+                }
                 void handleSend({ content: summary, inputType: "text" });
               }}
             />
@@ -1348,6 +1563,36 @@ export function TherapistScreen() {
                         </div>
                       </div>
                     )}
+                    {clinicalNotes.relationshipDynamic && (
+                      <div className="mt-3">
+                        <p className="mb-1" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, color: "rgba(26,18,8,0.4)" }}>RELATIONSHIP DYNAMIC</p>
+                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#1A1208", textTransform: "capitalize" }}>{clinicalNotes.relationshipDynamic}</p>
+                      </div>
+                    )}
+                    {clinicalNotes.userInsights.length > 0 && (
+                      <div className="mt-3">
+                        <p className="mb-1.5" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, color: "rgba(26,18,8,0.4)" }}>INSIGHTS</p>
+                        <div className="space-y-1.5">
+                          {clinicalNotes.userInsights.map((ins, i) => (
+                            <p key={i} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.7)", lineHeight: 1.45 }}>
+                              • {ins}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {Array.isArray(clinicalNotes.epiphanies) && clinicalNotes.epiphanies.length > 0 && (
+                      <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(26,18,8,0.06)" }}>
+                        <p className="mb-1.5" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, color: "#C8522A" }}>BREAKTHROUGHS</p>
+                        <div className="space-y-1.5">
+                          {clinicalNotes.epiphanies.map((eph, i) => (
+                            <p key={i} style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14, fontStyle: "italic", color: "#1A1208", lineHeight: 1.45 }}>
+                              "{eph.content}"
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Memories Section */}
@@ -1433,6 +1678,59 @@ export function TherapistScreen() {
           </>
         )}
       </AnimatePresence>
+      {/* Crisis Support Panel — blocking, with resources, persists until user acknowledges */}
+      {crisisPanel && (
+        <div className="fixed inset-0 z-[300] flex items-end justify-center" style={{ backgroundColor: "rgba(26,18,8,0.5)" }}>
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ type: "spring", damping: 28, stiffness: 300 }}
+            className="w-full max-w-[430px]"
+            style={{ backgroundColor: "#FDFAF5", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "24px 20px calc(24px + env(safe-area-inset-bottom))" }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <Heart size={18} color="#C8522A" />
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: "0.15em", color: "#C8522A", textTransform: "uppercase" }}>
+                You're not alone in this
+              </p>
+            </div>
+            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: "#1A1208", lineHeight: 1.55 }}>
+              {crisisPanel.reason}
+            </p>
+            <p style={{ marginTop: 10, fontFamily: "'Cormorant Garamond', serif", fontSize: 18, fontStyle: "italic", color: "rgba(26,18,8,0.7)", lineHeight: 1.5 }}>
+              {crisisPanel.calmDownText}
+            </p>
+            <div style={{ marginTop: 14, backgroundColor: "#F5E8E0", borderRadius: 14, padding: "12px 14px" }}>
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", color: "#C8522A", textTransform: "uppercase", marginBottom: 6 }}>
+                Helplines
+              </p>
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.75)", lineHeight: 1.6 }}>
+                {crisisPanel.resources}
+              </p>
+            </div>
+            <button
+              onClick={() => setCrisisPanel(null)}
+              className="w-full cursor-pointer mt-4"
+              style={{
+                height: 50,
+                borderRadius: 100,
+                border: "none",
+                backgroundColor: "#C8522A",
+                color: "#FFFFFF",
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 15,
+                fontWeight: 600,
+              }}
+            >
+              I'm okay right now — continue
+            </button>
+            <p style={{ marginTop: 10, fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.45)", textAlign: "center" }}>
+              If you're in immediate danger, call your local emergency number (India: 112 / 108).
+            </p>
+          </motion.div>
+        </div>
+      )}
+
       {/* Transcript Review Modal */}
       {transcriptResult && (
         <motion.div

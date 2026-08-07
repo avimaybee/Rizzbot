@@ -26,15 +26,16 @@ export interface SimResult {
   verdict: string; // "ABSOLUTE FIRE" or "IMMEDIATE JAIL"
   feedback: string[]; // 3 bullet points
   predictedReply?: string; // What the target might say
+  bubbles?: { text: string; delayMs?: number }[]; // Structured multi-bubble reply with pacing
   rewrites: {
     safe: string;
     bold: string;
     spicy: string;
     you?: string; // User's authentic style, upgraded
   };
-  // Optional state updates (can also come via tools)
+  // State updates (deltas from the coach call)
   updatedMood?: string;
-  updatedFamiliarity?: number;
+  updatedFamiliarity?: number; // DELTA ±5 max
 }
 
 export interface SimAnalysisResult {
@@ -351,6 +352,7 @@ export interface ClinicalNotes {
   actionItems: string[]; // Suggested exercises or next steps
   customNotes?: string; // Free-form notes the user can edit
   epiphanies?: Epiphany[]; // Tracked realizations for high-level progress
+  summary?: string; // AI-generated session summary (feeds the next session)
 }
 
 /**

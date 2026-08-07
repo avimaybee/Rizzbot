@@ -7,6 +7,8 @@ interface ClosingData {
   workedOn?: string[];
   insight?: string;
   attachmentStyle?: string;
+  summary?: string;
+  nextStep?: string;
 }
 
 const defaultWorkedOn = [
@@ -20,7 +22,9 @@ export function TherapistClosingScreen() {
   const location = useLocation();
   const data = (location.state as ClosingData) || {};
   const workedOn = data.workedOn?.length ? data.workedOn : defaultWorkedOn;
-  const insight = data.insight || "Give yourself permission to wait. Silence isn't rejection — it's an invitation for them to miss you.";
+  // Real AI-generated insight when available; graceful fallback otherwise
+  const insight = data.insight || (data.summary ? data.summary.split(". ")[0] + "." : "");
+  const nextStep = data.nextStep || "";
 
   return (
     <div
@@ -171,10 +175,37 @@ export function TherapistClosingScreen() {
                 lineHeight: 1.5,
               }}
             >
-              {insight}
+              {insight || "You showed up for yourself today. That matters."}
             </p>
           </div>
         </motion.div>
+
+        {nextStep && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.55 }}
+            className="w-full mt-3"
+            style={{
+              backgroundColor: "#FDFAF5",
+              borderRadius: 18,
+              padding: "14px 16px",
+              border: "1px solid #E8E0D4",
+            }}
+          >
+            <div className="flex items-start gap-3">
+              <BookOpen size={16} strokeWidth={1.8} color="#7A9E7E" style={{ marginTop: 2 }} />
+              <div>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A9E7E", marginBottom: 4 }}>
+                  Carry forward
+                </p>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "#1A1208", lineHeight: 1.5 }}>
+                  {nextStep}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
       </div>
 
       {/* CTAs */}

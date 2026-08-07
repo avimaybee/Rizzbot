@@ -27,7 +27,7 @@ import { GrainOverlay } from "./GrainOverlay";
 import { useToast } from "./ui/Toast";
 import { haptics } from "../utils/haptics";
 import { useAppContext } from "../app-context";
-import { deleteSession, getSessions, getTherapistSessions, Session, SessionResult } from "../../services/dbService";
+import { deleteSession, deleteTherapistSession, getSessions, getTherapistSessions, Session, SessionResult } from "../../services/dbService";
 import { formatShortDate, formatTimeAgo, parseDbDate } from "../utils/formatTime";
 
 const filterOptions = ["All", "Quick Mode", "Practice", "Therapist"] as const;
@@ -214,18 +214,20 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
                 {session.headline || parsed.headline || session.persona_name || "Conversation replay"}
               </p>
               <div className="mt-3 flex items-center gap-3">
-                <span
-                  style={{
-                    borderRadius: 999,
-                    padding: "4px 10px",
-                    backgroundColor: "rgba(122,158,126,0.12)",
-                    color: accent,
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 11,
-                  }}
-                >
-                  {risk}% risk
-                </span>
+                {session.mode !== "therapist" && (
+                  <span
+                    style={{
+                      borderRadius: 999,
+                      padding: "4px 10px",
+                      backgroundColor: "rgba(122,158,126,0.12)",
+                      color: accent,
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 11,
+                    }}
+                  >
+                    {risk}% risk
+                  </span>
+                )}
                 {session.persona_name && (
                   <span
                     style={{
@@ -806,6 +808,7 @@ export function HistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [pendingDeleteMeta, setPendingDeleteMeta] = useState<{ mode?: string; interactionId?: string } | null>(null);
 
   useEffect(() => {
     if (!authUser?.uid) return;
@@ -817,26 +820,31 @@ export function HistoryScreen() {
           getTherapistSessions(authUser.uid).catch(() => [] as any[]),
         ]);
         // Normalize therapist sessions into the Session shape so they render in the same list
-        const therapistItems = (therapistSessions || []).map((ts: any) => ({
-          id: ts.id || 0,
-          mode: "therapist" as const,
-          created_at: ts.created_at,
-          headline:
-            (ts.clinical_notes as any)?.aiSummary ||
-            (Array.isArray((ts.clinical_notes as any)?.keyThemes) ? (ts.clinical_notes as any).keyThemes[0] : undefined) ||
-            "Therapist session",
-          result: JSON.stringify({
-            history: (ts.messages || [])
-              .filter((m: any) => m.role === "user")
-              .map((m: any) => ({ draft: m.content, result: { predictedReply: "" } })),
-            analysis: undefined,
-          }),
-          parsedResult: {
-            history: (ts.messages || [])
-              .filter((m: any) => m.role === "user")
-              .map((m: any) => ({ draft: m.content, result: { predictedReply: "" } })),
-          },
-        }));
+        const therapistItems = (therapistSessions || []).map((ts: any) => {
+          const notes = (ts.clinical_notes as any) || {};
+          const userMsgs = (ts.messages || [])
+            .filter((m: any) => m.role === "user")
+            .map((m: any) => ({ draft: m.content, result: { predictedReply: "" } }));
+          return {
+            id: ts.id || 0,
+            mode: "therapist" as const,
+            interaction_id: ts.interaction_id,
+            created_at: ts.created_at,
+            headline:
+              (typeof ts.summary === "string" && ts.summary ? ts.summary.split(". ")[0] : undefined) ||
+              (Array.isArray(notes.keyThemes) && notes.keyThemes.length ? notes.keyThemes[0] : undefined) ||
+              (notes.emotionalState ? `Therapist session — ${notes.emotionalState}` : undefined) ||
+              "Therapist session",
+            result: JSON.stringify({
+              history: userMsgs,
+              analysis: undefined,
+            }),
+            parsedResult: {
+              history: userMsgs,
+              analysis: undefined,
+            },
+          };
+        });
         const combined = [...(response.sessions || []), ...therapistItems].sort((a: any, b: any) =>
           parseDbDate(b.created_at).getTime() - parseDbDate(a.created_at).getTime()
         );
@@ -860,12 +868,16 @@ export function HistoryScreen() {
     });
   }, [sessions, activeFilter, query]);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: number, mode?: string, interactionId?: string) => {
     if (!authUser?.uid) return;
     setDeletingId(id);
     try {
-      await deleteSession(id);
-      setSessions((prev) => prev.filter((item) => item.id !== id));
+      if (mode === "therapist" && interactionId) {
+        await deleteTherapistSession(authUser.uid, interactionId);
+      } else {
+        await deleteSession(id);
+      }
+      setSessions((prev) => prev.filter((item) => item.id !== id || (item as any).interaction_id === interactionId));
       if (selectedSession?.id === id) setSelectedSession(null);
       toast("Session deleted", "info");
     } catch {
@@ -873,6 +885,7 @@ export function HistoryScreen() {
     } finally {
       setDeletingId(null);
       setConfirmDeleteId(null);
+      setPendingDeleteMeta(null);
     }
   };
 
@@ -1199,26 +1212,25 @@ export function HistoryScreen() {
                       <ChevronRight size={16} color="rgba(26,18,8,0.2)" />
                       </div>
                       <div className="flex items-center gap-3 mt-2 pt-2" style={{ borderTop: "1px solid rgba(26,18,8,0.06)" }}>
-                        {session.mode !== "therapist" && (
-                          <button
-                            className="cursor-pointer shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              haptics.medium();
-                              setConfirmDeleteId(session.id);
-                            }}
-                            disabled={deletingId === session.id}
-                            style={{
-                              border: "none",
-                              background: "none",
-                              color: "rgba(26,18,8,0.3)",
-                              padding: 2,
-                              opacity: deletingId === session.id ? 0.4 : 1,
-                            }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
+                        <button
+                          className="cursor-pointer shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            haptics.medium();
+                            setConfirmDeleteId(session.id);
+                            setPendingDeleteMeta({ mode: session.mode, interactionId: (session as any).interaction_id });
+                          }}
+                          disabled={deletingId === session.id}
+                          style={{
+                            border: "none",
+                            background: "none",
+                            color: "rgba(26,18,8,0.3)",
+                            padding: 2,
+                            opacity: deletingId === session.id ? 0.4 : 1,
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
                         <span className="flex-1" />
                         <span
                           style={{
@@ -1289,7 +1301,7 @@ export function HistoryScreen() {
                     Cancel
                   </button>
                   <button
-                    onClick={() => void handleDelete(confirmDeleteId)}
+                    onClick={() => void handleDelete(confirmDeleteId, pendingDeleteMeta?.mode, pendingDeleteMeta?.interactionId)}
                     disabled={deletingId === confirmDeleteId}
                     style={{
                       flex: 1,
