@@ -12,10 +12,12 @@ import {
   signOutUser,
   logScreenView,
 } from "../services/firebaseService";
+import { clearUserSessionState } from "./utils/useSessionState";
 import {
   getOrCreateUser,
   getStyleProfile,
   saveStyleProfile,
+  flushPendingSessions,
 } from "../services/dbService";
 import {
   checkWellbeing,
@@ -38,6 +40,7 @@ interface AppContextValue {
   dismissWellbeingForDay: () => void;
   isPremium: boolean;
   premiumUntil: string | null;
+  paymentStatus: string | null;
   updatePremiumStatus: () => Promise<void>;
 }
 
@@ -86,6 +89,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [wellbeingCheckIn, setWellbeingCheckIn] = useState<WellbeingState | null>(null);
   const [isPremium, setIsPremium] = useState(false);
   const [premiumUntil, setPremiumUntil] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthChange((user) => {
@@ -116,6 +120,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setUserId(user.id);
         setIsPremium(user.is_premium || false);
         setPremiumUntil(user.premium_until || null);
+        setPaymentStatus(user.payment_status || null);
+
+        // Retry any sessions that failed to save offline
+        void flushPendingSessions().catch(() => {});
 
         const profile = await getStyleProfile(user.id);
         if (!alive) return;
@@ -196,11 +204,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
+    const uid = authUser?.uid;
     await signOutUser();
     setUserId(null);
     setUserProfile(null);
     setWellbeingCheckIn(null);
-  }, []);
+    setPaymentStatus(null);
+    setIsPremium(false);
+    setPremiumUntil(null);
+    if (uid) clearUserSessionState(uid);
+  }, [authUser]);
 
   const dismissWellbeing = useCallback(() => {
     if (!authUser) return;
@@ -220,6 +233,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const user = await getOrCreateUser(authUser.uid);
       setIsPremium(user.is_premium || false);
       setPremiumUntil(user.premium_until || null);
+      setPaymentStatus(user.payment_status || null);
     } catch (err) {
       console.error("Failed to update premium status:", err);
     }
@@ -239,6 +253,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       dismissWellbeingForDay,
       isPremium,
       premiumUntil,
+      paymentStatus,
       updatePremiumStatus,
     }),
     [
@@ -254,6 +269,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       dismissWellbeingForDay,
       isPremium,
       premiumUntil,
+      paymentStatus,
       updatePremiumStatus,
     ]
   );

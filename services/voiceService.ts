@@ -14,7 +14,7 @@ export interface TranscriptionResponse {
 
 export const transcribeAudio = async (
   audioBlob: Blob,
-  mode: 'therapist' | 'practice'
+  mode: 'therapist' | 'practice' | 'myvoice'
 ): Promise<TranscriptionResponse> => {
   const formData = new FormData();
   formData.append('audio', audioBlob, 'recording.webm');

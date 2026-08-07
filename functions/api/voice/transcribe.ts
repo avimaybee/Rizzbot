@@ -26,7 +26,7 @@ export async function onRequest(context: { env: any; request: Request }) {
   try {
     const formData = await request.formData();
     const audioFile = formData.get('audio') as File;
-    const mode = (formData.get('mode') as 'therapist' | 'practice') || 'therapist';
+    const mode = (formData.get('mode') as 'therapist' | 'practice' | 'myvoice') || 'therapist';
 
     if (!audioFile) {
       return new Response(JSON.stringify({ error: "No audio file provided" }), { status: 400, headers: corsHeaders });
@@ -45,9 +45,10 @@ export async function onRequest(context: { env: any; request: Request }) {
     const ai = new GoogleGenAI({ apiKey });
     
     // Prompts based on implementation plan
-    const prompts = {
+    const prompts: Record<string, string> = {
       therapist: `Transcribe this voice note accurately. Preserve tone, hesitations, uncertainty, and emotionally meaningful phrasing. Return JSON with: transcript, cleanedTranscript, unclearSegments, emotionalTone, containsDirectQuestion. Do not rewrite the user’s meaning.`,
-      practice: `Transcribe this voice note accurately. If the user is brainstorming a text reply, extract the intended message as draftText. If the user is venting or explaining context, return contextSummary. Return JSON with: transcript, draftText, contextSummary, confidenceNote, needsUserConfirmation.`
+      practice: `Transcribe this voice note accurately. If the user is brainstorming a text reply, extract the intended message as draftText. If the user is venting or explaining context, return contextSummary. Return JSON with: transcript, draftText, contextSummary, confidenceNote, needsUserConfirmation.`,
+      myvoice: `Transcribe this voice note exactly as spoken — it is a sample of the user's natural texting/chatting style for style analysis. Preserve slang, abbreviations, capitalization, punctuation and emoji habits. Return JSON with: transcript, cleanedTranscript.`
     };
 
     const MODELS = ["gemini-3.5-flash-lite"];

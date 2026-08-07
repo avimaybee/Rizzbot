@@ -289,6 +289,10 @@ export const simulateDraft = async (
     - Slang level: ${userStyle.slangLevel}
     - Their signature patterns: ${userStyle.signaturePatterns.join(', ') || 'none'}
     - Preferred tone: ${userStyle.preferredTone}
+    - Response speed: ${userStyle.responseSpeed || 'not set'}
+    - Flirt level: ${userStyle.flirtLevel || 'not set'}
+    - Humor style: ${userStyle.humorStyle || 'not set'}
+    - Overall energy: ${userStyle.energy || 'not set'}
     
     CRITICAL FOR "YOU" SUGGESTION:
     - Sound how the user would naturally type - don't add extra flair or slang they don't use
@@ -386,7 +390,11 @@ export const simulateDraft = async (
     - Be HUMAN. If the user is being dry, be dry. If they're being intense, react accordingly.
     - Mood & Familiarity shift gradually. Use the update_sim_state tool for changes.
     - FAMILIARITY DELTA: Max ±5 per message.
-    
+
+    IMPORTANT: After generating the reply, use the update_sim_state tool to update
+    the persona's mood and familiarity_delta (±5 max) based on how this interaction
+    would realistically move them. Return the JSON below AND the tool call.
+
     TASK: 
     1. Analyze the user's draft - Does it match their target's energy? Is it authentic?
     2. Calculate "Regret Level" (0-100) - would they cringe at this later?
@@ -431,13 +439,28 @@ export const simulateDraft = async (
     }
     const response = await runWithFallback({
       contents: [{ role: "user", parts }],
-      safetySettings: safetySettings
+      safetySettings: safetySettings,
+      tools: [UPDATE_SIM_STATE_TOOL],
     }, THERAPIST_MODELS);
 
     const text = response.text;
     if (!text) throw new Error("Connection Lost");
 
-    return safeParseJson<SimResult>(text);
+    const parsed = safeParseJson<SimResult>(text);
+
+    // Extract sim-state updates from any function calls the model made
+    const calls = Array.isArray(response.functionCalls) ? response.functionCalls : [];
+    const simCall = calls.find((fc: any) => fc.name === "update_sim_state");
+    if (simCall?.args) {
+      if (typeof simCall.args.mood === "string") {
+        parsed.updatedMood = simCall.args.mood;
+      }
+      if (typeof simCall.args.familiarity_delta === "number") {
+        parsed.updatedFamiliarity = simCall.args.familiarity_delta;
+      }
+    }
+
+    return parsed;
 
   } catch (error) {
     logger.error("Sim Failed:", error);
@@ -599,6 +622,10 @@ export const getQuickAdvice = async (
     - Slang level: ${s.slangLevel}
     - Signature patterns: ${s.signaturePatterns.join(', ') || 'none identified'}
     - Preferred tone: ${s.preferredTone}
+    - Response speed: ${s.responseSpeed || 'not set'}
+    - Flirt level: ${s.flirtLevel || 'not set'}
+    - Humor style: ${s.humorStyle || 'not set'}
+    - Overall energy: ${s.energy || 'not set'}
     `;
   }
 
@@ -1552,65 +1579,5 @@ User's Own Notes: ${currentNotes.customNotes || 'none'}]
   } catch (error) {
     logger.error("Streaming Therapist Advice Failed:", error);
     throw error;
-  }
-};
-
-/**
- * Get therapist advice (non-streaming fallback).
- */
-export const getTherapistAdvice = async (
-  userMessage: string,
-  _previousInteractionId?: string,
-  images?: string[]
-): Promise<TherapistResponse> => {
-  try {
-    const parts: any[] = [];
-
-    if (images && images.length > 0) {
-      parts.push({ text: "The user has shared these conversation screenshots:" });
-      images.forEach(base64 => {
-        const mimeMatch = base64.match(/^data:([^;]+);base64,/);
-        const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
-        const cleanBase64 = base64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
-        parts.push({
-          inlineData: { data: cleanBase64, mimeType }
-        });
-      });
-    }
-
-    parts.push({ text: userMessage });
-
-    const result = await runWithFallback({
-      contents: [{ role: "user", parts }],
-      systemInstruction: THERAPIST_SYSTEM_INSTRUCTION,
-      tools: [SESSION_ANALYSIS_TOOL],
-      safetySettings: safetySettings,
-    }, THERAPIST_MODELS);
-
-    const response = result;
-    const reply = response.text || "i'm having trouble processing that. can you try rephrasing?";
-
-    // Extract clinical notes from any function calls
-    let clinicalNotes: Partial<ClinicalNotes> | undefined;
-    const functionCalls = response.functionCalls;
-    if (functionCalls && functionCalls.length > 0) {
-      const analysisCall = functionCalls.find((fc: any) => fc.name === 'update_session_analysis');
-      if (analysisCall?.args) {
-        clinicalNotes = analysisCall.args as Partial<ClinicalNotes>;
-      }
-    }
-
-    return {
-      reply,
-      interactionId: `session_${Date.now()}`,
-      clinicalNotes
-    };
-
-  } catch (error) {
-    logger.error("Therapist Advice Failed:", error);
-    return {
-      reply: "something went wrong on my end. let's take a breath and try again?",
-      interactionId: ""
-    };
   }
 };

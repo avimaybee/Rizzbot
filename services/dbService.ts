@@ -57,6 +57,7 @@ export interface User {
   provider?: string | null;
   is_premium?: boolean;
   premium_until?: string | null;
+  payment_status?: string | null;
   created_at: string;
   last_login_at?: string;
 }
@@ -117,7 +118,7 @@ export interface Session {
   firebase_uid?: string;
   anon_id?: string;
   result: string;
-  mode?: 'simulator' | 'quick';
+  mode?: 'simulator' | 'quick' | 'therapist';
   persona_name?: string;
   headline?: string;
   ghost_risk?: number;
@@ -291,33 +292,6 @@ export async function getPersonas(userId: number): Promise<Persona[]> {
 }
 
 /**
- * Get single persona by ID
- */
-export async function getPersona(personaId: number): Promise<Persona | null> {
-  const res = await authenticatedFetch(`/api/personas?persona_id=${personaId}`);
-  if (!res.ok) throw new Error(`Failed to get persona: ${res.statusText}`);
-  const p = await res.json();
-  if (!p) return null;
-
-  return {
-    id: String(p.id),
-    name: p.name,
-    description: "",
-    tone: p.tone || "Unknown",
-    style: p.style || "Standard",
-    habits: p.habits || "Unknown",
-    redFlags: p.red_flags ? JSON.parse(p.red_flags) : [],
-    greenFlags: p.green_flags ? JSON.parse(p.green_flags) : [],
-    relationshipContext: p.relationship_context,
-    harshnessLevel: p.harshness_level,
-    communicationTips: p.communication_tips ? JSON.parse(p.communication_tips) : [],
-    conversationStarters: p.conversation_starters ? JSON.parse(p.conversation_starters) : [],
-    thingsToAvoid: p.things_to_avoid ? JSON.parse(p.things_to_avoid) : [],
-    theirLanguage: p.their_language ? JSON.parse(p.their_language) : [],
-  };
-}
-
-/**
  * Create persona
  */
 export async function createPersona(persona: Persona): Promise<{ id: number }> {
@@ -327,30 +301,6 @@ export async function createPersona(persona: Persona): Promise<{ id: number }> {
     body: JSON.stringify(persona),
   });
   if (!res.ok) throw new Error(`Failed to create persona: ${res.statusText}`);
-  return res.json();
-}
-
-/**
- * Update persona
- */
-export async function updatePersona(id: number, updates: Partial<Persona>): Promise<{ success: boolean }> {
-  const res = await authenticatedFetch(`/api/personas`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, ...updates }),
-  });
-  if (!res.ok) throw new Error(`Failed to update persona: ${res.statusText}`);
-  return res.json();
-}
-
-/**
- * Delete persona
- */
-export async function deletePersona(id: number): Promise<{ success: boolean }> {
-  const res = await authenticatedFetch(`/api/personas?id=${id}`, {
-    method: 'DELETE',
-  });
-  if (!res.ok) throw new Error(`Failed to delete persona: ${res.statusText}`);
   return res.json();
 }
 
@@ -372,15 +322,6 @@ export async function saveStyleProfile(profile: any): Promise<{ id: number }> {
 }
 
 // ===== Feedback API =====
-
-/**
- * Get feedback stats for user (aggregated by suggestion type)
- */
-export async function getFeedback(userId: number): Promise<any[]> {
-  const res = await authenticatedFetch(`/api/feedback?user_id=${userId}`);
-  if (!res.ok) throw new Error(`Failed to get feedback: ${res.statusText}`);
-  return res.json();
-}
 
 /**
  * Submit feedback entry
@@ -477,6 +418,57 @@ export async function createSession(
   return res.json();
 }
 
+// ===== Offline session-save retry queue =====
+// Fire-and-forget saves can silently lose data if D1 fails; queue them and
+// flush on the next app load instead.
+const PENDING_SESSIONS_KEY = "rizzbot_pending_sessions";
+
+export function queuePendingSession(
+  firebaseUid: string,
+  result: any,
+  options?: Parameters<typeof createSession>[2]
+): void {
+  try {
+    const raw = localStorage.getItem(PENDING_SESSIONS_KEY);
+    const queue: any[] = raw ? JSON.parse(raw) : [];
+    queue.push({ firebaseUid, result, options, ts: Date.now() });
+    // Cap the queue to avoid unbounded growth
+    localStorage.setItem(PENDING_SESSIONS_KEY, JSON.stringify(queue.slice(-20)));
+  } catch {
+    // Quota or parse failure — drop silently
+  }
+}
+
+export async function flushPendingSessions(): Promise<void> {
+  let queue: any[] = [];
+  try {
+    const raw = localStorage.getItem(PENDING_SESSIONS_KEY);
+    if (!raw) return;
+    queue = JSON.parse(raw);
+  } catch {
+    return;
+  }
+  if (queue.length === 0) return;
+
+  const remaining: any[] = [];
+  for (const item of queue) {
+    try {
+      await createSession(item.firebaseUid, item.result, item.options);
+    } catch {
+      remaining.push(item);
+    }
+  }
+  try {
+    if (remaining.length === 0) {
+      localStorage.removeItem(PENDING_SESSIONS_KEY);
+    } else {
+      localStorage.setItem(PENDING_SESSIONS_KEY, JSON.stringify(remaining));
+    }
+  } catch {
+    // ignore
+  }
+}
+
 /**
  * Delete a session by ID
  */
@@ -520,26 +512,6 @@ export async function saveTherapistSession(
   });
   if (!res.ok) throw new Error(`Failed to save therapist session: ${res.statusText}`);
   return res.json();
-}
-
-/**
- * Get a specific therapist session by interaction ID
- */
-export async function getTherapistSession(interactionId: string): Promise<TherapistSession | null> {
-  const res = await authenticatedFetch(`/api/therapist_sessions?interaction_id=${interactionId}`);
-  if (!res.ok) {
-    if (res.status === 404) return null;
-    throw new Error(`Failed to get therapist session: ${res.statusText}`);
-  }
-  const data = await res.json();
-  if (!data) return null;
-
-  // Parse JSON fields
-  return {
-    ...data,
-    messages: typeof data.messages === 'string' ? JSON.parse(data.messages) : data.messages,
-    clinical_notes: typeof data.clinical_notes === 'string' ? JSON.parse(data.clinical_notes) : data.clinical_notes
-  };
 }
 
 /**
@@ -620,17 +592,6 @@ export interface StreakData {
   current_streak: number;
   longest_streak: number;
   last_active_date: string | null;
-}
-
-export async function getStreak(firebaseUid: string): Promise<StreakData> {
-  try {
-    const res = await authenticatedFetch(`/api/streaks?anon_id=${firebaseUid}`);
-    if (!res.ok) return { current_streak: 0, longest_streak: 0, last_active_date: null };
-    const data = await res.json();
-    return data.streak || { current_streak: 0, longest_streak: 0, last_active_date: null };
-  } catch {
-    return { current_streak: 0, longest_streak: 0, last_active_date: null };
-  }
 }
 
 export async function recordActivity(firebaseUid: string): Promise<StreakData> {

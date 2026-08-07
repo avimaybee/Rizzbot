@@ -5,16 +5,21 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   Camera,
   Check,
+  CheckCircle,
   ChevronLeft,
+  Clock,
   Copy,
   CornerDownRight,
   Info,
   Link2,
+  Pencil,
   RotateCcw,
   Share2,
+  Sparkles,
   Tag,
   ThumbsDown,
   ThumbsUp,
+  Timer,
   X,
   ChevronRight,
 } from "lucide-react";
@@ -25,7 +30,7 @@ import { useToast } from "./ui/Toast";
 import { haptics } from "../utils/haptics";
 import { useAppContext } from "../app-context";
 import { getQuickAdvice } from "../../services/geminiService";
-import { createSession, submitFeedback } from "../../services/dbService";
+import { createSession, flushPendingSessions, queuePendingSession, recordActivity, submitFeedback } from "../../services/dbService";
 import { logSession, saveFeedback } from "../../services/feedbackService";
 import { QuickAdviceResponse, SuggestionOption } from "../../types";
 import { useScrollFade } from "../utils/useScrollFade";
@@ -92,12 +97,12 @@ export function QuickModeScreen() {
 
   const [showResults, setShowResults] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [theirMessage, setTheirMessage] = useSessionState("quick_theirMessage", "");
-  const [yourDraft, setYourDraft] = useSessionState("quick_yourDraft", "");
-  const [context, setContext] = useSessionState<ContextOption>("quick_context", "new");
-  const [activeTone, setActiveTone] = useSessionState<Tone>("quick_tone", "Smooth");
+  const [theirMessage, setTheirMessage] = useSessionState("quick_theirMessage", "", authUser?.uid);
+  const [yourDraft, setYourDraft] = useSessionState("quick_yourDraft", "", authUser?.uid);
+  const [context, setContext] = useSessionState<ContextOption>("quick_context", "new", authUser?.uid);
+  const [activeTone, setActiveTone] = useSessionState<Tone>("quick_tone", "Smooth", authUser?.uid);
   const [showStyleTooltip, setShowStyleTooltip] = useState(false);
-  const [screenshots, setScreenshots] = useSessionState<string[]>("quick_screenshots", []);
+  const [screenshots, setScreenshots] = useSessionState<string[]>("quick_screenshots", [], authUser?.uid);
   const [result, setResult] = useState<QuickAdviceResponse | null>(null);
   const [feedbackGiven, setFeedbackGiven] = useState<"helpful" | "off" | null>(null);
   const [cursor, setCursor] = useState<Record<Tone, number>>({
@@ -199,6 +204,7 @@ export function QuickModeScreen() {
 
       if (authUser?.uid) {
         logSession(authUser.uid, "quick", undefined, derivedGhostRisk);
+        void recordActivity(authUser.uid).catch(() => {});
         void createSession(
           authUser.uid,
           {
@@ -220,6 +226,22 @@ export function QuickModeScreen() {
           }
         ).catch((sessionErr) => {
           console.error("Failed to save session:", sessionErr);
+          // Queue for retry on next load instead of silently losing it
+          queuePendingSession(
+            authUser.uid,
+            {
+              request: { screenshots, theirMessage, yourDraft, context },
+              response,
+              vibeCheck: response.vibeCheck,
+              suggestions: response.suggestions,
+            },
+            {
+              mode: "quick",
+              headline: response.proTip || "Quick analysis",
+              ghost_risk: derivedGhostRisk,
+              message_count: response.extractedUnrepliedMessages?.length || 1,
+            }
+          );
         });
       }
 
@@ -244,6 +266,45 @@ export function QuickModeScreen() {
     setCursor({ Smooth: 0, Bold: 0, Witty: 0, Roast: 0, Authentic: 0, "Your Style": 0 });
     setFeedbackGiven(null);
     haptics.light();
+  };
+
+  const handleEdit = () => {
+    // Return to the input view with message/draft/context/screenshots preserved
+    setShowResults(false);
+    setResult(null);
+    setFeedbackGiven(null);
+    haptics.light();
+  };
+
+  const handleShare = async () => {
+    if (!result) return;
+    const summary = [
+      `Vibe: ${result.vibeCheck?.theirEnergy || "neutral"} · Interest ${result.vibeCheck?.interestLevel ?? 50}/100`,
+      result.proTip ? `Tip: ${result.proTip}` : "",
+      result.recommendedAction ? `Next move: ${result.recommendedAction}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const text = `Rizzbot analysis\n\n${summary}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        toast("Analysis copied", "success");
+      }
+    } catch {
+      // user cancelled share — no-op
+    }
+  };
+
+  const actionLabel: Record<string, { label: string; color: string; bg: string }> = {
+    SEND: { label: "Send it", color: "#7A9E7E", bg: "rgba(122,158,126,0.12)" },
+    WAIT: { label: "Wait", color: "#B8860B", bg: "rgba(212,168,83,0.12)" },
+    CALL: { label: "Call / voice note", color: "#C8522A", bg: "rgba(200,82,42,0.1)" },
+    MATCH: { label: "Match their energy", color: "#7A9E7E", bg: "rgba(122,158,126,0.12)" },
+    PULL_BACK: { label: "Pull back", color: "#B8860B", bg: "rgba(212,168,83,0.12)" },
+    ABORT: { label: "Walk away", color: "#C8522A", bg: "rgba(200,82,42,0.1)" },
   };
 
   const situationFade = useScrollFade();
@@ -317,22 +378,39 @@ export function QuickModeScreen() {
           <p className="absolute left-1/2 -translate-x-1/2" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 600, color: "#1A1208", paddingBottom: 2 }}>
             Quick Mode
           </p>
-          <div className="relative z-10 flex justify-end" style={{ width: 44 }}>
+          <div className="relative z-10 flex items-center justify-end gap-2" style={{ minWidth: 96 }}>
             {showResults && (
-              <button
-                onClick={handleRedo}
-                className="cursor-pointer"
-                style={{
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: "#C8522A",
-                  background: "none",
-                  border: "none",
-                }}
-              >
-                Redo
-              </button>
+              <>
+                <button
+                  onClick={handleEdit}
+                  className="cursor-pointer flex items-center gap-1"
+                  style={{
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: "rgba(26,18,8,0.55)",
+                    background: "none",
+                    border: "none",
+                  }}
+                >
+                  <Pencil size={13} strokeWidth={2} />
+                  Edit
+                </button>
+                <button
+                  onClick={handleRedo}
+                  className="cursor-pointer"
+                  style={{
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: "#C8522A",
+                    background: "none",
+                    border: "none",
+                  }}
+                >
+                  Redo
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -555,14 +633,75 @@ export function QuickModeScreen() {
                 <div style={{ width: 3, backgroundColor: "#C8522A", borderRadius: "3px 0 0 3px", flexShrink: 0 }} />
                 <div className="p-4 flex-1">
                   <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.15em", color: "rgba(26, 18, 8, 0.55)", textTransform: "uppercase" }}>
-                    Their message
+                    {result?.extractedUnrepliedMessages?.length ? "Messages to reply to" : "Their message"}
                   </p>
-                  <p className="mt-2" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: "#1A1208", lineHeight: 1.5 }}>
-                    {showMessage}
-                  </p>
+                  {result?.extractedUnrepliedMessages?.length ? (
+                    <div className="mt-2 space-y-2">
+                      {result.extractedUnrepliedMessages.map((msg: string, i: number) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <CornerDownRight size={14} strokeWidth={2} color="#C8522A" style={{ marginTop: 4, flexShrink: 0 }} />
+                          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: "#1A1208", lineHeight: 1.5 }}>
+                            "{msg}"
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-2" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: "#1A1208", lineHeight: 1.5 }}>
+                      {showMessage}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
+
+            {result?.conversationContext && (
+              <div className="mt-3 px-4 py-3" style={{ backgroundColor: "#FDFAF5", borderRadius: 16 }}>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontStyle: "italic", color: "rgba(26,18,8,0.55)", lineHeight: 1.5 }}>
+                  {result.conversationContext}
+                </p>
+              </div>
+            )}
+
+            {result?.detectedMeta && (result.detectedMeta.platform || result.detectedMeta.deliveryStatus || result.detectedMeta.timestamp || result.detectedMeta.isMessageRequest || (result.detectedMeta.reactions?.length ?? 0) > 0 || result.detectedMeta.groupName) && (
+              <div className="mt-3 px-4 py-3" style={{ backgroundColor: "#FDFAF5", borderRadius: 16 }}>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase", marginBottom: 8 }}>
+                  Detected
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {result.detectedMeta.platform && result.detectedMeta.platform !== "unknown" && (
+                    <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "#F5E8E0", color: "#C8522A", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+                      {result.detectedMeta.platform}
+                    </span>
+                  )}
+                  {result.detectedMeta.deliveryStatus && result.detectedMeta.deliveryStatus !== "unknown" && (
+                    <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "#F5EFE6", border: "1px solid #E8E0D4", color: "rgba(26,18,8,0.6)", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+                      {result.detectedMeta.deliveryStatus === "read" ? "✓✓ read" : result.detectedMeta.deliveryStatus}
+                    </span>
+                  )}
+                  {result.detectedMeta.timestamp && (
+                    <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "#F5EFE6", border: "1px solid #E8E0D4", color: "rgba(26,18,8,0.6)", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+                      {result.detectedMeta.timestamp}
+                    </span>
+                  )}
+                  {result.detectedMeta.groupName && (
+                    <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "#F5EFE6", border: "1px solid #E8E0D4", color: "rgba(26,18,8,0.6)", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+                      {result.detectedMeta.groupName}
+                    </span>
+                  )}
+                  {result.detectedMeta.isMessageRequest === true && (
+                    <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "rgba(200,82,42,0.1)", color: "#C8522A", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+                      message request
+                    </span>
+                  )}
+                  {Array.isArray(result.detectedMeta.reactions) && result.detectedMeta.reactions.length > 0 && (
+                    <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "#F5EFE6", border: "1px solid #E8E0D4", color: "rgba(26,18,8,0.6)", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+                      {result.detectedMeta.reactions.join(" ")}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div
               className="mt-4"
@@ -570,7 +709,14 @@ export function QuickModeScreen() {
             >
               <div className="flex items-center justify-between mb-3">
                 <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>Vibe Check</p>
-                <Share2 size={16} strokeWidth={1.8} color="rgba(26,18,8,0.4)" />
+                <button
+                  onClick={() => void handleShare()}
+                  className="cursor-pointer flex items-center gap-1.5"
+                  style={{ border: "none", background: "none", color: "rgba(26,18,8,0.4)" }}
+                  title="Share analysis"
+                >
+                  <Share2 size={16} strokeWidth={1.8} />
+                </button>
               </div>
               <div className="mb-3" style={{ height: 1, backgroundColor: "#E8E0D4" }} />
 
@@ -590,6 +736,14 @@ export function QuickModeScreen() {
                   color: "#C8522A",
                 },
                 { label: "Ghost Risk", value: `${riskLabel} (${ghostRisk}%)`, level: Math.max(0.05, ghostRisk / 100), color: riskColor },
+                ...(typeof result?.interestSignal === "number"
+                  ? [{
+                      label: "Interest to show",
+                      value: `${result.interestSignal}/100`,
+                      level: Math.max(0.05, result.interestSignal / 100),
+                      color: "#D4A853",
+                    }]
+                  : []),
               ].map((metric) => (
                 <div key={metric.label} className="mb-3">
                   <div className="flex items-center justify-between mb-1.5">
@@ -602,14 +756,128 @@ export function QuickModeScreen() {
                 </div>
               ))}
 
+              {Array.isArray(result?.vibeCheck?.greenFlags) && result.vibeCheck.greenFlags.length > 0 && (
+                <div className="mb-2">
+                  <p style={{ fontSize: 11, color: "#7A9E7E", marginBottom: 6, fontFamily: "'DM Sans', sans-serif" }}>Green flags</p>
+                  <div className="flex flex-wrap gap-2">
+                    {result.vibeCheck.greenFlags.map((flag: string, i: number) => (
+                      <span key={i} style={{ borderRadius: 999, padding: "3px 9px", backgroundColor: "rgba(122,158,126,0.12)", color: "#58745A", fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>
+                        {flag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {Array.isArray(result?.vibeCheck?.redFlags) && result.vibeCheck.redFlags.length > 0 && (
+                <div>
+                  <p style={{ fontSize: 11, color: "#C8522A", marginBottom: 6, fontFamily: "'DM Sans', sans-serif" }}>Red flags</p>
+                  <div className="flex flex-wrap gap-2">
+                    {result.vibeCheck.redFlags.map((flag: string, i: number) => (
+                      <span key={i} style={{ borderRadius: 999, padding: "3px 9px", backgroundColor: "rgba(200,82,42,0.12)", color: "#C8522A", fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>
+                        {flag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {result?.proTip && (
-                <div className="mt-2" style={{ backgroundColor: "#F5E8E0", borderRadius: 12, padding: "12px 14px" }}>
+                <div className="mt-3" style={{ backgroundColor: "#F5E8E0", borderRadius: 12, padding: "12px 14px" }}>
                   <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, fontStyle: "italic", color: "#1A1208", lineHeight: 1.4 }}>
                     "{result.proTip}"
                   </p>
                 </div>
               )}
             </div>
+
+            {result?.recommendedAction && (
+              <div className="mt-3 px-4 py-3" style={{ backgroundColor: "#FDFAF5", borderRadius: 16 }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles size={14} color="#C8522A" />
+                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>
+                    Next move
+                  </p>
+                </div>
+                {(() => {
+                  const a = actionLabel[result.recommendedAction] || { label: result.recommendedAction, color: "#1A1208", bg: "rgba(26,18,8,0.06)" };
+                  return (
+                    <span style={{ borderRadius: 999, padding: "5px 12px", backgroundColor: a.bg, color: a.color, fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600 }}>
+                      {a.label}
+                    </span>
+                  );
+                })()}
+                {result?.timingRecommendation && (
+                  <div className="mt-3 flex items-start gap-2">
+                    <Timer size={14} strokeWidth={1.8} color="rgba(26,18,8,0.4)" style={{ marginTop: 2, flexShrink: 0 }} />
+                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.65)", lineHeight: 1.5 }}>
+                      {result.timingRecommendation}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {result?.suggestions?.wait && (
+              <div className="mt-3 px-4 py-3" style={{ backgroundColor: "#FEF3E2", borderRadius: 16, border: "1px solid rgba(212,168,83,0.25)" }}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Clock size={15} color="#B8860B" />
+                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", color: "#B8860B", textTransform: "uppercase" }}>
+                    Don't reply yet
+                  </p>
+                </div>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.7)", lineHeight: 1.5 }}>
+                  {result.suggestions.wait}
+                </p>
+              </div>
+            )}
+
+            {result?.draftAnalysis && (
+              <div className="mt-3 px-4 py-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 16 }}>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase", marginBottom: 8 }}>
+                  Draft analysis
+                </p>
+                {result.draftAnalysis.verdict && (
+                  <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontStyle: "italic", color: "#1A1208", lineHeight: 1.45, marginBottom: 10 }}>
+                    "{result.draftAnalysis.verdict}"
+                  </p>
+                )}
+                {typeof result.draftAnalysis.confidenceScore === "number" && (
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.55)" }}>Confidence</span>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "#1A1208" }}>{result.draftAnalysis.confidenceScore}/100</span>
+                    </div>
+                    <div className="w-full overflow-hidden" style={{ height: 6, borderRadius: 100, backgroundColor: "#E8E0D4" }}>
+                      <div style={{ width: `${result.draftAnalysis.confidenceScore}%`, height: "100%", borderRadius: 100, backgroundColor: "#7A9E7E" }} />
+                    </div>
+                  </div>
+                )}
+                {Array.isArray(result.draftAnalysis.strengths) && result.draftAnalysis.strengths.length > 0 && (
+                  <div className="mb-2">
+                    <p style={{ fontSize: 11, color: "#7A9E7E", marginBottom: 5, fontFamily: "'DM Sans', sans-serif" }}>Strengths</p>
+                    <div className="flex flex-wrap gap-2">
+                      {result.draftAnalysis.strengths.map((s: string, i: number) => (
+                        <span key={i} style={{ borderRadius: 999, padding: "3px 9px", backgroundColor: "rgba(122,158,126,0.12)", color: "#58745A", fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {Array.isArray(result.draftAnalysis.issues) && result.draftAnalysis.issues.length > 0 && (
+                  <div>
+                    <p style={{ fontSize: 11, color: "#C8522A", marginBottom: 5, fontFamily: "'DM Sans', sans-serif" }}>Could improve</p>
+                    <div className="flex flex-wrap gap-2">
+                      {result.draftAnalysis.issues.map((s: string, i: number) => (
+                        <span key={i} style={{ borderRadius: 999, padding: "3px 9px", backgroundColor: "rgba(200,82,42,0.12)", color: "#C8522A", fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="mt-4">
               <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.15em", color: "rgba(26, 18, 8, 0.55)", textTransform: "uppercase" }}>

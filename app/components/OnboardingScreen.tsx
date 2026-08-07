@@ -50,7 +50,7 @@ export function OnboardingScreen() {
   const handleNext = () => {
     if (isLast) {
       localStorage.setItem("rizzbot_onboarded", "1");
-      navigate("/auth");
+      navigate("/auth", { state: { startVoiceQuiz: true } });
     } else {
       setIndex((i) => i + 1);
     }

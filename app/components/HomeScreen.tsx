@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { Bell, ChevronRight, Heart, LogOut, Mic, Sparkles, Target, Zap } from "lucide-react";
+import { Bell, CheckCircle, ChevronRight, Clock, Heart, LogOut, Mic, Sparkles, Target, Zap } from "lucide-react";
 import { GrainOverlay } from "./GrainOverlay";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { PremiumModal } from "./PremiumModal";
 import { useAppContext } from "../app-context";
-import { getSessions, recordActivity, type StreakData } from "../../services/dbService";
+import { getSessions, getTherapistSessions, recordActivity, type StreakData } from "../../services/dbService";
 import { useScrollFade } from "../utils/useScrollFade";
 import { formatTimeAgo, parseDbDate } from "../utils/formatTime";
 
@@ -75,10 +75,9 @@ const toModeCardName = (mode?: string): string | null => {
   if (mode === "voice") return "My Voice";
   return null;
 };
-
 export function HomeScreen() {
   const navigate = useNavigate();
-  const { authUser, userId, userProfile, signOut, isPremium } = useAppContext();
+  const { authUser, userId, userProfile, signOut, isPremium, paymentStatus } = useAppContext();
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [lastUsedByMode, setLastUsedByMode] = useState<Record<string, string>>({});
@@ -99,11 +98,28 @@ export function HomeScreen() {
   useEffect(() => {
     if (!authUser?.uid) return;
     let alive = true;
-    void getSessions(userId || authUser.uid, 5, 0)
-      .then((response) => {
+    const loadActivity = async () => {
+      try {
+        const [sessionResp, therapistSessions] = await Promise.all([
+          getSessions(userId || authUser.uid, 10, 0),
+          getTherapistSessions(authUser.uid).catch(() => [] as any[]),
+        ]);
         if (!alive) return;
-        const sessions = response.sessions || [];
-        const recent = sessions.slice(0, 4).map((session) => ({
+        const sessions = sessionResp.sessions || [];
+
+        // Normalize therapist sessions into the same shape (mode: "therapist")
+        const therapistItems = (therapistSessions || []).map((ts: any) => ({
+          id: ts.interaction_id,
+          mode: "therapist" as const,
+          created_at: ts.created_at,
+          headline: (ts.clinical_notes as any)?.aiSummary || (ts.clinical_notes as any)?.keyThemes?.[0] || "Therapist session",
+          parsedResult: { analysis: undefined },
+        }));
+        const allSessions = [...sessions, ...therapistItems].sort(
+          (a: any, b: any) => parseDbDate(b.created_at).getTime() - parseDbDate(a.created_at).getTime()
+        );
+
+        const recent = allSessions.slice(0, 4).map((session: any) => ({
           mode: toModeCardName(session.mode) || "Session",
           time: formatHoursAgo(session.created_at),
           risk:
@@ -112,7 +128,7 @@ export function HomeScreen() {
               : session.parsedResult?.analysis?.ghostRisk,
         }));
         const latestByMode: Record<string, string> = {};
-        sessions.forEach((session) => {
+        allSessions.forEach((session: any) => {
           const mode = toModeCardName(session.mode);
           if (!mode || !session.created_at) return;
           const nextTime = parseDbDate(session.created_at).getTime();
@@ -129,25 +145,17 @@ export function HomeScreen() {
         });
         setLastUsedByMode(computedLastUsed);
         setActivity(recent);
-      })
-      .catch(() => {
+      } catch {
         if (!alive) return;
         setActivity([]);
         setLastUsedByMode({});
-      });
+      }
+    };
+    void loadActivity();
     return () => {
       alive = false;
     };
   }, [authUser?.uid, userId]);
-
-  useEffect(() => {
-    if (!authUser?.uid) return;
-    let alive = true;
-    void recordActivity(authUser.uid).then((data) => {
-      if (alive) setStreak(data);
-    }).catch(() => { });
-    return () => { alive = false; };
-  }, [authUser?.uid]);
 
   const isLateNight = new Date().getHours() >= 21 || new Date().getHours() < 5;
   const hasVoiceProfile = Boolean(userProfile);
@@ -369,8 +377,8 @@ export function HomeScreen() {
           })}
         </div>
 
-        {/* Premium Banner */}
-        {!isPremium && (
+        {/* Premium Banner — hidden while a payment is pending verification */}
+        {!isPremium && paymentStatus !== "PENDING_RECONCILIATION" && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -535,6 +543,22 @@ export function HomeScreen() {
                 <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.5)" }}>{authUser?.email}</p>
               </div>
             </div>
+            {paymentStatus === "PENDING_RECONCILIATION" && (
+              <div className="mb-4 flex items-center gap-2" style={{ backgroundColor: "#FEF3E2", borderRadius: 12, padding: "10px 12px", border: "1px solid rgba(212,168,83,0.3)" }}>
+                <Clock size={15} color="#B8860B" />
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.7)", lineHeight: 1.4 }}>
+                  Premium payment received — verification usually takes a few hours.
+                </p>
+              </div>
+            )}
+            {isPremium && (
+              <div className="mb-4 flex items-center gap-2" style={{ backgroundColor: "rgba(122,158,126,0.12)", borderRadius: 12, padding: "10px 12px" }}>
+                <CheckCircle size={15} color="#58745A" />
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#58745A", fontWeight: 600 }}>
+                  Premium active
+                </p>
+              </div>
+            )}
             <button
               onClick={() => { setShowProfileSheet(false); navigate("/voice"); }}
               className="w-full flex items-center gap-3 cursor-pointer fade-press"

@@ -32,6 +32,7 @@ import {
   deleteMemory,
   getMemories,
   getTherapistSessions,
+  recordActivity,
   saveMemory,
   saveTherapistSession,
   TherapistMemory,
@@ -40,6 +41,7 @@ import {
 } from "../../services/dbService";
 import { streamTherapistAdvice } from "../../services/geminiService";
 import { ClinicalNotes, ExerciseType, TherapistExercise } from "../../types";
+import { logSession } from "../../services/feedbackService";
 import { useScrollFade } from "../utils/useScrollFade";
 import { formatShortDate, formatTimeAgo } from "../utils/formatTime";
 
@@ -399,8 +401,8 @@ export function TherapistScreen() {
   const [interactionId, setInteractionId] = useState<string | undefined>(
     () => localStorage.getItem(`${storagePrefix}_interaction_id`) || undefined
   );
-  const [inputValue, setInputValue] = useSessionState("therapist_input", "");
-  const [pendingImages, setPendingImages] = useSessionState<string[]>("therapist_images", []);
+  const [inputValue, setInputValue] = useSessionState("therapist_input", "", authUser?.uid);
+  const [pendingImages, setPendingImages] = useSessionState<string[]>("therapist_images", [], authUser?.uid);
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [pendingExercise, setPendingExercise] = useState<TherapistExercise | null>(null);
@@ -430,7 +432,9 @@ export function TherapistScreen() {
 
   const refreshMemories = useCallback(() => {
     if (!authUser?.uid) return;
-    void getMemories(authUser.uid, undefined, interactionId)
+    // When no session exists yet (fresh conversation), only GLOBAL memories
+    // should be in context — SESSION memories belong to their own sessions.
+    void getMemories(authUser.uid, interactionId ? undefined : "GLOBAL", interactionId)
       .then((data) => setMemories(data))
       .catch(() => setMemories([]));
   }, [authUser?.uid, interactionId]);
@@ -610,6 +614,10 @@ export function TherapistScreen() {
     const currentInteractionId = interactionId || `session_${Date.now()}`;
     if (!interactionId) setInteractionId(currentInteractionId);
 
+    // Therapist usage feeds wellbeing heuristics + daily streak
+    logSession(authUser.uid, "therapist", undefined, undefined);
+    void recordActivity(authUser.uid).catch(() => {});
+
     const userContent = trimmed || "📎 Screenshot";
     const userMsg: TherapistUiMessage = {
       role: "user",
@@ -683,6 +691,12 @@ export function TherapistScreen() {
           capturedInsights[toolName] = args;
           if (toolName === "save_memory" && args && authUser?.uid) {
             void saveMemory(authUser.uid, args.type, args.content, currentInteractionId, "AI").then(() => {
+              void refreshMemories();
+            });
+          }
+          if (toolName === "log_epiphany" && args?.content && authUser?.uid) {
+            // Persist AI-captured epiphanies as SESSION memories so they aren't lost
+            void saveMemory(authUser.uid, "SESSION", args.content, currentInteractionId, "AI").then(() => {
               void refreshMemories();
             });
           }

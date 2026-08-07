@@ -21,6 +21,8 @@ import {
   UserStyleProfile,
 } from "../../types";
 import { extractUserStyle } from "../../services/geminiService";
+import { transcribeAudio } from "../../services/voiceService";
+import VoiceRecorder from "./VoiceRecorder";
 
 interface QuizQuestion {
   icon: typeof Mic;
@@ -167,6 +169,8 @@ export function MyVoiceScreen() {
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [dictating, setDictating] = useState(false);
+  const [dictatedText, setDictatedText] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const question = questions[currentQ];
@@ -184,6 +188,14 @@ export function MyVoiceScreen() {
     const nextAnswers = [...answers];
     nextAnswers[currentQ] = selectedOption;
     setAnswers(nextAnswers);
+    if (dictatedText.trim()) {
+      setSampleTexts((prev) => {
+        const next = [...prev];
+        next[currentQ] = dictatedText.trim();
+        return next;
+      });
+      setDictatedText("");
+    }
     if (isLast) {
       const mapped = profileFromAnswers(nextAnswers);
       setProfileDraft(mapped);
@@ -392,6 +404,44 @@ export function MyVoiceScreen() {
                     {option}
                   </button>
                 ))}
+
+                {dictating ? (
+                  <div className="mt-2 p-3" style={{ backgroundColor: "#FDFAF5", borderRadius: 16, border: "1px solid #E8E0D4" }}>
+                    <VoiceRecorder
+                      mode="myvoice"
+                      onCancel={() => setDictating(false)}
+                      onTranscriptionComplete={(result) => {
+                        setDictatedText(result.cleanedTranscript || result.transcript);
+                        setDictating(false);
+                        toast("Dictation added", "success");
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setDictating(true)}
+                    className="cursor-pointer flex items-center justify-center gap-2"
+                    style={{
+                      minHeight: 44,
+                      borderRadius: 16,
+                      backgroundColor: "transparent",
+                      border: "1px dashed rgba(200,82,42,0.4)",
+                      color: "#C8522A",
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontSize: 13,
+                      fontWeight: 500,
+                    }}
+                  >
+                    <Mic size={14} />
+                    Dictate your answer
+                  </button>
+                )}
+
+                {dictatedText && (
+                  <p className="mt-1 text-center" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontStyle: "italic", color: "rgba(26,18,8,0.55)" }}>
+                    "{dictatedText}"
+                  </p>
+                )}
               </div>
             </motion.div>
           </AnimatePresence>
@@ -610,6 +660,15 @@ export function MyVoiceScreen() {
               <option value="playful">humor: playful</option>
               <option value="sarcastic">humor: sarcastic</option>
               <option value="wholesome">humor: wholesome</option>
+            </select>
+            <select
+              value={computedProfile.energy || "medium"}
+              onChange={(e) => updateProfile({ energy: e.target.value as UserStyleProfile["energy"] })}
+              className="h-[40px] rounded-[10px] border border-[#E8E0D4] px-[10px] text-[13px] text-[#1A1208] bg-[#FFFFFF] outline-none transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20"
+            >
+              <option value="low">energy: low</option>
+              <option value="medium">energy: medium</option>
+              <option value="high">energy: high</option>
             </select>
           </div>
         </div>

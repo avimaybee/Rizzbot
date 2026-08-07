@@ -27,13 +27,13 @@ import { GrainOverlay } from "./GrainOverlay";
 import { useToast } from "./ui/Toast";
 import { haptics } from "../utils/haptics";
 import { useAppContext } from "../app-context";
-import { deleteSession, getSessions, Session, SessionResult } from "../../services/dbService";
-import { formatShortDate, formatTimeAgo } from "../utils/formatTime";
+import { deleteSession, getSessions, getTherapistSessions, Session, SessionResult } from "../../services/dbService";
+import { formatShortDate, formatTimeAgo, parseDbDate } from "../utils/formatTime";
 
-const filterOptions = ["All", "Quick Mode", "Practice"] as const;
+const filterOptions = ["All", "Quick Mode", "Practice", "Therapist"] as const;
 
 const toMode = (mode?: string) =>
-  mode === "quick" ? "Quick Mode" : mode === "simulator" ? "Practice" : "Session";
+  mode === "quick" ? "Quick Mode" : mode === "simulator" ? "Practice" : mode === "therapist" ? "Therapist" : "Session";
 
 const getAccentColor = (risk: number) =>
   risk > 65 ? "#C8522A" : risk > 35 ? "#D4A853" : "#7A9E7E";
@@ -810,11 +810,45 @@ export function HistoryScreen() {
   useEffect(() => {
     if (!authUser?.uid) return;
     setLoading(true);
-    void getSessions(userId || authUser.uid, 50, 0)
-      .then((response) => setSessions(response.sessions || []))
-      .catch(() => setSessions([]))
-      .finally(() => setLoading(false));
-  }, [authUser?.uid]);
+    const load = async () => {
+      try {
+        const [response, therapistSessions] = await Promise.all([
+          getSessions(userId || authUser.uid, 50, 0),
+          getTherapistSessions(authUser.uid).catch(() => [] as any[]),
+        ]);
+        // Normalize therapist sessions into the Session shape so they render in the same list
+        const therapistItems = (therapistSessions || []).map((ts: any) => ({
+          id: ts.id || 0,
+          mode: "therapist" as const,
+          created_at: ts.created_at,
+          headline:
+            (ts.clinical_notes as any)?.aiSummary ||
+            (Array.isArray((ts.clinical_notes as any)?.keyThemes) ? (ts.clinical_notes as any).keyThemes[0] : undefined) ||
+            "Therapist session",
+          result: JSON.stringify({
+            history: (ts.messages || [])
+              .filter((m: any) => m.role === "user")
+              .map((m: any) => ({ draft: m.content, result: { predictedReply: "" } })),
+            analysis: undefined,
+          }),
+          parsedResult: {
+            history: (ts.messages || [])
+              .filter((m: any) => m.role === "user")
+              .map((m: any) => ({ draft: m.content, result: { predictedReply: "" } })),
+          },
+        }));
+        const combined = [...(response.sessions || []), ...therapistItems].sort((a: any, b: any) =>
+          parseDbDate(b.created_at).getTime() - parseDbDate(a.created_at).getTime()
+        );
+        setSessions(combined);
+      } catch {
+        setSessions([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+  }, [authUser?.uid, userId]);
 
   const filtered = useMemo(() => {
     return sessions.filter((session) => {
@@ -1076,7 +1110,7 @@ export function HistoryScreen() {
               const accent = getAccentColor(risk);
               return (
                 <div
-                  key={session.id}
+                  key={session.mode === "therapist" ? `t-${session.created_at}` : session.id}
                   onClick={() => {
                     setSelectedSession(session);
                     navigate("/history");
@@ -1165,24 +1199,26 @@ export function HistoryScreen() {
                       <ChevronRight size={16} color="rgba(26,18,8,0.2)" />
                       </div>
                       <div className="flex items-center gap-3 mt-2 pt-2" style={{ borderTop: "1px solid rgba(26,18,8,0.06)" }}>
-                        <button
-                          className="cursor-pointer shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            haptics.medium();
-                            setConfirmDeleteId(session.id);
-                          }}
-                          disabled={deletingId === session.id}
-                          style={{
-                            border: "none",
-                            background: "none",
-                            color: "rgba(26,18,8,0.3)",
-                            padding: 2,
-                            opacity: deletingId === session.id ? 0.4 : 1,
-                          }}
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {session.mode !== "therapist" && (
+                          <button
+                            className="cursor-pointer shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              haptics.medium();
+                              setConfirmDeleteId(session.id);
+                            }}
+                            disabled={deletingId === session.id}
+                            style={{
+                              border: "none",
+                              background: "none",
+                              color: "rgba(26,18,8,0.3)",
+                              padding: 2,
+                              opacity: deletingId === session.id ? 0.4 : 1,
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                         <span className="flex-1" />
                         <span
                           style={{

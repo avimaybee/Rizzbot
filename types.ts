@@ -265,7 +265,7 @@ export interface FeedbackStats {
 export interface SessionLog {
   id: string;
   timestamp: number;
-  module: 'quick' | 'practice';
+  module: 'quick' | 'practice' | 'therapist';
   personaName?: string; // For detecting same-person obsession
   duration?: number; // Session duration in seconds
   ghostRisk?: number; // If available from analysis

@@ -85,7 +85,18 @@ export async function onRequest(context: any) {
         // Column might not exist yet
       }
 
-      return new Response(JSON.stringify({ user }), {
+      // Surface the user's latest payment status (e.g. PENDING_RECONCILIATION)
+      let paymentStatus: string | null = null;
+      try {
+        const payment = await db.prepare(
+          'SELECT status FROM payments WHERE user_id = ? ORDER BY created_at DESC LIMIT 1'
+        ).bind(user.id).first() as any;
+        paymentStatus = payment?.status || null;
+      } catch (e) {
+        // payments table may not exist yet
+      }
+
+      return new Response(JSON.stringify({ user: { ...user, payment_status: paymentStatus } }), {
         headers: corsHeaders,
       });
     }

@@ -27,7 +27,7 @@ import { useToast } from "./ui/Toast";
 import { haptics } from "../utils/haptics";
 import { useAppContext } from "../app-context";
 import { analyzeSimulation, generatePersona, simulateDraft } from "../../services/geminiService";
-import { createPersona, createSession, getPersonas } from "../../services/dbService";
+import { createPersona, createSession, getPersonas, recordActivity } from "../../services/dbService";
 import { logSession, saveFeedback } from "../../services/feedbackService";
 import { Persona, SimResult } from "../../types";
 import { useScrollFade } from "../utils/useScrollFade";
@@ -149,24 +149,24 @@ export function PracticeScreen() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { authUser, userId, userProfile, runWellbeingCheck } = useAppContext();
-  const [mode, setMode] = useSessionState<"setup" | "chat">("practice_mode", "setup");
-  const [activePersonaName, setActivePersonaName] = useSessionState<(typeof personaOptions)[number]>("practice_persona_name", "The Dry Texter");
-  const [goalText, setGoalText] = useSessionState("practice_goal_text", "");
-  const [activeGoal, setActiveGoal] = useSessionState("practice_active_goal", "");
-  const [customDescription, setCustomDescription] = useSessionState("practice_custom_desc", "");
-  const [screenshots, setScreenshots] = useSessionState<string[]>("practice_screenshots", []);
+  const [mode, setMode] = useSessionState<"setup" | "chat">("practice_mode", "setup", authUser?.uid);
+  const [activePersonaName, setActivePersonaName] = useSessionState<(typeof personaOptions)[number]>("practice_persona_name", "The Dry Texter", authUser?.uid);
+  const [goalText, setGoalText] = useSessionState("practice_goal_text", "", authUser?.uid);
+  const [activeGoal, setActiveGoal] = useSessionState("practice_active_goal", "", authUser?.uid);
+  const [customDescription, setCustomDescription] = useSessionState("practice_custom_desc", "", authUser?.uid);
+  const [screenshots, setScreenshots] = useSessionState<string[]>("practice_screenshots", [], authUser?.uid);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [persona, setPersona] = useSessionState<Persona | null>("practice_persona", null);
+  const [persona, setPersona] = useSessionState<Persona | null>("practice_persona", null, authUser?.uid);
 
-  const [messages, setMessages] = useSessionState<ChatMessage[]>("practice_messages", []);
-  const [simHistory, setSimHistory] = useSessionState<{ draft: string; result: SimResult }[]>("practice_simHistory", []);
-  const [inputText, setInputText] = useSessionState("practice_inputText", "");
+  const [messages, setMessages] = useSessionState<ChatMessage[]>("practice_messages", [], authUser?.uid);
+  const [simHistory, setSimHistory] = useSessionState<{ draft: string; result: SimResult }[]>("practice_simHistory", [], authUser?.uid);
+  const [inputText, setInputText] = useSessionState("practice_inputText", "", authUser?.uid);
   const [isTyping, setIsTyping] = useState(false);
-  const [lastResult, setLastResult] = useSessionState<SimResult | null>("practice_lastResult", null);
+  const [lastResult, setLastResult] = useSessionState<SimResult | null>("practice_lastResult", null, authUser?.uid);
   
   // Behavioral Session State
-  const [currentMood, setCurrentMood] = useSessionState<string>("practice_mood", "Neutral");
-  const [familiarity, setFamiliarity] = useSessionState<number>("practice_familiarity", 20);
+  const [currentMood, setCurrentMood] = useSessionState<string>("practice_mood", "Neutral", authUser?.uid);
+  const [familiarity, setFamiliarity] = useSessionState<number>("practice_familiarity", 20, authUser?.uid);
 
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [showHintSheet, setShowHintSheet] = useState(false);
@@ -329,12 +329,20 @@ export function PracticeScreen() {
           void createPersona({
             user_id: userId,
             name: resolvedPersona.name,
+            tone: resolvedPersona.tone,
+            style: resolvedPersona.style,
+            habits: resolvedPersona.habits,
+            red_flags: resolvedPersona.redFlags,
+            green_flags: resolvedPersona.greenFlags || [],
+            their_language: resolvedPersona.theirLanguage || [],
             relationship_context: resolvedPersona.relationshipContext,
             harshness_level: resolvedPersona.harshnessLevel,
             communication_tips: resolvedPersona.communicationTips || [],
             conversation_starters: resolvedPersona.conversationStarters || [],
             things_to_avoid: resolvedPersona.thingsToAvoid || [],
-          } as unknown as Persona);
+          } as unknown as Persona).catch((err) => {
+            console.error("Failed to save persona:", err);
+          });
         }
       } else {
         resolvedPersona = buildPresetPersona(activePersonaName);
@@ -457,6 +465,7 @@ export function PracticeScreen() {
           message_count: simHistory.length,
         }
       );
+      void recordActivity(authUser.uid).catch(() => {});
 
       navigate("/tactical-report", {
         state: {
@@ -477,8 +486,8 @@ export function PracticeScreen() {
       setCurrentMood("Neutral");
       setFamiliarity(20);
       setChatImages([]);
-      sessionStorage.removeItem("practice_mood");
-      sessionStorage.removeItem("practice_familiarity");
+      sessionStorage.removeItem(`practice_mood_${authUser?.uid}`);
+      sessionStorage.removeItem(`practice_familiarity_${authUser?.uid}`);
     } catch {
       toast("Could not finalize report", "error");
     }
@@ -743,6 +752,35 @@ export function PracticeScreen() {
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 17, fontWeight: 600, color: "#1A1208" }}>
               {persona?.name || "Practice"}
             </p>
+            <div className="flex items-center gap-2 mt-1">
+              <span
+                style={{
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 11,
+                  fontWeight: 500,
+                  color: "#C8522A",
+                  backgroundColor: "rgba(200,82,42,0.08)",
+                  borderRadius: 999,
+                  padding: "2px 8px",
+                }}
+              >
+                {currentMood || "Neutral"}
+              </span>
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 11,
+                  fontWeight: 500,
+                  color: "rgba(26,18,8,0.6)",
+                  backgroundColor: "#FDFAF5",
+                  borderRadius: 999,
+                  padding: "2px 8px",
+                  border: "1px solid #E8E0D4",
+                }}
+              >
+                {familiarity}%
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -1085,10 +1123,10 @@ export function PracticeScreen() {
                 <div className="space-y-0">
                   {lastResult ? (
                     [
-                      { label: "Safe", text: lastResult.rewrites.safe },
-                      { label: "Bold", text: lastResult.rewrites.bold },
-                      { label: "Spicy", text: lastResult.rewrites.spicy },
-                      { label: "Your Style", text: lastResult.rewrites.you || "" },
+                      { label: "Safe", type: "safe" as const, text: lastResult.rewrites.safe },
+                      { label: "Bold", type: "bold" as const, text: lastResult.rewrites.bold },
+                      { label: "Spicy", type: "spicy" as const, text: lastResult.rewrites.spicy },
+                      { label: "Your Style", type: "you" as const, text: lastResult.rewrites.you || "" },
                     ].filter(item => item.text).map((item, i, arr) => (
                       <div key={item.label} className="flex gap-3" style={{ paddingBottom: 16, marginBottom: 4, borderBottom: i < arr.length - 1 ? '1px solid #E8E0D4' : 'none' }}>
                         <div className="shrink-0 flex items-center justify-center" style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: '#F5E8E0' }}>
@@ -1115,7 +1153,7 @@ export function PracticeScreen() {
                                 if (authUser?.uid) {
                                   saveFeedback(authUser.uid, {
                                     source: "practice",
-                                    suggestionType: (item.label.toLowerCase().replace(/\s+/g, "") as any) || "safe",
+                                    suggestionType: item.type,
                                     rating: "helpful",
                                   });
                                 }
@@ -1129,7 +1167,7 @@ export function PracticeScreen() {
                                 if (authUser?.uid) {
                                   saveFeedback(authUser.uid, {
                                     source: "practice",
-                                    suggestionType: (item.label.toLowerCase().replace(/\s+/g, "") as any) || "safe",
+                                    suggestionType: item.type,
                                     rating: "off",
                                   });
                                 }

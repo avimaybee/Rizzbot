@@ -241,7 +241,7 @@ export const getSessionLogs = (userId: string): SessionLog[] => {
  */
 export const logSession = (
   userId: string,
-  module: 'quick' | 'practice',
+  module: 'quick' | 'practice' | 'therapist',
   personaName?: string,
   ghostRisk?: number
 ): SessionLog => {

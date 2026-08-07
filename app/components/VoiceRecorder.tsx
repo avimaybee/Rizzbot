@@ -4,7 +4,7 @@ import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { transcribeAudio, TranscriptionResponse } from '../../services/voiceService';
 
 interface VoiceRecorderProps {
-  mode: 'therapist' | 'practice';
+  mode: 'therapist' | 'practice' | 'myvoice';
   onTranscriptionComplete: (result: TranscriptionResponse) => void;
   onCancel: () => void;
 }

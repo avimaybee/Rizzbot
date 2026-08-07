@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { GrainOverlay } from "./GrainOverlay";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { Mail } from "lucide-react";
@@ -39,6 +39,7 @@ type EmailMode = "signin" | "signup" | "reset";
 
 export function AuthScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { authUser } = useAppContext();
   const [mode, setMode] = useState<EmailMode>("signin");
   const [email, setEmail] = useState("");
@@ -50,9 +51,10 @@ export function AuthScreen() {
 
   useEffect(() => {
     if (authUser) {
-      navigate("/home", { replace: true });
+      const startVoiceQuiz = (location.state as any)?.startVoiceQuiz;
+      navigate(startVoiceQuiz ? "/voice" : "/home", { replace: true });
     }
-  }, [authUser, navigate]);
+  }, [authUser, navigate, location.state]);
 
   const handleGoogle = async () => {
     setError(null);
