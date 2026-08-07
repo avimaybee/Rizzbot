@@ -101,7 +101,7 @@ export function QuickModeScreen() {
   const [yourDraft, setYourDraft] = useSessionState("quick_yourDraft", "", authUser?.uid);
   const [context, setContext] = useSessionState<ContextOption>("quick_context", "new", authUser?.uid);
   const [activeTone, setActiveTone] = useSessionState<Tone>("quick_tone", "Smooth", authUser?.uid);
-  const [showStyleTooltip, setShowStyleTooltip] = useState(false);
+  const [showStyleTooltip, setShowStyleTooltip] = useState<string | null>(null);
   const [screenshots, setScreenshots] = useSessionState<string[]>("quick_screenshots", [], authUser?.uid);
   const [result, setResult] = useState<QuickAdviceResponse | null>(null);
   const [feedbackGiven, setFeedbackGiven] = useState<"helpful" | "off" | null>(null);
@@ -117,6 +117,15 @@ export function QuickModeScreen() {
   const copyTimerRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const mountedRef = useRef(true);
+  const resultsTopRef = useRef<HTMLDivElement | null>(null);
+
+  // Scroll to the top of results when a new analysis lands
+  useEffect(() => {
+    if (showResults) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+      resultsTopRef.current?.scrollIntoView({ behavior: "auto", block: "start" });
+    }
+  }, [showResults, result]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -358,7 +367,30 @@ export function QuickModeScreen() {
     toast(rating === "helpful" ? "Saved as helpful" : "Got it, we will calibrate", "success");
   };
 
+  const handleCopyAll = async () => {
+    if (!selectedOption) return;
+    const replies = selectedOption.replies.map((r) => r.reply).filter(Boolean).join("\n\n");
+    const hook = selectedOption.conversationHook ? `\n\n${selectedOption.conversationHook}` : "";
+    await handleCopy(`${replies}${hook}`, `copyall-${activeTone}-${cursor[activeTone]}`);
+  };
+
   const showMessage = result?.extractedTargetMessage || theirMessage || "Conversation screenshot";
+
+  // Auto-resize restored textareas so sessionStorage-restored drafts aren't clipped
+  const theirMessageRef = useRef<HTMLTextAreaElement | null>(null);
+  const yourDraftRef = useRef<HTMLTextAreaElement | null>(null);
+  useEffect(() => {
+    const el = theirMessageRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = `${Math.min(el.scrollHeight, 300)}px`;
+    }
+    const el2 = yourDraftRef.current;
+    if (el2) {
+      el2.style.height = "auto";
+      el2.style.height = `${Math.min(el2.scrollHeight, 300)}px`;
+    }
+  }, [showResults, screenshots.length]);
 
   return (
     <motion.div
@@ -507,6 +539,7 @@ export function QuickModeScreen() {
             <div className="mt-4 relative">
               <label className="block mb-1.5" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>Context</label>
               <textarea
+                ref={theirMessageRef}
                 value={theirMessage}
                 onChange={(e) => {
                   setTheirMessage(e.target.value);
@@ -527,6 +560,7 @@ export function QuickModeScreen() {
                 Your Potential Reply <span style={{ color: "rgba(26,18,8,0.35)", textTransform: "lowercase", letterSpacing: "normal" }}>(optional)</span>
               </label>
               <textarea
+                ref={yourDraftRef}
                 value={yourDraft}
                 onChange={(e) => {
                   setYourDraft(e.target.value);
@@ -624,7 +658,7 @@ export function QuickModeScreen() {
             </div>
           </div>
         ) : (
-          <div className="px-5 pb-8">
+          <div className="px-5 pb-8" ref={resultsTopRef}>
             <div
               className="mt-4 overflow-hidden"
               style={{ backgroundColor: "#FDFAF5", borderRadius: 20, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)" }}
@@ -912,7 +946,7 @@ export function QuickModeScreen() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setShowStyleTooltip((prev) => !prev);
+                            setShowStyleTooltip((prev) => (prev ? null : key));
                           }}
                           className="cursor-pointer"
                         >
@@ -920,17 +954,21 @@ export function QuickModeScreen() {
                         </button>
                       )}
                     </button>
-                    {help && showStyleTooltip && activeTone === key && (
-                      <div
-                        className="absolute bottom-full mb-2 left-0 z-50"
-                        style={{ backgroundColor: "#1A1208", borderRadius: 10, padding: "8px 12px", width: 210 }}
-                      >
-                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#FDFAF5", lineHeight: 1.4 }}>{help}</p>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
+
+              {/* Tooltip rendered OUTSIDE the scroll container (it was clipped before) */}
+              {showStyleTooltip && (
+                <div
+                  className="mt-2"
+                  style={{ backgroundColor: "#1A1208", borderRadius: 10, padding: "8px 12px", width: 210 }}
+                >
+                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#FDFAF5", lineHeight: 1.4 }}>
+                    {toneOptions.find((t) => t.key === showStyleTooltip)?.help}
+                  </p>
+                </div>
+              )}
 
               <div
                 className="mt-3 overflow-hidden"
@@ -1043,39 +1081,56 @@ export function QuickModeScreen() {
                   <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, color: "rgba(26,18,8,0.55)" }}>
                     Variation {(cursor[activeTone] % selectedOptions.length) + 1} of {selectedOptions.length}
                   </span>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={() => {
-                        haptics.light();
-                        setCursor(prev => ({
-                          ...prev,
-                          [activeTone]: prev[activeTone] > 0 ? prev[activeTone] - 1 : selectedOptions.length - 1
-                        }));
-                      }}
-                      className="flex items-center justify-center cursor-pointer transition-colors"
+                      onClick={() => void handleCopyAll()}
+                      className="cursor-pointer flex items-center gap-1.5"
                       style={{
-                        width: 36, height: 36, borderRadius: 18,
-                        backgroundColor: "#F5E8E0", border: "1px solid #E8E0D4", color: "#C8522A"
+                        border: "none",
+                        background: "none",
+                        color: copiedKey === `copyall-${activeTone}-${cursor[activeTone]}` ? "#7A9E7E" : "#C8522A",
+                        fontFamily: "'DM Sans', sans-serif",
+                        fontSize: 12,
+                        fontWeight: 600,
                       }}
                     >
-                      <ChevronLeft size={16} strokeWidth={2.5} />
+                      {copiedKey === `copyall-${activeTone}-${cursor[activeTone]}` ? <Check size={14} /> : <Copy size={14} />}
+                      Copy all
                     </button>
-                    <button
-                      onClick={() => {
-                        haptics.light();
-                        setCursor(prev => ({
-                          ...prev,
-                          [activeTone]: prev[activeTone] + 1
-                        }));
-                      }}
-                      className="flex items-center justify-center cursor-pointer transition-colors"
-                      style={{
-                        width: 36, height: 36, borderRadius: 18,
-                        backgroundColor: "#F5E8E0", border: "1px solid #E8E0D4", color: "#C8522A"
-                      }}
-                    >
-                      <ChevronRight size={16} strokeWidth={2.5} />
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          haptics.light();
+                          setCursor(prev => ({
+                            ...prev,
+                            [activeTone]: prev[activeTone] > 0 ? prev[activeTone] - 1 : selectedOptions.length - 1
+                          }));
+                        }}
+                        className="flex items-center justify-center cursor-pointer transition-colors"
+                        style={{
+                          width: 36, height: 36, borderRadius: 18,
+                          backgroundColor: "#F5E8E0", border: "1px solid #E8E0D4", color: "#C8522A"
+                        }}
+                      >
+                        <ChevronLeft size={16} strokeWidth={2.5} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          haptics.light();
+                          setCursor(prev => ({
+                            ...prev,
+                            [activeTone]: (prev[activeTone] + 1) % selectedOptions.length
+                          }));
+                        }}
+                        className="flex items-center justify-center cursor-pointer transition-colors"
+                        style={{
+                          width: 36, height: 36, borderRadius: 18,
+                          backgroundColor: "#F5E8E0", border: "1px solid #E8E0D4", color: "#C8522A"
+                        }}
+                      >
+                        <ChevronRight size={16} strokeWidth={2.5} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
