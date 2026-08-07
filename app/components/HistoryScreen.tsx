@@ -73,11 +73,12 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
     smooth: "Smooth",
     bold: "Bold",
     witty: "Witty",
+    roast: "Roast",
     authentic: "Authentic",
     yourStyle: "Your Style",
   };
 
-  const toneOrder = ["smooth", "bold", "witty", "authentic", "yourStyle"];
+  const toneOrder = ["smooth", "bold", "witty", "roast", "authentic", "yourStyle"];
 
   const [activeTone, setActiveTone] = useState<string>(() => {
     const firstAvailable = toneOrder.find((t) => {

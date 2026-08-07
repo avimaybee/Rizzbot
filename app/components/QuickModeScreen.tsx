@@ -34,6 +34,7 @@ const toneOptions = [
   { key: "Smooth", help: null },
   { key: "Bold", help: null },
   { key: "Witty", help: null },
+  { key: "Roast", help: "Playful teasing — savage but affectionate. Only when the vibe allows it." },
   { key: "Authentic", help: null },
   { key: "Your Style", help: "Uses your saved voice profile when available." },
 ] as const;
@@ -44,6 +45,7 @@ const toneMap: Record<Tone, keyof QuickAdviceResponse["suggestions"]> = {
   Smooth: "smooth",
   Bold: "bold",
   Witty: "witty",
+  Roast: "roast",
   Authentic: "authentic",
   "Your Style": "yourStyle",
 };
@@ -52,6 +54,7 @@ const feedbackTypeMap: Record<Tone, string> = {
   Smooth: "smooth",
   Bold: "bold",
   Witty: "witty",
+  Roast: "roast",
   Authentic: "authentic",
   "Your Style": "yourStyle",
 };
@@ -101,6 +104,7 @@ export function QuickModeScreen() {
     Smooth: 0,
     Bold: 0,
     Witty: 0,
+    Roast: 0,
     Authentic: 0,
     "Your Style": 0,
   });
@@ -166,7 +170,7 @@ export function QuickModeScreen() {
     setIsLoading(true);
     setShowResults(false);
     setFeedbackGiven(null);
-    setCursor({ Smooth: 0, Bold: 0, Witty: 0, Authentic: 0, "Your Style": 0 });
+    setCursor({ Smooth: 0, Bold: 0, Witty: 0, Roast: 0, Authentic: 0, "Your Style": 0 });
     haptics.medium();
 
     let isStillLoading = true;
@@ -237,7 +241,7 @@ export function QuickModeScreen() {
     setTheirMessage("");
     setYourDraft("");
     setScreenshots([]);
-    setCursor({ Smooth: 0, Bold: 0, Witty: 0, Authentic: 0, "Your Style": 0 });
+    setCursor({ Smooth: 0, Bold: 0, Witty: 0, Roast: 0, Authentic: 0, "Your Style": 0 });
     setFeedbackGiven(null);
     haptics.light();
   };

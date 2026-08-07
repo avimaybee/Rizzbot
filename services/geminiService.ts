@@ -774,7 +774,7 @@ export const getQuickAdvice = async (
     TASK:
     1. Assess the vibe - what's the energy between them?
     2. ${request.yourDraft ? 'Analyze the draft - does it match their energy authentically?' : 'Think about responses that feel genuine and match the vibe'}
-    3. For EACH unreplied message, generate a reply in 5 DIFFERENT STYLES
+    3. For EACH unreplied message, generate a reply in 6 DIFFERENT STYLES
     4. Include a CONVERSATION HOOK with each option to keep things flowing
     5. Drop one psychology-backed insight (casual, empowering)
     6. Recommend an action that respects their authentic voice
@@ -790,6 +790,13 @@ export const getQuickAdvice = async (
     WITTY: Subtle wordplay, clever observations, light puns. 
            CRITICAL: Must be SMOOTH and CHARMING - NOT nerdy, NOT dad jokes, NOT cringe.
            Think "smirk in text form" - high IQ but chill. A hint, not a hammer.
+    
+    ROAST: Playful teasing with affectionate energy. A soft jab that makes them laugh, never hurts.
+           CRITICAL: Only playful when the vibe is warm enough. Reads as flirty banter, NOT mean.
+           Think "stand up babe" / "u should be in a museum... cuz ur a work of art" energy -
+           confident tease that shows you're comfortable, not insecure. Never insult, never cruel,
+           never about things they're sensitive about. If the conversation is cold or low-energy,
+           keep the roast light and short - a single teasing line, not a paragraph.
     
     AUTHENTIC: Matches the general vibe of a high-quality conversation.
                Elevated wingman style - natural, smooth, and effective.
@@ -833,6 +840,7 @@ export const getQuickAdvice = async (
         ],
         "bold": [ /* 3 distinct options, same structure as smooth */ ],
         "witty": [ /* 3 distinct options, same structure - SUBTLE cleverness, NOT cringe */ ],
+        "roast": [ /* 3 distinct options, same structure - PLAYFUL teasing, affectionate burn, never mean */ ],
         "authentic": [ /* 3 distinct options, same structure - user's elevated vibe */ ],
         "yourStyle": [ /* 3 distinct options, same structure - deep voice mimicry */ ],
         "wait": "string OR null (if they should let them come to you, explain why. null if replying now is good)"
@@ -844,7 +852,7 @@ export const getQuickAdvice = async (
     }
     
     IMPORTANT FOR MULTI-BUBBLE REPLIES:
-    - YOU MUST PROVIDE EXACTLY 3 OPTIONS FOR EACH CATEGORY (Smooth, Bold, Witty, Authentic, Your Style).
+    - YOU MUST PROVIDE EXACTLY 3 OPTIONS FOR EACH CATEGORY (Smooth, Bold, Witty, Roast, Authentic, Your Style).
     - Each OPTION in each category must have replies for ALL unreplied messages
     - Replies should be in the same chronological order as extractedUnrepliedMessages
     - The conversationHook comes AFTER all replies - it's the "keep it going" text
@@ -903,6 +911,7 @@ export const getQuickAdvice = async (
         smooth: normalize(parsed.suggestions?.smooth),
         bold: normalize(parsed.suggestions?.bold),
         witty: normalize(parsed.suggestions?.witty),
+        roast: normalize(parsed.suggestions?.roast),
         authentic: normalize(parsed.suggestions?.authentic),
         yourStyle: normalize(parsed.suggestions?.yourStyle),
         wait: parsed.suggestions?.wait ?? null,
@@ -928,6 +937,7 @@ export const getQuickAdvice = async (
         smooth: [fallbackOption, fallbackOption, fallbackOption],
         bold: [fallbackOption, fallbackOption, fallbackOption],
         witty: [fallbackOption, fallbackOption, fallbackOption],
+        roast: [fallbackOption, fallbackOption, fallbackOption],
         authentic: [fallbackOption, fallbackOption, fallbackOption],
         yourStyle: [fallbackOption, fallbackOption, fallbackOption],
         wait: undefined

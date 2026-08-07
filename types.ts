@@ -168,6 +168,7 @@ export interface QuickAdviceResponse {
     smooth: SuggestionOption[];    // 3 options - natural, effortless
     bold: SuggestionOption[];      // 3 options - confident, direct
     witty: SuggestionOption[];     // 3 options - subtle wordplay, clever (not cringe)
+    roast: SuggestionOption[];     // 3 options - playful teasing, affectionate burn
     authentic: SuggestionOption[]; // 3 options - user's vibe, elevated (not forced copy)
     yourStyle: SuggestionOption[]; // 3 options - deep mimicry of user's specific phrasing/quirks
     wait?: string | null;          // Sometimes best move is no move - explains why
@@ -225,7 +226,7 @@ export interface FeedbackEntry {
   id: string; // UUID
   timestamp: number; // Unix timestamp
   source: 'quick' | 'practice'; // Which module
-  suggestionType: 'smooth' | 'bold' | 'witty' | 'authentic' | 'safe' | 'spicy' | 'you' | 'yourStyle';
+  suggestionType: 'smooth' | 'bold' | 'witty' | 'roast' | 'authentic' | 'safe' | 'spicy' | 'you' | 'yourStyle';
   rating: 'helpful' | 'mid' | 'off'; // User's feedback
   context?: string; // Optional: relationship context
   // Metadata for learning
@@ -243,6 +244,7 @@ export interface FeedbackStats {
   smoothRatings: { helpful: number; mid: number; off: number };
   boldRatings: { helpful: number; mid: number; off: number };
   wittyRatings: { helpful: number; mid: number; off: number };
+  roastRatings: { helpful: number; mid: number; off: number };
   authenticRatings: { helpful: number; mid: number; off: number };
   safeRatings: { helpful: number; mid: number; off: number };
   spicyRatings: { helpful: number; mid: number; off: number };
