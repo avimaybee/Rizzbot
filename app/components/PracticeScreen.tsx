@@ -29,7 +29,7 @@ import { haptics } from "../utils/haptics";
 import { useAppContext } from "../app-context";
 import { analyzeSimulation, generatePersona, simulateDraft } from "../../services/geminiService";
 import { createPersona, createSession, deletePersona, getPersonas, recordActivity } from "../../services/dbService";
-import { logSession, saveFeedback } from "../../services/feedbackService";
+import { logSession } from "../../services/feedbackService";
 import { Persona, SimResult } from "../../types";
 import { useScrollFade } from "../utils/useScrollFade";
 import VoiceRecorder from "./VoiceRecorder";
@@ -1150,72 +1150,36 @@ export function PracticeScreen() {
 
                 {lastResult && (
                   <div className="mb-4">
-                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, color: "rgba(26,18,8,0.45)", textTransform: "uppercase", marginBottom: 12, letterSpacing: "0.1em" }}>Live Rewrites</p>
+                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, color: "rgba(26,18,8,0.45)", textTransform: "uppercase", marginBottom: 12, letterSpacing: "0.1em" }}>
+                      {persona?.name}'s reply
+                    </p>
+                    <div className="flex gap-3" style={{ paddingBottom: 16, borderBottom: '1px solid #E8E0D4' }}>
+                      <div className="shrink-0 flex items-center justify-center" style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: '#F5E8E0' }}>
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 500, color: '#C8522A' }}>1</span>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: '#1A1208' }}>Reply</p>
+                          <button
+                            onClick={() => {
+                              setInputText(lastResult.predictedReply || "");
+                              setShowHintSheet(false);
+                              haptics.light();
+                            }}
+                            style={{ border: "none", background: "none", color: "#C8522A", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                          >
+                            Copy
+                          </button>
+                        </div>
+                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'rgba(26,18,8,0.55)', lineHeight: 1.5 }}>{lastResult.predictedReply}</p>
+                      </div>
+                    </div>
                   </div>
                 )}
                 <div className="space-y-0">
-                  {lastResult ? (
-                    [
-                      { label: "Safe", type: "safe" as const, text: lastResult.rewrites.safe },
-                      { label: "Bold", type: "bold" as const, text: lastResult.rewrites.bold },
-                      { label: "Spicy", type: "spicy" as const, text: lastResult.rewrites.spicy },
-                      { label: "Your Style", type: "you" as const, text: lastResult.rewrites.you || "" },
-                    ].filter(item => item.text).map((item, i, arr) => (
-                      <div key={item.label} className="flex gap-3" style={{ paddingBottom: 16, marginBottom: 4, borderBottom: i < arr.length - 1 ? '1px solid #E8E0D4' : 'none' }}>
-                        <div className="shrink-0 flex items-center justify-center" style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: '#F5E8E0' }}>
-                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 500, color: '#C8522A' }}>{i + 1}</span>
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: '#1A1208' }}>{item.label}</p>
-                            <button
-                              onClick={() => {
-                                setInputText(item.text);
-                                setShowHintSheet(false);
-                                haptics.light();
-                              }}
-                              style={{ border: "none", background: "none", color: "#C8522A", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-                            >
-                              Copy
-                            </button>
-                          </div>
-                          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'rgba(26,18,8,0.55)', lineHeight: 1.5, marginBottom: 8 }}>{item.text}</p>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => {
-                                if (authUser?.uid) {
-                                  saveFeedback(authUser.uid, {
-                                    source: "practice",
-                                    suggestionType: item.type,
-                                    rating: "helpful",
-                                  });
-                                }
-                                toast("Thanks for the feedback!", "success");
-                                haptics.light();
-                              }}
-                              style={{ border: "1px solid #E8E0D4", borderRadius: 100, padding: "4px 10px", backgroundColor: "transparent", cursor: "pointer", fontSize: 12 }}
-                            >👍</button>
-                            <button
-                              onClick={() => {
-                                if (authUser?.uid) {
-                                  saveFeedback(authUser.uid, {
-                                    source: "practice",
-                                    suggestionType: item.type,
-                                    rating: "off",
-                                  });
-                                }
-                                toast("Thanks for the feedback!", "info");
-                                haptics.light();
-                              }}
-                              style={{ border: "1px solid #E8E0D4", borderRadius: 100, padding: "4px 10px", backgroundColor: "transparent", cursor: "pointer", fontSize: 12 }}
-                            >👎</button>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
+                  {!lastResult && (
                     <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'rgba(26,18,8,0.55)' }}>
-                      Send one message to unlock live rewrites and tactical suggestions.
+                      Send one message to see how they respond.
                     </p>
                   )}
                 </div>

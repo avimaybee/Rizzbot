@@ -340,36 +340,6 @@ export const simulateDraft = async (
     : escalationPhase === 'deep' ? 'You have been talking for a while now. You are comfortable, more open, willing to share real things and tease them.'
     : 'The conversation is winding down. You are wrapping up naturally — a good note to end on or a real plan.';
 
-  // Build user style context if available
-  let userStyleContext = '';
-  if (userStyle) {
-    userStyleContext = `
-    USER'S PERSONAL TEXTING STYLE (Match this for the "you" suggestion without compromising authenticity. authenticity is priority):
-    - Emoji use: ${userStyle.emojiUsage}
-    - Caps style: ${userStyle.capitalization}
-    - Punctuation: ${userStyle.punctuation}
-    - Message length: ${userStyle.averageLength}
-    - Slang level: ${userStyle.slangLevel}
-    - Their signature patterns: ${userStyle.signaturePatterns.join(', ') || 'none'}
-    - Preferred tone: ${userStyle.preferredTone}
-    - Response speed: ${userStyle.responseSpeed || 'not set'}
-    - Flirt level: ${userStyle.flirtLevel || 'not set'}
-    - Humor style: ${userStyle.humorStyle || 'not set'}
-    - Overall energy: ${userStyle.energy || 'not set'}
-    
-    CRITICAL FOR "YOU" SUGGESTION:
-    - Sound how the user would naturally type - don't add extra flair or slang they don't use
-    - If they're casual and simple, keep it casual and simple
-    - you can create phrases they would actually use
-    - Match their exact length preference - if they text short, keep it short
-    - Only use emojis if they naturally use emojis
-    - The goal is their authentic voice, just slightly polished - NOT a complete rewrite
-    `;
-  }
-
-  // Get feedback-based prompt bias (only when userId is available)
-  const feedbackBias = userId ? getPromptBias(userId) : '';
-
   // ============ CALL 1: THE ACTOR (plays the persona, never critiques) ============
   const actorPrompt = `
     SYSTEM IDENTITY: YOU ARE ${persona.name}.
@@ -416,85 +386,8 @@ export const simulateDraft = async (
     REPLY AS ${persona.name}. Reply with what you actually send — nothing else, no narration, no thinking out loud. You are a real person texting them back.
   `;
 
-  // ============ CALL 2: THE COACH (analyzes, never speaks as the persona) ============
-  const buildCoachPrompt = (predictedReply: string) => `
-    SYSTEM IDENTITY: THE WINGMAN
-    You're that friend who's effortlessly good at texting. Authentic, smooth, emotionally intelligent.
-    You help people communicate genuinely - not play games. Real connection > calculated coolness.
-    
-    YOUR VOICE: Supportive but honest. You want them to succeed AND be themselves.
-    - Sample tones: "okay wait this is actually cute", "ngl u can do better", "this aint it babe", "ur overthinking it"
-    - Be direct, warm, occasionally roast when needed, but ultimately empowering
-    ${feedbackBias}
-    ═══════════════════════════════════════════════
-    CORE PHILOSOPHY (RESEARCH-BACKED)
-    ═══════════════════════════════════════════════
-    
-    🧠 AUTHENTICITY > CALCULATION
-    - Self-disclosure increases liking (Collins & Miller, 1994)
-    - Being genuine signals trustworthiness
-    - Performed coolness reads as fake
-    
-    🔄 RECIPROCAL ENERGY
-    - Match their investment level (Miller & Kenny, 1986)
-    - Mirror their style (length, emojis, timing)
-    - Don't over-correct OR under-deliver
-    
-    💬 RESPONSIVE PRESENCE  
-    - Show you read what they said
-    - Validate before pivoting
-    - Engagement > appearing unbothered
-    
-    ⚠️ IMPORTANT: Being expressive is NOT cringe. Showing enthusiasm when appropriate is healthy.
-    CAPS for genuine excitement is valid: "NO WAY", "REALLYY??", "WAIT WHAT"
-    ${HUMAN_TEXTING_RULES}
-
-    THE SITUATION:
-    - The target is: ${persona.name} (tone: ${persona.tone}, style: ${persona.style}, habits: ${persona.habits})
-    - Their current mood: ${persona.mood || 'Neutral'}
-    - Familiarity: ${persona.familiarity || 20}/100
-    ${conversationContext}
-    ${userStyleContext}
-    ${personaSessionMemory ? `PERSONA REMEMBERS: ${personaSessionMemory}` : ''}
-
-    THE USER'S DRAFT: "${draft}"
-
-    WHAT THE TARGET ACTUALLY REPLIED (this is real, analyze it):
-    "${predictedReply}"
-
-    TASK: 
-    1. Analyze the user's draft - Does it match their target's energy? Is it authentic?
-    2. Calculate "Regret Level" (0-100) - would they cringe at this later?
-    3. Judge whether the target's real reply suggests the draft worked or backfired.
-    4. SUGGEST 3 follow-up options for after the predicted reply.
-
-    ANALYSIS FRAMEWORK:
-    - Does it match THEIR energy? (reciprocity principle)
-    - Does it sound authentic or calculated?
-    - Is it responsive to what they said?
-    - Is it appropriate for the relationship stage?
-
-    OUTPUT FORMAT (RAW JSON ONLY):
-    {
-      "regretLevel": number (0-100),
-      "verdict": "string (Your take - supportive OR honest. e.g. 'actually this is cute', 'ur trying too hard', 'they wont get this')",
-      "feedback": ["string", "string", "string"] (3 specific observations - be real but constructive),
-      "updatedMood": "string (How the target's mood shifted because of this exchange, e.g. 'Intrigued', 'Slightly Guarded', 'Playful', 'Bored'. Keep continuity with their prior mood.)",
-      "familiarityDelta": number (-5 to +5, how much closer or further this exchange moved them. A great message that landed: +3 to +5. A neutral one: 0 to +1. A message that backfired: -1 to -5.)",
-      "rewrites": {
-        "safe": "string (authentic, cant go wrong - matches their energy)",
-        "bold": "string (confident, shows genuine interest)", 
-        "spicy": "string (playful, flirty - adds some tension)",
-        "you": "string (MUST sound exactly like what the user would naturally type. Keep the same length, same vibe, same casualness. Just fix any awkwardness. If user is simple, be simple. DO NOT add extra slang, emojis, or phrases they wouldn't use. Less is more.)"
-      }
-    }
-    
-    ALL TEXT IN SUGGESTIONS SHOULD FEEL NATURAL AND AUTHENTIC.
-    DO NOT USE MARKDOWN. ONLY RAW JSON.
-  `;
-
   try {
-    // ---- ACTOR CALL: get the persona's genuine reply ----
+    // ---- SINGLE ACTOR CALL: the persona replies. No coach in the loop. ----
     // LOW thinking: role-play replies don't need deep reasoning, and
     // HIGH thinking on lite models can exhaust the budget with zero visible text.
     const actorParts: any[] = [{ text: actorPrompt }];
@@ -539,47 +432,40 @@ Reply exactly as ${persona.name} would — short, in character, no narration, no
 
     if (!actorReply) throw new Error("Connection Lost");
 
-    // ---- COACH CALL: analyze the draft + the persona's real reply ----
-    let coachText = "";
-    try {
-      const coachResponse = await runWithFallback({
-        contents: [{ role: "user", parts: [{ text: buildCoachPrompt(actorReply) }] }],
-        safetySettings: safetySettings,
-        config: { thinkingConfig: { thinkingLevel: "LOW" } },
-      }, THERAPIST_MODELS);
-      coachText = coachResponse.text || "";
-    } catch (coachErr) {
-      logger.warn("Coach call failed:", coachErr);
-    }
+    // Derive behavioral state from the reply itself (no coach needed):
+    // warmth signals → familiarity up, cold/short → down; mood shifts by tone
+    const replyLower = actorReply.toLowerCase();
+    const wordCount = actorReply.split(/\s+/).filter(Boolean).length;
+    const hasQuestion = /[?？]/.test(actorReply);
+    const warmSignals = ["haha", "lol", "lmao", "😂", "💀", "😭", "🥹", "✨", "🤭", "🫶", "!!", "!!!"].filter(s => replyLower.includes(s)).length;
+    const coldSignals = ["k", "ok", "yeah", "mhm", "cool", "nice", "sure", "ig", "👍", "🙂", "..."].filter(s => replyLower.startsWith(s) || replyLower.includes(s)).length;
 
-    // If the coach returns nothing, fall back to a minimal result so the
-    // user still gets the persona's reply instead of "..." (degraded but usable)
-    if (!coachText) {
-      return {
-        regretLevel: 40,
-        verdict: "The target replied.",
-        feedback: ["Reply landed.", "Keep it natural."],
-        predictedReply: actorReply,
-        rewrites: {
-          safe: actorReply,
-          bold: actorReply,
-          spicy: actorReply,
-          you: actorReply,
-        },
-      };
-    }
+    let familiarityDelta = 0;
+    if (hasQuestion && wordCount >= 4) familiarityDelta += 2;
+    else if (wordCount >= 8) familiarityDelta += 1;
+    if (warmSignals >= 2) familiarityDelta += 1;
+    if (coldSignals >= 2 || wordCount <= 2) familiarityDelta -= 1;
+    familiarityDelta = Math.max(-3, Math.min(3, familiarityDelta));
 
-    const parsed = safeParseJson<SimResult>(coachText);
-    // The persona's reply comes from the actor — the coach never authored it
-    parsed.predictedReply = actorReply;
-    // Map the coach's state judgments into the SimResult contract
-    const coachRaw = parsed as SimResult & { familiarityDelta?: number };
-    if (typeof coachRaw.familiarityDelta === "number") {
-      parsed.updatedFamiliarity = coachRaw.familiarityDelta;
-      delete coachRaw.familiarityDelta;
-    }
+    let updatedMood = persona.mood || 'Neutral';
+    if (warmSignals >= 2) updatedMood = 'Playful';
+    else if (hasQuestion) updatedMood = 'Curious';
+    else if (coldSignals >= 2 || wordCount <= 2) updatedMood = 'Guarded';
 
-    return parsed;
+    return {
+      regretLevel: 0,
+      verdict: "",
+      feedback: [],
+      predictedReply: actorReply,
+      rewrites: {
+        safe: actorReply,
+        bold: actorReply,
+        spicy: actorReply,
+        you: actorReply,
+      },
+      updatedMood,
+      updatedFamiliarity: familiarityDelta,
+    };
 
   } catch (error) {
     logger.error("Sim Failed:", error);
@@ -615,14 +501,12 @@ export const analyzeSimulation = async (
   const targetWords = targetMsgs.reduce((acc, m) => acc + m.split(/\s+/).filter(Boolean).length, 0);
   const userQuestions = userMsgs.reduce((acc, m) => acc + (m.match(/\?/g)?.length || 0), 0);
   const targetQuestions = targetMsgs.reduce((acc, m) => acc + (m.match(/\?/g)?.length || 0), 0);
-  const avgRegret = Math.round(history.reduce((acc, h) => acc + (h.result.regretLevel || 50), 0) / Math.max(1, history.length));
 
   const objectiveStats = `
     OBJECTIVE SESSION STATS (computed from the actual exchange — weigh these alongside your judgment):
     - Turns: ${history.length}
     - User words total: ${userWords} | Target words total: ${targetWords}
     - User questions: ${userQuestions} | Target questions: ${targetQuestions}
-    - Average regret score: ${avgRegret}/100 (lower = user's messages landed better)
     - ${userWords > targetWords * 1.3 ? 'The user is writing notably more than the target — possible over-investment.' : ''}
     - ${targetQuestions === 0 && history.length >= 3 ? 'The target asked zero questions — low curiosity signal.' : ''}
     ${goal ? `- SESSION GOAL: "${goal}" — grade whether the user actually moved toward it.` : ''}
@@ -1224,9 +1108,7 @@ IMPORTANT:
     const response = await runWithFallback({
       contents: parts,
       safetySettings: safetySettings,
-      config: { 
-        temperature: 0.3 
-      }
+      // Note: temperature was removed on gemini-3.x models — don't send it
     }, QUICK_MODE_MODELS);
 
     const text = response.text;
