@@ -1,8 +1,9 @@
 import { HarmCategory, HarmBlockThreshold, Type } from "@google/genai";
 
 
-import { SimResult, Persona, SimAnalysisResult, QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, StyleExtractionRequest, StyleExtractionResponse, AIExtractedStyleProfile, SuggestionOption } from "../types";
+import { SimResult, Persona, SimAnalysisResult, QuickAdviceRequest, QuickAdviceResponse, UserStyleProfile, StyleExtractionRequest, StyleExtractionResponse, AIExtractedStyleProfile } from "../types";
 import { getPromptBias } from "./feedbackService";
+import { normalizeQuickAdvice, buildQuickFallback, FALLBACK_PRO_TIP } from "./quickAdvice";
 import { getFirebaseToken } from "./firebaseService";
 import { logger } from "./logger";
 
@@ -577,13 +578,11 @@ export const analyzeSimulation = async (
 // ============================================
 
 /**
- * Get quick reply advice - the fast lane for "just help me reply".
- * No persona setup needed, instant vibe check and suggestions.
+ * Build the shared quick-advice request parts (prompt text + screenshot
+ * inline data). Used by both the non-streaming and streaming paths so they
+ * send byte-identical prompts.
  */
-export const getQuickAdvice = async (
-  request: QuickAdviceRequest
-): Promise<QuickAdviceResponse> => {
-
+function buildQuickAdviceParts(request: QuickAdviceRequest): any[] {
   // Build user style context if available
   let styleContext = '';
   if (request.userStyle) {
@@ -776,33 +775,30 @@ export const getQuickAdvice = async (
     TASK:
     1. Assess the vibe - what's the energy between them?
     2. ${request.yourDraft ? 'Analyze the draft - does it match their energy authentically?' : 'Think about responses that feel genuine and match the vibe'}
-    3. For EACH unreplied message, generate a reply in 6 DIFFERENT STYLES
+    3. For EACH unreplied message, generate a reply in 5 DIFFERENT STYLES
     4. Include a CONVERSATION HOOK with each option to keep things flowing
     5. Drop one psychology-backed insight (casual, empowering)
     6. Recommend an action that respects their authentic voice
-    
+
     ═══════════════════════════════════════════════
     SUGGESTION CATEGORY DEFINITIONS
     ═══════════════════════════════════════════════
-    
+
     SMOOTH: Natural, effortless flow. Safe but not boring. Matches energy perfectly.
-    
+
     BOLD: Confident, shows genuine interest. Takes initiative. Not aggressive, just assured.
-    
+           CRITICAL: Can include a playful soft jab or affectionate tease when the vibe is warm -
+           "stand up babe" energy that reads as flirty banter, NEVER mean, NEVER cruel,
+           never about things they're sensitive about. If the convo is cold or low-energy,
+           stay assured and direct - the tease waits for warmth.
+
     WITTY: Subtle wordplay, clever observations, light puns. 
            CRITICAL: Must be SMOOTH and CHARMING - NOT nerdy, NOT dad jokes, NOT cringe.
            Think "smirk in text form" - high IQ but chill. A hint, not a hammer.
-    
-    ROAST: Playful teasing with affectionate energy. A soft jab that makes them laugh, never hurts.
-           CRITICAL: Only playful when the vibe is warm enough. Reads as flirty banter, NOT mean.
-           Think "stand up babe" / "u should be in a museum... cuz ur a work of art" energy -
-           confident tease that shows you're comfortable, not insecure. Never insult, never cruel,
-           never about things they're sensitive about. If the conversation is cold or low-energy,
-           keep the roast light and short - a single teasing line, not a paragraph.
-    
+
     AUTHENTIC: Matches the general vibe of a high-quality conversation.
                Elevated wingman style - natural, smooth, and effective.
-    
+
     YOUR STYLE: Deep mimicry of the USER's specific texting quirks (based on their profile).
                 CRITICAL: Use their profile (capitalization, punctuation, emojis, slang)
                 to write replies that sound EXACTLY like them, just at their best.
@@ -823,10 +819,7 @@ export const getQuickAdvice = async (
         "greenFlags": ["string"] (good signs - empty array if none)
       },
       ${request.yourDraft ? `"draftAnalysis": {
-        "confidenceScore": number (0-100),
-        "verdict": "string (supportive or honest take - 'actually this slaps', 'u can do better', 'this is giving too much')",
-        "issues": ["string"] (what could be improved),
-        "strengths": ["string"] (what's working)
+        "verdict": "string (short supportive or honest take - 'actually this slaps', 'u can do better', 'this is giving too much')"
       },` : ''}
       "suggestions": {
         "smooth": [
@@ -840,21 +833,18 @@ export const getQuickAdvice = async (
           { "replies": [...], "conversationHook": "..." }, // Option 2
           { "replies": [...], "conversationHook": "..." }  // Option 3
         ],
-        "bold": [ /* 3 distinct options, same structure as smooth */ ],
+        "bold": [ /* 3 distinct options, same structure as smooth - confident, with playful tease when warm */ ],
         "witty": [ /* 3 distinct options, same structure - SUBTLE cleverness, NOT cringe */ ],
-        "roast": [ /* 3 distinct options, same structure - PLAYFUL teasing, affectionate burn, never mean */ ],
         "authentic": [ /* 3 distinct options, same structure - user's elevated vibe */ ],
         "yourStyle": [ /* 3 distinct options, same structure - deep voice mimicry */ ],
         "wait": "string OR null (if they should let them come to you, explain why. null if replying now is good)"
       },
       "proTip": "string (one insight - start with 'ngl', 'tbh', 'fr' - empowering not preachy)",
-      "interestSignal": number (0-100) (optional - recommended level of explicit interest to show in the reply),
-      "timingRecommendation": "string (short guidance on reply speed/pacing)",
       "recommendedAction": "SEND" | "WAIT" | "CALL" | "MATCH" | "PULL_BACK" | "ABORT"
     }
     
     IMPORTANT FOR MULTI-BUBBLE REPLIES:
-    - YOU MUST PROVIDE EXACTLY 3 OPTIONS FOR EACH CATEGORY (Smooth, Bold, Witty, Roast, Authentic, Your Style).
+    - YOU MUST PROVIDE EXACTLY 3 OPTIONS FOR EACH CATEGORY (Smooth, Bold, Witty, Authentic, Your Style).
     - Each OPTION in each category must have replies for ALL unreplied messages
     - Replies should be in the same chronological order as extractedUnrepliedMessages
     - The conversationHook comes AFTER all replies - it's the "keep it going" text
@@ -889,6 +879,18 @@ export const getQuickAdvice = async (
     });
   }
 
+  return parts;
+}
+
+/**
+ * Get quick reply advice - the fast lane for "just help me reply".
+ * No persona setup needed, instant vibe check and suggestions.
+ */
+export const getQuickAdvice = async (
+  request: QuickAdviceRequest
+): Promise<QuickAdviceResponse> => {
+  const parts = buildQuickAdviceParts(request);
+
   try {
     const response = await runWithFallback({
       contents: parts,
@@ -899,54 +901,90 @@ export const getQuickAdvice = async (
     if (!text) throw new Error("Connection Lost");
 
     const parsed = safeParseJson<QuickAdviceResponse>(text);
-    const normalize = (list: any): SuggestionOption[] =>
-      Array.isArray(list) ? list.filter((o: any) => o && Array.isArray(o.replies) && o.replies.length > 0) : [];
-    return {
-      ...parsed,
-      vibeCheck: parsed.vibeCheck || {
-        theirEnergy: 'neutral',
-        interestLevel: 50,
-        redFlags: [],
-        greenFlags: []
-      },
-      suggestions: {
-        smooth: normalize(parsed.suggestions?.smooth),
-        bold: normalize(parsed.suggestions?.bold),
-        witty: normalize(parsed.suggestions?.witty),
-        roast: normalize(parsed.suggestions?.roast),
-        authentic: normalize(parsed.suggestions?.authentic),
-        yourStyle: normalize(parsed.suggestions?.yourStyle),
-        wait: parsed.suggestions?.wait ?? null,
-      },
-      proTip: parsed.proTip || "ngl couldn't read that one properly, try again",
-      recommendedAction: parsed.recommendedAction || 'MATCH',
-    };
+    return normalizeQuickAdvice(parsed);
 
   } catch (error) {
     logger.error("Quick Advice Failed:", error);
-    const fallbackOption = {
-      replies: [{ originalMessage: "their message", reply: "hey" }],
-      conversationHook: "whats good"
-    };
-    return {
-      vibeCheck: {
-        theirEnergy: 'neutral',
-        interestLevel: 50,
-        redFlags: [],
-        greenFlags: []
-      },
-      suggestions: {
-        smooth: [fallbackOption, fallbackOption, fallbackOption],
-        bold: [fallbackOption, fallbackOption, fallbackOption],
-        witty: [fallbackOption, fallbackOption, fallbackOption],
-        roast: [fallbackOption, fallbackOption, fallbackOption],
-        authentic: [fallbackOption, fallbackOption, fallbackOption],
-        yourStyle: [fallbackOption, fallbackOption, fallbackOption],
-        wait: undefined
-      },
-      proTip: "ngl couldn't read that one properly, try again",
-      recommendedAction: 'MATCH'
-    };
+    return buildQuickFallback();
+  }
+};
+
+/**
+ * Stream quick reply advice (spike, plan 009). POSTs the same payload as
+ * getQuickAdvice to /api/gemini/stream, reports each text delta via onChunk
+ * as it arrives, and resolves with the fully assembled, normalized response.
+ * Throws on stream/parse failure so callers can fall back.
+ */
+export const streamQuickAdvice = async (
+  request: QuickAdviceRequest,
+  onChunk: (text: string) => void
+): Promise<QuickAdviceResponse> => {
+  let fullText = "";
+
+  try {
+    const response = await runStreamWithFallback({
+      contents: buildQuickAdviceParts(request),
+      safetySettings: safetySettings,
+      // LOW thinking: like the therapist path, keep first tokens fast and
+      // avoid empty/truncated streams on lite models with HIGH thinking.
+      config: { thinkingConfig: { thinkingLevel: "LOW" } },
+    }, QUICK_MODE_MODELS);
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("Stream body not available");
+
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        let chunk: any;
+        try {
+          chunk = JSON.parse(line);
+        } catch (parseErr) {
+          console.error("Error parsing stream line:", parseErr, line);
+          continue;
+        }
+
+        if (chunk.type === "error") {
+          throw new Error(chunk.message || "Stream error");
+        }
+
+        if (chunk.type === "text") {
+          const text = chunk.content;
+          fullText += text;
+          onChunk(text);
+        }
+      }
+    }
+
+    // Final buffer flush for trailing content without a newline
+    if (buffer.trim()) {
+      try {
+        const chunk = JSON.parse(buffer);
+        if (chunk.type === "text") {
+          const text = chunk.content;
+          fullText += text;
+          onChunk(text);
+        }
+      } catch (e) {
+        logger.warn("Malformed final stream chunk in buffer:", buffer);
+      }
+    }
+
+    const parsed = safeParseJson<QuickAdviceResponse>(fullText);
+    return normalizeQuickAdvice(parsed);
+  } catch (error) {
+    logger.error("Streamed Quick Advice Failed:", error);
+    throw error;
   }
 };
 

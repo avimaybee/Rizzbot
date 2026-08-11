@@ -167,15 +167,16 @@ export interface QuickAdviceResponse {
   };
   suggestions: {
     smooth: SuggestionOption[];    // 3 options - natural, effortless
-    bold: SuggestionOption[];      // 3 options - confident, direct
+    bold: SuggestionOption[];      // 3 options - confident, direct, playful tease when warm (Roast merged in)
     witty: SuggestionOption[];     // 3 options - subtle wordplay, clever (not cringe)
-    roast: SuggestionOption[];     // 3 options - playful teasing, affectionate burn
     authentic: SuggestionOption[]; // 3 options - user's vibe, elevated (not forced copy)
     yourStyle: SuggestionOption[]; // 3 options - deep mimicry of user's specific phrasing/quirks
     wait?: string | null;          // Sometimes best move is no move - explains why
   };
   proTip: string; // One psychology-backed insight
   recommendedAction: 'SEND' | 'WAIT' | 'CALL' | 'MATCH' | 'PULL_BACK' | 'ABORT';
+  // True when the service returned its degraded fallback (failed analysis)
+  degraded?: boolean;
   // New guidance fields (0-100 scale and short timing text)
   interestSignal?: number; // 0-100 recommended explicit interest level to show
   timingRecommendation?: string; // e.g., "reply within a few hours; prioritize thoughtful reply over speed"
@@ -245,7 +246,6 @@ export interface FeedbackStats {
   smoothRatings: { helpful: number; mid: number; off: number };
   boldRatings: { helpful: number; mid: number; off: number };
   wittyRatings: { helpful: number; mid: number; off: number };
-  roastRatings: { helpful: number; mid: number; off: number };
   authenticRatings: { helpful: number; mid: number; off: number };
   safeRatings: { helpful: number; mid: number; off: number };
   spicyRatings: { helpful: number; mid: number; off: number };

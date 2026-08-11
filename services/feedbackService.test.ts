@@ -47,23 +47,23 @@ describe("checkWellbeing", () => {
 
   test("returns null when no sessions exist", () => {
     mockTime(Date.now());
-    expect(checkWellbeing()).toBeNull();
+    expect(checkWellbeing("test-user")).toBeNull();
   });
 
   test("respects dismissal (24h default)", () => {
     const now = Date.now();
     mockTime(now);
 
-    dismissWellbeingCheckIn(24);
-    expect(checkWellbeing()).toBeNull();
+    dismissWellbeingCheckIn("test-user", 24);
+    expect(checkWellbeing("test-user")).toBeNull();
 
     // Still null after 23 hours
     mockTime(now + 23 * 60 * 60 * 1000);
-    expect(checkWellbeing()).toBeNull();
+    expect(checkWellbeing("test-user")).toBeNull();
 
     // Available after 25 hours (assuming no other triggers)
     mockTime(now + 25 * 60 * 60 * 1000);
-    expect(checkWellbeing()).toBeNull(); // Should be null because no sessions
+    expect(checkWellbeing("test-user")).toBeNull(); // Should be null because no sessions
   });
 
   test("respects lastCheckIn frequency (2h)", () => {
@@ -74,25 +74,25 @@ describe("checkWellbeing", () => {
     mockTime(now);
 
     // Set up conditions that would normally trigger a wellbeing check
-    logSession('quick');
-    logSession('quick');
-    logSession('quick');
+    logSession("test-user", 'quick');
+    logSession("test-user", 'quick');
+    logSession("test-user", 'quick');
 
     // Simulate a recent wellbeing check, which should throttle further checks
-    triggerWellbeingCheckIn('high_frequency');
-    expect(checkWellbeing()).toBeNull();
+    triggerWellbeingCheckIn("test-user", 'high_frequency');
+    expect(checkWellbeing("test-user")).toBeNull();
 
     // Still null after 1 hour (within the 2h window)
     mockTime(now + 60 * 60 * 1000);
-    expect(checkWellbeing()).toBeNull();
+    expect(checkWellbeing("test-user")).toBeNull();
 
     // After 2.5 hours, throttling should expire and the heuristic should trigger again
     const later = now + 2.5 * 60 * 60 * 1000;
     mockTime(later);
-    logSession('quick');
-    logSession('quick');
-    logSession('quick');
-    expect(checkWellbeing()).toBe('late_night');
+    logSession("test-user", 'quick');
+    logSession("test-user", 'quick');
+    logSession("test-user", 'quick');
+    expect(checkWellbeing("test-user")).toBe('late_night');
   });
 
   test("Heuristic 1: Late night usage (0-4am)", () => {
@@ -103,11 +103,11 @@ describe("checkWellbeing", () => {
     mockTime(now);
 
     // Log 3 late night sessions
-    logSession('quick');
-    logSession('quick');
-    logSession('quick');
+    logSession("test-user", 'quick');
+    logSession("test-user", 'quick');
+    logSession("test-user", 'quick');
 
-    expect(checkWellbeing()).toBe('late_night');
+    expect(checkWellbeing("test-user")).toBe('late_night');
   });
 
   test("Heuristic 1: should NOT trigger during daytime even if past late-night sessions exist", () => {
@@ -124,13 +124,13 @@ describe("checkWellbeing", () => {
     // We need to manually manipulate the log if we want to test sessions from different times
     // But logSession uses Date.now(), so we can just change mockTime before each log
     mockTime(lateNightTime.getTime());
-    logSession('quick');
-    logSession('quick');
-    logSession('quick');
+    logSession("test-user", 'quick');
+    logSession("test-user", 'quick');
+    logSession("test-user", 'quick');
 
     // Change back to 10 AM
     mockTime(now);
-    expect(checkWellbeing()).toBeNull();
+    expect(checkWellbeing("test-user")).toBeNull();
   });
 
   test("Heuristic 1: Late night should only count recent sessions", () => {
@@ -143,9 +143,9 @@ describe("checkWellbeing", () => {
     mockTime(lateNightPast.getTime());
 
     // Log 3 late night sessions in the past
-    logSession('quick');
-    logSession('quick');
-    logSession('quick');
+    logSession("test-user", 'quick');
+    logSession("test-user", 'quick');
+    logSession("test-user", 'quick');
 
     // Set time to 2 AM today
     const lateNightToday = new Date(now);
@@ -153,13 +153,13 @@ describe("checkWellbeing", () => {
     mockTime(lateNightToday.getTime());
 
     // Should NOT trigger because they were a week ago
-    expect(checkWellbeing()).toBeNull();
+    expect(checkWellbeing("test-user")).toBeNull();
 
     // Log 3 sessions tonight
-    logSession('quick');
-    logSession('quick');
-    logSession('quick');
-    expect(checkWellbeing()).toBe('late_night');
+    logSession("test-user", 'quick');
+    logSession("test-user", 'quick');
+    logSession("test-user", 'quick');
+    expect(checkWellbeing("test-user")).toBe('late_night');
   });
 
   test("Heuristic 2: Same person obsession (5+ in 24h)", () => {
@@ -168,10 +168,10 @@ describe("checkWellbeing", () => {
 
     // 5 sessions for same persona
     for (let i = 0; i < 5; i++) {
-      logSession('quick', 'Desired Persona');
+      logSession("test-user", 'quick', 'Desired Persona');
     }
 
-    expect(checkWellbeing()).toBe('same_person');
+    expect(checkWellbeing("test-user")).toBe('same_person');
   });
 
   test("Heuristic 2 should NOT trigger for different personas", () => {
@@ -179,11 +179,11 @@ describe("checkWellbeing", () => {
     mockTime(now);
 
     for (let i = 0; i < 4; i++) {
-      logSession('quick', `Persona ${i}`);
+      logSession("test-user", 'quick', `Persona ${i}`);
     }
-    logSession('quick', 'Persona 0'); // 5 total sessions across 4 personas: Persona 0 has 2, others have 1 each
+    logSession("test-user", 'quick', 'Persona 0'); // 5 total sessions across 4 personas: Persona 0 has 2, others have 1 each
 
-    expect(checkWellbeing()).toBeNull();
+    expect(checkWellbeing("test-user")).toBeNull();
   });
 
   test("Heuristic 3: High frequency (8+ in 2h)", () => {
@@ -192,10 +192,10 @@ describe("checkWellbeing", () => {
 
     // 8 sessions in a row
     for (let i = 0; i < 8; i++) {
-      logSession('quick');
+      logSession("test-user", 'quick');
     }
 
-    expect(checkWellbeing()).toBe('high_frequency');
+    expect(checkWellbeing("test-user")).toBe('high_frequency');
   });
 
   test("Heuristic 4: High ghost risk (avg > 70 over last 5)", () => {
@@ -204,10 +204,10 @@ describe("checkWellbeing", () => {
 
     // 5 sessions with 80% risk
     for (let i = 0; i < 5; i++) {
-      logSession('quick', undefined, 80);
+      logSession("test-user", 'quick', undefined, 80);
     }
 
-    expect(checkWellbeing()).toBe('high_risk');
+    expect(checkWellbeing("test-user")).toBe('high_risk');
   });
 
   test("Heuristic 4 should NOT trigger if avg <= 70", () => {
@@ -216,10 +216,10 @@ describe("checkWellbeing", () => {
 
     // 5 sessions with 70% risk
     for (let i = 0; i < 5; i++) {
-      logSession('quick', undefined, 70);
+      logSession("test-user", 'quick', undefined, 70);
     }
 
-    expect(checkWellbeing()).toBeNull();
+    expect(checkWellbeing("test-user")).toBeNull();
   });
 
   test("Heuristic 4 should NOT trigger if fewer than 5 sessions with risk", () => {
@@ -227,9 +227,9 @@ describe("checkWellbeing", () => {
     mockTime(now);
 
     for (let i = 0; i < 4; i++) {
-      logSession('quick', undefined, 100);
+      logSession("test-user", 'quick', undefined, 100);
     }
 
-    expect(checkWellbeing()).toBeNull();
+    expect(checkWellbeing("test-user")).toBeNull();
   });
 });

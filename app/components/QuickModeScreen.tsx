@@ -1,27 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSessionState } from "../utils/useSessionState";
 import { useNavigate } from "react-router";
-import { AnimatePresence, motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import {
   Camera,
   Check,
   CheckCircle,
   ChevronLeft,
   Clock,
-  Copy,
-  CornerDownRight,
-  Info,
-  Link2,
   Pencil,
   RotateCcw,
   Share2,
-  Sparkles,
   Tag,
   ThumbsDown,
   ThumbsUp,
-  Timer,
   X,
-  ChevronRight,
 } from "lucide-react";
 import { TabBar } from "./TabBar";
 import { GrainOverlay } from "./GrainOverlay";
@@ -29,17 +22,25 @@ import { Skeleton } from "./ui/Skeleton";
 import { useToast } from "./ui/Toast";
 import { haptics } from "../utils/haptics";
 import { useAppContext } from "../app-context";
-import { getQuickAdvice } from "../../services/geminiService";
+import { getQuickAdvice, streamQuickAdvice } from "../../services/geminiService";
 import { createSession, flushPendingSessions, queuePendingSession, recordActivity, submitFeedback } from "../../services/dbService";
 import { logSession, saveFeedback } from "../../services/feedbackService";
-import { QuickAdviceResponse, SuggestionOption } from "../../types";
+import { QuickAdviceRequest, QuickAdviceResponse } from "../../types";
+import { isQuickAdviceDegraded, buildCopyPayload } from "../../services/quickAdvice";
 import { useScrollFade } from "../utils/useScrollFade";
+import { DisclosureCard } from "./quick/DisclosureCard";
+import { ReplyHeroCard } from "./quick/ReplyHeroCard";
+import { ReadStrip } from "./quick/ReadStrip";
+import { ToneRail } from "./quick/ToneRail";
+
+// SPIKE (plan 009): streamed quick replies. Hardcoded OFF — the production
+// path is unchanged. Flip to true to exercise the prototype.
+const QUICK_STREAM_ENABLED = false;
 
 const toneOptions = [
   { key: "Smooth", help: null },
   { key: "Bold", help: null },
   { key: "Witty", help: null },
-  { key: "Roast", help: null },
   { key: "Authentic", help: null },
   { key: "Your Style", help: "Uses your saved voice profile when available." },
 ] as const;
@@ -50,7 +51,6 @@ const toneMap: Record<Tone, keyof QuickAdviceResponse["suggestions"]> = {
   Smooth: "smooth",
   Bold: "bold",
   Witty: "witty",
-  Roast: "roast",
   Authentic: "authentic",
   "Your Style": "yourStyle",
 };
@@ -59,7 +59,6 @@ const feedbackTypeMap: Record<Tone, string> = {
   Smooth: "smooth",
   Bold: "bold",
   Witty: "witty",
-  Roast: "roast",
   Authentic: "authentic",
   "Your Style": "yourStyle",
 };
@@ -102,14 +101,16 @@ export function QuickModeScreen() {
   const [context, setContext] = useSessionState<ContextOption>("quick_context", "new", authUser?.uid);
   const [activeTone, setActiveTone] = useSessionState<Tone>("quick_tone", "Smooth", authUser?.uid);
   const [showStyleTooltip, setShowStyleTooltip] = useState<string | null>(null);
+  const [waitDismissed, setWaitDismissed] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
   const [screenshots, setScreenshots] = useSessionState<string[]>("quick_screenshots", [], authUser?.uid);
   const [result, setResult] = useState<QuickAdviceResponse | null>(null);
+  const [streamedText, setStreamedText] = useState("");
   const [feedbackGiven, setFeedbackGiven] = useState<"helpful" | "off" | null>(null);
   const [cursor, setCursor] = useState<Record<Tone, number>>({
     Smooth: 0,
     Bold: 0,
     Witty: 0,
-    Roast: 0,
     Authentic: 0,
     "Your Style": 0,
   });
@@ -153,6 +154,14 @@ export function QuickModeScreen() {
   const riskColor = ghostRisk > 65 ? "#C8522A" : ghostRisk > 35 ? "#D4A853" : "#7A9E7E";
   const riskLabel = ghostRisk > 65 ? "High" : ghostRisk > 35 ? "Medium" : "Low";
 
+  const isDegraded = useMemo(() => (result ? isQuickAdviceDegraded(result) : false), [result]);
+
+  const [openSection, setOpenSection] = useState<string | null>(null);
+
+  const unrepliedCount = result?.extractedUnrepliedMessages?.length ?? 0;
+
+  const toneHasOptions = (key: Tone) => (result?.suggestions[toneMap[key]]?.length ?? 0) > 0;
+
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
@@ -184,7 +193,9 @@ export function QuickModeScreen() {
     setIsLoading(true);
     setShowResults(false);
     setFeedbackGiven(null);
-    setCursor({ Smooth: 0, Bold: 0, Witty: 0, Roast: 0, Authentic: 0, "Your Style": 0 });
+    setWaitDismissed(false);
+    setCursor({ Smooth: 0, Bold: 0, Witty: 0, Authentic: 0, "Your Style": 0 });
+    setStreamedText("");
     haptics.medium();
 
     let isStillLoading = true;
@@ -195,14 +206,19 @@ export function QuickModeScreen() {
     }, 12000);
 
     try {
-      const response = await getQuickAdvice({
+      const quickRequest: QuickAdviceRequest = {
         theirMessage: theirMessage.trim() || "Analyze the conversation screenshot",
         yourDraft: yourDraft.trim() || undefined,
         context,
         screenshots: screenshots.length ? screenshots : undefined,
         userStyle: userProfile || undefined,
         userId: authUser?.uid,
-      });
+      };
+      const response = QUICK_STREAM_ENABLED
+        ? await streamQuickAdvice(quickRequest, (text) => {
+            if (mountedRef.current) setStreamedText((prev) => prev + text);
+          })
+        : await getQuickAdvice(quickRequest);
       const derivedGhostRisk = Math.max(0, 100 - (response.vibeCheck?.interestLevel ?? 50));
 
       if (!mountedRef.current) return;
@@ -272,8 +288,9 @@ export function QuickModeScreen() {
     setTheirMessage("");
     setYourDraft("");
     setScreenshots([]);
-    setCursor({ Smooth: 0, Bold: 0, Witty: 0, Roast: 0, Authentic: 0, "Your Style": 0 });
+    setCursor({ Smooth: 0, Bold: 0, Witty: 0, Authentic: 0, "Your Style": 0 });
     setFeedbackGiven(null);
+    setStreamedText("");
     haptics.light();
   };
 
@@ -282,6 +299,7 @@ export function QuickModeScreen() {
     setShowResults(false);
     setResult(null);
     setFeedbackGiven(null);
+    setStreamedText("");
     haptics.light();
   };
 
@@ -307,17 +325,9 @@ export function QuickModeScreen() {
     }
   };
 
-  const actionLabel: Record<string, { label: string; color: string; bg: string }> = {
-    SEND: { label: "Send it", color: "#7A9E7E", bg: "rgba(122,158,126,0.12)" },
-    WAIT: { label: "Wait", color: "#B8860B", bg: "rgba(212,168,83,0.12)" },
-    CALL: { label: "Call / voice note", color: "#C8522A", bg: "rgba(200,82,42,0.1)" },
-    MATCH: { label: "Match their energy", color: "#7A9E7E", bg: "rgba(122,158,126,0.12)" },
-    PULL_BACK: { label: "Pull back", color: "#B8860B", bg: "rgba(212,168,83,0.12)" },
-    ABORT: { label: "Walk away", color: "#C8522A", bg: "rgba(200,82,42,0.1)" },
-  };
-
   const situationFade = useScrollFade();
   const toneFade = useScrollFade();
+  const stripFade = useScrollFade();
   const personaFade = useScrollFade();
   const screenshotsFade = useScrollFade();
 
@@ -369,9 +379,7 @@ export function QuickModeScreen() {
 
   const handleCopyAll = async () => {
     if (!selectedOption) return;
-    const replies = selectedOption.replies.map((r) => r.reply).filter(Boolean).join("\n\n");
-    const hook = selectedOption.conversationHook ? `\n\n${selectedOption.conversationHook}` : "";
-    await handleCopy(`${replies}${hook}`, `copyall-${activeTone}-${cursor[activeTone]}`);
+    await handleCopy(buildCopyPayload(selectedOption), `copyall-${activeTone}-${cursor[activeTone]}`);
   };
 
   const showMessage = result?.extractedTargetMessage || theirMessage || "Conversation screenshot";
@@ -641,68 +649,125 @@ export function QuickModeScreen() {
             </div>
           </div>
         ) : isLoading ? (
-          <div className="px-5 mt-6">
+          <div className="px-5 mt-6 pb-[160px]">
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.45)", letterSpacing: "0.12em", textTransform: "uppercase" }}>
               Reading the room...
             </p>
-            <div style={{ backgroundColor: "#FDFAF5", borderRadius: 24, padding: 20, marginTop: 16 }}>
-              <Skeleton className="h-3 w-28 mb-3" />
-              <Skeleton className="h-4 w-full mb-2" />
-              <Skeleton className="h-4 w-4/5" />
+            <div className="flex gap-2 mt-4 overflow-hidden">
+              <Skeleton className="h-10 w-24" style={{ borderRadius: 100 }} />
+              <Skeleton className="h-10 w-16" style={{ borderRadius: 100 }} />
+              <Skeleton className="h-10 w-20" style={{ borderRadius: 100 }} />
             </div>
-            <div style={{ backgroundColor: "#FDFAF5", borderRadius: 24, padding: 20, marginTop: 12 }}>
-              <Skeleton className="h-4 w-24 mb-4" />
-              <Skeleton className="h-1.5 w-full mb-4" />
-              <Skeleton className="h-1.5 w-full mb-4" />
-              <Skeleton className="h-1.5 w-full" />
+            <div className="mt-4">
+              <Skeleton className="h-2.5 w-40 mb-3" />
+              <div className="flex justify-end">
+                <Skeleton className="h-9 w-3/4 mb-2" style={{ borderRadius: 12 }} />
+              </div>
+              <div className="flex justify-end">
+                <Skeleton className="h-9 w-2/3" style={{ borderRadius: 12 }} />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4 overflow-hidden">
+              <Skeleton className="h-8 w-24" style={{ borderRadius: 8 }} />
+              <Skeleton className="h-8 w-20" style={{ borderRadius: 8 }} />
+              <Skeleton className="h-8 w-32" style={{ borderRadius: 8 }} />
             </div>
           </div>
         ) : (
-          <div className="px-5 pb-8" ref={resultsTopRef}>
-            <div
-              className="mt-4 overflow-hidden"
-              style={{ backgroundColor: "#FDFAF5", borderRadius: 20, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)" }}
-            >
-              <div className="flex">
-                <div style={{ width: 3, backgroundColor: "#C8522A", borderRadius: "3px 0 0 3px", flexShrink: 0 }} />
-                <div className="p-4 flex-1">
-                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.15em", color: "rgba(26, 18, 8, 0.55)", textTransform: "uppercase" }}>
-                    {result?.extractedUnrepliedMessages?.length ? "Messages to reply to" : "Their message"}
+          <div className="px-5 pb-[150px]" ref={resultsTopRef}>
+            {result?.suggestions?.wait && !waitDismissed && (
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="mt-4 relative flex items-start gap-3 px-4 py-3"
+                style={{ backgroundColor: "#FEF3E2", borderRadius: 16, border: "1px solid rgba(212,168,83,0.25)" }}
+              >
+                <Clock size={18} strokeWidth={1.8} color="#B8860B" style={{ marginTop: 2, flexShrink: 0 }} />
+                <div className="flex-1 pr-6">
+                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", color: "#7A5400", textTransform: "uppercase" }}>
+                    Don't reply yet
                   </p>
-                  {result?.extractedUnrepliedMessages?.length ? (
-                    <div className="mt-2 space-y-2">
-                      {result.extractedUnrepliedMessages.map((msg: string, i: number) => (
-                        <div key={i} className="flex items-start gap-2">
-                          <CornerDownRight size={14} strokeWidth={2} color="#C8522A" style={{ marginTop: 4, flexShrink: 0 }} />
-                          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: "#1A1208", lineHeight: 1.5 }}>
-                            "{msg}"
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="mt-2" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: "#1A1208", lineHeight: 1.5 }}>
-                      {showMessage}
-                    </p>
-                  )}
+                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.7)", lineHeight: 1.5, marginTop: 3 }}>
+                    {result.suggestions.wait}
+                  </p>
+                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontStyle: "italic", color: "rgba(26,18,8,0.5)", lineHeight: 1.4, marginTop: 3 }}>
+                    Your replies are ready below — give it a beat, then send.
+                  </p>
                 </div>
-              </div>
-            </div>
+                <button
+                  onClick={() => setWaitDismissed(true)}
+                  aria-label="Dismiss this reminder"
+                  className="cursor-pointer absolute top-1 right-1"
+                  style={{ width: 44, height: 44, borderRadius: 22, background: "none", border: "none", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(122,90,8,0.8)" }}
+                >
+                  <X size={15} strokeWidth={2.2} />
+                </button>
+              </motion.div>
+            )}
 
-            {result?.conversationContext && (
-              <div className="mt-3 px-4 py-3" style={{ backgroundColor: "#FDFAF5", borderRadius: 16 }}>
-                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontStyle: "italic", color: "rgba(26,18,8,0.55)", lineHeight: 1.5 }}>
-                  {result.conversationContext}
+            {isDegraded && (
+              <div className="mt-3 px-4 py-3" style={{ backgroundColor: "#F5E8E0", borderRadius: 16 }}>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#A8401C", lineHeight: 1.5 }}>
+                  The read came back thin — take these with salt, or try again.
                 </p>
               </div>
             )}
 
-            {result?.detectedMeta && (result.detectedMeta.platform || result.detectedMeta.deliveryStatus || result.detectedMeta.timestamp || result.detectedMeta.isMessageRequest || (result.detectedMeta.reactions?.length ?? 0) > 0 || result.detectedMeta.groupName) && (
-              <div className="mt-3 px-4 py-3" style={{ backgroundColor: "#FDFAF5", borderRadius: 16 }}>
-                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase", marginBottom: 8 }}>
-                  Detected
+            <ToneRail
+              toneOptions={toneOptions}
+              toneHasOptions={toneHasOptions}
+              activeTone={activeTone}
+              onSelectTone={(key) => {
+                setActiveTone(key);
+                haptics.light();
+              }}
+              showStyleTooltip={showStyleTooltip}
+              onToggleStyleTooltip={(key) => setShowStyleTooltip((prev) => (prev ? null : key))}
+              scrollFade={toneFade}
+            />
+
+            <ReplyHeroCard
+              selectedOption={selectedOption}
+              optionCount={selectedOptions.length}
+              activeTone={activeTone}
+              cursor={cursor[activeTone]}
+              copiedKey={copiedKey}
+              prefersReducedMotion={prefersReducedMotion}
+              streamedText={streamedText}
+              onCopy={(text, key) => void handleCopy(text, key)}
+              onSelectVariation={(i) => { haptics.light(); setCursor((prev) => ({ ...prev, [activeTone]: i })); }}
+              onDragEnd={({ offset, velocity }) => {
+                if (selectedOptions.length <= 1) return;
+                const flick = Math.abs(offset.x) > 56 || (Math.abs(offset.x) > 24 && Math.abs(velocity.x) > 500);
+                if (!flick) return;
+                const dir = offset.x < 0 ? 1 : -1;
+                haptics.light();
+                setCursor((prev) => ({ ...prev, [activeTone]: (prev[activeTone] + dir + selectedOptions.length) % selectedOptions.length }));
+              }}
+            />
+
+            <ReadStrip ghostRisk={ghostRisk} riskColor={riskColor} result={result} scrollFade={stripFade} />
+
+            <DisclosureCard
+              title={`Their message${unrepliedCount > 1 ? ` (${unrepliedCount})` : ""}`}
+              open={openSection === "context"}
+              onToggle={() => setOpenSection(openSection === "context" ? null : "context")}
+            >
+              {result?.conversationContext && (
+                <p className="mb-3" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontStyle: "italic", color: "rgba(26,18,8,0.55)", lineHeight: 1.5 }}>
+                  {result.conversationContext}
                 </p>
-                <div className="flex flex-wrap gap-2">
+              )}
+              <div className="space-y-2">
+                {(result?.extractedUnrepliedMessages?.length ? result.extractedUnrepliedMessages : [showMessage]).map((msg: string, i: number) => (
+                  <p key={i} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13.5, color: "#1A1208", lineHeight: 1.5 }}>
+                    "{msg}"
+                  </p>
+                ))}
+              </div>
+              {result?.detectedMeta && (result.detectedMeta.platform || result.detectedMeta.deliveryStatus || result.detectedMeta.timestamp || result.detectedMeta.isMessageRequest || (result.detectedMeta.reactions?.length ?? 0) > 0 || result.detectedMeta.groupName) && (
+                <div className="flex flex-wrap gap-2 mt-3">
                   {result.detectedMeta.platform && result.detectedMeta.platform !== "unknown" && (
                     <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "#F5E8E0", color: "#C8522A", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
                       {result.detectedMeta.platform}
@@ -734,406 +799,72 @@ export function QuickModeScreen() {
                     </span>
                   )}
                 </div>
-              </div>
+              )}
+            </DisclosureCard>
+
+            {result?.draftAnalysis?.verdict && (
+              <DisclosureCard
+                title="Your draft"
+                open={openSection === "draft"}
+                onToggle={() => setOpenSection(openSection === "draft" ? null : "draft")}
+              >
+                <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontStyle: "italic", color: "#1A1208", lineHeight: 1.45 }}>
+                  "{result.draftAnalysis.verdict}"
+                </p>
+              </DisclosureCard>
             )}
 
-            <div
-              className="mt-4"
-              style={{ backgroundColor: "#FDFAF5", borderRadius: 20, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)", padding: 16 }}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#1A1208" }}>Vibe Check</p>
+            <div className="fixed bottom-20 left-0 right-0 z-30" style={{ backgroundColor: "rgba(245,239,230,0.92)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderTop: "1px solid #E8E0D4" }}>
+              <div className="max-w-[430px] mx-auto flex items-center gap-2 px-5 py-2.5">
+                <button
+                  onClick={() => handleFeedback("helpful")}
+                  aria-label="Helpful reply"
+                  className="cursor-pointer"
+                  style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", color: feedbackGiven === "helpful" ? "#7A9E7E" : "rgba(26,18,8,0.45)" }}
+                >
+                  <ThumbsUp size={19} strokeWidth={2} fill={feedbackGiven === "helpful" ? "#7A9E7E" : "none"} />
+                </button>
+                <button
+                  onClick={() => void handleCopyAll()}
+                  disabled={!selectedOption}
+                  className="flex-1 cursor-pointer transition-all active:scale-[0.98]"
+                  style={{
+                    height: 52,
+                    borderRadius: 999,
+                    backgroundColor: !selectedOption ? "#E8E0D4" : copiedKey === `copyall-${activeTone}-${cursor[activeTone]}` ? "#7A9E7E" : "#C8522A",
+                    color: !selectedOption ? "rgba(26,18,8,0.35)" : "#FFFFFF",
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 15,
+                    fontWeight: 600,
+                    border: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  {copiedKey === `copyall-${activeTone}-${cursor[activeTone]}` ? (
+                    <>
+                      <Check size={18} strokeWidth={2.5} /> Copied
+                    </>
+                  ) : !selectedOption ? (
+                    "Nothing to copy"
+                  ) : selectedOption.replies.length + (selectedOption.conversationHook ? 1 : 0) > 1 ? (
+                    "Copy all"
+                  ) : (
+                    "Copy reply"
+                  )}
+                </button>
                 <button
                   onClick={() => void handleShare()}
-                  className="cursor-pointer flex items-center gap-1.5"
-                  style={{ border: "none", background: "none", color: "rgba(26,18,8,0.4)" }}
-                  title="Share analysis"
+                  aria-label="Share analysis"
+                  className="cursor-pointer"
+                  style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", color: "rgba(26,18,8,0.45)" }}
                 >
-                  <Share2 size={16} strokeWidth={1.8} />
+                  <Share2 size={18} strokeWidth={1.8} />
                 </button>
               </div>
-              <div className="mb-3" style={{ height: 1, backgroundColor: "#E8E0D4" }} />
-
-              {[
-                {
-                  label: "Energy",
-                  value: result?.vibeCheck?.theirEnergy || "neutral",
-                  level: result?.vibeCheck?.theirEnergy === "hot" ? 1.0 :
-                    result?.vibeCheck?.theirEnergy === "warm" ? 0.8 :
-                      result?.vibeCheck?.theirEnergy === "cold" ? 0.2 : 0.5,
-                  color: "#C8522A"
-                },
-                {
-                  label: "Interest",
-                  value: `${result?.vibeCheck?.interestLevel ?? 50}/100`,
-                  level: Math.max(0.05, (result?.vibeCheck?.interestLevel ?? 50) / 100),
-                  color: "#C8522A",
-                },
-                { label: "Ghost Risk", value: `${riskLabel} (${ghostRisk}%)`, level: Math.max(0.05, ghostRisk / 100), color: riskColor },
-                ...(typeof result?.interestSignal === "number"
-                  ? [{
-                      label: "Interest to show",
-                      value: `${result.interestSignal}/100`,
-                      level: Math.max(0.05, result.interestSignal / 100),
-                      color: "#D4A853",
-                    }]
-                  : []),
-              ].map((metric) => (
-                <div key={metric.label} className="mb-3">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "rgba(26, 18, 8, 0.55)" }}>{metric.label}</span>
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: metric.color }}>{metric.value}</span>
-                  </div>
-                  <div className="w-full overflow-hidden" style={{ height: 6, borderRadius: 100, backgroundColor: "#E8E0D4" }}>
-                    <div style={{ width: `${metric.level * 100}%`, height: "100%", borderRadius: 100, backgroundColor: metric.color, transition: 'width 0.6s ease' }} />
-                  </div>
-                </div>
-              ))}
-
-              {Array.isArray(result?.vibeCheck?.greenFlags) && result.vibeCheck.greenFlags.length > 0 && (
-                <div className="mb-2">
-                  <p style={{ fontSize: 11, color: "#7A9E7E", marginBottom: 6, fontFamily: "'DM Sans', sans-serif" }}>Green flags</p>
-                  <div className="flex flex-wrap gap-2">
-                    {result.vibeCheck.greenFlags.map((flag: string, i: number) => (
-                      <span key={i} style={{ borderRadius: 999, padding: "3px 9px", backgroundColor: "rgba(122,158,126,0.12)", color: "#58745A", fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>
-                        {flag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {Array.isArray(result?.vibeCheck?.redFlags) && result.vibeCheck.redFlags.length > 0 && (
-                <div>
-                  <p style={{ fontSize: 11, color: "#C8522A", marginBottom: 6, fontFamily: "'DM Sans', sans-serif" }}>Red flags</p>
-                  <div className="flex flex-wrap gap-2">
-                    {result.vibeCheck.redFlags.map((flag: string, i: number) => (
-                      <span key={i} style={{ borderRadius: 999, padding: "3px 9px", backgroundColor: "rgba(200,82,42,0.12)", color: "#C8522A", fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>
-                        {flag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {result?.proTip && (
-                <div className="mt-3" style={{ backgroundColor: "#F5E8E0", borderRadius: 12, padding: "12px 14px" }}>
-                  <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, fontStyle: "italic", color: "#1A1208", lineHeight: 1.4 }}>
-                    "{result.proTip}"
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {result?.recommendedAction && (
-              <div className="mt-3 px-4 py-3" style={{ backgroundColor: "#FDFAF5", borderRadius: 16 }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles size={14} color="#C8522A" />
-                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>
-                    Next move
-                  </p>
-                </div>
-                {(() => {
-                  const a = actionLabel[result.recommendedAction] || { label: result.recommendedAction, color: "#1A1208", bg: "rgba(26,18,8,0.06)" };
-                  return (
-                    <span style={{ borderRadius: 999, padding: "5px 12px", backgroundColor: a.bg, color: a.color, fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600 }}>
-                      {a.label}
-                    </span>
-                  );
-                })()}
-                {result?.timingRecommendation && (
-                  <div className="mt-3 flex items-start gap-2">
-                    <Timer size={14} strokeWidth={1.8} color="rgba(26,18,8,0.4)" style={{ marginTop: 2, flexShrink: 0 }} />
-                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.65)", lineHeight: 1.5 }}>
-                      {result.timingRecommendation}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {result?.suggestions?.wait && (
-              <div className="mt-3 px-4 py-3" style={{ backgroundColor: "#FEF3E2", borderRadius: 16, border: "1px solid rgba(212,168,83,0.25)" }}>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <Clock size={15} color="#B8860B" />
-                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", color: "#B8860B", textTransform: "uppercase" }}>
-                    Don't reply yet
-                  </p>
-                </div>
-                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.7)", lineHeight: 1.5 }}>
-                  {result.suggestions.wait}
-                </p>
-              </div>
-            )}
-
-            {result?.draftAnalysis && (
-              <div className="mt-3 px-4 py-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 16 }}>
-                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase", marginBottom: 8 }}>
-                  Draft analysis
-                </p>
-                {result.draftAnalysis.verdict && (
-                  <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontStyle: "italic", color: "#1A1208", lineHeight: 1.45, marginBottom: 10 }}>
-                    "{result.draftAnalysis.verdict}"
-                  </p>
-                )}
-                {typeof result.draftAnalysis.confidenceScore === "number" && (
-                  <div className="mb-3">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.55)" }}>Confidence</span>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "#1A1208" }}>{result.draftAnalysis.confidenceScore}/100</span>
-                    </div>
-                    <div className="w-full overflow-hidden" style={{ height: 6, borderRadius: 100, backgroundColor: "#E8E0D4" }}>
-                      <div style={{ width: `${result.draftAnalysis.confidenceScore}%`, height: "100%", borderRadius: 100, backgroundColor: "#7A9E7E" }} />
-                    </div>
-                  </div>
-                )}
-                {Array.isArray(result.draftAnalysis.strengths) && result.draftAnalysis.strengths.length > 0 && (
-                  <div className="mb-2">
-                    <p style={{ fontSize: 11, color: "#7A9E7E", marginBottom: 5, fontFamily: "'DM Sans', sans-serif" }}>Strengths</p>
-                    <div className="flex flex-wrap gap-2">
-                      {result.draftAnalysis.strengths.map((s: string, i: number) => (
-                        <span key={i} style={{ borderRadius: 999, padding: "3px 9px", backgroundColor: "rgba(122,158,126,0.12)", color: "#58745A", fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {Array.isArray(result.draftAnalysis.issues) && result.draftAnalysis.issues.length > 0 && (
-                  <div>
-                    <p style={{ fontSize: 11, color: "#C8522A", marginBottom: 5, fontFamily: "'DM Sans', sans-serif" }}>Could improve</p>
-                    <div className="flex flex-wrap gap-2">
-                      {result.draftAnalysis.issues.map((s: string, i: number) => (
-                        <span key={i} style={{ borderRadius: 999, padding: "3px 9px", backgroundColor: "rgba(200,82,42,0.12)", color: "#C8522A", fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="mt-4">
-              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: "0.15em", color: "rgba(26, 18, 8, 0.55)", textTransform: "uppercase" }}>
-                Suggested replies
-              </p>
-              <div
-                ref={toneFade.ref}
-                className="flex gap-2 mt-3 overflow-x-auto pb-1 no-scrollbar"
-                style={toneFade.style}
-              >
-                {toneOptions.map(({ key, help }) => (
-                  <div key={key} className="relative shrink-0">
-                    <button
-                      onClick={() => {
-                        setActiveTone(key);
-                        haptics.light();
-                      }}
-                      className="flex items-center gap-1.5 cursor-pointer transition-colors"
-                      style={{
-                        borderRadius: 100,
-                        padding: "8px 16px",
-                        backgroundColor: activeTone === key ? "#C8522A" : "transparent",
-                        color: activeTone === key ? "#FFFFFF" : "rgba(26, 18, 8, 0.55)",
-                        border: activeTone === key ? "1px solid #C8522A" : "1px solid #E8E0D4",
-                        fontFamily: "'DM Sans', sans-serif",
-                        fontSize: 13,
-                        fontWeight: 500,
-                      }}
-                    >
-                      {key}
-                      {help && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowStyleTooltip((prev) => (prev ? null : key));
-                          }}
-                          className="cursor-pointer"
-                        >
-                          <Info size={12} strokeWidth={2} color={activeTone === key ? "rgba(255,255,255,0.6)" : "rgba(26,18,8,0.35)"} />
-                        </button>
-                      )}
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              {/* Tooltip rendered OUTSIDE the scroll container (it was clipped before) */}
-              {showStyleTooltip && (
-                <div
-                  className="mt-2"
-                  style={{ backgroundColor: "#1A1208", borderRadius: 10, padding: "8px 12px", width: 210 }}
-                >
-                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#FDFAF5", lineHeight: 1.4 }}>
-                    {toneOptions.find((t) => t.key === showStyleTooltip)?.help}
-                  </p>
-                </div>
-              )}
-
-              <div
-                className="mt-3 overflow-hidden"
-                style={{ backgroundColor: "#FDFAF5", borderRadius: 20, boxShadow: "0 2px 16px rgba(26, 18, 8, 0.07)", padding: 16 }}
-              >
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={`${activeTone}-${cursor[activeTone]}`}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.25 }}
-                    className="space-y-3"
-                  >
-                    {selectedOption?.replies?.length ? selectedOption.replies.map((replyItem, idx) => {
-                      const replyKey = `reply-${activeTone}-${cursor[activeTone]}-${idx}`;
-                      const isCopied = copiedKey === replyKey;
-                      return (
-                        <div key={idx} className="relative group">
-                          <button
-                            onClick={() => handleCopy(replyItem.reply, replyKey)}
-                            className="w-full text-left cursor-pointer transition-all"
-                            style={{
-                              backgroundColor: "#FFFFFF",
-                              border: "1px solid #E8E0D4",
-                              borderRadius: 14,
-                              padding: "12px 14px",
-                            }}
-                          >
-                            <div className="flex justify-between items-start gap-3 mb-2">
-                              <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26, 18, 8, 0.6)", display: "flex", alignItems: "center", gap: 6 }}>
-                                <CornerDownRight size={14} />
-                                <span className="italic">"{replyItem.originalMessage}"</span>
-                              </span>
-                              <div className="flex items-center gap-1.5" style={{ color: isCopied ? "#7A9E7E" : "rgba(26, 18, 8, 0.4)", fontFamily: "'DM Sans', sans-serif", fontSize: 10, textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.05em" }}>
-                                {isCopied ? <Check size={14} /> : <Copy size={14} />}
-                                <span>{isCopied ? "Copied" : "Copy"}</span>
-                              </div>
-                            </div>
-                            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: "#1A1208", lineHeight: 1.5, paddingLeft: 12, borderLeft: "2px solid #C8522A" }}>
-                              {replyItem.reply}
-                            </p>
-                          </button>
-                        </div>
-                      );
-                    }) : null}
-
-                    {!selectedOption && (
-                      <div
-                        className="py-8 flex flex-col items-center justify-center text-center"
-                        style={{ backgroundColor: "#F9F7F4", borderRadius: 16 }}
-                      >
-                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.5)" }}>
-                          No {activeTone} replies for this one — try another style.
-                        </p>
-                      </div>
-                    )}
-
-                    {selectedOption?.conversationHook && (
-                      <div className="relative mt-1">
-                        <button
-                          onClick={() => handleCopy(selectedOption.conversationHook!, `hook-${activeTone}-${cursor[activeTone]}`)}
-                          className="w-full text-left cursor-pointer transition-all"
-                          style={{
-                            backgroundColor: "#F5E8E0",
-                            border: "1px solid #E8E0D4",
-                            borderRadius: 14,
-                            padding: "12px 14px",
-                          }}
-                        >
-                          <div className="flex justify-between items-center mb-2">
-                            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#C8522A", display: "flex", alignItems: "center", gap: 6, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-                              <Link2 size={14} />
-                              Conversation Hook
-                            </span>
-                            <div className="flex items-center gap-1.5" style={{ color: copiedKey === `hook-${activeTone}-${cursor[activeTone]}` ? "#C8522A" : "rgba(200, 82, 42, 0.5)", fontFamily: "'DM Sans', sans-serif", fontSize: 10, textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.05em" }}>
-                              {copiedKey === `hook-${activeTone}-${cursor[activeTone]}` ? <Check size={14} /> : <Copy size={14} />}
-                              <span>{copiedKey === `hook-${activeTone}-${cursor[activeTone]}` ? "Copied" : "Copy"}</span>
-                            </div>
-                          </div>
-                          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "#1A1208", lineHeight: 1.5 }}>
-                            {selectedOption.conversationHook}
-                          </p>
-                        </button>
-                      </div>
-                    )}
-                  </motion.div>
-                </AnimatePresence>
-
-                <div className="flex items-center justify-end mt-3 pt-3" style={{ borderTop: "1px solid #E8E0D4" }}>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleFeedback("helpful")}
-                      style={{ border: "none", background: "none", color: "#7A9E7E", cursor: "pointer" }}
-                    >
-                      <ThumbsUp size={15} fill={feedbackGiven === "helpful" ? "#7A9E7E" : "none"} />
-                    </button>
-                    <button
-                      onClick={() => handleFeedback("off")}
-                      style={{ border: "none", background: "none", color: "#C8522A", cursor: "pointer" }}
-                    >
-                      <ThumbsDown size={15} fill={feedbackGiven === "off" ? "#C8522A" : "none"} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {selectedOptions.length > 0 && (
-                <div className="flex items-center justify-between mt-4 pt-3" style={{ borderTop: "1px solid #E8E0D4" }}>
-                  <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, color: "rgba(26,18,8,0.55)" }}>
-                    Variation {(cursor[activeTone] % selectedOptions.length) + 1} of {selectedOptions.length}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => void handleCopyAll()}
-                      className="cursor-pointer flex items-center gap-1.5"
-                      style={{
-                        border: "none",
-                        background: "none",
-                        color: copiedKey === `copyall-${activeTone}-${cursor[activeTone]}` ? "#7A9E7E" : "#C8522A",
-                        fontFamily: "'DM Sans', sans-serif",
-                        fontSize: 12,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {copiedKey === `copyall-${activeTone}-${cursor[activeTone]}` ? <Check size={14} /> : <Copy size={14} />}
-                      Copy all
-                    </button>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          haptics.light();
-                          setCursor(prev => ({
-                            ...prev,
-                            [activeTone]: prev[activeTone] > 0 ? prev[activeTone] - 1 : selectedOptions.length - 1
-                          }));
-                        }}
-                        className="flex items-center justify-center cursor-pointer transition-colors"
-                        style={{
-                          width: 36, height: 36, borderRadius: 18,
-                          backgroundColor: "#F5E8E0", border: "1px solid #E8E0D4", color: "#C8522A"
-                        }}
-                      >
-                        <ChevronLeft size={16} strokeWidth={2.5} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          haptics.light();
-                          setCursor(prev => ({
-                            ...prev,
-                            [activeTone]: (prev[activeTone] + 1) % selectedOptions.length
-                          }));
-                        }}
-                        className="flex items-center justify-center cursor-pointer transition-colors"
-                        style={{
-                          width: 36, height: 36, borderRadius: 18,
-                          backgroundColor: "#F5E8E0", border: "1px solid #E8E0D4", color: "#C8522A"
-                        }}
-                      >
-                        <ChevronRight size={16} strokeWidth={2.5} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         )}

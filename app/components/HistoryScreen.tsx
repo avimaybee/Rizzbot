@@ -26,6 +26,7 @@ import { TabBar } from "./TabBar";
 import { GrainOverlay } from "./GrainOverlay";
 import { useToast } from "./ui/Toast";
 import { haptics } from "../utils/haptics";
+import { TONE_ORDER, TONE_LABELS, getActionLabel } from "../utils/quickLogic";
 import { useAppContext } from "../app-context";
 import { deleteSession, deleteTherapistSession, getSessions, getTherapistSessions, Session, SessionResult } from "../../services/dbService";
 import { formatShortDate, formatTimeAgo, parseDbDate } from "../utils/formatTime";
@@ -69,19 +70,8 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
 
   const parsedAny = parsed as any;
 
-  const toneLabels: Record<string, string> = {
-    smooth: "Smooth",
-    bold: "Bold",
-    witty: "Witty",
-    roast: "Roast",
-    authentic: "Authentic",
-    yourStyle: "Your Style",
-  };
-
-  const toneOrder = ["smooth", "bold", "witty", "roast", "authentic", "yourStyle"];
-
   const [activeTone, setActiveTone] = useState<string>(() => {
-    const firstAvailable = toneOrder.find((t) => {
+    const firstAvailable = TONE_ORDER.find((t) => {
       const list = (parsed.suggestions || parsed.response?.suggestions)?.[t];
       return Array.isArray(list) && list.length > 0;
     });
@@ -92,7 +82,10 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
   const copyTimerRef = useRef<number | null>(null);
 
   const optionsForTone = (tone: string): any[] => {
-    const list = suggestions?.[tone];
+    let list = suggestions?.[tone];
+    if ((!Array.isArray(list) || list.length === 0) && tone === "bold") {
+      list = suggestions?.roast; // legacy sessions: roast data folds into bold
+    }
     return Array.isArray(list) ? list.filter((o: any) => o && Array.isArray(o.replies) && o.replies.length > 0) : [];
   };
 
@@ -113,15 +106,6 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
     toast("Copied to clipboard", "success");
     if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current);
     copyTimerRef.current = window.setTimeout(() => setCopiedKey(null), 1500);
-  };
-
-  const actionLabel: Record<string, { label: string; color: string; bg: string }> = {
-    SEND: { label: "Send it", color: "#7A9E7E", bg: "rgba(122,158,126,0.12)" },
-    WAIT: { label: "Wait", color: "#D4A853", bg: "rgba(212,168,83,0.12)" },
-    CALL: { label: "Call / voice note", color: "#C8522A", bg: "rgba(200,82,42,0.1)" },
-    MATCH: { label: "Match their energy", color: "#7A9E7E", bg: "rgba(122,158,126,0.12)" },
-    PULL_BACK: { label: "Pull back", color: "#D4A853", bg: "rgba(212,168,83,0.12)" },
-    ABORT: { label: "Walk away", color: "#C8522A", bg: "rgba(200,82,42,0.1)" },
   };
 
   const nextMove = (response?.recommendedAction || parsedAny.recommendedAction) as string | undefined;
@@ -315,7 +299,7 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
               <p style={labelStyle}>Next move</p>
             </div>
             {(() => {
-              const a = actionLabel[nextMove] || { label: nextMove, color: "#1A1208", bg: "rgba(26,18,8,0.06)" };
+              const a = getActionLabel(nextMove);
               return (
                 <div className="flex flex-wrap items-center gap-3">
                   <span
@@ -354,7 +338,7 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
           <div className="mt-3 p-4" style={{ backgroundColor: "#FEF3E2", borderRadius: 20, border: "1px solid rgba(212,168,83,0.25)" }}>
             <div className="flex items-center gap-2 mb-2">
               <Clock size={15} color="#D4A853" />
-              <p style={{ ...labelStyle, color: "#B8860B" }}>Don't reply yet</p>
+              <p style={{ ...labelStyle, color: "#7A5400" }}>Don't reply yet</p>
             </div>
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.7)", lineHeight: 1.5 }}>
               {waitReason}
@@ -548,7 +532,7 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
           </div>
         )}
 
-        {isQuick && suggestions && toneOrder.some((t) => optionsForTone(t).length > 0) && (
+        {isQuick && suggestions && TONE_ORDER.some((t) => optionsForTone(t).length > 0) && (
           <div className="mt-4 p-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 20 }}>
             <div className="flex items-center gap-2 mb-3">
               <Zap size={15} color="#C8522A" />
@@ -556,7 +540,7 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
             </div>
 
             <div className="flex gap-1.5 overflow-x-auto pb-2 no-scrollbar" style={{ marginLeft: -2, marginRight: -2, paddingLeft: 2, paddingRight: 2 }}>
-              {toneOrder.filter((t) => optionsForTone(t).length > 0).map((tone) => {
+              {TONE_ORDER.filter((t) => optionsForTone(t).length > 0).map((tone) => {
                 const isActive = activeTone === tone;
                 return (
                   <button
@@ -578,7 +562,7 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
                       transition: "all 0.2s ease",
                     }}
                   >
-                    {toneLabels[tone]}
+                    {TONE_LABELS[tone]}
                   </button>
                 );
               })}
