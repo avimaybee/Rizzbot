@@ -9,9 +9,18 @@ database_id = "4211ee68-0f20-42d1-87b2-dd450ec4dd89"
 database_name = "rizzbot"
 migrations_dir = "d1_migrations"
 
+# R2 Media Bucket Binding
+[[r2_buckets]]
+binding = "RIZZBOT_MEDIA"
+bucket_name = "rizzbot-media"
+
 # Production environment
 [env.production]
 [[env.production.d1_databases]]
 binding = "RIZZBOT_DATA"
 database_id = "4211ee68-0f20-42d1-87b2-dd450ec4dd89"
 database_name = "rizzbot"
+
+[[env.production.r2_buckets]]
+binding = "RIZZBOT_MEDIA"
+bucket_name = "rizzbot-media"

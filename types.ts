@@ -77,6 +77,13 @@ export interface UserStyleProfile {
   aiSummary?: string; // AI-generated personality summary
   favoriteEmojis?: string[]; // User's frequently used emojis extracted from samples
   rawSamples?: string[]; // User's MCQ text samples for persistence
+  /** Passively extracted outgoing user messages from Quick Mode screenshots (rolling max 40) */
+  learnedSamples?: string[];
+  /** Distilled abstract cadence description (structural rhythm only — never literal catchphrases) */
+  cadenceNotes?: string;
+  /** Total count of deduplicated user messages learned from screenshots */
+  sampleCount?: number;
+  updatedAt?: number;
 }
 
 /**
@@ -140,6 +147,33 @@ export interface MessageReply {
 export interface SuggestionOption {
   replies: MessageReply[];      // Replies to each unreplied message (in order)
   conversationHook: string;     // Text to keep the conversation flowing
+  text?: string;               // V2 synthesized newline-joined bubble text
+  /** V2 multi-bubble reply sequence (1–3 bubbles in send order). Synthesized when missing. */
+  bubbles?: QuickReplyBubble[];
+  /** Optional V1 legacy display fields kept for backward compatibility */
+  subtext?: string;
+  isRecommended?: boolean;
+  hookType?: string;
+}
+
+/** V2 style keys for the 5-tab bubble schema (Plan 010). Legacy witty/authentic kept for V1 history. */
+export type QuickReplyStyle = 'real' | 'smooth' | 'playful' | 'bold' | 'yourStyle';
+
+export interface QuickReplyBubble {
+  replyTo: string | null;
+  text: string;
+}
+
+export interface QuickReplyOption {
+  /** V2 multi-bubble reply sequence (1–3 bubbles in send order) */
+  bubbles: QuickReplyBubble[];
+  /** Synthesized newline-joined string of all bubbles (or V1 single text) for copy/TTS/feedback */
+  text: string;
+  /** Optional legacy fields kept for backward compatibility with old D1 sessions */
+  subtext?: string;
+  conversationHook?: string;
+  isRecommended?: boolean;
+  hookType?: string;
 }
 
 /**
@@ -172,11 +206,24 @@ export interface QuickAdviceResponse {
     authentic: SuggestionOption[]; // 3 options - user's vibe, elevated (not forced copy)
     yourStyle: SuggestionOption[]; // 3 options - deep mimicry of user's specific phrasing/quirks
     wait?: string | null;          // Sometimes best move is no move - explains why
+    /** V2 tabs (Plan 010). Populated by OpenCode Go backend; legacy rows omit these. */
+    real?: SuggestionOption[];
+    playful?: SuggestionOption[];
   };
   proTip: string; // One psychology-backed insight
   recommendedAction: 'SEND' | 'WAIT' | 'CALL' | 'MATCH' | 'PULL_BACK' | 'ABORT';
   // True when the service returned its degraded fallback (failed analysis)
   degraded?: boolean;
+  // V2 friend-summary fields (Plan 010). Present on OpenCode Go responses.
+  summary?: string; // 2-3 sentence blunt friend read
+  shouldWait?: boolean; // true when replying now hurts them
+  modelUsed?: string; // Model ID that fulfilled the request
+  tacticalSummary?: string; // legacy alias mirror for summary
+  // Optional V1 legacy diagnostic fields — present on old rows, synthesized with safe defaults
+  emotionalRead?: string;
+  ghostRisk?: number;
+  effortBalance?: number;
+  subtext?: string;
   // New guidance fields (0-100 scale and short timing text)
   interestSignal?: number; // 0-100 recommended explicit interest level to show
   timingRecommendation?: string; // e.g., "reply within a few hours; prioritize thoughtful reply over speed"
@@ -405,5 +452,6 @@ export interface TherapistResponse {
   clinicalNotes?: Partial<ClinicalNotes>; // Updated clinical notes from this turn
   exercise?: TherapistExercise; // Optional interactive exercise assigned
 }
+
 
 

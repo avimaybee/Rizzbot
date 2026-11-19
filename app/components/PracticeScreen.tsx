@@ -27,7 +27,7 @@ import { GrainOverlay } from "./GrainOverlay";
 import { useToast } from "./ui/Toast";
 import { haptics } from "../utils/haptics";
 import { useAppContext } from "../app-context";
-import { analyzeSimulation, generatePersona, simulateDraft } from "../../services/geminiService";
+import { analyzeSimulation, generatePersona, simulateDraft } from "../../services/aiService";
 import { createPersona, createSession, deletePersona, getPersonas, recordActivity } from "../../services/dbService";
 import { logSession } from "../../services/feedbackService";
 import { Persona, SimResult } from "../../types";
@@ -1313,3 +1313,4 @@ export function PracticeScreen() {
     </motion.div>
   );
 }
+

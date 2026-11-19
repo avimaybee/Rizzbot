@@ -2,7 +2,7 @@ import type React from "react";
 import { motion } from "motion/react";
 import { Info } from "lucide-react";
 
-type Tone = "Smooth" | "Bold" | "Witty" | "Authentic" | "Your Style";
+export type Tone = "Real" | "Smooth" | "Playful" | "Bold" | "Your Style";
 
 interface ToneRailProps {
   toneOptions: readonly { key: Tone; help: string | null }[];

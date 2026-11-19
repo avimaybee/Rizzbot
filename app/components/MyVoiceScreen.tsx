@@ -20,7 +20,7 @@ import {
   StyleExtractionResponse,
   UserStyleProfile,
 } from "../../types";
-import { extractUserStyle } from "../../services/geminiService";
+import { extractUserStyle } from "../../services/aiService";
 import { transcribeAudio } from "../../services/voiceService";
 import VoiceRecorder from "./VoiceRecorder";
 
@@ -85,13 +85,13 @@ const profileFromAnswers = (answers: number[]): UserStyleProfile => {
     punctuation: "minimal",
     averageLength,
     slangLevel: "casual",
-    signaturePatterns,
+    signaturePatterns: [],
     preferredTone,
     responseSpeed,
     flirtLevel,
     humorStyle,
     aiSummary: `you text ${preferredTone} with ${averageLength} messages and ${emojiUsage} emoji use`,
-    rawSamples: signaturePatterns,
+    rawSamples: [],
   };
 };
 
@@ -535,6 +535,15 @@ export function MyVoiceScreen() {
           >
             Your style
           </p>
+          {(computedProfile.sampleCount ?? 0) > 0 ? (
+            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#7A9E7E", marginTop: 4 }}>
+              Learned from {computedProfile.sampleCount} of your real texts across Quick Mode screenshots
+            </p>
+          ) : (
+            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.45)", marginTop: 4 }}>
+              Auto-learns as you use Quick Mode — every screenshot you upload sharpens Your Style automatically.
+            </p>
+          )}
           <p
             style={{
               fontFamily: "'Cormorant Garamond', serif",
@@ -580,6 +589,17 @@ export function MyVoiceScreen() {
             </div>
           )}
         </div>
+
+        {computedProfile.cadenceNotes && (
+          <div className="mt-4" style={{ backgroundColor: "#FDFAF5", borderRadius: 20, padding: "16px", border: "1px solid #E8E0D4" }}>
+            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>
+              Your observed texting cadence
+            </p>
+            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13.5, color: "#1A1208", lineHeight: 1.6, marginTop: 6 }}>
+              {computedProfile.cadenceNotes}
+            </p>
+          </div>
+        )}
 
         <div
           className="mt-4"
@@ -874,3 +894,4 @@ export function MyVoiceScreen() {
     </div>
   );
 }
+

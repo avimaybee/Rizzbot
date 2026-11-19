@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { TabBar } from "./TabBar";
+import { R2Image } from "./ui/R2Image";
+import { FriendSummaryCard } from "./quick/FriendSummaryCard";
 import { GrainOverlay } from "./GrainOverlay";
 import { useToast } from "./ui/Toast";
 import { haptics } from "../utils/haptics";
@@ -83,8 +85,8 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
 
   const optionsForTone = (tone: string): any[] => {
     let list = suggestions?.[tone];
-    if ((!Array.isArray(list) || list.length === 0) && tone === "bold") {
-      list = suggestions?.roast; // legacy sessions: roast data folds into bold
+    if ((!Array.isArray(list) || list.length === 0) && tone === "bold") { list = suggestions?.roast; } if ((!Array.isArray(list) || list.length === 0) && tone === "real") { list = suggestions?.authentic; } if ((!Array.isArray(list) || list.length === 0) && tone === "playful") { list = suggestions?.witty; } {
+      // legacy V1 tone aliases folded above
     }
     return Array.isArray(list) ? list.filter((o: any) => o && Array.isArray(o.replies) && o.replies.length > 0) : [];
   };
@@ -198,7 +200,7 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
                 {session.headline || parsed.headline || session.persona_name || "Conversation replay"}
               </p>
               <div className="mt-3 flex items-center gap-3">
-                {session.mode !== "therapist" && (
+                {session.mode !== "therapist" && typeof session.ghost_risk === "number" && session.ghost_risk > 0 && (
                   <span
                     style={{
                       borderRadius: 999,
@@ -238,9 +240,9 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
             </div>
             <div className="grid grid-cols-3 gap-2">
               {screenshots.map((screenshot, idx) => (
-                <img
+                <R2Image
                   key={idx}
-                  src={screenshot.startsWith("data:") ? screenshot : `data:image/png;base64,${screenshot}`}
+                  srcOrKey={screenshot}
                   alt={`Screenshot ${idx + 1}`}
                   style={{
                     width: "100%",
@@ -670,6 +672,16 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {isQuick && ((response as any)?.summary || (parsed as any).summary || (response as any)?.tacticalSummary || (parsed as any).tacticalSummary) && (
+          <div className="mt-4">
+            <FriendSummaryCard
+              summary={(response as any)?.summary || (parsed as any).summary || (response as any)?.tacticalSummary || (parsed as any).tacticalSummary}
+              shouldWait={Boolean((response as any)?.shouldWait ?? (parsed as any).shouldWait)}
+              extractedUnrepliedMessages={(response as any)?.extractedUnrepliedMessages ?? (parsed as any).extractedUnrepliedMessages ?? []}
+            />
           </div>
         )}
 
@@ -1172,6 +1184,7 @@ export function HistoryScreen() {
                       </p>
                       <div className="mt-2 flex items-center justify-between">
                         <div className="flex items-center gap-3">
+                          {typeof session.ghost_risk === "number" && session.ghost_risk > 0 && (
                           <span
                             style={{
                               borderRadius: 999,
@@ -1186,6 +1199,7 @@ export function HistoryScreen() {
                           >
                             {risk}% risk
                           </span>
+                          )}
                           {session.parsedResult?.request?.screenshots?.length > 0 && (
                             <div className="flex items-center gap-1 opacity-40">
                               <Image size={12} />

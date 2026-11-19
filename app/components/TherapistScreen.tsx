@@ -39,7 +39,7 @@ import {
   TherapistSession,
   updateMemory,
 } from "../../services/dbService";
-import { generateSessionClosure, streamTherapistAdvice } from "../../services/geminiService";
+import { generateSessionClosure, streamTherapistAdvice } from "../../services/aiService";
 import { ClinicalNotes, ExerciseType, TherapistExercise } from "../../types";
 import { logSession } from "../../services/feedbackService";
 import { useScrollFade } from "../utils/useScrollFade";
@@ -1794,3 +1794,4 @@ export function TherapistScreen() {
     </motion.div >
   );
 }
+

@@ -1,4 +1,5 @@
 import { getFirebaseToken } from "./firebaseService";
+import { convertAudioBlobToWavBase64 } from "../app/hooks/useVoiceRecorder";
 
 export interface TranscriptionResponse {
   transcript: string;
@@ -12,12 +13,28 @@ export interface TranscriptionResponse {
   contextSummary?: string;
 }
 
+async function tryWavEncode(blob: Blob): Promise<{ base64: string; mimeType: string } | null> {
+  try {
+    return await convertAudioBlobToWavBase64(blob);
+  } catch {
+    return null;
+  }
+}
+
 export const transcribeAudio = async (
   audioBlob: Blob,
   mode: 'therapist' | 'practice' | 'myvoice'
 ): Promise<TranscriptionResponse> => {
   const formData = new FormData();
-  formData.append('audio', audioBlob, 'recording.webm');
+  const wav = await tryWavEncode(audioBlob);
+  if (wav) {
+    formData.append('audioBase64', wav.base64);
+    formData.append('mimeType', wav.mimeType);
+    // Keep a File entry too for backends that expect it (harmless)
+    formData.append('audio', audioBlob, 'recording.webm');
+  } else {
+    formData.append('audio', audioBlob, 'recording.webm');
+  }
   formData.append('mode', mode);
 
   const token = await getFirebaseToken();
@@ -29,8 +46,14 @@ export const transcribeAudio = async (
 
   if (!response.ok) {
     const errorData = await response.json() as any;
-    throw new Error(errorData.error || 'Transcription failed');
+    throw new Error(errorData.error || errorData.message || 'Transcription failed');
   }
 
-  return response.json();
+  const text = await response.text();
+  try {
+    return JSON.parse(text) as TranscriptionResponse;
+  } catch {
+    // Whisper-style plain transcript fallback
+    return { transcript: text } as TranscriptionResponse;
+  }
 };

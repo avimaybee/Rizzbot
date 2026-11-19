@@ -1,6 +1,6 @@
 import type React from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, CornerDownRight } from "lucide-react";
 import type { SuggestionOption } from "../../../types";
 
 interface ReplyHeroCardProps {
@@ -16,6 +16,14 @@ interface ReplyHeroCardProps {
   // Spike (plan 009): raw streamed text rendered in the reply bubble area
   // while the streaming prototype is active.
   streamedText?: string;
+  // V2 optional props (Plan 012). When provided, ReplyHeroCard can operate
+  // in standalone mode without the legacy QuickModeScreen copy handlers.
+  style?: string;
+  options?: SuggestionOption[];
+  selectedIndex?: number;
+  onCopyAll?: (text: string) => void;
+  onCopySingleBubble?: (bubbleText: string, bubbleIndex: number) => void;
+  copiedAll?: boolean;
 }
 
 export function ReplyHeroCard({
@@ -29,7 +37,57 @@ export function ReplyHeroCard({
   onSelectVariation,
   onDragEnd,
   streamedText,
+  options,
+  selectedIndex,
+  onCopyAll,
+  onCopySingleBubble,
+  copiedAll,
 }: ReplyHeroCardProps) {
+  const effectiveOption = selectedOption ?? (options && typeof selectedIndex === 'number' ? options[selectedIndex] : null);
+  const effectiveCount = options ? options.length : optionCount;
+
+  const bubbles = (() => {
+    if (!effectiveOption) return [];
+    if (Array.isArray((effectiveOption as any).bubbles) && (effectiveOption as any).bubbles.length > 0) {
+      return (effectiveOption as any).bubbles as Array<{ replyTo: string | null; text: string }>;
+    }
+    if (Array.isArray(effectiveOption.replies) && effectiveOption.replies.length > 0) {
+      return effectiveOption.replies.map((r) => ({ replyTo: r.originalMessage ?? null, text: r.reply }));
+    }
+    if (typeof (effectiveOption as any).text === 'string' && (effectiveOption as any).text.trim()) {
+      return [{ replyTo: null, text: (effectiveOption as any).text.trim() }];
+    }
+    return [];
+  })();
+
+  const fullText = (() => {
+    if (!effectiveOption) return '';
+    if (typeof (effectiveOption as any).text === 'string' && (effectiveOption as any).text.trim()) {
+      return (effectiveOption as any).text as string;
+    }
+    return bubbles.map((b) => b.text).join('\n');
+  })();
+
+  const handleBubbleCopy = (text: string, idx: number) => {
+    if (onCopySingleBubble) {
+      onCopySingleBubble(text, idx);
+      return;
+    }
+    onCopy(text, `bubble-${activeTone}-${cursor}-${idx}`);
+  };
+
+  const handleCopyAll = () => {
+    if (onCopyAll) {
+      onCopyAll(fullText);
+      return;
+    }
+    onCopy(fullText, `copyall-${activeTone}-${cursor}`);
+  };
+
+  const isAllCopied = typeof copiedAll === 'boolean'
+    ? copiedAll
+    : copiedKey === `copyall-${activeTone}-${cursor}`;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -44,7 +102,7 @@ export function ReplyHeroCard({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
-          drag={!prefersReducedMotion && optionCount > 1 ? "x" : false}
+          drag={!prefersReducedMotion && effectiveCount > 1 ? "x" : false}
           dragConstraints={{ left: 0, right: 0 }}
           dragElastic={0.12}
           whileDrag={{ scale: 0.99, opacity: 0.92 }}
@@ -69,15 +127,15 @@ export function ReplyHeroCard({
             >
               {streamedText}
             </div>
-          ) : selectedOption ? (
+          ) : effectiveOption ? (
             <>
               <div className="flex items-center justify-between gap-3 mb-2.5">
                 <p style={{ flex: 1, fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.5)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {selectedOption.replies.length > 1 ? `Replying to ${selectedOption.replies.length} messages` : "Your reply"}
+                  {bubbles.length > 1 ? `${bubbles.length} bubbles — send in order` : "Your reply"}
                 </p>
-                {optionCount > 1 && (
+                {effectiveCount > 1 && (
                   <div className="flex items-center shrink-0" style={{ gap: 2, padding: 2, backgroundColor: "rgba(26,18,8,0.06)", borderRadius: 10 }}>
-                    {Array.from({ length: optionCount }, (_, i) => (
+                    {Array.from({ length: effectiveCount }, (_, i) => (
                       <button
                         key={i}
                         onClick={() => onSelectVariation(i)}
@@ -86,8 +144,8 @@ export function ReplyHeroCard({
                           width: 36,
                           height: 36,
                           borderRadius: 8,
-                          backgroundColor: cursor % optionCount === i ? "#1A1208" : "transparent",
-                          color: cursor % optionCount === i ? "#FFFFFF" : "rgba(26,18,8,0.55)",
+                          backgroundColor: cursor % effectiveCount === i ? "#1A1208" : "transparent",
+                          color: cursor % effectiveCount === i ? "#FFFFFF" : "rgba(26,18,8,0.55)",
                           border: "none",
                           fontFamily: "'JetBrains Mono', monospace",
                           fontSize: 12,
@@ -103,27 +161,30 @@ export function ReplyHeroCard({
               </div>
 
               <div className="space-y-2.5">
-                {selectedOption.replies.map((replyItem, idx) => {
-                  const replyKey = `reply-${activeTone}-${cursor}-${idx}`;
+                {bubbles.map((bubble, idx) => {
+                  const replyKey = `bubble-${activeTone}-${cursor}-${idx}`;
                   const isCopied = copiedKey === replyKey;
                   return (
                     <div key={idx}>
-                      <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontStyle: "italic", color: "rgba(26,18,8,0.45)", lineHeight: 1.4, marginBottom: 5 }}>
-                        "{replyItem.originalMessage}"
-                      </p>
+                      {bubble.replyTo && (
+                        <div className="flex items-center gap-1.5 text-xs mb-1.5 truncate" style={{ color: "rgba(26,18,8,0.45)" }}>
+                          <CornerDownRight size={12} strokeWidth={2} color="rgba(200,82,42,0.55)" />
+                          <span className="truncate italic" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12 }}>&quot;{bubble.replyTo}&quot;</span>
+                        </div>
+                      )}
                       <div className="flex justify-end">
                         <button
-                          onClick={() => onCopy(replyItem.reply, replyKey)}
+                          onClick={() => (bubbles.length > 1 ? handleBubbleCopy(bubble.text, idx) : handleCopyAll())}
                           className="cursor-pointer fade-press"
                           style={{ maxWidth: "88%", border: "none", background: "none", padding: 0, textAlign: "left" }}
-                          aria-label="Copy this reply"
+                          aria-label={bubbles.length > 1 ? `Copy bubble ${idx + 1}` : "Copy this reply"}
                         >
                           <div
                             className="flex items-start gap-2"
                             style={{ backgroundColor: isCopied ? "#EAF0EA" : "#F5E8E0", borderRadius: 12, borderTopRightRadius: 4, padding: "10px 14px", transition: "background-color 0.15s ease" }}
                           >
                             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15.5, color: "#1A1208", lineHeight: 1.45, flex: 1 }}>
-                              {replyItem.reply}
+                              {bubble.text}
                             </p>
                             <span style={{ marginTop: 2, flexShrink: 0, color: isCopied ? "#58745A" : "rgba(200,82,42,0.55)" }}>
                               {isCopied ? <Check size={16} strokeWidth={2.5} /> : <Copy size={14} strokeWidth={2} />}
@@ -135,19 +196,19 @@ export function ReplyHeroCard({
                   );
                 })}
 
-                {selectedOption.conversationHook && (
+                {effectiveOption.conversationHook && (
                   <div className="mt-2">
                     <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 10, fontWeight: 600, letterSpacing: "0.12em", color: "#C8522A", textTransform: "uppercase", marginBottom: 5 }}>
                       keep it going
                     </p>
                     <button
-                      onClick={() => onCopy(selectedOption.conversationHook!, `hook-${activeTone}-${cursor}`)}
+                      onClick={() => onCopy(effectiveOption.conversationHook!, `hook-${activeTone}-${cursor}`)}
                       className="w-full text-left cursor-pointer fade-press"
                       style={{ backgroundColor: "#FFFFFF", border: "1px solid #E8E0D4", borderRadius: 12, padding: "10px 14px" }}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: "#1A1208", lineHeight: 1.5, flex: 1 }}>
-                          {selectedOption.conversationHook}
+                          {effectiveOption.conversationHook}
                         </p>
                         <span style={{ flexShrink: 0, color: copiedKey === `hook-${activeTone}-${cursor}` ? "#58745A" : "rgba(200,82,42,0.55)" }}>
                           {copiedKey === `hook-${activeTone}-${cursor}` ? <Check size={15} strokeWidth={2.5} /> : <Copy size={13} strokeWidth={2} />}
@@ -156,7 +217,23 @@ export function ReplyHeroCard({
                     </button>
                   </div>
                 )}
+
+                {bubbles.length > 1 && (
+                  <button
+                    onClick={handleCopyAll}
+                    className="w-full cursor-pointer"
+                    style={{ marginTop: 8, height: 40, borderRadius: 10, border: "1px solid #E8E0D4", backgroundColor: "#FFFFFF", fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: "#1A1208" }}
+                  >
+                    {isAllCopied ? "Copied all bubbles" : "Copy all bubbles"}
+                  </button>
+                )}
               </div>
+
+              {(effectiveOption as any).subtext && (effectiveOption as any).subtext !== 'Fallback suggestion.' && (
+                <p className="mt-3 text-xs italic" style={{ fontFamily: "'DM Sans', sans-serif", color: "rgba(26,18,8,0.5)" }}>
+                  {(effectiveOption as any).subtext}
+                </p>
+              )}
             </>
           ) : (
             <div className="py-6 flex flex-col items-center justify-center text-center" style={{ backgroundColor: "rgba(26,18,8,0.04)", borderRadius: 12 }}>

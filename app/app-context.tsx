@@ -33,6 +33,7 @@ interface AppContextValue {
   userId: number | null;
   userProfile: UserStyleProfile | null;
   saveUserProfile: (profile: UserStyleProfile) => Promise<void>;
+  applyLearnedProfile: (profile: UserStyleProfile) => void;
   signOut: () => Promise<void>;
   wellbeingCheckIn: WellbeingState | null;
   runWellbeingCheck: () => void;
@@ -79,6 +80,10 @@ const mapDbProfileToUserProfile = (profile: Record<string, unknown>): UserStyleP
   flirtLevel: (profile.flirt_level as UserStyleProfile["flirtLevel"] | undefined) || undefined,
   humorStyle: (profile.humor_style as UserStyleProfile["humorStyle"] | undefined) || undefined,
   energy: (profile.energy as UserStyleProfile["energy"] | undefined) || undefined,
+  learnedSamples: parseJsonArray(profile.learned_samples),
+  cadenceNotes: (profile.cadence_notes as string | undefined) || undefined,
+  sampleCount: typeof profile.sample_count === 'number' ? profile.sample_count : parseJsonArray(profile.learned_samples).length,
+  updatedAt: profile.updated_at ? new Date(profile.updated_at as string).getTime() : undefined,
 });
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -192,6 +197,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         flirt_level: profile.flirtLevel,
         humor_style: profile.humorStyle,
         energy: profile.energy,
+        learned_samples: profile.learnedSamples ?? [],
+        cadence_notes: profile.cadenceNotes ?? '',
+        sample_count: profile.sampleCount ?? 0,
       });
       try {
         localStorage.setItem(`userStyleProfile_${authUser?.uid || "anon"}`, JSON.stringify(profile));
@@ -201,6 +209,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setUserProfile(profile);
     },
     [userId, authUser?.uid]
+  );
+
+  const applyLearnedProfile = useCallback(
+    (profile: UserStyleProfile) => {
+      setUserProfile((prev) => {
+        const merged: UserStyleProfile = {
+          ...(prev || profile),
+          ...profile,
+        };
+        try {
+          localStorage.setItem(`userStyleProfile_${authUser?.uid || "anon"}`, JSON.stringify(merged));
+        } catch {
+          // Ignore quota errors
+        }
+        return merged;
+      });
+    },
+    [authUser?.uid]
   );
 
   const signOut = useCallback(async () => {
@@ -246,6 +272,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       userId,
       userProfile,
       saveUserProfile,
+      applyLearnedProfile,
       signOut,
       wellbeingCheckIn,
       runWellbeingCheck,
@@ -262,6 +289,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       userId,
       userProfile,
       saveUserProfile,
+      applyLearnedProfile,
       signOut,
       wellbeingCheckIn,
       runWellbeingCheck,

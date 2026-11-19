@@ -148,6 +148,11 @@ export async function onRequest(context: any) {
         });
       }
 
+      const existing = await db
+        .prepare('SELECT result FROM sessions WHERE id = ? AND user_id = ?')
+        .bind(parseInt(sessionId), dbUserId)
+        .first();
+
       // Ensure that the session being deleted actually belongs to the verified user
       const run = await db.prepare('DELETE FROM sessions WHERE id = ? AND user_id = ?').bind(parseInt(sessionId), dbUserId).run();
 
@@ -156,6 +161,29 @@ export async function onRequest(context: any) {
           status: 403,
           headers: corsHeaders,
         });
+      }
+
+      // Best-effort R2 media cleanup for screenshots stored in session.result
+      if (env.RIZZBOT_MEDIA && existing?.result && typeof existing.result === 'string') {
+        try {
+          const parsed = JSON.parse(existing.result);
+          const candidateLists = [parsed?.request?.screenshots, parsed?.screenshots];
+          const r2Keys: string[] = [];
+          for (const list of candidateLists) {
+            if (Array.isArray(list)) {
+              for (const item of list) {
+                if (typeof item === 'string' && item.startsWith(`r2:quick/${verifiedUid}/`)) {
+                  r2Keys.push(item.slice(3));
+                }
+              }
+            }
+          }
+          if (r2Keys.length > 0) {
+            await env.RIZZBOT_MEDIA.delete(r2Keys);
+          }
+        } catch (cleanupErr) {
+          console.warn('[sessions.ts] Best-effort R2 cleanup warning:', cleanupErr);
+        }
       }
 
       return new Response(JSON.stringify({ success: run.success }), {
@@ -177,3 +205,4 @@ export async function onRequest(context: any) {
     });
   }
 }
+

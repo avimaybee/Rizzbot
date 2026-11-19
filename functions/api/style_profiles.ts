@@ -92,6 +92,9 @@ export async function onRequest(context: any) {
         flirt_level,
         humor_style,
         energy,
+        learned_samples,
+        cadence_notes,
+        sample_count,
       } = body;
 
       // We ignore client-provided user IDs and use the verified user context
@@ -117,8 +120,8 @@ export async function onRequest(context: any) {
       const result = await db
         .prepare(
           `INSERT INTO style_profiles 
-           (user_id, emoji_usage, capitalization, punctuation, average_length, slang_level, signature_patterns, preferred_tone, raw_samples, ai_summary, favorite_emojis, response_speed, flirt_level, humor_style, energy)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+           (user_id, emoji_usage, capitalization, punctuation, average_length, slang_level, signature_patterns, preferred_tone, raw_samples, ai_summary, favorite_emojis, response_speed, flirt_level, humor_style, energy, learned_samples, cadence_notes, sample_count, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
         )
         .bind(
           dbUserId,
@@ -135,7 +138,10 @@ export async function onRequest(context: any) {
           response_speed || null,
           flirt_level || null,
           humor_style || null,
-          energy || null
+          energy || null,
+          typeof learned_samples === 'string' ? learned_samples : JSON.stringify(learned_samples || []),
+          cadence_notes || '',
+          typeof sample_count === 'number' ? sample_count : 0
         )
         .run();
 

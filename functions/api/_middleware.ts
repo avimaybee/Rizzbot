@@ -87,6 +87,32 @@ async function verifyFirebaseToken(token: string, projectId: string) {
  * Pages Functions Middleware
  * Intercepts requests to /api/* to verify Firebase authentication.
  */
+
+// Best-effort in-memory per-UID rate limiting for AI proxy endpoints.
+// Note: resets on isolate restart; D1-backed limiting can replace this later.
+const AI_RATE_LIMIT_WINDOW_MS = 60_000;
+const AI_RATE_LIMIT_MAX = 15;
+const aiRateBuckets = new Map<string, number[]>();
+
+function isAiEndpoint(pathname: string): boolean {
+  return (
+    pathname.startsWith("/api/opencode") ||
+    pathname.startsWith("/api/voice")
+  );
+}
+
+function isAiRateLimited(uid: string, now: number): boolean {
+  const bucket = aiRateBuckets.get(uid) ?? [];
+  const fresh = bucket.filter((ts) => now - ts < AI_RATE_LIMIT_WINDOW_MS);
+  if (fresh.length >= AI_RATE_LIMIT_MAX) {
+    aiRateBuckets.set(uid, fresh);
+    return true;
+  }
+  fresh.push(now);
+  aiRateBuckets.set(uid, fresh);
+  return false;
+}
+
 export async function onRequest(context: any) {
     const { request, env, next } = context;
     const url = new URL(request.url);
@@ -158,6 +184,21 @@ export async function onRequest(context: any) {
         picture: decodedToken.picture
     };
 
+    // Rate-limit AI proxy endpoints strictly; data CRUD endpoints are exempted
+    if (isAiEndpoint(url.pathname)) {
+      if (isAiRateLimited(String(decodedToken.sub || "anon"), Date.now())) {
+        return new Response(JSON.stringify({ error: "Rate limited: too many AI requests. Try again in a minute." }), {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+            "Retry-After": "60",
+          }
+        });
+      }
+    }
+
     // Process the actual API route handler
     return next();
 }
+

@@ -1,10 +1,12 @@
 import { expect, test, describe } from "bun:test";
 import {
   normalizeQuickAdvice,
+  normalizeQuickAdviceResponse,
   buildQuickFallback,
   isQuickAdviceDegraded,
   buildCopyPayload,
   FALLBACK_PRO_TIP,
+  QUICK_STYLES,
 } from "./quickAdvice";
 import { SuggestionOption, QuickAdviceResponse } from "../types";
 import "../tests/setup";
@@ -151,5 +153,75 @@ describe("buildCopyPayload", () => {
       conversationHook: "",
     };
     expect(buildCopyPayload(option)).toBe("r1");
+  });
+});
+
+describe("V2 multi-bubble schema normalization", () => {
+  test("multi-bubble options preserve bubbles and synthesize text", () => {
+    const raw = {
+      extractedUnrepliedMessages: ["hey", "  ", "what's up"],
+      summary: "Sharp friend read.",
+      shouldWait: false,
+      suggestions: {
+        real: [{ bubbles: [{ replyTo: "hey", text: "yo" }, { replyTo: null, text: "what's good" }] }],
+        smooth: [{ bubbles: [{ replyTo: null, text: "smooth one" }] }],
+        playful: [{ bubbles: [{ replyTo: null, text: "playful one" }] }],
+        bold: [{ bubbles: [{ replyTo: null, text: "bold one" }] }],
+        yourStyle: [{ bubbles: [{ replyTo: null, text: "your style one" }] }],
+      },
+    };
+    const result = normalizeQuickAdviceResponse(raw as any);
+    expect(result.extractedUnrepliedMessages).toEqual(["hey", "what's up"]);
+    expect(result.summary).toBe("Sharp friend read.");
+    expect(result.suggestions.real?.[0].bubbles).toHaveLength(2);
+    expect(result.suggestions.real?.[0].text).toBe("yo\nwhat's good");
+    // V1 bridge: playful -> witty, real -> authentic
+    expect(result.suggestions.witty[0].text).toBe("playful one");
+    expect(result.suggestions.authentic[0].text).toBe("yo\nwhat's good");
+  });
+
+  test("legacy V1 text synthesizes bubbles", () => {
+    const raw = {
+      suggestions: {
+        smooth: [{ text: "hello", subtext: "why" }],
+      },
+    };
+    const result = normalizeQuickAdviceResponse(raw as any);
+    expect(result.suggestions.smooth[0].bubbles).toEqual([{ replyTo: null, text: "hello" }]);
+    expect(result.suggestions.smooth[0].text).toBe("hello");
+  });
+
+  test("summary falls back to tacticalSummary and mirrors", () => {
+    const raw = {
+      tacticalSummary: "V1 summary here",
+      suggestions: { smooth: [{ bubbles: [{ replyTo: null, text: "hi" }] }] },
+    };
+    const result = normalizeQuickAdviceResponse(raw as any);
+    expect(result.summary).toBe("V1 summary here");
+    expect(result.tacticalSummary).toBe("V1 summary here");
+  });
+
+  test("QUICK_STYLES order matches V2", () => {
+    expect([...QUICK_STYLES]).toEqual(['real', 'smooth', 'playful', 'bold', 'yourStyle']);
+  });
+
+  test("V2 response with summary is not marked degraded and null replyTo maps to empty originalMessage", () => {
+    const raw = {
+      extractedUnrepliedMessages: ["u awake?"],
+      summary: "She's testing if you're free tonight — keep it short and playful.",
+      shouldWait: false,
+      suggestions: {
+        real: [{ bubbles: [{ replyTo: null, text: "barely, what's up" }] }],
+        smooth: [{ bubbles: [{ replyTo: "u awake?", text: "for you maybe" }] }],
+        playful: [{ bubbles: [{ replyTo: null, text: "depends who's asking" }] }],
+        bold: [{ bubbles: [{ replyTo: null, text: "yeah come over" }] }],
+        yourStyle: [{ bubbles: [{ replyTo: null, text: "yo wsp" }] }],
+      },
+    };
+    const result = normalizeQuickAdviceResponse(raw as any);
+    expect(isQuickAdviceDegraded(result)).toBe(false);
+    expect(result.proTip).toBe("She's testing if you're free tonight — keep it short and playful.");
+    expect(result.suggestions.real?.[0].replies[0].originalMessage).toBe("");
+    expect(result.suggestions.smooth[0].replies[0].originalMessage).toBe("u awake?");
   });
 });

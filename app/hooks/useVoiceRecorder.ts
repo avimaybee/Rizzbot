@@ -137,7 +137,6 @@ export const useVoiceRecorder = (): UseVoiceRecorderReturn => {
     setRecordingTime(0);
     setError(null);
   }, []);
-
   // Release the microphone, timers, and audio context if the hook unmounts mid-recording
   useEffect(() => {
     return () => {
@@ -173,3 +172,35 @@ export const useVoiceRecorder = (): UseVoiceRecorderReturn => {
     clearRecording
   };
 };
+
+/** Encode any recorded blob to 16kHz mono 16-bit PCM WAV base64 (OpenCode input_audio compatible). */
+export async function convertAudioBlobToWavBase64(blob: Blob): Promise<{ base64: string; mimeType: string }> {
+  const arrayBuffer = await blob.arrayBuffer();
+  const AC = window.AudioContext || (window as any).webkitAudioContext;
+  const audioCtx = new AC({ sampleRate: 16000 });
+  try {
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
+    const channelData = audioBuffer.getChannelData(0);
+    const numSamples = channelData.length;
+    const wavBuffer = new ArrayBuffer(44 + numSamples * 2);
+    const view = new DataView(wavBuffer);
+    const writeString = (offset: number, str: string) => { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); };
+    writeString(0, 'RIFF'); view.setUint32(4, 36 + numSamples * 2, true); writeString(8, 'WAVE'); writeString(12, 'fmt ');
+    view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+    view.setUint32(24, audioBuffer.sampleRate, true); view.setUint32(28, audioBuffer.sampleRate * 2, true);
+    view.setUint16(32, 2, true); view.setUint16(34, 16, true); writeString(36, 'data'); view.setUint32(40, numSamples * 2, true);
+    let offset = 44;
+    for (let i = 0; i < numSamples; i++) { const s = Math.max(-1, Math.min(1, channelData[i])); view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true); offset += 2; }
+    const bytes = new Uint8Array(wavBuffer); let binary = ''; const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)) as any);
+    return { base64: btoa(binary), mimeType: 'audio/wav' };
+  } finally { await audioCtx.close().catch(() => {}); }
+}
+
+export function getSupportedMimeType(): string {
+  if (typeof MediaRecorder === 'undefined') return 'audio/webm';
+  if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) return 'audio/webm;codecs=opus';
+  if (MediaRecorder.isTypeSupported('audio/mp4')) return 'audio/mp4';
+  return 'audio/webm';
+}
+

@@ -29,7 +29,6 @@ export default defineConfig(({ mode }) => {
             react: ['react', 'react-dom'],
             router: ['react-router'],
             firebase: ['firebase/app', 'firebase/auth', 'firebase/analytics'],
-            genai: ['@google/genai'],
             markdown: ['react-markdown', 'remark-gfm'],
             motion: ['motion'],
             lucide: ['lucide-react'],

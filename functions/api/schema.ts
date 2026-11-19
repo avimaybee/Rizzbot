@@ -132,6 +132,10 @@ const ensureSchemaInternal = async (db: D1Database): Promise<void> => {
       flirt_level TEXT,
       humor_style TEXT,
       energy TEXT,
+      learned_samples TEXT DEFAULT '[]',
+      cadence_notes TEXT DEFAULT '',
+      sample_count INTEGER DEFAULT 0,
+      updated_at TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`
   );
@@ -142,6 +146,10 @@ const ensureSchemaInternal = async (db: D1Database): Promise<void> => {
   await runSchemaStatement(db, `ALTER TABLE style_profiles ADD COLUMN flirt_level TEXT`);
   await runSchemaStatement(db, `ALTER TABLE style_profiles ADD COLUMN humor_style TEXT`);
   await runSchemaStatement(db, `ALTER TABLE style_profiles ADD COLUMN energy TEXT`);
+  await runSchemaStatement(db, `ALTER TABLE style_profiles ADD COLUMN learned_samples TEXT DEFAULT '[]'`);
+  await runSchemaStatement(db, `ALTER TABLE style_profiles ADD COLUMN cadence_notes TEXT DEFAULT ''`);
+  await runSchemaStatement(db, `ALTER TABLE style_profiles ADD COLUMN sample_count INTEGER DEFAULT 0`);
+  await runSchemaStatement(db, `ALTER TABLE style_profiles ADD COLUMN updated_at TEXT`);
 
   await runSchemaStatement(
     db,

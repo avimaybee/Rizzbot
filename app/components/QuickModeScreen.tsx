@@ -22,15 +22,19 @@ import { Skeleton } from "./ui/Skeleton";
 import { useToast } from "./ui/Toast";
 import { haptics } from "../utils/haptics";
 import { useAppContext } from "../app-context";
-import { getQuickAdvice, streamQuickAdvice } from "../../services/geminiService";
+import { getQuickAdvice } from "../../services/quickAdviceService";
+import { streamQuickAdvice } from "../../services/aiService";
 import { createSession, flushPendingSessions, queuePendingSession, recordActivity, submitFeedback } from "../../services/dbService";
 import { logSession, saveFeedback } from "../../services/feedbackService";
 import { QuickAdviceRequest, QuickAdviceResponse } from "../../types";
 import { isQuickAdviceDegraded, buildCopyPayload } from "../../services/quickAdvice";
 import { useScrollFade } from "../utils/useScrollFade";
+import { MAX_QUICK_SCREENSHOTS, optimizeImageFile, clampScreenshotList } from "../utils/imageOptimize";
+import { uploadQuickImagesToR2 } from "../../services/mediaService";
+import { triggerPassiveVoiceLearning } from "../../services/voiceLearningService";
 import { DisclosureCard } from "./quick/DisclosureCard";
 import { ReplyHeroCard } from "./quick/ReplyHeroCard";
-import { ReadStrip } from "./quick/ReadStrip";
+import { FriendSummaryCard } from "./quick/FriendSummaryCard";
 import { ToneRail } from "./quick/ToneRail";
 
 // SPIKE (plan 009): streamed quick replies. Hardcoded OFF — the production
@@ -38,28 +42,28 @@ import { ToneRail } from "./quick/ToneRail";
 const QUICK_STREAM_ENABLED = false;
 
 const toneOptions = [
+  { key: "Real", help: null },
   { key: "Smooth", help: null },
+  { key: "Playful", help: null },
   { key: "Bold", help: null },
-  { key: "Witty", help: null },
-  { key: "Authentic", help: null },
   { key: "Your Style", help: "Uses your saved voice profile when available." },
 ] as const;
 
 type Tone = (typeof toneOptions)[number]["key"];
 
 const toneMap: Record<Tone, keyof QuickAdviceResponse["suggestions"]> = {
+  Real: "real",
   Smooth: "smooth",
+  Playful: "playful",
   Bold: "bold",
-  Witty: "witty",
-  Authentic: "authentic",
   "Your Style": "yourStyle",
 };
 
 const feedbackTypeMap: Record<Tone, string> = {
+  Real: "real",
   Smooth: "smooth",
+  Playful: "playful",
   Bold: "bold",
-  Witty: "witty",
-  Authentic: "authentic",
   "Your Style": "yourStyle",
 };
 
@@ -75,43 +79,34 @@ const contextOptions = [
 
 type ContextOption = (typeof contextOptions)[number]["value"];
 
-const toDataUrl = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result);
-      } else {
-        reject(new Error("Failed to read file"));
-      }
-    };
-    reader.onerror = () => reject(reader.error || new Error("Read failed"));
-    reader.readAsDataURL(file);
-  });
+const toOptimizedPreview = async (file: File): Promise<string> => {
+  const optimized = await optimizeImageFile(file);
+  return optimized.preview;
+};
 
 export function QuickModeScreen() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { authUser, userProfile, userId, runWellbeingCheck } = useAppContext();
+  const { authUser, userProfile, userId, applyLearnedProfile, runWellbeingCheck } = useAppContext();
 
   const [showResults, setShowResults] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [theirMessage, setTheirMessage] = useSessionState("quick_theirMessage", "", authUser?.uid);
   const [yourDraft, setYourDraft] = useSessionState("quick_yourDraft", "", authUser?.uid);
   const [context, setContext] = useSessionState<ContextOption>("quick_context", "new", authUser?.uid);
-  const [activeTone, setActiveTone] = useSessionState<Tone>("quick_tone", "Smooth", authUser?.uid);
+  const [activeTone, setActiveTone] = useSessionState<Tone>("quick_tone", "Real", authUser?.uid);
   const [showStyleTooltip, setShowStyleTooltip] = useState<string | null>(null);
   const [waitDismissed, setWaitDismissed] = useState(false);
   const prefersReducedMotion = useReducedMotion();
-  const [screenshots, setScreenshots] = useSessionState<string[]>("quick_screenshots", [], authUser?.uid);
+  const [screenshots, setScreenshots] = useState<string[]>([]);
   const [result, setResult] = useState<QuickAdviceResponse | null>(null);
   const [streamedText, setStreamedText] = useState("");
   const [feedbackGiven, setFeedbackGiven] = useState<"helpful" | "off" | null>(null);
   const [cursor, setCursor] = useState<Record<Tone, number>>({
+    Real: 0,
     Smooth: 0,
+    Playful: 0,
     Bold: 0,
-    Witty: 0,
-    Authentic: 0,
     "Your Style": 0,
   });
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -119,6 +114,8 @@ export function QuickModeScreen() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const mountedRef = useRef(true);
   const resultsTopRef = useRef<HTMLDivElement | null>(null);
+  const [loadingElapsed, setLoadingElapsed] = useState(0);
+  const [showDraftInput, setShowDraftInput] = useState(false);
 
   // Scroll to the top of results when a new analysis lands
   useEffect(() => {
@@ -136,7 +133,7 @@ export function QuickModeScreen() {
   }, []);
 
   useEffect(() => {
-    runWellbeingCheck();
+    runWellbeingCheck(); if (!(activeTone in toneMap)) setActiveTone("Real"); try { sessionStorage.removeItem("quick_screenshots"); if (authUser?.uid) sessionStorage.removeItem(`quick_screenshots_${authUser.uid}`); } catch {}
   }, [runWellbeingCheck]);
 
   const selectedOptions = useMemo(() => {
@@ -165,21 +162,50 @@ export function QuickModeScreen() {
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
-    const remainingSlots = 3 - screenshots.length;
+    const remainingSlots = MAX_QUICK_SCREENSHOTS - screenshots.length;
     if (remainingSlots <= 0) {
-      toast("Maximum 3 screenshots allowed", "error");
+      toast("Maximum 10 screenshots allowed", "error");
       return;
     }
 
     const picked = Array.from(files).slice(0, remainingSlots);
     try {
-      const encoded = await Promise.all(picked.map((f) => toDataUrl(f)));
-      setScreenshots((prev) => [...prev, ...encoded]);
+      const encoded = await Promise.all(picked.map((f) => toOptimizedPreview(f)));
+      setScreenshots((prev) => clampScreenshotList(prev, encoded, MAX_QUICK_SCREENSHOTS));
       toast(`${encoded.length} screenshot(s) attached`, "success");
     } catch {
       toast("Could not read one or more screenshots", "error");
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const imageFiles: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) imageFiles.push(file);
+      }
+    }
+    if (imageFiles.length === 0) return;
+    e.preventDefault();
+    const remainingSlots = MAX_QUICK_SCREENSHOTS - screenshots.length;
+    if (remainingSlots <= 0) {
+      toast("Maximum 10 screenshots allowed", "error");
+      return;
+    }
+    try {
+      const encoded = await Promise.all(
+        imageFiles.slice(0, remainingSlots).map((f) => toOptimizedPreview(f))
+      );
+      setScreenshots((prev) => clampScreenshotList(prev, encoded, MAX_QUICK_SCREENSHOTS));
+      toast(`${encoded.length} screenshot(s) pasted`, "success");
+    } catch {
+      toast("Could not read pasted image", "error");
     }
   };
 
@@ -194,16 +220,14 @@ export function QuickModeScreen() {
     setShowResults(false);
     setFeedbackGiven(null);
     setWaitDismissed(false);
-    setCursor({ Smooth: 0, Bold: 0, Witty: 0, Authentic: 0, "Your Style": 0 });
+    setCursor({ Real: 0, Smooth: 0, Playful: 0, Bold: 0, "Your Style": 0 });
     setStreamedText("");
+    setLoadingElapsed(0);
     haptics.medium();
 
-    let isStillLoading = true;
-    const toastTimeout = setTimeout(() => {
-      if (isStillLoading) {
-        toast("Give me a second, this one deserves a thoughtful response.", "info");
-      }
-    }, 12000);
+    const loadingTimer = setInterval(() => {
+      if (mountedRef.current) setLoadingElapsed((prev) => prev + 1);
+    }, 1000);
 
     try {
       const quickRequest: QuickAdviceRequest = {
@@ -219,22 +243,55 @@ export function QuickModeScreen() {
             if (mountedRef.current) setStreamedText((prev) => prev + text);
           })
         : await getQuickAdvice(quickRequest);
-      const derivedGhostRisk = Math.max(0, 100 - (response.vibeCheck?.interestLevel ?? 50));
+      const isV2 = Boolean(response.summary);
+      const derivedGhostRisk = isV2
+        ? undefined
+        : Math.max(0, 100 - (response.vibeCheck?.interestLevel ?? 50));
 
       if (!mountedRef.current) return;
       setResult(response);
       setShowResults(true);
-      runWellbeingCheck();
+      runWellbeingCheck(); if (!(activeTone in toneMap)) setActiveTone("Real"); try { sessionStorage.removeItem("quick_screenshots"); if (authUser?.uid) sessionStorage.removeItem(`quick_screenshots_${authUser.uid}`); } catch {}
       haptics.success();
+
+      if (screenshots.length > 0) {
+        const learnImages = screenshots.slice(0, 3).map((src) => {
+          const m = src.match(/^data:([^;]+);base64,/);
+          return {
+            mimeType: m ? m[1] : "image/webp" as string,
+            data: src.includes(",") ? src.split(",")[1] : src,
+          };
+        });
+        void triggerPassiveVoiceLearning(learnImages, (updatedProfile) => {
+          applyLearnedProfile(updatedProfile);
+        });
+      }
 
       if (authUser?.uid) {
         logSession(authUser.uid, "quick", undefined, derivedGhostRisk);
         void recordActivity(authUser.uid).catch(() => {});
+        // Upload screenshots to R2 for durable history; fall back to inline data URLs offline
+        let storedImageRefs: string[] | undefined = undefined;
+        try {
+          if (screenshots.length > 0) {
+            const uploadable = screenshots.map((src) => {
+              const m = src.match(/^data:([^;]+);base64,/);
+              return {
+                mimeType: m ? m[1] : "image/webp",
+                data: src.includes(",") ? src.split(",")[1] : src,
+              };
+            });
+            storedImageRefs = await uploadQuickImagesToR2(uploadable);
+          }
+        } catch {
+          storedImageRefs = undefined;
+        }
+        const historyScreenshots = storedImageRefs && storedImageRefs.length > 0 ? storedImageRefs : screenshots;
         void createSession(
           authUser.uid,
           {
             request: {
-              screenshots,
+              screenshots: historyScreenshots,
               theirMessage,
               yourDraft,
               context,
@@ -245,7 +302,7 @@ export function QuickModeScreen() {
           },
           {
             mode: "quick",
-            headline: response.proTip || "Quick analysis",
+            headline: response.summary || response.proTip || "Quick analysis",
             ghost_risk: derivedGhostRisk,
             message_count: response.extractedUnrepliedMessages?.length || 1,
           }
@@ -255,14 +312,14 @@ export function QuickModeScreen() {
           queuePendingSession(
             authUser.uid,
             {
-              request: { screenshots, theirMessage, yourDraft, context },
+              request: { screenshots: historyScreenshots, theirMessage, yourDraft, context },
               response,
               vibeCheck: response.vibeCheck,
               suggestions: response.suggestions,
             },
             {
               mode: "quick",
-              headline: response.proTip || "Quick analysis",
+              headline: response.summary || response.proTip || "Quick analysis",
               ghost_risk: derivedGhostRisk,
               message_count: response.extractedUnrepliedMessages?.length || 1,
             }
@@ -276,8 +333,7 @@ export function QuickModeScreen() {
       toast(message, "error");
       haptics.error();
     } finally {
-      isStillLoading = false;
-      clearTimeout(toastTimeout);
+      clearInterval(loadingTimer);
       setIsLoading(false);
     }
   };
@@ -288,7 +344,7 @@ export function QuickModeScreen() {
     setTheirMessage("");
     setYourDraft("");
     setScreenshots([]);
-    setCursor({ Smooth: 0, Bold: 0, Witty: 0, Authentic: 0, "Your Style": 0 });
+    setCursor({ Real: 0, Smooth: 0, Playful: 0, Bold: 0, "Your Style": 0 });
     setFeedbackGiven(null);
     setStreamedText("");
     haptics.light();
@@ -456,7 +512,7 @@ export function QuickModeScreen() {
         </div>
 
         {!showResults && !isLoading ? (
-          <div className="px-5 pb-[140px]">
+          <div className="px-5 pb-[140px]" onPaste={handlePaste}>
             <div className="mt-4">
               <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 700, fontStyle: "italic", color: "#1A1208", lineHeight: 1.2 }}>
                 Drop their message.
@@ -490,7 +546,7 @@ export function QuickModeScreen() {
                 {screenshots.length > 0 ? `${screenshots.length} screenshot(s) attached` : "Upload screenshot(s)"}
               </p>
               <p className="mt-1" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.45)" }}>
-                {screenshots.length > 0 ? "Tap to add more" : "1–3 images supported"}
+                {screenshots.length > 0 ? "Tap to add more" : "1–10 images supported • paste works too"}
               </p>
             </button>
 
@@ -545,7 +601,10 @@ export function QuickModeScreen() {
             </div>
 
             <div className="mt-4 relative">
-              <label className="block mb-1.5" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>Context</label>
+              <label className="block mb-1.5" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>{screenshots.length > 0 ? "Your goal / direction (optional)" : "Their message / context"}</label>
+              {screenshots.length > 0 && (
+                <p className="mb-2" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.45)" }}>Private coaching for your wingman — won&apos;t be echoed out loud</p>
+              )}
               <textarea
                 ref={theirMessageRef}
                 value={theirMessage}
@@ -554,7 +613,7 @@ export function QuickModeScreen() {
                   e.target.style.height = 'auto';
                   e.target.style.height = `${e.target.scrollHeight}px`;
                 }}
-                placeholder={screenshots.length > 0 ? "Any backstory? e.g., 'We haven't talked in 2 weeks'" : "Paste their message or add context here..."}
+                placeholder={screenshots.length > 0 ? "e.g., match her energy, tease her about taking 3 days, pivot toward drinks this week..." : "Paste what they sent, or describe the situation..."}
                 className="w-full resize-none outline-none overflow-hidden bg-[#FDFAF5] rounded-[14px] border border-[#E8E0D4] p-3 text-[15px] text-[#1A1208] transition-all duration-300 focus:border-[#C8522A] focus:ring-[3px] focus:ring-[#C8522A]/20 shadow-sm"
                 style={{
                   minHeight: 80,
@@ -564,8 +623,18 @@ export function QuickModeScreen() {
             </div>
 
             <div className="mt-3 relative">
+              {!showDraftInput && !yourDraft.trim() ? (
+                <button
+                  onClick={() => setShowDraftInput(true)}
+                  className="cursor-pointer"
+                  style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#C8522A", background: "none", border: "none", padding: 0 }}
+                >
+                  + Test a draft you&apos;re thinking of sending
+                </button>
+              ) : (
+                <>
               <label className="block mb-1.5" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, letterSpacing: "0.12em", color: "rgba(26,18,8,0.55)", textTransform: "uppercase" }}>
-                Your Potential Reply <span style={{ color: "rgba(26,18,8,0.35)", textTransform: "lowercase", letterSpacing: "normal" }}>(optional)</span>
+                Your tentative draft <span style={{ color: "rgba(26,18,8,0.35)", textTransform: "lowercase", letterSpacing: "normal" }}>(we&apos;ll critique it honestly in The Read)</span>
               </label>
               <textarea
                 ref={yourDraftRef}
@@ -582,6 +651,8 @@ export function QuickModeScreen() {
                   fontFamily: "'DM Sans', sans-serif",
                 }}
               />
+                </>
+              )}
             </div>
 
             <div className="mt-4">
@@ -622,7 +693,7 @@ export function QuickModeScreen() {
               </div>
             </div>
 
-            <div className="fixed bottom-20 left-0 right-0 px-5 z-30 pointer-events-none">
+            <div className="fixed bottom-[60px] md:bottom-0 left-0 right-0 px-5 z-30 pointer-events-none">
               <div className="max-w-[430px] mx-auto pointer-events-auto">
                 <button
                   onClick={() => void handleAnalyze()}
@@ -651,7 +722,13 @@ export function QuickModeScreen() {
         ) : isLoading ? (
           <div className="px-5 mt-6 pb-[160px]">
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.45)", letterSpacing: "0.12em", textTransform: "uppercase" }}>
-              Reading the room...
+              {loadingElapsed < 11
+                ? "Reading the screenshots & message flow..."
+                : loadingElapsed < 26
+                ? "Picking up the subtext and relationship dynamic..."
+                : loadingElapsed < 43
+                ? "Writing 15 replies across Real, Smooth, Playful, Bold & Your Style..."
+                : "Deep-thinking the sharpest angles — almost ready..."}
             </p>
             <div className="flex gap-2 mt-4 overflow-hidden">
               <Skeleton className="h-10 w-24" style={{ borderRadius: 100 }} />
@@ -747,7 +824,13 @@ export function QuickModeScreen() {
               }}
             />
 
-            <ReadStrip ghostRisk={ghostRisk} riskColor={riskColor} result={result} scrollFade={stripFade} />
+            <div className="mt-3">
+              <FriendSummaryCard
+                summary={result?.summary || result?.tacticalSummary || result?.proTip || "Keep it light, match their energy, and leave an easy lane to reply."}
+                shouldWait={Boolean(result?.shouldWait)}
+                extractedUnrepliedMessages={result?.extractedUnrepliedMessages ?? []}
+              />
+            </div>
 
             <DisclosureCard
               title={`Their message${unrepliedCount > 1 ? ` (${unrepliedCount})` : ""}`}
@@ -766,7 +849,7 @@ export function QuickModeScreen() {
                   </p>
                 ))}
               </div>
-              {result?.detectedMeta && (result.detectedMeta.platform || result.detectedMeta.deliveryStatus || result.detectedMeta.timestamp || result.detectedMeta.isMessageRequest || (result.detectedMeta.reactions?.length ?? 0) > 0 || result.detectedMeta.groupName) && (
+              {false && result?.detectedMeta && (result.detectedMeta.platform || result.detectedMeta.deliveryStatus || result.detectedMeta.timestamp || result.detectedMeta.isMessageRequest || (result.detectedMeta.reactions?.length ?? 0) > 0 || result.detectedMeta.groupName) && (
                 <div className="flex flex-wrap gap-2 mt-3">
                   {result.detectedMeta.platform && result.detectedMeta.platform !== "unknown" && (
                     <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "#F5E8E0", color: "#C8522A", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
@@ -802,7 +885,7 @@ export function QuickModeScreen() {
               )}
             </DisclosureCard>
 
-            {result?.draftAnalysis?.verdict && (
+            {!result?.summary && result?.draftAnalysis?.verdict && (
               <DisclosureCard
                 title="Your draft"
                 open={openSection === "draft"}
@@ -814,7 +897,7 @@ export function QuickModeScreen() {
               </DisclosureCard>
             )}
 
-            <div className="fixed bottom-20 left-0 right-0 z-30" style={{ backgroundColor: "rgba(245,239,230,0.92)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderTop: "1px solid #E8E0D4" }}>
+            <div className="fixed bottom-[60px] md:bottom-0 left-0 right-0 z-30" style={{ backgroundColor: "rgba(245,239,230,0.92)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderTop: "1px solid #E8E0D4" }}>
               <div className="max-w-[430px] mx-auto flex items-center gap-2 px-5 py-2.5">
                 <button
                   onClick={() => handleFeedback("helpful")}
@@ -823,6 +906,14 @@ export function QuickModeScreen() {
                   style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", color: feedbackGiven === "helpful" ? "#7A9E7E" : "rgba(26,18,8,0.45)" }}
                 >
                   <ThumbsUp size={19} strokeWidth={2} fill={feedbackGiven === "helpful" ? "#7A9E7E" : "none"} />
+                </button>
+                <button
+                  onClick={() => handleFeedback("off")}
+                  aria-label="Not helpful"
+                  className="cursor-pointer"
+                  style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", color: feedbackGiven === "off" ? "#C8522A" : "rgba(26,18,8,0.45)" }}
+                >
+                  <ThumbsDown size={19} strokeWidth={2} fill={feedbackGiven === "off" ? "#C8522A" : "none"} />
                 </button>
                 <button
                   onClick={() => void handleCopyAll()}
@@ -872,3 +963,6 @@ export function QuickModeScreen() {
     </motion.div>
   );
 }
+
+
+
