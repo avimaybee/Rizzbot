@@ -54,5 +54,5 @@ export const R2Image: React.FC<R2ImageProps> = ({ srcOrKey, alt = 'Screenshot', 
     return <div className={`animate-pulse bg-[#1E1C1D] ${className || ''}`} />;
   }
 
-  return <img src={resolvedSrc} alt={alt} className={className} {...rest} />;
+  return <img src={resolvedSrc} alt={alt} className={className} loading="lazy" decoding="async" {...rest} />;
 };

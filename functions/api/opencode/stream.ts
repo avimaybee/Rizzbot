@@ -1,3 +1,6 @@
+import { corsHeadersFor } from "../../lib/cors";
+import { telemetry } from "../../lib/telemetry";
+
 function toOpenAIMessages(contents: any, systemInstruction: string): any[] {
   const messages: any[] = [];
   if (systemInstruction) messages.push({ role: "system", content: systemInstruction });
@@ -60,9 +63,7 @@ function toOpenAITools(tools: any[]): any[] {
 export async function onRequest(context: any) {
   const { env, request, data } = context;
   const cors = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    ...corsHeadersFor(request),
     "Content-Type": "application/x-ndjson; charset=utf-8",
     "Cache-Control": "no-cache",
     "Connection": "keep-alive",
@@ -96,7 +97,9 @@ export async function onRequest(context: any) {
     ];
     let started = false;
     let lastError = "";
+    const db = (env as any).RIZZBOT_DATA;
     for (const spec of chain) {
+      const t0 = Date.now();
       try {
         await send({ type: "metadata", model: spec.id });
         const headers = {
@@ -181,11 +184,13 @@ export async function onRequest(context: any) {
           } catch { /* ignore */ }
         }
         await flushToolCalls();
+        telemetry(context, db, { endpoint: "opencode/stream", model: spec.id, latencyMs: Date.now() - t0, ok: true, uid });
         await writer.close().catch(() => {});
         return;
       } catch (e: any) {
         lastError = e?.message || String(e);
         console.warn(`[opencode/stream] ${spec.id} failed:`, lastError);
+        telemetry(context, db, { endpoint: "opencode/stream", model: spec.id, latencyMs: Date.now() - t0, ok: false, error: lastError.slice(0, 300), uid });
         if (started) {
           await send({ type: "error", message: `Stream interrupted (${spec.id}): ${lastError}` });
           await writer.close().catch(() => {});
@@ -202,3 +207,4 @@ export async function onRequest(context: any) {
 }
 
 export const onRequestPost = onRequest;
+

@@ -218,6 +218,7 @@ export interface QuickAdviceResponse {
   summary?: string; // 2-3 sentence blunt friend read
   shouldWait?: boolean; // true when replying now hurts them
   modelUsed?: string; // Model ID that fulfilled the request
+  siVersion?: string; // System instruction version that produced the response
   tacticalSummary?: string; // legacy alias mirror for summary
   // Optional V1 legacy diagnostic fields — present on old rows, synthesized with safe defaults
   emotionalRead?: string;

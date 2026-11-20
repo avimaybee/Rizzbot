@@ -1,10 +1,11 @@
+import { corsHeadersFor } from "../../lib/cors";
+import { telemetry } from "../../lib/telemetry";
+
 export async function onRequest(context: { env: any; request: Request }) {
   const { env, request } = context;
 
   const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    ...corsHeadersFor(request),
     'Content-Type': 'application/json; charset=utf-8',
   };
 
@@ -72,6 +73,7 @@ export async function onRequest(context: { env: any; request: Request }) {
     const audioFormat = mimeType.includes("wav") ? "wav" : mimeType.includes("mp3") || mimeType.includes("mpeg") ? "mp3" : "wav";
 
     try {
+      const t0 = Date.now();
       const res = await fetch("https://opencode.ai/inference/go/openai/v1/chat/completions", {
         method: "POST",
         headers,
@@ -93,6 +95,7 @@ export async function onRequest(context: { env: any; request: Request }) {
       const data = (await res.json()) as any;
       const text = data.choices?.[0]?.message?.content ?? "";
       if (!text.trim()) throw new Error("Empty transcription");
+      telemetry(context, (env as any).RIZZBOT_DATA, { endpoint: "voice/transcribe", model: "mimo-v2.6-flash", latencyMs: Date.now() - t0, ok: true, uid: (context as any)?.data?.user?.uid });
       return new Response(text, {
         headers: { ...corsHeaders, "X-Model-Used": "mimo-v2.6-flash" },
       });

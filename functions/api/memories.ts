@@ -1,12 +1,13 @@
 
 import { ensureAppSchema } from './schema';
+import { corsHeadersFor } from '../lib/cors';
 
 export async function onRequest(context: any) {
     const { env, request, data } = context;
     const db = env.RIZZBOT_DATA || env.RIZZBOT || env.RIZZBOT_DB || env.RIZZBOT_D1 || env.RIZZBOT_DATASET || env["rizzbot data"];
 
     const corsHeaders = {
-        'Access-Control-Allow-Origin': '*',
+        ...corsHeadersFor(request),
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Content-Type': 'application/json',
@@ -155,3 +156,4 @@ export async function onRequest(context: any) {
         return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
     }
 }
+

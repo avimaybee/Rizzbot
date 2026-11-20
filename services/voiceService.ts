@@ -1,4 +1,4 @@
-import { getFirebaseToken } from "./firebaseService";
+import { getAuthHeaders } from "./authHeaders";
 import { convertAudioBlobToWavBase64 } from "../app/hooks/useVoiceRecorder";
 
 export interface TranscriptionResponse {
@@ -37,10 +37,10 @@ export const transcribeAudio = async (
   }
   formData.append('mode', mode);
 
-  const token = await getFirebaseToken();
+  const authHeaders = await getAuthHeaders();
   const response = await fetch('/api/voice/transcribe', {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    headers: Object.keys(authHeaders).length > 0 ? authHeaders : undefined,
     body: formData,
   });
 

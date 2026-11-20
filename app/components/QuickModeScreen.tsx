@@ -29,6 +29,7 @@ import { logSession, saveFeedback } from "../../services/feedbackService";
 import { QuickAdviceRequest, QuickAdviceResponse } from "../../types";
 import { isQuickAdviceDegraded, buildCopyPayload } from "../../services/quickAdvice";
 import { useScrollFade } from "../utils/useScrollFade";
+import { shuffledLoadingLines, loadingLineForElapsed } from "../utils/loadingLines";
 import { MAX_QUICK_SCREENSHOTS, optimizeImageFile, clampScreenshotList } from "../utils/imageOptimize";
 import { uploadQuickImagesToR2 } from "../../services/mediaService";
 import { triggerPassiveVoiceLearning } from "../../services/voiceLearningService";
@@ -66,32 +67,11 @@ const feedbackTypeMap: Record<Tone, string> = {
   "Your Style": "yourStyle",
 };
 
-// Rotating loading lines — organic wingman voice, no fake precision.
-// Shuffled per run so repeats never read the same way twice.
-const LOADING_LINES = [
-  "reading the room…",
-  "checking the vibe…",
-  "finding the angle…",
-  "cooking up something good…",
-  "reading between the lines…",
-  "feeling out the energy…",
-  "sharpening the reply…",
-  "thinking like your wittiest friend…",
-  "spotting the perfect opening…",
-  "tuning the tone…",
-  "plotting the smooth move…",
-  "decoding the subtext…",
-  "warming up the words…",
-  "landing the right energy…",
-];
+// Rotating loading lines live in app/utils/loadingLines.ts (organic wingman
+// voice, no fake precision). Shuffled per run so repeats never read the same.
 
 function shuffledLines(): string[] {
-  const arr = [...LOADING_LINES];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
+  return shuffledLoadingLines();
 }
 
 const contextOptions = [
@@ -143,7 +123,7 @@ export function QuickModeScreen() {
   const resultsTopRef = useRef<HTMLDivElement | null>(null);
   const [loadingElapsed, setLoadingElapsed] = useState(0);
   const [showDraftInput, setShowDraftInput] = useState(false);
-  const [loadingLines, setLoadingLines] = useState<string[]>(LOADING_LINES);
+  const [loadingLines, setLoadingLines] = useState<string[]>(() => shuffledLoadingLines());
   const [modelStatus, setModelStatus] = useState<{ model: string; effort: string; attempt: number } | null>(null);
 
   // Scroll to the top of results when a new analysis lands
@@ -319,6 +299,9 @@ export function QuickModeScreen() {
         void createSession(
           authUser.uid,
           {
+            // Envelope v2: full normalized response nested under `response`.
+            // History must read suggestions/summary via `parsed.response`, never top-level.
+            v: 2,
             request: {
               screenshots: historyScreenshots,
               theirMessage,
@@ -341,6 +324,7 @@ export function QuickModeScreen() {
           queuePendingSession(
             authUser.uid,
             {
+              v: 2,
               request: { screenshots: historyScreenshots, theirMessage, yourDraft, context },
               response,
               vibeCheck: response.vibeCheck,
@@ -587,6 +571,8 @@ export function QuickModeScreen() {
                     <img
                       src={src}
                       alt={`Screenshot ${i + 1}`}
+                      loading="lazy"
+                      decoding="async"
                       style={{
                         width: 120,
                         height: 160,
@@ -748,7 +734,7 @@ export function QuickModeScreen() {
         ) : isLoading ? (
           <div className="px-5 mt-6 pb-[160px]">
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.45)", letterSpacing: "0.12em", textTransform: "uppercase" }}>
-              {loadingLines[Math.floor(loadingElapsed / 6) % loadingLines.length]}
+              {loadingLineForElapsed(loadingLines, loadingElapsed)}
             </p>
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.35)", marginTop: 6 }}>
               {modelStatus && modelStatus.attempt > 1

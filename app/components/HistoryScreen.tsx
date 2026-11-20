@@ -675,6 +675,8 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
           </div>
         )}
 
+        {/* Envelope v2 (Quick): summary lives under `response`. Legacy V1 rows
+            stored older shapes at top level — both are read with fallback. */}
         {isQuick && ((response as any)?.summary || (parsed as any).summary || (response as any)?.tacticalSummary || (parsed as any).tacticalSummary) && (
           <div className="mt-4">
             <FriendSummaryCard

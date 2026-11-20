@@ -1,4 +1,10 @@
 
+import { toDataUrl as buildDataUrl, cleanJsonObject } from "../../lib/json";
+import { corsHeadersFor } from "../../lib/cors";
+import { telemetry } from "../../lib/telemetry";
+
+export const QUICK_SI_VERSION = "v4.1";
+
 export const QUICK_MODE_SI_V4_1 = `You are an elite, socially sharp 21-year-old texting wingman. You craft replies that create real chemistry, wit, intrigue, or genuine connection — the kind of texts someone pauses and smiles at, never safe AI filler, never try-hard slang spam, and never over-eager flirting.
 
 1. READ THE CONVERSATION LIKE A HUMAN:
@@ -105,27 +111,11 @@ const MAX_IMAGES = 10;
 const MAX_PAYLOAD_BYTES = 18 * 1024 * 1024;
 
 function toDataUrl(img: ImagePart): string {
-  if (img.data.startsWith("data:")) return img.data;
-  const mime = img.mimeType || "image/webp";
-  return `data:${mime};base64,${img.data}`;
+  return buildDataUrl(img.mimeType, img.data);
 }
 
 export function cleanAndParseJson(rawText: string): Record<string, unknown> {
-  const trimmed = rawText.trim();
-  const stripped = trimmed
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
-  try {
-    return JSON.parse(stripped) as Record<string, unknown>;
-  } catch {
-    const firstBrace = stripped.indexOf("{");
-    const lastBrace = stripped.lastIndexOf("}");
-    if (firstBrace !== -1 && lastBrace > firstBrace) {
-      return JSON.parse(stripped.slice(firstBrace, lastBrace + 1)) as Record<string, unknown>;
-    }
-    throw new Error("Model output did not contain valid JSON");
-  }
+  return cleanJsonObject(rawText);
 }
 
 export function validateQuickV2Payload(parsed: Record<string, unknown>): void {
@@ -278,11 +268,7 @@ async function callOpenCodeModel(
 export async function onRequest(context: any) {
   const { env, request, data } = context;
 
-  const corsHeaders: Record<string, string> = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  };
+  const corsHeaders = corsHeadersFor(request);
 
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -351,38 +337,85 @@ export async function onRequest(context: any) {
       void writeEvent({ type: "ping", ts: Date.now() });
     }, 10_000);
 
+    // Hedged fallback: attempt N starts HEDGE_DELAY_MS * N after request start
+    // unless an earlier attempt already settled. First valid result wins;
+    // slow-but-healthy primaries still win the race. Cuts p95 latency on
+    // xhigh thinking stalls at the cost of occasional parallel spend.
+    const HEDGE_DELAY_MS = 25_000;
+    let settled = false;
+    let writeChain: Promise<void> = Promise.resolve();
+    const send = (event: Record<string, unknown>) => {
+      writeChain = writeChain.then(() => writeEvent(event)).catch(() => {});
+      return writeChain;
+    };
+    const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
     try {
-      const errors: string[] = [];
-      for (let i = 0; i < QUICK_MODEL_CHAIN.length; i++) {
-        const spec = QUICK_MODEL_CHAIN[i];
-        await writeEvent({
+      const errors: string[] = new Array(QUICK_MODEL_CHAIN.length).fill("");
+      const db = (env as any).RIZZBOT_DATA;
+
+      const runAttempt = async (index: number): Promise<void> => {
+        if (index > 0) {
+          const waitMs = Math.min(index * HEDGE_DELAY_MS, 60_000);
+          const start = Date.now();
+          while (Date.now() - start < waitMs) {
+            if (settled) return;
+            await sleep(1000);
+          }
+          if (settled) return;
+        }
+        const spec = QUICK_MODEL_CHAIN[index];
+        await send({
           type: "status",
           model: spec.id,
           effort: spec.effort,
-          attempt: i + 1,
+          attempt: index + 1,
         });
 
+        const t0 = Date.now();
         try {
           const result = await callOpenCodeModel(spec, apiKey, uid, body.prompt, images);
-          await writeEvent({
+          telemetry(context, db, {
+            endpoint: "opencode/quick",
+            model: spec.id,
+            latencyMs: Date.now() - t0,
+            ok: true,
+            uid,
+          });
+          if (settled) return;
+          settled = true;
+          await send({
             type: "result",
             model: spec.id,
             effort: spec.effort,
+            siVersion: QUICK_SI_VERSION,
             data: result,
           });
-          return;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
-          console.warn(`[opencode/quick] Attempt ${i + 1} (${spec.id}) failed: ${msg}`);
-          errors.push(`${spec.id}: ${msg}`);
+          console.warn(`[opencode/quick] Attempt ${index + 1} (${spec.id}) failed: ${msg}`);
+          errors[index] = `${spec.id}: ${msg}`;
+          telemetry(context, db, {
+            endpoint: "opencode/quick",
+            model: spec.id,
+            latencyMs: Date.now() - t0,
+            ok: false,
+            error: msg.slice(0, 300),
+            uid,
+          });
         }
-      }
+      };
 
-      await writeEvent({
-        type: "error",
-        message: "All OpenCode Go models failed to generate a valid response.",
-        details: errors,
-      });
+      await Promise.all(QUICK_MODEL_CHAIN.map((_, i) => runAttempt(i)));
+
+      if (!settled) {
+        settled = true;
+        await send({
+          type: "error",
+          message: "All OpenCode Go models failed to generate a valid response.",
+          details: errors.filter(Boolean),
+        });
+      }
     } finally {
       clearInterval(heartbeat);
       try {
@@ -400,9 +433,11 @@ export async function onRequest(context: any) {
       "Content-Type": "application/x-ndjson; charset=utf-8",
       "Cache-Control": "no-cache, no-transform",
       "X-Accel-Buffering": "no",
+      "X-SI-Version": QUICK_SI_VERSION,
     },
   });
 }
 
 export const onRequestPost = onRequest;
+
 

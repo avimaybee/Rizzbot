@@ -1,3 +1,7 @@
+import { toDataUrl, cleanJsonObject } from "../../lib/json";
+import { corsHeadersFor } from "../../lib/cors";
+import { telemetry } from "../../lib/telemetry";
+
 interface GenerateRequest {
   task: "persona" | "simulate" | "analyze_simulation" | "extract_style" | "session_closure";
   systemInstruction: string;
@@ -6,27 +10,17 @@ interface GenerateRequest {
   effort?: "medium" | "low" | "high";
 }
 
-function toDataUrl(mimeType: string, data: string): string {
-  if (data.startsWith("data:")) return data;
-  return `data:${mimeType || "image/webp"};base64,${data}`;
-}
-
 function cleanJson(raw: string): string {
-  const t = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
-  const a = t.indexOf("{");
-  const b = t.lastIndexOf("}");
-  if (a !== -1 && b > a) return t.slice(a, b + 1);
-  return t;
+  try {
+    return JSON.stringify(cleanJsonObject(raw));
+  } catch {
+    return raw;
+  }
 }
 
 export async function onRequest(context: any) {
   const { env, request, data } = context;
-  const cors = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Content-Type": "application/json",
-  };
+  const cors = { ...corsHeadersFor(request), "Content-Type": "application/json" };
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   if (request.method !== "POST") return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: cors });
 
@@ -62,9 +56,11 @@ export async function onRequest(context: any) {
   });
 
   let lastError = "";
+  const db = (env as any).RIZZBOT_DATA;
   for (const spec of chain) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), spec.timeoutMs);
+    const t0 = Date.now();
     try {
       let rawText = "";
       let modelUsed = spec.id;
@@ -114,10 +110,12 @@ export async function onRequest(context: any) {
       if (!rawText.trim()) throw new Error(`${spec.id} empty response`);
       // Validate JSON but return raw text for client-side parsing (preserves existing safeParseJson)
       cleanJson(rawText);
+      telemetry(context, db, { endpoint: "opencode/generate", model: modelUsed, latencyMs: Date.now() - t0, ok: true, uid });
       return new Response(JSON.stringify({ text: rawText, model: modelUsed }), { status: 200, headers: { ...cors, "X-Model-Used": modelUsed } });
     } catch (e: any) {
       lastError = e?.message || String(e);
       console.warn(`[opencode/generate] ${spec.id} failed:`, lastError);
+      telemetry(context, db, { endpoint: "opencode/generate", model: spec.id, latencyMs: Date.now() - t0, ok: false, error: lastError.slice(0, 300), uid });
       continue;
     } finally {
       clearTimeout(timer);
@@ -128,3 +126,4 @@ export async function onRequest(context: any) {
 }
 
 export const onRequestPost = onRequest;
+

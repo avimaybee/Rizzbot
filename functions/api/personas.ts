@@ -1,4 +1,5 @@
 import { ensureAppSchema } from './schema';
+import { corsHeadersFor } from '../lib/cors';
 
 export async function onRequest(context: any) {
   const { env, request, data } = context;
@@ -6,7 +7,7 @@ export async function onRequest(context: any) {
 
   // Add CORS headers
   const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
+    ...corsHeadersFor(request),
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Content-Type': 'application/json',
@@ -231,3 +232,4 @@ export async function onRequest(context: any) {
     });
   }
 }
+

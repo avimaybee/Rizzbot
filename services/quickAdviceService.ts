@@ -2,7 +2,7 @@ import {
   QuickAdviceResponse,
   UserStyleProfile,
 } from '../types';
-import { getFirebaseToken } from './firebaseService';
+import { getAuthHeaders } from './authHeaders';
 import { normalizeQuickAdviceResponse } from './quickAdvice';
 import { getPromptBias } from './feedbackService';
 
@@ -106,12 +106,12 @@ async function postQuickNDJSON(
   images: QuickImageAttachment[],
   onStatus?: (status: QuickModelStatus) => void
 ): Promise<QuickAdviceResponse> {
-  const token = await getFirebaseToken();
+  const authHeaders = await getAuthHeaders();
   const response = await fetch('/api/opencode/quick', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...authHeaders,
     },
     body: JSON.stringify({ prompt, images }),
   });
@@ -168,6 +168,7 @@ async function postQuickNDJSON(
         return normalizeQuickAdviceResponse({
           ...rawData,
           modelUsed: typeof event.model === 'string' ? event.model : undefined,
+          siVersion: typeof event.siVersion === 'string' ? event.siVersion : undefined,
         });
       }
     }

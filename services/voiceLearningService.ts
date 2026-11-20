@@ -1,5 +1,5 @@
 import { UserStyleProfile } from '../types';
-import { getFirebaseToken } from './firebaseService';
+import { getAuthHeaders } from './authHeaders';
 import { QuickImageAttachment } from './quickAdviceService';
 
 /**
@@ -13,11 +13,11 @@ export async function triggerPassiveVoiceLearning(
   if (!Array.isArray(images) || images.length === 0) return;
 
   try {
-    const token = await getFirebaseToken();
+    const authHeaders = await getAuthHeaders();
     const res = await fetch('/api/voice/learn', {
       method: 'POST',
       headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...authHeaders,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

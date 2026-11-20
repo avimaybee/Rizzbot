@@ -1,4 +1,7 @@
 import { ensureAppSchema } from "../schema";
+import { toDataUrl, cleanJsonObject } from "../../lib/json";
+import { corsHeadersFor } from "../../lib/cors";
+import { telemetry } from "../../lib/telemetry";
 
 const MAX_LEARNED_SAMPLES = 40;
 
@@ -37,21 +40,8 @@ OUTPUT ONLY RAW VALID JSON matching:
   "cadenceNotes": "string"
 }`;
 
-function toDataUrl(mimeType: string, data: string): string {
-  if (data.startsWith("data:")) return data;
-  return `data:${mimeType || "image/webp"};base64,${data}`;
-}
-
 function cleanJson(text: string): any {
-  const stripped = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
-  try {
-    return JSON.parse(stripped);
-  } catch {
-    const a = stripped.indexOf("{");
-    const b = stripped.lastIndexOf("}");
-    if (a !== -1 && b > a) return JSON.parse(stripped.slice(a, b + 1));
-    throw new Error("Invalid JSON from voice model");
-  }
+  return cleanJsonObject(text);
 }
 
 async function callVoiceModel(
@@ -129,12 +119,7 @@ async function callVoiceModel(
 
 export async function onRequest(context: any) {
   const { env, request, data } = context;
-  const corsHeaders: Record<string, string> = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Content-Type": "application/json",
-  };
+  const corsHeaders = { ...corsHeadersFor(request), "Content-Type": "application/json" };
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
   if (request.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: corsHeaders });
@@ -179,7 +164,9 @@ export async function onRequest(context: any) {
       priorSamples = [];
     }
 
+    const t0 = Date.now();
     const parsed = await callVoiceModel(apiKey, uid, images, priorSamples);
+    telemetry(context, db, { endpoint: "voice/learn", model: "muse-spark-1.3-contributor+hy4", latencyMs: Date.now() - t0, ok: true, uid });
     const extracted: string[] = Array.isArray(parsed.userMessages)
       ? parsed.userMessages
           .filter((m: any) => typeof m === "string" && m.trim().length >= 4)

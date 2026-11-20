@@ -1,10 +1,11 @@
+import { base64ToBytes } from "../lib/json";
+import { corsHeadersFor } from "../lib/cors";
+
 export async function onRequest(context: any) {
   const { env, request, data } = context;
 
   const corsHeaders: Record<string, string> = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    ...corsHeadersFor(request),
     'Content-Type': 'application/json',
   };
 
@@ -40,15 +41,7 @@ export async function onRequest(context: any) {
     return cleanKey.startsWith(`quick/${userId}/`);
   };
 
-  const base64ToUint8Array = (base64: string): Uint8Array => {
-    const clean = base64.includes(',') ? base64.split(',')[1] : base64;
-    const binary = atob(clean);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
-  };
+  const base64ToUint8Array = (base64: string): Uint8Array => base64ToBytes(base64);
 
   if (request.method === 'POST') {
     let body: { images?: Array<{ data: string; mimeType?: string }> };
@@ -160,3 +153,4 @@ export async function onRequest(context: any) {
     headers: corsHeaders,
   });
 }
+

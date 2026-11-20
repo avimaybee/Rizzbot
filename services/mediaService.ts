@@ -1,4 +1,4 @@
-import { getFirebaseToken } from './firebaseService';
+import { getAuthHeaders } from './authHeaders';
 import { isR2MediaKey } from '../app/utils/imageOptimize';
 
 const blobUrlCache = new Map<string, string>();
@@ -20,11 +20,11 @@ export async function uploadQuickImagesToR2(
   if (images.length === 0) return [];
 
   try {
-    const token = await getFirebaseToken();
+    const authHeaders = await getAuthHeaders();
     const res = await fetch('/api/media', {
       method: 'POST',
       headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...authHeaders,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -73,10 +73,10 @@ export async function resolveMediaUrl(srcOrKey: string): Promise<string> {
 
   const promise = (async () => {
     try {
-      const token = await getFirebaseToken();
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`/api/media?key=${encodeURIComponent(srcOrKey)}`, {
         method: 'GET',
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        headers: authHeaders,
       });
       if (!res.ok) {
         throw new Error(`GET /api/media failed (${res.status})`);

@@ -1,5 +1,5 @@
 import { SimResult, Persona, SimAnalysisResult, UserStyleProfile, ClinicalNotes, TherapistResponse } from "../types";
-import { getFirebaseToken } from "./firebaseService";
+import { getAuthHeaders } from "./authHeaders";
 import { logger } from "./logger";
 
 export { getQuickAdvice } from "./quickAdviceService";
@@ -23,12 +23,12 @@ async function opencodeGenerate(args: {
   images?: Array<{ mimeType: string; data: string }>;
   effort?: "medium" | "low" | "high";
 }): Promise<{ text: string; model: string }> {
-  const token = await getFirebaseToken();
+  const authHeaders = await getAuthHeaders();
   const res = await fetch("/api/opencode/generate", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...authHeaders,
     },
     body: JSON.stringify({
       task: "persona",
@@ -252,10 +252,10 @@ export const streamTherapistAdvice = async (
 
   const contents = [...history, { role: "user" as const, parts }];
 
-  const token = await getFirebaseToken();
+  const authHeaders = await getAuthHeaders();
   const res = await fetch("/api/opencode/stream", {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    headers: { "Content-Type": "application/json", ...authHeaders },
     body: JSON.stringify({ contents, systemInstruction: THERAPIST_SI, tools: THERAPIST_TOOLS }),
   });
   if (!res.ok || !res.body) throw new Error(`opencode/stream ${res.status}`);

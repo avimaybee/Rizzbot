@@ -1,6 +1,7 @@
 import { RouterProvider } from "react-router";
 import { router } from "./routes";
 import { ToastProvider } from "./components/ui/Toast";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AppProvider, useAppContext } from "./app-context";
 
 function WellbeingModal() {
@@ -156,7 +157,9 @@ function AppRouter() {
 
   return (
     <div className="app-shell">
-      <RouterProvider router={router} />
+      <ErrorBoundary label="router">
+        <RouterProvider router={router} />
+      </ErrorBoundary>
       <WellbeingModal />
     </div>
   );

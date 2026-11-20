@@ -1,4 +1,5 @@
 import { ensureAppSchema } from './schema';
+import { corsHeadersFor } from '../lib/cors';
 
 export async function onRequest(context: any) {
   const { env, request } = context;
@@ -6,7 +7,7 @@ export async function onRequest(context: any) {
 
   // Add CORS headers
   const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
+    ...corsHeadersFor(request),
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': 'application/json',
@@ -15,6 +16,17 @@ export async function onRequest(context: any) {
   // Handle preflight
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  // Admin-only: running DDL must never be reachable by regular users.
+  // Configure via `wrangler pages secret put ADMIN_EMAIL`.
+  const callerEmail = (context.data?.user?.email as string | undefined) || "";
+  const adminEmail = (env as any).ADMIN_EMAIL as string | undefined;
+  if (!adminEmail || callerEmail.toLowerCase() !== adminEmail.toLowerCase()) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: corsHeaders,
+    });
   }
 
   if (!db) {
@@ -195,3 +207,4 @@ CREATE INDEX IF NOT EXISTS idx_feedback_user_id ON feedback(user_id);
     });
   }
 }
+

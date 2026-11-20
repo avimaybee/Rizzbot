@@ -1,4 +1,5 @@
 import { importX509, jwtVerify } from "jose";
+import { corsHeadersFor } from "../lib/cors";
 
 // Cached Google public keys
 let publicKeys: Record<string, any> = {};
@@ -88,11 +89,12 @@ async function verifyFirebaseToken(token: string, projectId: string) {
  * Intercepts requests to /api/* to verify Firebase authentication.
  */
 
-// Best-effort in-memory per-UID rate limiting for AI proxy endpoints.
-// Note: resets on isolate restart; D1-backed limiting can replace this later.
+// D1-backed per-UID sliding-window rate limiting for AI proxy endpoints.
+// Fail-open: any storage error skips limiting rather than blocking requests.
+// Table is created lazily; each isolate caches readiness after first success.
 const AI_RATE_LIMIT_WINDOW_MS = 60_000;
 const AI_RATE_LIMIT_MAX = 15;
-const aiRateBuckets = new Map<string, number[]>();
+let rateTableReady = false;
 
 function isAiEndpoint(pathname: string): boolean {
   return (
@@ -101,16 +103,44 @@ function isAiEndpoint(pathname: string): boolean {
   );
 }
 
-function isAiRateLimited(uid: string, now: number): boolean {
-  const bucket = aiRateBuckets.get(uid) ?? [];
-  const fresh = bucket.filter((ts) => now - ts < AI_RATE_LIMIT_WINDOW_MS);
-  if (fresh.length >= AI_RATE_LIMIT_MAX) {
-    aiRateBuckets.set(uid, fresh);
-    return true;
+function resolveDb(env: any): any {
+  return (
+    env.RIZZBOT_DATA ||
+    env.RIZZBOT ||
+    env.RIZZBOT_DB ||
+    env.RIZZBOT_D1 ||
+    env.RIZZBOT_DATASET ||
+    env["rizzbot data"]
+  );
+}
+
+async function isAiRateLimited(db: any, uid: string, now: number): Promise<boolean> {
+  try {
+    if (!db) return false;
+    if (!rateTableReady) {
+      await db
+        .prepare(
+          `CREATE TABLE IF NOT EXISTS ai_rate_limits (uid TEXT NOT NULL, ts INTEGER NOT NULL)`
+        )
+        .run();
+      await db
+        .prepare(`CREATE INDEX IF NOT EXISTS idx_ai_rate_limits_uid_ts ON ai_rate_limits(uid, ts)`)
+        .run();
+      rateTableReady = true;
+    }
+    const cutoff = now - AI_RATE_LIMIT_WINDOW_MS;
+    // Global expiry keeps the table tiny (single-user scale: a handful of rows)
+    await db.prepare(`DELETE FROM ai_rate_limits WHERE ts < ?`).bind(cutoff).run();
+    const row = (await db
+      .prepare(`SELECT COUNT(*) as n FROM ai_rate_limits WHERE uid = ? AND ts >= ?`)
+      .bind(uid, cutoff)
+      .first()) as any;
+    if ((row?.n ?? 0) >= AI_RATE_LIMIT_MAX) return true;
+    await db.prepare(`INSERT INTO ai_rate_limits (uid, ts) VALUES (?, ?)`).bind(uid, now).run();
+    return false;
+  } catch {
+    return false;
   }
-  fresh.push(now);
-  aiRateBuckets.set(uid, fresh);
-  return false;
 }
 
 export async function onRequest(context: any) {
@@ -141,7 +171,7 @@ export async function onRequest(context: any) {
             status: 401,
             headers: {
                 "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",
+                ...corsHeadersFor(request),
             }
         });
     }
@@ -167,7 +197,7 @@ export async function onRequest(context: any) {
                 status: 401,
                 headers: {
                     "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*",
+                    ...corsHeadersFor(request),
                 }
             });
         }
@@ -186,12 +216,12 @@ export async function onRequest(context: any) {
 
     // Rate-limit AI proxy endpoints strictly; data CRUD endpoints are exempted
     if (isAiEndpoint(url.pathname)) {
-      if (isAiRateLimited(String(decodedToken.sub || "anon"), Date.now())) {
+      if (await isAiRateLimited(resolveDb(env), String(decodedToken.sub || "anon"), Date.now())) {
         return new Response(JSON.stringify({ error: "Rate limited: too many AI requests. Try again in a minute." }), {
           status: 429,
           headers: {
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
+            ...corsHeadersFor(request),
             "Retry-After": "60",
           }
         });

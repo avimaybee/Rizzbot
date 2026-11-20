@@ -1,4 +1,5 @@
 import { ensureAppSchema } from './schema';
+import { corsHeadersFor } from '../lib/cors';
 
 const getDB = (env: any) =>
   env.RIZZBOT_DATA ||
@@ -11,28 +12,28 @@ const getDB = (env: any) =>
   env.D1_DB ||
   env.__D1_NAMESPACES__?.DB;
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+const baseCorsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Api-Key',
   'Content-Type': 'application/json',
 };
+const corsFor = (req?: Request) => req ? { ...corsHeadersFor(req), ...baseCorsHeaders } : { 'Access-Control-Allow-Origin': 'https://rizzbot.pages.dev', ...baseCorsHeaders };
 
-export const onRequestOptions = async () => {
-  return new Response(null, { status: 204, headers: corsHeaders });
+export const onRequestOptions = async (context: any) => {
+  return new Response(null, { status: 204, headers: corsFor(context?.request) });
 };
 
 export const onRequestGet = async (context: any) => {
   const { env, request, data } = context;
   const db = getDB(env);
-  if (!db) return new Response(JSON.stringify({ error: 'No database' }), { status: 500, headers: corsHeaders });
+  if (!db) return new Response(JSON.stringify({ error: 'No database' }), { status: 500, headers: corsFor(context.request) });
 
   // Ensure authenticated user exists in context
   const authenticatedUser = data?.user;
   if (!authenticatedUser) {
     return new Response(JSON.stringify({ error: 'Unauthorized: No verified user context' }), {
       status: 401,
-      headers: corsHeaders,
+      headers: corsFor(request),
     });
   }
   const verifiedUid = authenticatedUser.uid;
@@ -40,7 +41,7 @@ export const onRequestGet = async (context: any) => {
   const url = new URL(request.url);
   const reqAnonId = url.searchParams.get('anon_id');
   if (reqAnonId && reqAnonId !== verifiedUid) {
-    return new Response(JSON.stringify({ error: 'Forbidden: Cannot access other users\' data' }), { status: 403, headers: corsHeaders });
+    return new Response(JSON.stringify({ error: 'Forbidden: Cannot access other users\' data' }), { status: 403, headers: corsFor(context.request) });
   }
 
   try {
@@ -48,29 +49,29 @@ export const onRequestGet = async (context: any) => {
 
     const user = await db.prepare('SELECT id FROM users WHERE anon_id = ?').bind(verifiedUid).first();
     if (!user) {
-      return new Response(JSON.stringify({ streak: { current_streak: 0, longest_streak: 0, last_active_date: null } }), { headers: corsHeaders });
+      return new Response(JSON.stringify({ streak: { current_streak: 0, longest_streak: 0, last_active_date: null } }), { headers: corsFor(context.request) });
     }
 
     const streak = await db.prepare('SELECT current_streak, longest_streak, last_active_date FROM streaks WHERE user_id = ?').bind(user.id).first();
     return new Response(JSON.stringify({
       streak: streak || { current_streak: 0, longest_streak: 0, last_active_date: null }
-    }), { headers: corsHeaders });
+    }), { headers: corsFor(context.request) });
   } catch (e: any) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
+    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsFor(context.request) });
   }
 };
 
 export const onRequestPost = async (context: any) => {
-  const { env, data } = context;
+  const { env, request, data } = context;
   const db = getDB(env);
-  if (!db) return new Response(JSON.stringify({ error: 'No database' }), { status: 500, headers: corsHeaders });
+  if (!db) return new Response(JSON.stringify({ error: 'No database' }), { status: 500, headers: corsFor(context.request) });
 
   // Ensure authenticated user exists in context
   const authenticatedUser = data?.user;
   if (!authenticatedUser) {
     return new Response(JSON.stringify({ error: 'Unauthorized: No verified user context' }), {
       status: 401,
-      headers: corsHeaders,
+      headers: corsFor(request),
     });
   }
   const verifiedUid = authenticatedUser.uid;
@@ -101,7 +102,7 @@ export const onRequestPost = async (context: any) => {
         .prepare('INSERT OR IGNORE INTO streaks (user_id, current_streak, longest_streak, last_active_date) VALUES (?, 1, 1, ?)')
         .bind(newUser.id, todayForNewUser)
         .run();
-      return new Response(JSON.stringify({ streak: { current_streak: 1, longest_streak: 1, last_active_date: todayForNewUser } }), { headers: corsHeaders });
+      return new Response(JSON.stringify({ streak: { current_streak: 1, longest_streak: 1, last_active_date: todayForNewUser } }), { headers: corsFor(context.request) });
     }
 
     const today = getLocalDate(tzOffsetMin);
@@ -109,11 +110,11 @@ export const onRequestPost = async (context: any) => {
 
     if (!existing) {
       await db.prepare('INSERT OR IGNORE INTO streaks (user_id, current_streak, longest_streak, last_active_date) VALUES (?, 1, 1, ?)').bind(user.id, today).run();
-      return new Response(JSON.stringify({ streak: { current_streak: 1, longest_streak: 1, last_active_date: today } }), { headers: corsHeaders });
+      return new Response(JSON.stringify({ streak: { current_streak: 1, longest_streak: 1, last_active_date: today } }), { headers: corsFor(context.request) });
     }
 
     if (existing.last_active_date === today) {
-      return new Response(JSON.stringify({ streak: existing }), { headers: corsHeaders });
+      return new Response(JSON.stringify({ streak: existing }), { headers: corsFor(context.request) });
     }
 
     const lastDate = new Date(existing.last_active_date + 'T00:00:00Z');
@@ -132,8 +133,9 @@ export const onRequestPost = async (context: any) => {
     await db.prepare('UPDATE streaks SET current_streak = ?, longest_streak = ?, last_active_date = ?, updated_at = datetime(\'now\') WHERE user_id = ?')
       .bind(newStreak, newLongest, today, user.id).run();
 
-    return new Response(JSON.stringify({ streak: { current_streak: newStreak, longest_streak: newLongest, last_active_date: today } }), { headers: corsHeaders });
+    return new Response(JSON.stringify({ streak: { current_streak: newStreak, longest_streak: newLongest, last_active_date: today } }), { headers: corsFor(context.request) });
   } catch (e: any) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
+    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsFor(context.request) });
   }
 };
+

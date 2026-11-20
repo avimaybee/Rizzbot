@@ -1,19 +1,68 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { createBrowserRouter, Navigate, Outlet } from "react-router";
 import { SplashScreen } from "./components/SplashScreen";
-import { OnboardingScreen } from "./components/OnboardingScreen";
 import { AuthScreen } from "./components/AuthScreen";
 import { HomeScreen } from "./components/HomeScreen";
-import { QuickModeScreen } from "./components/QuickModeScreen";
-import { PracticeScreen } from "./components/PracticeScreen";
-import { TherapistScreen } from "./components/TherapistScreen";
-import { TherapistClosingScreen } from "./components/TherapistClosingScreen";
-import { HistoryScreen } from "./components/HistoryScreen";
-import { MyVoiceScreen } from "./components/MyVoiceScreen";
-import { TacticalReportScreen } from "./components/TacticalReportScreen";
 import { NotFoundScreen } from "./components/NotFoundScreen";
 import { TabBar } from "./components/TabBar";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useAppContext } from "./app-context";
+
+const QuickModeScreen = lazy(() =>
+  import("./components/QuickModeScreen").then((m) => ({ default: m.QuickModeScreen }))
+);
+const PracticeScreen = lazy(() =>
+  import("./components/PracticeScreen").then((m) => ({ default: m.PracticeScreen }))
+);
+const TherapistScreen = lazy(() =>
+  import("./components/TherapistScreen").then((m) => ({ default: m.TherapistScreen }))
+);
+const TherapistClosingScreen = lazy(() =>
+  import("./components/TherapistClosingScreen").then((m) => ({ default: m.TherapistClosingScreen }))
+);
+const HistoryScreen = lazy(() =>
+  import("./components/HistoryScreen").then((m) => ({ default: m.HistoryScreen }))
+);
+const MyVoiceScreen = lazy(() =>
+  import("./components/MyVoiceScreen").then((m) => ({ default: m.MyVoiceScreen }))
+);
+const TacticalReportScreen = lazy(() =>
+  import("./components/TacticalReportScreen").then((m) => ({ default: m.TacticalReportScreen }))
+);
+const OnboardingScreen = lazy(() =>
+  import("./components/OnboardingScreen").then((m) => ({ default: m.OnboardingScreen }))
+);
+
+function ScreenFallback() {
+  return (
+    <div
+      className="min-h-screen flex items-center justify-center"
+      style={{ backgroundColor: "#F5EFE6" }}
+    >
+      <div
+        className="animate-spin"
+        style={{
+          width: 30,
+          height: 30,
+          borderRadius: "50%",
+          border: "2px solid #E8E0D4",
+          borderTopColor: "#C8522A",
+        }}
+        role="status"
+        aria-label="Loading screen"
+      />
+    </div>
+  );
+}
+
+/** Lazy screens load in their own chunk; each gets a crash boundary + loader. */
+function LazyScreen({ children }: { children: React.ReactNode }) {
+  return (
+    <ErrorBoundary label="screen">
+      <Suspense fallback={<ScreenFallback />}>{children}</Suspense>
+    </ErrorBoundary>
+  );
+}
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { authUser } = useAppContext();
@@ -42,7 +91,7 @@ function ProtectedHome() {
 function ProtectedQuick() {
   return (
     <RequireAuth>
-      <QuickModeScreen />
+      <LazyScreen><QuickModeScreen /></LazyScreen>
     </RequireAuth>
   );
 }
@@ -50,7 +99,7 @@ function ProtectedQuick() {
 function ProtectedPractice() {
   return (
     <RequireAuth>
-      <PracticeScreen />
+      <LazyScreen><PracticeScreen /></LazyScreen>
     </RequireAuth>
   );
 }
@@ -58,7 +107,7 @@ function ProtectedPractice() {
 function ProtectedTacticalReport() {
   return (
     <RequireAuth>
-      <TacticalReportScreen />
+      <LazyScreen><TacticalReportScreen /></LazyScreen>
     </RequireAuth>
   );
 }
@@ -66,7 +115,7 @@ function ProtectedTacticalReport() {
 function ProtectedTherapistNew() {
   return (
     <RequireAuth>
-      <TherapistScreen />
+      <LazyScreen><TherapistScreen /></LazyScreen>
     </RequireAuth>
   );
 }
@@ -74,7 +123,7 @@ function ProtectedTherapistNew() {
 function ProtectedTherapistClosing() {
   return (
     <RequireAuth>
-      <TherapistClosingScreen />
+      <LazyScreen><TherapistClosingScreen /></LazyScreen>
     </RequireAuth>
   );
 }
@@ -82,7 +131,7 @@ function ProtectedTherapistClosing() {
 function ProtectedHistoryNew() {
   return (
     <RequireAuth>
-      <HistoryScreen />
+      <LazyScreen><HistoryScreen /></LazyScreen>
     </RequireAuth>
   );
 }
@@ -90,14 +139,14 @@ function ProtectedHistoryNew() {
 function ProtectedVoiceNew() {
   return (
     <RequireAuth>
-      <MyVoiceScreen />
+      <LazyScreen><MyVoiceScreen /></LazyScreen>
     </RequireAuth>
   );
 }
 
 export const router = createBrowserRouter([
   { path: "/", Component: SplashScreen },
-  { path: "/onboarding", Component: OnboardingScreen },
+  { path: "/onboarding", Component: () => (<LazyScreen><OnboardingScreen /></LazyScreen>) },
   { path: "/auth", Component: AuthScreen },
   { path: "*", Component: NotFoundScreen },
   {
@@ -115,3 +164,4 @@ export const router = createBrowserRouter([
     ],
   },
 ]);
+
