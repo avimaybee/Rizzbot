@@ -190,7 +190,7 @@ export async function getQuickAdvice(
     screenshots?: string[];
     userId?: string;
   },
-  image?: QuickImageAttachment,
+  image?: QuickImageAttachment | ((status: QuickModelStatus) => void),
   stage?: string,
   userDraft?: string,
   styleProfile?: UserStyleProfile | null,
@@ -226,8 +226,9 @@ export async function getQuickAdvice(
 
   // New positional form
   const inputText = inputOrRequest as string;
+  const singleImage = typeof image === 'function' ? undefined : image;
   const images: QuickImageAttachment[] = [
-    ...(image ? [image] : []),
+    ...(singleImage ? [singleImage] : []),
     ...(Array.isArray(extraImages) ? extraImages : []),
   ].slice(0, 10);
 

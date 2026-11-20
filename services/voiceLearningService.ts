@@ -8,7 +8,7 @@ import { QuickImageAttachment } from './quickAdviceService';
  */
 export async function triggerPassiveVoiceLearning(
   images: QuickImageAttachment[],
-  onProfileUpdated?: (profile: UserStyleProfile) => void
+  onProfileUpdated?: (profile: UserStyleProfile, newCount?: number) => void
 ): Promise<void> {
   if (!Array.isArray(images) || images.length === 0) return;
 
@@ -21,7 +21,7 @@ export async function triggerPassiveVoiceLearning(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        images: images.slice(0, 3).map((img) => ({
+        images: images.slice(0, 10).map((img) => ({
           mimeType: img.mimeType,
           data: img.data,
         })),
@@ -31,11 +31,12 @@ export async function triggerPassiveVoiceLearning(
     if (!res.ok) return;
     const data = (await res.json()) as {
       updated?: boolean;
+      newMessages?: number;
       profile?: UserStyleProfile;
     };
 
     if (data.updated && data.profile && onProfileUpdated) {
-      onProfileUpdated(data.profile);
+      onProfileUpdated(data.profile, data.newMessages ?? 0);
     }
   } catch {
     // Non-blocking background enhancement; ignore errors silently

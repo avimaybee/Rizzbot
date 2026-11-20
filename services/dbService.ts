@@ -199,70 +199,6 @@ export async function updateUserData(userId: number, userData: UserData): Promis
   }
 }
 
-// ===== Payments API =====
-
-export interface PaymentVerificationRequest {
-  payment_method?: 'razorpay' | 'upi';
-  razorpay_payment_id?: string;
-  razorpay_order_id?: string;
-  razorpay_signature?: string;
-  utr?: string;
-  amount: number;
-  currency: string;
-}
-
-/**
- * Verify payment (Razorpay or UPI UTR) and upgrade user status
- */
-export async function verifyPayment(paymentData: PaymentVerificationRequest): Promise<{ success: boolean; is_premium: boolean; status?: string; message?: string }> {
-  const res = await authenticatedFetch('/api/payments/verify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(paymentData),
-  });
-
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(error.error || 'Payment verification failed');
-  }
-
-  return res.json();
-}
-
-/**
- * Submit UPI UTR for verification (admin reconciles; premium activates after approval)
- */
-export async function submitUtrPayment(utr: string): Promise<{ success: boolean; is_premium: boolean; status?: string; message?: string }> {
-  return verifyPayment({
-    payment_method: 'upi',
-    utr,
-    amount: 500,
-    currency: 'INR'
-  });
-}
-
-/**
- * ADMIN: Get all submitted payments for reconciliation
- */
-export async function getAdminPayments(): Promise<any[]> {
-  const res = await authenticatedFetch('/api/admin_payments');
-  if (!res.ok) throw new Error(`Failed to get admin payments: ${res.statusText}`);
-  return res.json();
-}
-
-/**
- * ADMIN: Update payment status (APPROVE/REJECT)
- */
-export async function updatePaymentStatus(payment_id: number, status: 'COMPLETED' | 'REJECTED'): Promise<{ success: boolean }> {
-  const res = await authenticatedFetch('/api/admin_payments', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ payment_id, status }),
-  });
-  if (!res.ok) throw new Error(`Failed to update payment status: ${res.statusText}`);
-  return res.json();
-}
-
 // ===== Personas API =====
 
 /**
@@ -650,4 +586,5 @@ export async function recordActivity(firebaseUid: string): Promise<StreakData> {
     return { current_streak: 0, longest_streak: 0, last_active_date: null };
   }
 }
+
 

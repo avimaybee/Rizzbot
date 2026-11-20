@@ -8,6 +8,7 @@ const VOICE_EXTRACTION_INSTRUCTION = `You analyze chat screenshots to learn how 
 - In iMessage, Instagram, WhatsApp, Hinge, Tinder, Telegram: the user's messages are the RIGHT-SIDE bubbles.
 - In Snapchat: the user's messages are labeled "Me" (usually red/pink or blue vertical bar with "Me").
 - NEVER extract messages sent by the other person. If no user messages are visible, return an empty array for userMessages.
+- Skip pure media/status rows with no text (e.g. "Opened", "Delivered", "Seen").
 
 2. SYNTHESIZE ABSTRACT CADENCE (NO CATCHPHRASE COPYING):
 - Given the user's visible messages (and any previously learned samples provided in the prompt), infer their structural texting habits:
@@ -17,7 +18,12 @@ const VOICE_EXTRACTION_INSTRUCTION = `You analyze chat screenshots to learn how 
   * averageLength: "short" | "medium" | "long"
   * energy: "low" | "medium" | "high"
   * preferredTone: "playful" | "chill" | "direct" | "sweet"
-  * cadenceNotes: 1-2 sentences describing HOW they structure thoughts, sentence length, fragments, capitalization, and humor rhythm. NEVER tell the AI to repeat specific words or catchphrases.
+  * cadenceNotes: 1-2 sentences describing HOW they structure thoughts, sentence length, fragments, capitalization, and humor rhythm, using ONLY everyday descriptive words.
+- ANTI-PARROT RULES for cadenceNotes:
+  * NEVER quote the user's words back longer than 2 words in a row.
+  * NEVER name specific catchphrases, slang, or jokes as things to repeat — describe the rhythm, not the content.
+  * You MAY end cadenceNotes with up to 4 single signature words, but ONLY words that appear 3 or more times across all samples (e.g. "leans on 'wait' and 'nah' as dry pivots"). If no word repeats that often, say nothing about specific words.
+  * Ignore content (names, places, plans, stories) — learn the lingo shape and the major texting tells, not the message.
 
 OUTPUT ONLY RAW VALID JSON matching:
 {
@@ -149,7 +155,7 @@ export async function onRequest(context: any) {
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers: corsHeaders });
   }
-  const images = Array.isArray(body.images) ? body.images.slice(0, 3) : [];
+  const images = Array.isArray(body.images) ? body.images.slice(0, 10) : [];
   if (images.length === 0) {
     return new Response(JSON.stringify({ updated: false, extractedMessages: [] }), { status: 200, headers: corsHeaders });
   }
@@ -175,7 +181,11 @@ export async function onRequest(context: any) {
 
     const parsed = await callVoiceModel(apiKey, uid, images, priorSamples);
     const extracted: string[] = Array.isArray(parsed.userMessages)
-      ? parsed.userMessages.filter((m: any) => typeof m === "string" && m.trim().length >= 4).map((m: string) => m.trim()).slice(0, 20)
+      ? parsed.userMessages
+          .filter((m: any) => typeof m === "string" && m.trim().length >= 4)
+          .map((m: string) => m.trim().slice(0, 120))
+          .filter((m: string) => m.length >= 4)
+          .slice(0, 20)
       : [];
 
     // Dedupe (case-insensitive) + rolling 40
@@ -225,6 +235,7 @@ export async function onRequest(context: any) {
 
     return new Response(JSON.stringify({
       updated: fresh.length > 0,
+      newMessages: fresh.length,
       extractedMessages: fresh,
       profile: {
         emojiUsage: profile.emoji_usage,

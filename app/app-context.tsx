@@ -39,10 +39,6 @@ interface AppContextValue {
   runWellbeingCheck: () => void;
   dismissWellbeing: () => void;
   dismissWellbeingForDay: () => void;
-  isPremium: boolean;
-  premiumUntil: string | null;
-  paymentStatus: string | null;
-  updatePremiumStatus: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -92,9 +88,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<number | null>(null);
   const [userProfile, setUserProfile] = useState<UserStyleProfile | null>(null);
   const [wellbeingCheckIn, setWellbeingCheckIn] = useState<WellbeingState | null>(null);
-  const [isPremium, setIsPremium] = useState(false);
-  const [premiumUntil, setPremiumUntil] = useState<string | null>(null);
-  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthChange((user) => {
@@ -123,9 +116,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
         if (!alive) return;
         setUserId(user.id);
-        setIsPremium(user.is_premium || false);
-        setPremiumUntil(user.premium_until || null);
-        setPaymentStatus(user.payment_status || null);
 
         // Retry any sessions that failed to save offline
         void flushPendingSessions().catch(() => {});
@@ -235,9 +225,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUserId(null);
     setUserProfile(null);
     setWellbeingCheckIn(null);
-    setPaymentStatus(null);
-    setIsPremium(false);
-    setPremiumUntil(null);
     if (uid) clearUserSessionState(uid);
   }, [authUser]);
 
@@ -253,18 +240,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setWellbeingCheckIn(null);
   }, [authUser]);
 
-  const updatePremiumStatus = useCallback(async () => {
-    if (!authUser) return;
-    try {
-      const user = await getOrCreateUser(authUser.uid);
-      setIsPremium(user.is_premium || false);
-      setPremiumUntil(user.premium_until || null);
-      setPaymentStatus(user.payment_status || null);
-    } catch (err) {
-      console.error("Failed to update premium status:", err);
-    }
-  }, [authUser]);
-
   const value = useMemo<AppContextValue>(
     () => ({
       authUser,
@@ -278,10 +253,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       runWellbeingCheck,
       dismissWellbeing,
       dismissWellbeingForDay,
-      isPremium,
-      premiumUntil,
-      paymentStatus,
-      updatePremiumStatus,
     }),
     [
       authUser,
@@ -295,10 +266,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       runWellbeingCheck,
       dismissWellbeing,
       dismissWellbeingForDay,
-      isPremium,
-      premiumUntil,
-      paymentStatus,
-      updatePremiumStatus,
     ]
   );
 

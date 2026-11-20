@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { Bell, CheckCircle, ChevronRight, Clock, Heart, LogOut, Mic, Sparkles, Target, Zap } from "lucide-react";
+import { Bell, ChevronRight, Heart, LogOut, Mic, Target, Zap } from "lucide-react";
 import { GrainOverlay } from "./GrainOverlay";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
-import { PremiumModal } from "./PremiumModal";
 import { useAppContext } from "../app-context";
 import { getSessions, getTherapistSessions, recordActivity, type StreakData } from "../../services/dbService";
 import { useScrollFade } from "../utils/useScrollFade";
@@ -77,8 +76,7 @@ const toModeCardName = (mode?: string): string | null => {
 };
 export function HomeScreen() {
   const navigate = useNavigate();
-  const { authUser, userId, userProfile, signOut, isPremium, paymentStatus } = useAppContext();
-  const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
+  const { authUser, userId, userProfile, signOut } = useAppContext();
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [lastUsedByMode, setLastUsedByMode] = useState<Record<string, string>>({});
   const [streak, setStreak] = useState<StreakData>({
@@ -377,35 +375,6 @@ export function HomeScreen() {
           })}
         </div>
 
-        {/* Premium Banner — hidden while a payment is pending verification */}
-        {!isPremium && paymentStatus !== "PENDING_RECONCILIATION" && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            onClick={() => setIsPremiumModalOpen(true)}
-            className="mt-6 p-5 rounded-[24px] bg-[#1A1208] text-white relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all"
-          >
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
-                  Limited Offer
-                </span>
-                <Sparkles size={12} className="text-[#C8522A]" />
-              </div>
-              <h3 className="text-xl font-bold mb-1">Get Lifetime Access</h3>
-              <p className="text-sm text-white/60 mb-3">
-                Unlimited AI advice, practice sessions & more. Just ₹500.
-              </p>
-              <div className="inline-flex items-center gap-2 text-sm font-bold text-[#C8522A]">
-                Upgrade Now <ChevronRight size={16} />
-              </div>
-            </div>
-            <div className="absolute top-1/2 right-[-20px] -translate-y-1/2 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
-              <Zap size={140} fill="white" />
-            </div>
-          </motion.div>
-        )}
-
         <div className="mt-6">
           <div className="flex items-center justify-between">
             <p
@@ -543,22 +512,6 @@ export function HomeScreen() {
                 <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.5)" }}>{authUser?.email}</p>
               </div>
             </div>
-            {paymentStatus === "PENDING_RECONCILIATION" && (
-              <div className="mb-4 flex items-center gap-2" style={{ backgroundColor: "#FEF3E2", borderRadius: 12, padding: "10px 12px", border: "1px solid rgba(212,168,83,0.3)" }}>
-                <Clock size={15} color="#B8860B" />
-                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.7)", lineHeight: 1.4 }}>
-                  Premium payment received — verification usually takes a few hours.
-                </p>
-              </div>
-            )}
-            {isPremium && (
-              <div className="mb-4 flex items-center gap-2" style={{ backgroundColor: "rgba(122,158,126,0.12)", borderRadius: 12, padding: "10px 12px" }}>
-                <CheckCircle size={15} color="#58745A" />
-                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#58745A", fontWeight: 600 }}>
-                  Premium active
-                </p>
-              </div>
-            )}
             <button
               onClick={() => { setShowProfileSheet(false); navigate("/voice"); }}
               className="w-full flex items-center gap-3 cursor-pointer fade-press"
@@ -579,10 +532,6 @@ export function HomeScreen() {
         </div>
       )}
 
-      <PremiumModal
-        isOpen={isPremiumModalOpen}
-        onClose={() => setIsPremiumModalOpen(false)}
-      />
     </motion.div>
   );
 }

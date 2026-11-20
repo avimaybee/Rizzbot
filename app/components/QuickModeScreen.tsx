@@ -32,7 +32,6 @@ import { useScrollFade } from "../utils/useScrollFade";
 import { MAX_QUICK_SCREENSHOTS, optimizeImageFile, clampScreenshotList } from "../utils/imageOptimize";
 import { uploadQuickImagesToR2 } from "../../services/mediaService";
 import { triggerPassiveVoiceLearning } from "../../services/voiceLearningService";
-import { DisclosureCard } from "./quick/DisclosureCard";
 import { ReplyHeroCard } from "./quick/ReplyHeroCard";
 import { FriendSummaryCard } from "./quick/FriendSummaryCard";
 import { ToneRail } from "./quick/ToneRail";
@@ -66,6 +65,34 @@ const feedbackTypeMap: Record<Tone, string> = {
   Bold: "bold",
   "Your Style": "yourStyle",
 };
+
+// Rotating loading lines — organic wingman voice, no fake precision.
+// Shuffled per run so repeats never read the same way twice.
+const LOADING_LINES = [
+  "reading the room…",
+  "checking the vibe…",
+  "finding the angle…",
+  "cooking up something good…",
+  "reading between the lines…",
+  "feeling out the energy…",
+  "sharpening the reply…",
+  "thinking like your wittiest friend…",
+  "spotting the perfect opening…",
+  "tuning the tone…",
+  "plotting the smooth move…",
+  "decoding the subtext…",
+  "warming up the words…",
+  "landing the right energy…",
+];
+
+function shuffledLines(): string[] {
+  const arr = [...LOADING_LINES];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
 const contextOptions = [
   { value: "stranger", label: "STRANGER" },
@@ -116,6 +143,8 @@ export function QuickModeScreen() {
   const resultsTopRef = useRef<HTMLDivElement | null>(null);
   const [loadingElapsed, setLoadingElapsed] = useState(0);
   const [showDraftInput, setShowDraftInput] = useState(false);
+  const [loadingLines, setLoadingLines] = useState<string[]>(LOADING_LINES);
+  const [modelStatus, setModelStatus] = useState<{ model: string; effort: string; attempt: number } | null>(null);
 
   // Scroll to the top of results when a new analysis lands
   useEffect(() => {
@@ -147,15 +176,7 @@ export function QuickModeScreen() {
     ? selectedOptions[cursor[activeTone] % selectedOptions.length]
     : null;
 
-  const ghostRisk = result ? Math.max(0, 100 - (result.vibeCheck?.interestLevel ?? 50)) : 0;
-  const riskColor = ghostRisk > 65 ? "#C8522A" : ghostRisk > 35 ? "#D4A853" : "#7A9E7E";
-  const riskLabel = ghostRisk > 65 ? "High" : ghostRisk > 35 ? "Medium" : "Low";
-
   const isDegraded = useMemo(() => (result ? isQuickAdviceDegraded(result) : false), [result]);
-
-  const [openSection, setOpenSection] = useState<string | null>(null);
-
-  const unrepliedCount = result?.extractedUnrepliedMessages?.length ?? 0;
 
   const toneHasOptions = (key: Tone) => (result?.suggestions[toneMap[key]]?.length ?? 0) > 0;
 
@@ -223,6 +244,8 @@ export function QuickModeScreen() {
     setCursor({ Real: 0, Smooth: 0, Playful: 0, Bold: 0, "Your Style": 0 });
     setStreamedText("");
     setLoadingElapsed(0);
+    setLoadingLines(shuffledLines());
+    setModelStatus(null);
     haptics.medium();
 
     const loadingTimer = setInterval(() => {
@@ -242,7 +265,9 @@ export function QuickModeScreen() {
         ? await streamQuickAdvice(quickRequest, (text) => {
             if (mountedRef.current) setStreamedText((prev) => prev + text);
           })
-        : await getQuickAdvice(quickRequest);
+        : await getQuickAdvice(quickRequest, (s) => {
+            if (mountedRef.current) setModelStatus(s);
+          });
       const isV2 = Boolean(response.summary);
       const derivedGhostRisk = isV2
         ? undefined
@@ -255,15 +280,19 @@ export function QuickModeScreen() {
       haptics.success();
 
       if (screenshots.length > 0) {
-        const learnImages = screenshots.slice(0, 3).map((src) => {
+        const learnImages = screenshots.slice(0, 10).map((src) => {
           const m = src.match(/^data:([^;]+);base64,/);
           return {
             mimeType: m ? m[1] : "image/webp" as string,
             data: src.includes(",") ? src.split(",")[1] : src,
           };
         });
-        void triggerPassiveVoiceLearning(learnImages, (updatedProfile) => {
+        void triggerPassiveVoiceLearning(learnImages, (updatedProfile, newCount) => {
+          if (!mountedRef.current) return;
           applyLearnedProfile(updatedProfile);
+          if (newCount && newCount > 0) {
+            toast(`voice notes updated · picked up ${newCount} new tell${newCount > 1 ? "s" : ""}`, "success");
+          }
         });
       }
 
@@ -383,7 +412,6 @@ export function QuickModeScreen() {
 
   const situationFade = useScrollFade();
   const toneFade = useScrollFade();
-  const stripFade = useScrollFade();
   const personaFade = useScrollFade();
   const screenshotsFade = useScrollFade();
 
@@ -437,8 +465,6 @@ export function QuickModeScreen() {
     if (!selectedOption) return;
     await handleCopy(buildCopyPayload(selectedOption), `copyall-${activeTone}-${cursor[activeTone]}`);
   };
-
-  const showMessage = result?.extractedTargetMessage || theirMessage || "Conversation screenshot";
 
   // Auto-resize restored textareas so sessionStorage-restored drafts aren't clipped
   const theirMessageRef = useRef<HTMLTextAreaElement | null>(null);
@@ -693,8 +719,8 @@ export function QuickModeScreen() {
               </div>
             </div>
 
-            <div className="fixed bottom-[60px] md:bottom-0 left-0 right-0 px-5 z-30 pointer-events-none">
-              <div className="max-w-[430px] mx-auto pointer-events-auto">
+            <div className="sticky bottom-[76px] z-30 px-5 mt-6" style={{ background: "linear-gradient(to top, #F5EFE6 70%, rgba(245,239,230,0))", paddingTop: 12, paddingBottom: 8, marginLeft: -20, marginRight: -20, paddingLeft: 20, paddingRight: 20 }}>
+              <div className="max-w-[430px] mx-auto">
                 <button
                   onClick={() => void handleAnalyze()}
                   disabled={!theirMessage.trim() && screenshots.length === 0}
@@ -722,13 +748,12 @@ export function QuickModeScreen() {
         ) : isLoading ? (
           <div className="px-5 mt-6 pb-[160px]">
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.45)", letterSpacing: "0.12em", textTransform: "uppercase" }}>
-              {loadingElapsed < 11
-                ? "Reading the screenshots & message flow..."
-                : loadingElapsed < 26
-                ? "Picking up the subtext and relationship dynamic..."
-                : loadingElapsed < 43
-                ? "Writing 15 replies across Real, Smooth, Playful, Bold & Your Style..."
-                : "Deep-thinking the sharpest angles — almost ready..."}
+              {loadingLines[Math.floor(loadingElapsed / 6) % loadingLines.length]}
+            </p>
+            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.35)", marginTop: 6 }}>
+              {modelStatus && modelStatus.attempt > 1
+                ? `trying another angle · attempt ${modelStatus.attempt} · ${loadingElapsed}s`
+                : `${modelStatus?.effort === "xhigh" ? "deep thinking" : "thinking"} · ${loadingElapsed}s`}
             </p>
             <div className="flex gap-2 mt-4 overflow-hidden">
               <Skeleton className="h-10 w-24" style={{ borderRadius: 100 }} />
@@ -832,71 +857,6 @@ export function QuickModeScreen() {
               />
             </div>
 
-            <DisclosureCard
-              title={`Their message${unrepliedCount > 1 ? ` (${unrepliedCount})` : ""}`}
-              open={openSection === "context"}
-              onToggle={() => setOpenSection(openSection === "context" ? null : "context")}
-            >
-              {result?.conversationContext && (
-                <p className="mb-3" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontStyle: "italic", color: "rgba(26,18,8,0.55)", lineHeight: 1.5 }}>
-                  {result.conversationContext}
-                </p>
-              )}
-              <div className="space-y-2">
-                {(result?.extractedUnrepliedMessages?.length ? result.extractedUnrepliedMessages : [showMessage]).map((msg: string, i: number) => (
-                  <p key={i} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13.5, color: "#1A1208", lineHeight: 1.5 }}>
-                    "{msg}"
-                  </p>
-                ))}
-              </div>
-              {false && result?.detectedMeta && (result.detectedMeta.platform || result.detectedMeta.deliveryStatus || result.detectedMeta.timestamp || result.detectedMeta.isMessageRequest || (result.detectedMeta.reactions?.length ?? 0) > 0 || result.detectedMeta.groupName) && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {result.detectedMeta.platform && result.detectedMeta.platform !== "unknown" && (
-                    <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "#F5E8E0", color: "#C8522A", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
-                      {result.detectedMeta.platform}
-                    </span>
-                  )}
-                  {result.detectedMeta.deliveryStatus && result.detectedMeta.deliveryStatus !== "unknown" && (
-                    <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "#F5EFE6", border: "1px solid #E8E0D4", color: "rgba(26,18,8,0.6)", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
-                      {result.detectedMeta.deliveryStatus === "read" ? "✓✓ read" : result.detectedMeta.deliveryStatus}
-                    </span>
-                  )}
-                  {result.detectedMeta.timestamp && (
-                    <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "#F5EFE6", border: "1px solid #E8E0D4", color: "rgba(26,18,8,0.6)", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
-                      {result.detectedMeta.timestamp}
-                    </span>
-                  )}
-                  {result.detectedMeta.groupName && (
-                    <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "#F5EFE6", border: "1px solid #E8E0D4", color: "rgba(26,18,8,0.6)", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
-                      {result.detectedMeta.groupName}
-                    </span>
-                  )}
-                  {result.detectedMeta.isMessageRequest === true && (
-                    <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "rgba(200,82,42,0.1)", color: "#C8522A", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
-                      message request
-                    </span>
-                  )}
-                  {Array.isArray(result.detectedMeta.reactions) && result.detectedMeta.reactions.length > 0 && (
-                    <span style={{ borderRadius: 999, padding: "3px 10px", backgroundColor: "#F5EFE6", border: "1px solid #E8E0D4", color: "rgba(26,18,8,0.6)", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
-                      {result.detectedMeta.reactions.join(" ")}
-                    </span>
-                  )}
-                </div>
-              )}
-            </DisclosureCard>
-
-            {!result?.summary && result?.draftAnalysis?.verdict && (
-              <DisclosureCard
-                title="Your draft"
-                open={openSection === "draft"}
-                onToggle={() => setOpenSection(openSection === "draft" ? null : "draft")}
-              >
-                <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontStyle: "italic", color: "#1A1208", lineHeight: 1.45 }}>
-                  "{result.draftAnalysis.verdict}"
-                </p>
-              </DisclosureCard>
-            )}
-
             <div className="fixed bottom-[60px] md:bottom-0 left-0 right-0 z-30" style={{ backgroundColor: "rgba(245,239,230,0.92)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderTop: "1px solid #E8E0D4" }}>
               <div className="max-w-[430px] mx-auto flex items-center gap-2 px-5 py-2.5">
                 <button
@@ -963,6 +923,7 @@ export function QuickModeScreen() {
     </motion.div>
   );
 }
+
 
 
 
