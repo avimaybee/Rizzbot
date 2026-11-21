@@ -72,7 +72,6 @@ function bubblesFromReplies(replies: Array<{ originalMessage?: string; reply?: s
       replyTo: typeof r.originalMessage === 'string' && r.originalMessage.trim() ? r.originalMessage.trim() : null,
       text: r.reply.trim(),
     });
-    if (out.length >= 3) break;
   }
   return out;
 }
@@ -169,7 +168,8 @@ function normalizeBubbles(rawItem: Record<string, unknown>): QuickReplyBubble[] 
       .filter((b): b is QuickReplyBubble => b !== null);
 
     if (valid.length > 0) {
-      return valid.slice(0, 3);
+      // No cap: bubble count mirrors how many topics needed replies.
+      return valid;
     }
   }
 
