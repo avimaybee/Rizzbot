@@ -309,8 +309,3 @@ export const __therapistSystemInstruction = THERAPIST_SI;
 
 export type { ClinicalNotes, TherapistResponse };
 
-/** Legacy Quick stream spike (Plan 009) — disabled. Use getQuickAdvice. */
-export const streamQuickAdvice = async (..._args: any[]): Promise<never> => {
-  throw new Error("streamQuickAdvice is disabled");
-};
-

@@ -1,6 +1,6 @@
 import type React from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, Copy, CornerDownRight, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Check, Copy, CornerDownRight, Plus, ThumbsDown, ThumbsUp } from "lucide-react";
 import type { SuggestionOption } from "../../../types";
 
 interface ReplyHeroCardProps {
@@ -13,9 +13,6 @@ interface ReplyHeroCardProps {
   onCopy: (text: string, key: string) => void;
   onSelectVariation: (i: number) => void;
   onDragEnd: (info: { offset: { x: number }; velocity: { x: number } }) => void;
-  // Spike (plan 009): raw streamed text rendered in the reply bubble area
-  // while the streaming prototype is active.
-  streamedText?: string;
   // V2 optional props (Plan 012). When provided, ReplyHeroCard can operate
   // in standalone mode without the legacy QuickModeScreen copy handlers.
   style?: string;
@@ -28,6 +25,9 @@ interface ReplyHeroCardProps {
       since picks are made bubble-by-bubble across tones. */
   onFeedback?: (rating: "helpful" | "off", bubbleIndex: number) => void;
   feedbackVotes?: Record<string, "helpful" | "off">;
+  /** Toggle a bubble into the picked-lines tray. */
+  onTogglePick?: (bubbleIndex: number, text: string) => void;
+  pickedKeys?: Record<string, unknown>;
 }
 
 export function ReplyHeroCard({
@@ -40,7 +40,6 @@ export function ReplyHeroCard({
   onCopy,
   onSelectVariation,
   onDragEnd,
-  streamedText,
   options,
   selectedIndex,
   onCopyAll,
@@ -48,6 +47,8 @@ export function ReplyHeroCard({
   copiedAll,
   onFeedback,
   feedbackVotes,
+  onTogglePick,
+  pickedKeys,
 }: ReplyHeroCardProps) {
   const effectiveOption = selectedOption ?? (options && typeof selectedIndex === 'number' ? options[selectedIndex] : null);
   const effectiveCount = options ? options.length : optionCount;
@@ -115,25 +116,7 @@ export function ReplyHeroCard({
           onDragEnd={(_e, info) => onDragEnd(info)}
           aria-live="polite"
         >
-          {streamedText ? (
-            <div
-              style={{
-                backgroundColor: "rgba(26,18,8,0.04)",
-                borderRadius: 12,
-                padding: "10px 14px",
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 11.5,
-                color: "rgba(26,18,8,0.7)",
-                lineHeight: 1.5,
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                maxHeight: 200,
-                overflowY: "auto",
-              }}
-            >
-              {streamedText}
-            </div>
-          ) : effectiveOption ? (
+          {effectiveOption ? (
             <>
               <div className="flex items-center justify-between gap-3 mb-2.5">
                 <p style={{ flex: 1, fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(26,18,8,0.5)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -181,44 +164,72 @@ export function ReplyHeroCard({
                         </div>
                       )}
                       <div className="flex items-center justify-end gap-1">
-                        {onFeedback && (
+                        {(onFeedback || onTogglePick) && (
                           <div className="flex flex-col items-center gap-0.5 shrink-0" aria-label={`Rate bubble ${idx + 1}`}>
-                            <button
-                              type="button"
-                              onClick={() => onFeedback("helpful", idx)}
-                              aria-label={`Bubble ${idx + 1} was helpful`}
-                              title="Helpful"
-                              className="cursor-pointer flex items-center justify-center"
-                              style={{
-                                width: 30,
-                                height: 30,
-                                borderRadius: 8,
-                                border: "none",
-                                background: "none",
-                                color: vote === "helpful" ? "#58745A" : "rgba(26,18,8,0.28)",
-                                opacity: vote === "helpful" ? 1 : 0.55,
-                              }}
-                            >
-                              <ThumbsUp size={13} strokeWidth={2} fill={vote === "helpful" ? "#58745A" : "none"} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => onFeedback("off", idx)}
-                              aria-label={`Bubble ${idx + 1} was off`}
-                              title="Off"
-                              className="cursor-pointer flex items-center justify-center"
-                              style={{
-                                width: 30,
-                                height: 30,
-                                borderRadius: 8,
-                                border: "none",
-                                background: "none",
-                                color: vote === "off" ? "#A8401C" : "rgba(26,18,8,0.28)",
-                                opacity: vote === "off" ? 1 : 0.55,
-                              }}
-                            >
-                              <ThumbsDown size={13} strokeWidth={2} fill={vote === "off" ? "#A8401C" : "none"} />
-                            </button>
+                            {onTogglePick && (() => {
+                              const pickKey = `pick-${activeTone}-${cursor}-${idx}`;
+                              const isPicked = Boolean(pickedKeys?.[pickKey]);
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => onTogglePick(idx, bubble.text)}
+                                  aria-label={isPicked ? `Remove bubble ${idx + 1} from picked lines` : `Pick bubble ${idx + 1}`}
+                                  title={isPicked ? "Picked — tap to remove" : "Pick this line"}
+                                  className="cursor-pointer flex items-center justify-center"
+                                  style={{
+                                    width: 30,
+                                    height: 30,
+                                    borderRadius: 8,
+                                    border: "none",
+                                    background: "none",
+                                    color: isPicked ? "#C8522A" : "rgba(26,18,8,0.28)",
+                                    opacity: isPicked ? 1 : 0.55,
+                                  }}
+                                >
+                                  <Plus size={14} strokeWidth={2.5} />
+                                </button>
+                              );
+                            })()}
+                            {onFeedback && (
+                              <button
+                                type="button"
+                                onClick={() => onFeedback("helpful", idx)}
+                                aria-label={`Bubble ${idx + 1} was helpful`}
+                                title="Helpful"
+                                className="cursor-pointer flex items-center justify-center"
+                                style={{
+                                  width: 30,
+                                  height: 30,
+                                  borderRadius: 8,
+                                  border: "none",
+                                  background: "none",
+                                  color: vote === "helpful" ? "#58745A" : "rgba(26,18,8,0.28)",
+                                  opacity: vote === "helpful" ? 1 : 0.55,
+                                }}
+                              >
+                                <ThumbsUp size={13} strokeWidth={2} fill={vote === "helpful" ? "#58745A" : "none"} />
+                              </button>
+                            )}
+                            {onFeedback && (
+                              <button
+                                type="button"
+                                onClick={() => onFeedback("off", idx)}
+                                aria-label={`Bubble ${idx + 1} was off`}
+                                title="Off"
+                                className="cursor-pointer flex items-center justify-center"
+                                style={{
+                                  width: 30,
+                                  height: 30,
+                                  borderRadius: 8,
+                                  border: "none",
+                                  background: "none",
+                                  color: vote === "off" ? "#A8401C" : "rgba(26,18,8,0.28)",
+                                  opacity: vote === "off" ? 1 : 0.55,
+                                }}
+                              >
+                                <ThumbsDown size={13} strokeWidth={2} fill={vote === "off" ? "#A8401C" : "none"} />
+                              </button>
+                            )}
                           </div>
                         )}
                         <button

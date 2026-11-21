@@ -17,7 +17,6 @@ import { useToast } from "./ui/Toast";
 import { haptics } from "../utils/haptics";
 import { useAppContext } from "../app-context";
 import { getQuickAdvice } from "../../services/quickAdviceService";
-import { streamQuickAdvice } from "../../services/aiService";
 import { createSession, flushPendingSessions, queuePendingSession, recordActivity, submitFeedback } from "../../services/dbService";
 import { logSession, saveFeedback } from "../../services/feedbackService";
 import { QuickAdviceRequest, QuickAdviceResponse } from "../../types";
@@ -29,11 +28,8 @@ import { uploadQuickImagesToR2 } from "../../services/mediaService";
 import { triggerPassiveVoiceLearning } from "../../services/voiceLearningService";
 import { ReplyHeroCard } from "./quick/ReplyHeroCard";
 import { FriendSummaryCard } from "./quick/FriendSummaryCard";
+import { PickedTray } from "./quick/PickedTray";
 import { ToneRail } from "./quick/ToneRail";
-
-// SPIKE (plan 009): streamed quick replies. Hardcoded OFF — the production
-// path is unchanged. Flip to true to exercise the prototype.
-const QUICK_STREAM_ENABLED = false;
 
 const toneOptions = [
   { key: "Real", help: null },
@@ -101,8 +97,9 @@ export function QuickModeScreen() {
   const prefersReducedMotion = useReducedMotion();
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [result, setResult] = useState<QuickAdviceResponse | null>(null);
-  const [streamedText, setStreamedText] = useState("");
   const [feedbackVotes, setFeedbackVotes] = useState<Record<string, "helpful" | "off">>({});
+  const [picked, setPicked] = useState<Record<string, { tone: string; variation: number; text: string }>>({});
+  const [pickedCopied, setPickedCopied] = useState(false);
   const [cursor, setCursor] = useState<Record<Tone, number>>({
     Real: 0,
     Smooth: 0,
@@ -240,9 +237,10 @@ export function QuickModeScreen() {
     setIsLoading(true);
     setShowResults(false);
     setFeedbackVotes({});
+    setPicked({});
+    setPickedCopied(false);
     setWaitDismissed(false);
     setCursor({ Real: 0, Smooth: 0, Playful: 0, Bold: 0, "Your Style": 0 });
-    setStreamedText("");
     setLoadingElapsed(0);
     setLoadingLines(shuffledLines());
     setModelStatus(null);
@@ -261,13 +259,9 @@ export function QuickModeScreen() {
         userStyle: userProfile || undefined,
         userId: authUser?.uid,
       };
-      const response = QUICK_STREAM_ENABLED
-        ? await streamQuickAdvice(quickRequest, (text) => {
-            if (mountedRef.current) setStreamedText((prev) => prev + text);
-          })
-        : await getQuickAdvice(quickRequest, (s) => {
-            if (mountedRef.current) setModelStatus(s);
-          });
+      const response = await getQuickAdvice(quickRequest, (s) => {
+        if (mountedRef.current) setModelStatus(s);
+      });
       const isV2 = Boolean(response.summary);
       const derivedGhostRisk = isV2
         ? undefined
@@ -395,7 +389,8 @@ export function QuickModeScreen() {
     }
     setCursor({ Real: 0, Smooth: 0, Playful: 0, Bold: 0, "Your Style": 0 });
     setFeedbackVotes({});
-    setStreamedText("");
+    setPicked({});
+    setPickedCopied(false);
     haptics.light();
   };
 
@@ -404,7 +399,6 @@ export function QuickModeScreen() {
     setShowResults(false);
     setResult(null);
     setFeedbackVotes({});
-    setStreamedText("");
     haptics.light();
   };
 
@@ -433,6 +427,36 @@ export function QuickModeScreen() {
     toast("Copied to clipboard", "success");
     if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current);
     copyTimerRef.current = window.setTimeout(() => setCopiedKey(null), 1500);
+  };
+
+  const handleTogglePick = (bubbleIdx: number, text: string) => {
+    const key = `pick-${activeTone}-${cursor[activeTone]}-${bubbleIdx}`;
+    haptics.light();
+    setPicked((prev) => {
+      if (prev[key]) {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+      return { ...prev, [key]: { tone: activeTone, variation: cursor[activeTone], text } };
+    });
+    setPickedCopied(false);
+  };
+
+  const pickedItems = useMemo(
+    () =>
+      Object.entries(picked).map(([key, v]) => ({
+        key,
+        tone: v.tone,
+        text: v.text,
+      })),
+    [picked]
+  );
+
+  const handleCopyPicked = async () => {
+    if (pickedItems.length === 0) return;
+    await handleCopy(pickedItems.map((p) => p.text).join("\n\n"), "picked-copy-all");
+    setPickedCopied(true);
   };
 
   const handleFeedback = (rating: "helpful" | "off", bubbleIdx?: number) => {
@@ -843,10 +867,11 @@ export function QuickModeScreen() {
               cursor={cursor[activeTone]}
               copiedKey={copiedKey}
               prefersReducedMotion={prefersReducedMotion}
-              streamedText={streamedText}
               onCopy={(text, key) => void handleCopy(text, key)}
               onFeedback={(rating, bubbleIdx) => handleFeedback(rating, bubbleIdx)}
               feedbackVotes={feedbackVotes}
+              onTogglePick={(idx, text) => handleTogglePick(idx, text)}
+              pickedKeys={picked}
               onSelectVariation={(i) => { haptics.light(); setCursor((prev) => ({ ...prev, [activeTone]: i })); }}
               onDragEnd={({ offset, velocity }) => {
                 if (selectedOptions.length <= 1) return;
@@ -859,6 +884,23 @@ export function QuickModeScreen() {
             />
 
             <div className="mt-3">
+              <PickedTray
+                items={pickedItems}
+                copied={pickedCopied}
+                onCopyAll={() => void handleCopyPicked()}
+                onRemove={(key) => {
+                  setPicked((prev) => {
+                    const next = { ...prev };
+                    delete next[key];
+                    return next;
+                  });
+                  setPickedCopied(false);
+                }}
+                onClear={() => {
+                  setPicked({});
+                  setPickedCopied(false);
+                }}
+              />
               <FriendSummaryCard
                 summary={result?.summary || result?.tacticalSummary || result?.proTip || "Keep it light, match their energy, and leave an easy lane to reply."}
                 shouldWait={Boolean(result?.shouldWait)}
@@ -950,6 +992,8 @@ export function QuickModeScreen() {
     </motion.div>
   );
 }
+
+
 
 
 

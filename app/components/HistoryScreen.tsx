@@ -56,6 +56,15 @@ const getScreenshots = (session: Session): string[] => {
   return (fromRequest && fromRequest.length ? fromRequest : fromResult) || [];
 };
 
+const friendlyModelName = (model?: string): string | null => {
+  if (!model) return null;
+  if (model.includes("muse-spark")) return "Spark";
+  if (model.includes("deepseek")) return "Deepseek";
+  if (model.includes("hy4")) return "Hy4 free";
+  if (model.includes("gemini")) return "Gemini (legacy)";
+  return model;
+};
+
 function SessionDetail({ session, onBack }: { session: Session; onBack: () => void }) {
   const { toast } = useToast();
   const parsed = session.parsedResult || {};
@@ -540,6 +549,11 @@ function SessionDetail({ session, onBack }: { session: Session; onBack: () => vo
               <Zap size={15} color="#C8522A" />
               <p style={labelStyle}>Suggested replies</p>
             </div>
+            {(((response as any)?.modelUsed || (response as any)?.siVersion)) && (
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: "rgba(26,18,8,0.4)", marginBottom: 8 }}>
+                {[friendlyModelName((response as any)?.modelUsed), (response as any)?.siVersion ? `SI ${(response as any).siVersion}` : null].filter(Boolean).join(" · ")}
+              </p>
+            )}
 
             <div className="flex gap-1.5 overflow-x-auto pb-2 no-scrollbar" style={{ marginLeft: -2, marginRight: -2, paddingLeft: 2, paddingRight: 2 }}>
               {TONE_ORDER.filter((t) => optionsForTone(t).length > 0).map((tone) => {
