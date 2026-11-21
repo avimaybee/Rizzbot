@@ -244,7 +244,7 @@ export function MyVoiceScreen() {
     try {
       await saveUserProfile(computedProfile);
       toast("Voice profile saved", "success");
-      navigate("/home");
+      navigate("/settings");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not save profile";
       toast(message, "error");
@@ -289,7 +289,7 @@ export function MyVoiceScreen() {
             Start Quiz
           </button>
           <button
-            onClick={() => navigate("/home")}
+            onClick={() => navigate("/settings")}
             className="mt-4 fade-press cursor-pointer flex items-center justify-center gap-2"
             style={{
               backgroundColor: "#FDFAF5",

@@ -125,6 +125,8 @@ export const calculateFeedbackStats = (userId: string): FeedbackStats => {
   // Count ratings per type
   entries.forEach(entry => {
     const typeMap: Record<string, keyof FeedbackStats> = {
+      real: 'authenticRatings',
+      playful: 'wittyRatings',
       smooth: 'smoothRatings',
       bold: 'boldRatings',
       witty: 'wittyRatings',

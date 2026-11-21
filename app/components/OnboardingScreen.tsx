@@ -1,10 +1,21 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { Zap, Target, Heart, ChevronRight } from "lucide-react";
+import { Zap, MessageSquare, Brain, ChevronRight } from "lucide-react";
 import { GrainOverlay } from "./GrainOverlay";
 
 const slides = [
+  {
+    icon: MessageSquare,
+    iconBg: "#F5E8E0",
+    iconColor: "#C8522A",
+    eyebrow: "MEET KAI",
+    title: "Your sharper,\nunfiltered friend",
+    titleAccent: "friend",
+    body: "Drop screenshots, vent by voice note, or overthink a 2am text. Kai reads the subtext and tells you what's actually going on.",
+    researchNote: "No therapy-speak or generic bot replies.",
+    cta: "Next",
+  },
   {
     icon: Zap,
     iconBg: "#FEF3E2",
@@ -12,30 +23,19 @@ const slides = [
     eyebrow: "QUICK MODE",
     title: "Read the room\ninstantly",
     titleAccent: "instantly",
-    body: "Drop a screenshot or paste a message. Rizzbot reads the energy, flags ghost risk, and serves you the perfect reply in seconds.",
-    researchNote: "Backed by realtime linguistic signal analysis.",
+    body: "Need options fast? Quick Mode serves up five tones — Real, Smooth, Playful, Bold, and Your Style — built straight from the chat.",
+    researchNote: "Swipe right on any line to quote or tweak it.",
     cta: "Next",
   },
   {
-    icon: Target,
-    iconBg: "#FEF3E2",
-    iconColor: "#C8522A",
-    eyebrow: "PRACTICE MODE",
-    title: "Rehearse before\nyou reply",
-    titleAccent: "reply",
-    body: "Pick a persona — The Dry Texter, The Ghoster, The Flirt — and spar until your responses feel effortless and confident.",
-    researchNote: "Stress-tested against established behavioral archetypes.",
-    cta: "Next",
-  },
-  {
-    icon: Heart,
+    icon: Brain,
     iconBg: "#FDF0F0",
-    iconColor: "#D4838A",
-    eyebrow: "DEEP DIVE",
-    title: "Understand your\nown patterns",
-    titleAccent: "patterns",
-    body: "Talk it through with your AI therapist. Surface attachment habits, decode recurring behaviors, and build a healthier texting style.",
-    researchNote: "Grounded in clinical attachment theory models.",
+    iconColor: "#C8522A",
+    eyebrow: "MEMORY & STYLE",
+    title: "Learns how you\nactually text",
+    titleAccent: "actually text",
+    body: "Kai picks up your natural texting cadence from screenshots and remembers the backstory — with Incognito mode whenever you want zero trace.",
+    researchNote: "Editable & clearable anytime in Settings.",
     cta: "Let's go →",
   },
 ];
@@ -50,7 +50,7 @@ export function OnboardingScreen() {
   const handleNext = () => {
     if (isLast) {
       localStorage.setItem("rizzbot_onboarded", "1");
-      navigate("/auth", { state: { startVoiceQuiz: true } });
+      navigate("/auth");
     } else {
       setIndex((i) => i + 1);
     }

@@ -27,16 +27,17 @@ export const PickedTray: React.FC<PickedTrayProps> = ({
   return (
     <section
       aria-label="Picked lines"
-      className="mt-3 rounded-2xl bg-[#181617] border border-[#2A2627] p-5"
+      className="mt-3 rounded-[18px] bg-[#FDFAF5] border border-[#E8E0D4] p-4"
+      style={{ boxShadow: "0 2px 10px rgba(26, 18, 8, 0.04)" }}
     >
-      <div className="flex items-center justify-between gap-2 mb-3 pb-3 border-b border-[#252223]">
-        <span className="text-xs uppercase tracking-[0.12em] text-[#D47254] font-semibold">
+      <div className="flex items-center justify-between gap-2 mb-2.5 pb-2.5 border-b border-[#E8E0D4]">
+        <span className="text-[11px] uppercase tracking-[0.12em] text-[#C8522A] font-semibold" style={{ fontFamily: "'DM Sans', sans-serif" }}>
           Picked lines · {items.length}
         </span>
         <button
           type="button"
           onClick={onClear}
-          className="cursor-pointer text-xs font-medium text-[#A69F95] hover:text-[#F2EFE9] transition-colors"
+          className="cursor-pointer text-xs font-medium text-[rgba(26,18,8,0.5)] hover:text-[#1A1208] transition-colors"
           style={{ background: "none", border: "none", fontFamily: "'DM Sans', sans-serif" }}
         >
           Clear
@@ -47,22 +48,22 @@ export const PickedTray: React.FC<PickedTrayProps> = ({
         {items.map((item) => (
           <div
             key={item.key}
-            className="flex items-start gap-2 rounded-xl bg-[#221F20] border border-[#302C2D] px-3 py-2.5"
+            className="flex items-start gap-2.5 rounded-xl bg-[#F5EFE6] border border-[#E8E0D4] px-3 py-2.5"
           >
             <span
-              className="shrink-0 text-[10px] uppercase tracking-[0.08em] font-semibold text-[#D47254] mt-0.5"
+              className="shrink-0 text-[10px] uppercase tracking-[0.08em] font-semibold text-[#C8522A] mt-0.5"
               style={{ fontFamily: "'DM Sans', sans-serif" }}
             >
               {item.tone}
             </span>
-            <p className="flex-1 text-[13.5px] leading-[1.45] text-[#F2EFE9] whitespace-pre-wrap break-words" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <p className="flex-1 text-[13.5px] leading-[1.45] text-[#1A1208] whitespace-pre-wrap break-words m-0" style={{ fontFamily: "'DM Sans', sans-serif" }}>
               {item.text}
             </p>
             <button
               type="button"
               onClick={() => onRemove(item.key)}
               aria-label="Remove picked line"
-              className="cursor-pointer shrink-0 p-1 rounded-md text-[#8E8A84] hover:text-[#F2EFE9] transition-colors"
+              className="cursor-pointer shrink-0 p-1 rounded-md text-[rgba(26,18,8,0.4)] hover:text-[#1A1208] transition-colors"
               style={{ background: "none", border: "none" }}
             >
               <X size={13} strokeWidth={2} />
@@ -74,15 +75,15 @@ export const PickedTray: React.FC<PickedTrayProps> = ({
       <button
         type="button"
         onClick={onCopyAll}
-        className="w-full cursor-pointer inline-flex items-center justify-center gap-1.5 rounded-xl font-medium transition-colors"
+        className="w-full cursor-pointer inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold transition-colors"
         style={{
-          marginTop: 12,
-          height: 44,
-          backgroundColor: copied ? "rgba(107,158,120,0.2)" : "rgba(212,114,84,0.15)",
-          color: copied ? "#8FCE9D" : "#E3886B",
+          marginTop: 10,
+          height: 40,
+          backgroundColor: copied ? "#EAF0EA" : "#F5E8E0",
+          color: copied ? "#466348" : "#A8401C",
           fontFamily: "'DM Sans', sans-serif",
           fontSize: 13,
-          border: "none",
+          border: "1px solid #E8E0D4",
         }}
       >
         {copied ? <Check size={15} strokeWidth={2.5} /> : <Copy size={14} strokeWidth={2} />}

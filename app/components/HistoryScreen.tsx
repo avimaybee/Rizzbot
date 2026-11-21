@@ -33,7 +33,7 @@ import { useAppContext } from "../app-context";
 import { deleteSession, deleteTherapistSession, getSessions, getTherapistSessions, Session, SessionResult } from "../../services/dbService";
 import { formatShortDate, formatTimeAgo, parseDbDate } from "../utils/formatTime";
 
-const filterOptions = ["All", "Quick Mode", "Practice", "Therapist"] as const;
+const filterOptions = ["All", "Quick Mode"] as const;
 
 const toMode = (mode?: string) =>
   mode === "quick" ? "Quick Mode" : mode === "simulator" ? "Practice" : mode === "therapist" ? "Therapist" : "Session";

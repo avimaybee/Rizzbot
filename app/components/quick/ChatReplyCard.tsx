@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { Check, Copy, Reply } from "lucide-react";
 import { ReplyHeroCard } from "./ReplyHeroCard";
 import { ToneRail, type Tone } from "./ToneRail";
 import { PickedTray, type PickedItem } from "./PickedTray";
@@ -7,7 +8,11 @@ import { useScrollFade } from "../../utils/useScrollFade";
 import { haptics } from "../../utils/haptics";
 import { TONE_ORDER } from "../../utils/quickLogic";
 import type { QuickAdviceResponse, SuggestionOption } from "../../../types";
+import type { ReplyQuote } from "../../../services/chatApi";
 import { buildCopyPayload } from "../../../services/quickAdvice";
+import { saveFeedback } from "../../../services/feedbackService";
+import { submitFeedback } from "../../../services/dbService";
+import { useAppContext } from "../../app-context";
 
 const toneOptions = [
   { key: "Real", help: null },
@@ -30,7 +35,8 @@ const labelToKey: Record<string, string> = { Real: "real", Smooth: "smooth", Pla
 interface ChatReplyCardProps {
   turnId: string;
   card: any;
-  onRefine: (ref: { sourceTurnId: string; tone?: string; optionIndex?: number; bubbleIndex?: number; label: string }) => void;
+  onRefine?: (ref: { sourceTurnId: string; tone?: string; optionIndex?: number; bubbleIndex?: number; label: string }) => void;
+  onQuoteBubble?: (quote: ReplyQuote) => void;
   onCopyLine?: (text: string) => void;
 }
 
@@ -54,7 +60,8 @@ function toRevision(card: any): { variations: Array<{ bubbles: Array<{ text: str
   return { variations: v, sourceTone: (card as any).sourceTone, sourceOptionIndex: (card as any).sourceOptionIndex };
 }
 
-export function ChatReplyCard({ turnId, card, onRefine, onCopyLine }: ChatReplyCardProps) {
+export function ChatReplyCard({ turnId, card, onQuoteBubble, onCopyLine }: ChatReplyCardProps) {
+  const { authUser, userId } = useAppContext();
   const deck = toDeck(card);
   const revision = toRevision(card);
   const [activeTone, setActiveTone] = useState<Tone>("Real");
@@ -64,6 +71,7 @@ export function ChatReplyCard({ turnId, card, onRefine, onCopyLine }: ChatReplyC
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [copyError, setCopyError] = useState<string | null>(null);
   const [showTip, setShowTip] = useState<string | null>(null);
+  const [feedbackVotes, setFeedbackVotes] = useState<Record<string, "helpful" | "off">>({});
   const copyTimer = useRef<number | null>(null);
   const toneFade = useScrollFade();
 
@@ -165,72 +173,150 @@ export function ChatReplyCard({ turnId, card, onRefine, onCopyLine }: ChatReplyC
     if (ok) setPickedCopied(true);
   };
 
+  const optionIdx = options.length ? cur % options.length : 0;
+
+  const feedbackTypeForTone = (tone: Tone): "real" | "smooth" | "playful" | "bold" | "yourStyle" => {
+    if (tone === "Your Style") return "yourStyle";
+    return tone.toLowerCase() as "real" | "smooth" | "playful" | "bold";
+  };
+
+  const handleFeedback = (rating: "helpful" | "off", bubbleIdx: number) => {
+    const key = `fb-${resolvedTone}-${cur}-${bubbleIdx}`;
+    if (feedbackVotes[key]) return;
+    haptics.light();
+    setFeedbackVotes((prev) => ({ ...prev, [key]: rating }));
+    const suggestionType = feedbackTypeForTone(resolvedTone);
+    if (authUser?.uid) {
+      saveFeedback(authUser.uid, {
+        source: "chat",
+        suggestionType,
+        rating,
+        recommendedAction: deck.summary || "",
+      });
+    }
+    if (userId) {
+      void submitFeedback({
+        user_id: userId,
+        source: "chat",
+        suggestion_type: suggestionType,
+        rating: rating === "helpful" ? 1 : -1,
+        metadata: {
+          turnId,
+          tone: resolvedTone,
+          variation: cur,
+          bubble: bubbleIdx,
+        },
+      }).catch(() => {});
+    }
+  };
+
+  const quoteActiveOption = (bubbleText?: string, bubbleIdx?: number) => {
+    if (!onQuoteBubble || !selected) return;
+    haptics.light();
+    const toneKey = labelToKey[resolvedTone] || resolvedTone.toLowerCase();
+    const label = `${resolvedTone} #${optionIdx + 1}`;
+    const fullText = bubbleText || buildCopyPayload(selected);
+    onQuoteBubble({
+      author: `Kai (${label})`,
+      text: fullText.slice(0, 400),
+      turnId,
+      tone: toneKey,
+      optionIndex: optionIdx,
+      ...(typeof bubbleIdx === "number" ? { bubbleIndex: bubbleIdx } : {}),
+    });
+  };
+
   return (
-    <div>
-      <ToneRail
-        toneOptions={toneOptions}
-        toneHasOptions={hasOptions}
-        activeTone={resolvedTone}
-        onSelectTone={(k) => { setActiveTone(k); haptics.light(); }}
-        showStyleTooltip={showTip}
-        onToggleStyleTooltip={(k) => setShowTip((p) => (p ? null : k))}
-        scrollFade={toneFade}
-      />
-      <ReplyHeroCard
-        selectedOption={selected}
-        optionCount={options.length}
-        activeTone={resolvedTone}
-        cursor={cur}
-        copiedKey={copiedKey}
-        prefersReducedMotion={false}
-        onCopy={(text, key) => void copyText(text, key)}
-        onTogglePick={(idx, text) => handleTogglePick(idx, text)}
-        pickedKeys={picked}
-        onSelectVariation={(i) => { haptics.light(); setCursor((p) => ({ ...p, [resolvedTone]: i })); }}
-        onDragEnd={({ offset, velocity }) => {
-          if (options.length <= 1) return;
-          const flick = Math.abs(offset.x) > 56 || (Math.abs(offset.x) > 24 && Math.abs(velocity.x) > 500);
-          if (!flick) return;
-          const dir = offset.x < 0 ? 1 : -1;
-          setCursor((p) => ({ ...p, [resolvedTone]: (cur + dir + options.length) % options.length }));
+    <div className="space-y-3">
+      <section
+        aria-label="Reply options"
+        style={{
+          backgroundColor: "#FDFAF5",
+          border: "1px solid #E8E0D4",
+          borderRadius: 20,
+          padding: "12px 14px 14px",
+          boxShadow: "0 2px 10px rgba(26,18,8,0.04)",
         }}
-      />
-      <div className="mt-2 flex gap-2">
-        <button
-          type="button"
-          onClick={() => onRefine({ sourceTurnId: turnId, tone: labelToKey[resolvedTone] || resolvedTone.toLowerCase(), optionIndex: options.length ? cur % options.length : 0, label: `Refining ${resolvedTone} · Option ${(options.length ? cur % options.length : 0) + 1}` })}
-          className="cursor-pointer"
-          style={{ height: 40, borderRadius: 10, border: "1px solid #E8E0D4", backgroundColor: "#FFFFFF", fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: "#1A1208", padding: "0 14px" }}
-        >
-          Refine
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (!selected) return;
-            const text = buildCopyPayload(selected);
-            void copyText(text, `copyall-${resolvedTone}-${cur}`);
-          }}
-          className="cursor-pointer"
-          style={{ height: 40, borderRadius: 10, border: "1px solid #E8E0D4", backgroundColor: "#FFFFFF", fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: "#1A1208", padding: "0 14px" }}
-        >
-          {copiedKey === `copyall-${resolvedTone}-${cur}` ? "Copied" : "Copy reply"}
-        </button>
-      </div>
-      <div className="mt-3">
-        <PickedTray
-          items={pickedItems}
-          copied={pickedCopied}
-          onCopyAll={() => void handleCopyPicked()}
-          onRemove={(key) => { setPicked((p) => { const n = { ...p }; delete n[key]; return n; }); setPickedCopied(false); }}
-          onClear={() => { setPicked({}); setPickedCopied(false); }}
+      >
+        <ToneRail
+          toneOptions={toneOptions}
+          toneHasOptions={hasOptions}
+          activeTone={resolvedTone}
+          onSelectTone={(k) => { setActiveTone(k); haptics.light(); }}
+          showStyleTooltip={showTip}
+          onToggleStyleTooltip={(k) => setShowTip((p) => (p ? null : k))}
+          scrollFade={toneFade}
         />
-        {deck.summary ? (
-          <div className="mt-3">
-            <FriendSummaryCard summary={deck.summary} shouldWait={Boolean(deck.shouldWait)} extractedUnrepliedMessages={deck.extracted || []} />
-          </div>
-        ) : null}
-      </div>
+        <ReplyHeroCard
+          selectedOption={selected}
+          optionCount={options.length}
+          activeTone={resolvedTone}
+          cursor={cur}
+          copiedKey={copiedKey}
+          prefersReducedMotion={false}
+          hideCopyAllBar
+          onCopy={(text, key) => void copyText(text, key)}
+          onTogglePick={(idx, text) => handleTogglePick(idx, text)}
+          pickedKeys={picked}
+          onFeedback={handleFeedback}
+          feedbackVotes={feedbackVotes}
+          onQuoteBubble={onQuoteBubble ? (bubbleText, idx) => quoteActiveOption(bubbleText, idx) : undefined}
+          onSelectVariation={(i) => { haptics.light(); setCursor((p) => ({ ...p, [resolvedTone]: i })); }}
+          onDragEnd={({ offset, velocity }) => {
+            if (options.length <= 1) return;
+            const flick = Math.abs(offset.x) > 56 || (Math.abs(offset.x) > 24 && Math.abs(velocity.x) > 500);
+            if (!flick) return;
+            const dir = offset.x < 0 ? 1 : -1;
+            setCursor((p) => ({ ...p, [resolvedTone]: (cur + dir + options.length) % options.length }));
+          }}
+        />
+        <div className="mt-3 pt-2.5 flex items-center gap-2 border-t border-[#E8E0D4]">
+          {onQuoteBubble && (
+            <button
+              type="button"
+              onClick={() => quoteActiveOption()}
+              className="cursor-pointer inline-flex items-center gap-1.5 transition-colors hover:bg-[#F5E8E0]"
+              style={{ height: 38, borderRadius: 10, border: "1px solid #E8E0D4", backgroundColor: "#F5EFE6", fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: "#1A1208", padding: "0 13px" }}
+            >
+              <Reply size={13} strokeWidth={2.2} color="#C8522A" />
+              Reply to this
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              if (!selected) return;
+              const text = buildCopyPayload(selected);
+              void copyText(text, `copyall-${resolvedTone}-${cur}`);
+            }}
+            className="cursor-pointer inline-flex items-center gap-1.5 transition-colors ml-auto hover:opacity-90"
+            style={{
+              height: 38,
+              borderRadius: 10,
+              border: "none",
+              backgroundColor: copiedKey === `copyall-${resolvedTone}-${cur}` ? "#58745A" : "#1A1208",
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#FFFFFF",
+              padding: "0 14px",
+            }}
+          >
+            {copiedKey === `copyall-${resolvedTone}-${cur}` ? <Check size={14} strokeWidth={2.5} /> : <Copy size={13} strokeWidth={2} />}
+            {copiedKey === `copyall-${resolvedTone}-${cur}` ? "Copied" : "Copy reply"}
+          </button>
+        </div>
+      </section>
+      <PickedTray
+        items={pickedItems}
+        copied={pickedCopied}
+        onCopyAll={() => void handleCopyPicked()}
+        onRemove={(key) => { setPicked((p) => { const n = { ...p }; delete n[key]; return n; }); setPickedCopied(false); }}
+        onClear={() => { setPicked({}); setPickedCopied(false); }}
+      />
+      {deck.summary ? (
+        <FriendSummaryCard summary={deck.summary} shouldWait={Boolean(deck.shouldWait)} extractedUnrepliedMessages={deck.extracted || []} />
+      ) : null}
       <p className="sr-only" aria-live="off">{TONE_ORDER.join(",")}</p>
       {copyError && !copiedKey && (
         <p role="alert" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#A8401C", marginTop: 6 }}>{copyError}</p>

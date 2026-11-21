@@ -1,6 +1,6 @@
 import type React from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, Copy, CornerDownRight, Plus, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, CornerDownRight, Plus, Reply, ThumbsDown, ThumbsUp } from "lucide-react";
 import type { SuggestionOption } from "../../../types";
 
 interface ReplyHeroCardProps {
@@ -21,6 +21,8 @@ interface ReplyHeroCardProps {
   onCopyAll?: (text: string) => void;
   onCopySingleBubble?: (bubbleText: string, bubbleIndex: number) => void;
   copiedAll?: boolean;
+  /** Hide the internal full-width Copy All bar when the parent card provides its own footer actions. */
+  hideCopyAllBar?: boolean;
   /** Rate a single bubble. Rendered as tiny quiet thumbs on each bubble,
       since picks are made bubble-by-bubble across tones. */
   onFeedback?: (rating: "helpful" | "off", bubbleIndex: number) => void;
@@ -28,6 +30,8 @@ interface ReplyHeroCardProps {
   /** Toggle a bubble into the picked-lines tray. */
   onTogglePick?: (bubbleIndex: number, text: string) => void;
   pickedKeys?: Record<string, unknown>;
+  /** Quote an individual reply bubble into Chat so user can ask Kai to tweak it conversationally. */
+  onQuoteBubble?: (bubbleText: string, bubbleIndex: number) => void;
 }
 
 export function ReplyHeroCard({
@@ -45,10 +49,12 @@ export function ReplyHeroCard({
   onCopyAll,
   onCopySingleBubble,
   copiedAll,
+  hideCopyAllBar,
   onFeedback,
   feedbackVotes,
   onTogglePick,
   pickedKeys,
+  onQuoteBubble,
 }: ReplyHeroCardProps) {
   const effectiveOption = selectedOption ?? (options && typeof selectedIndex === 'number' ? options[selectedIndex] : null);
   const effectiveCount = options ? options.length : optionCount;
@@ -124,14 +130,23 @@ export function ReplyHeroCard({
                 </p>
                 {effectiveCount > 1 && (
                   <div className="flex items-center shrink-0" style={{ gap: 2, padding: 2, backgroundColor: "rgba(26,18,8,0.06)", borderRadius: 10 }}>
+                    <button
+                      type="button"
+                      onClick={() => onSelectVariation((cursor - 1 + effectiveCount) % effectiveCount)}
+                      aria-label="Previous variation"
+                      className="cursor-pointer flex items-center justify-center rounded-lg hover:bg-black/5"
+                      style={{ width: 28, height: 32, border: "none", background: "transparent", color: "rgba(26,18,8,0.55)" }}
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
                     {Array.from({ length: effectiveCount }, (_, i) => (
                       <button
                         key={i}
                         onClick={() => onSelectVariation(i)}
                         aria-label={`Variation ${i + 1}`}
                         style={{
-                          width: 36,
-                          height: 36,
+                          width: 32,
+                          height: 32,
                           borderRadius: 8,
                           backgroundColor: cursor % effectiveCount === i ? "#1A1208" : "transparent",
                           color: cursor % effectiveCount === i ? "#FFFFFF" : "rgba(26,18,8,0.55)",
@@ -145,6 +160,15 @@ export function ReplyHeroCard({
                         {i + 1}
                       </button>
                     ))}
+                    <button
+                      type="button"
+                      onClick={() => onSelectVariation((cursor + 1) % effectiveCount)}
+                      aria-label="Next variation"
+                      className="cursor-pointer flex items-center justify-center rounded-lg hover:bg-black/5"
+                      style={{ width: 28, height: 32, border: "none", background: "transparent", color: "rgba(26,18,8,0.55)" }}
+                    >
+                      <ChevronRight size={14} />
+                    </button>
                   </div>
                 )}
               </div>
@@ -164,8 +188,27 @@ export function ReplyHeroCard({
                         </div>
                       )}
                       <div className="flex items-center justify-end gap-1">
-                        {(onFeedback || onTogglePick) && (
+                        {(onFeedback || onTogglePick || onQuoteBubble) && (
                           <div className="flex flex-col items-center gap-0.5 shrink-0" aria-label={`Rate bubble ${idx + 1}`}>
+                            {onQuoteBubble && (
+                              <button
+                                type="button"
+                                onClick={() => onQuoteBubble(bubble.text, idx)}
+                                aria-label={`Quote bubble ${idx + 1} to Kai`}
+                                title="Quote in chat"
+                                className="cursor-pointer flex items-center justify-center transition-colors hover:bg-[#F5E8E0]"
+                                style={{
+                                  width: 28,
+                                  height: 28,
+                                  borderRadius: 8,
+                                  border: "none",
+                                  background: "none",
+                                  color: "rgba(200,82,42,0.72)",
+                                }}
+                              >
+                                <Reply size={13} strokeWidth={2.2} />
+                              </button>
+                            )}
                             {onTogglePick && (() => {
                               const pickKey = `pick-${activeTone}-${cursor}-${idx}`;
                               const isPicked = Boolean(pickedKeys?.[pickKey]);
@@ -277,7 +320,7 @@ export function ReplyHeroCard({
                   </div>
                 )}
 
-                {bubbles.length > 1 && (
+                {bubbles.length > 1 && !hideCopyAllBar && (
                   <button
                     onClick={handleCopyAll}
                     className="w-full cursor-pointer"

@@ -1,5 +1,5 @@
 import { getAuthHeaders } from "./authHeaders";
-import type { ChatRef } from "./chatApi";
+import type { ChatRef, ReplyQuote } from "./chatApi";
 
 export interface SendTurnInput {
   mode: "regular" | "incognito";
@@ -8,10 +8,11 @@ export interface SendTurnInput {
   text: string;
   attachmentKeys?: string[];
   ref?: ChatRef;
+  replyQuote?: ReplyQuote;
   action?: "draft" | "refine";
   // incognito-only
   images?: Array<{ data: string; mimeType: string }>;
-  priorTurns?: Array<{ role: "user" | "assistant"; text: string }>;
+  priorTurns?: Array<{ role: "user" | "assistant"; text: string; replyQuote?: ReplyQuote }>;
   sessionId?: string;
 }
 
@@ -19,7 +20,7 @@ export interface StreamCallbacks {
   onAccepted?: (turnId: string) => void;
   onStatus?: (code: string, message: string) => void;
   onDelta?: (text: string) => void;
-  onDone?: (turn: any) => void;
+  onDone?: (turn: any, updatedTitle?: string) => void;
   onError?: (code: string, message: string) => void;
   signal?: AbortSignal;
 }
@@ -36,6 +37,7 @@ export async function sendChatTurn(input: SendTurnInput, cb: StreamCallbacks): P
           priorTurns: input.priorTurns || [],
           sessionId: input.sessionId,
           ref: input.ref,
+          replyQuote: input.replyQuote,
           action: input.action,
         }
       : {
@@ -45,6 +47,7 @@ export async function sendChatTurn(input: SendTurnInput, cb: StreamCallbacks): P
           text: input.text,
           attachmentKeys: input.attachmentKeys || [],
           ref: input.ref,
+          replyQuote: input.replyQuote,
           action: input.action,
         };
 
@@ -83,7 +86,7 @@ export async function sendChatTurn(input: SendTurnInput, cb: StreamCallbacks): P
     if (evt.type === "accepted") cb.onAccepted?.(evt.turnId || "");
     else if (evt.type === "status") cb.onStatus?.(evt.code || "thinking", typeof evt.message === "string" ? evt.message : "");
     else if (evt.type === "delta" && typeof evt.text === "string") cb.onDelta?.(evt.text);
-    else if (evt.type === "done") cb.onDone?.(evt.turn);
+    else if (evt.type === "done") cb.onDone?.(evt.turn, typeof evt.updatedTitle === "string" ? evt.updatedTitle : undefined);
     else if (evt.type === "error") cb.onError?.(evt.code || "upstream", evt.message || "Couldn’t finish that reply.");
   };
 

@@ -4,12 +4,22 @@ export interface ChatThreadSummary {
   id: string;
   title: string;
   context_note?: string;
+  title_manual?: number;
   created_at: string;
   updated_at: string;
 }
 
 export interface ChatRef {
   sourceTurnId: string;
+  tone?: string;
+  optionIndex?: number;
+  bubbleIndex?: number;
+}
+
+export interface ReplyQuote {
+  author: string;
+  text: string;
+  turnId?: string;
   tone?: string;
   optionIndex?: number;
   bubbleIndex?: number;
@@ -22,11 +32,22 @@ export interface ChatTurnWire {
   userText: string;
   attachments: string[];
   ref?: ChatRef;
+  replyQuote?: ReplyQuote;
   assistantText: string;
   card?: any;
   status: string;
   attempt?: number;
   createdAt?: string;
+}
+
+export interface AppSettingsWire {
+  vibe: "unfiltered" | "balanced" | "gentle";
+  autoLearnVoice: boolean;
+  autoSaveMemory: boolean;
+  hapticsEnabled: boolean;
+  memoryCount: number;
+  memoryCap: number;
+  threadCount: number;
 }
 
 async function authed(path: string, init?: RequestInit): Promise<Response> {
@@ -83,6 +104,62 @@ export async function renameThread(threadId: string, title: string): Promise<{ t
   return res.json();
 }
 
+export async function updateThreadNote(threadId: string, contextNote: string): Promise<{ thread: ChatThreadSummary }> {
+  const res = await authed(`/api/chat/threads/${encodeURIComponent(threadId)}`, { method: "PATCH", body: JSON.stringify({ context_note: contextNote }) });
+  if (res.status === 404) throw new Error("not_found");
+  if (!res.ok) throw new Error("unavailable");
+  return res.json();
+}
+
+export async function abortTurn(threadId: string, turnId: string): Promise<void> {
+  const res = await authed(`/api/chat/threads/${encodeURIComponent(threadId)}`, {
+    method: "POST",
+    body: JSON.stringify({ action: "abort_pending", turnId }),
+  });
+  if (!res.ok && res.status !== 404) throw new Error("unavailable");
+}
+
+export async function rewindThread(
+  threadId: string,
+  turnId: string,
+  opts?: { keepAnchorMedia?: boolean }
+): Promise<{ deletedTurnIds?: string[] }> {
+  const res = await authed(`/api/chat/threads/${encodeURIComponent(threadId)}`, {
+    method: "POST",
+    body: JSON.stringify({ action: "rewind_to", turnId, keepAnchorMedia: Boolean(opts?.keepAnchorMedia) }),
+  });
+  if (res.status === 404) throw new Error("not_found");
+  if (res.status === 409) throw new Error("active");
+  if (!res.ok) throw new Error("unavailable");
+  return res.json();
+}
+
+export async function getAppSettings(): Promise<AppSettingsWire> {
+  const res = await authed(`/api/chat/settings`);
+  if (res.status === 401) throw new Error("unauthorized");
+  if (!res.ok) throw new Error("unavailable");
+  return res.json();
+}
+
+export async function updateAppSettings(
+  patch: Partial<Pick<AppSettingsWire, "vibe" | "autoLearnVoice" | "autoSaveMemory" | "hapticsEnabled">>
+): Promise<AppSettingsWire> {
+  const res = await authed(`/api/chat/settings`, { method: "PUT", body: JSON.stringify(patch) });
+  if (res.status === 401) throw new Error("unauthorized");
+  if (!res.ok) throw new Error("unavailable");
+  return res.json();
+}
+
+export async function deleteAllChats(): Promise<void> {
+  const res = await authed(`/api/chat/settings?scope=chats`, { method: "DELETE" });
+  if (!res.ok) throw new Error("unavailable");
+}
+
+export async function clearVoiceSamples(): Promise<void> {
+  const res = await authed(`/api/chat/settings?scope=voice_samples`, { method: "DELETE" });
+  if (!res.ok) throw new Error("unavailable");
+}
+
 export async function deleteThread(threadId: string): Promise<void> {
   const res = await authed(`/api/chat/threads/${encodeURIComponent(threadId)}`, { method: "DELETE" });
   if (res.status === 404) throw new Error("not_found");
@@ -132,6 +209,7 @@ export function chatErrorCopy(code: string): string {
     case "not_found": return "This chat isn’t available.";
     case "invalid_input": return "Couldn’t send your message. Try again.";
     case "unauthorized": return "Sign in to use Chat.";
+    case "aborted": return "Stopped.";
     default: return "Couldn’t finish that reply.";
   }
 }

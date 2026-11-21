@@ -1,10 +1,19 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { MicroIllustrations } from "./MicroIllustrations";
 import { GrainOverlay } from "./GrainOverlay";
 import { motion } from "motion/react";
+import { useAppContext } from "../app-context";
 
 export function SplashScreen() {
   const navigate = useNavigate();
+  const { authUser, authLoading } = useAppContext();
+
+  useEffect(() => {
+    if (!authLoading && authUser) {
+      navigate("/chat", { replace: true });
+    }
+  }, [authLoading, authUser, navigate]);
 
   const handleGetStarted = () => {
     const onboarded = localStorage.getItem("rizzbot_onboarded");
@@ -61,13 +70,13 @@ export function SplashScreen() {
           <p
             style={{
               fontFamily: "'DM Sans', sans-serif",
-              fontSize: 12,
+              fontSize: 12.5,
               fontWeight: 400,
               lineHeight: 1.6,
-              color: "rgba(26, 18, 8, 0.45)",
+              color: "rgba(26, 18, 8, 0.5)",
             }}
           >
-            Powered by linguistic forensics, relational psychology, and attachment theory.
+            Chat with Kai, drop screenshots, get replies in your own voice.
           </p>
         </motion.div>
 

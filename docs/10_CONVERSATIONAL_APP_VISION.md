@@ -1,152 +1,93 @@
-# 10 — Conversational App Vision (Phase 2 Blueprint: Unified Thread Architecture)
+# Rizzbot Chat
 
-> **Status**: Phase 2 Architectural Blueprint (Execute **after** Plans `010`–`014` are shipped and verified in production).
-> **Foundation Reused**: Built directly on top of the OpenCode Go backend (`functions/api/opencode/*`), Cloudflare R2 media pipeline (`RIZZBOT_MEDIA`, `functions/api/media.ts`, `<R2Image />`), and Passive Voice Learning (`style_profiles.learned_samples`, `style_profiles.cadence_notes`) introduced in Plans `010`–`014`.
->
-> **Locked decisions (Nov 2026, single-user hobby scope, ~10 users max)**:
-> - NO roleplay anywhere (cut as creepy — no simulator, no "test this reply on them").
-> - NO separate router agent or intent categories. One agent with tools; deterministic heuristics pick the fast path, the model calls tools as needed mid-turn.
-> - "One conversation = one session" is OUR abstraction (`thread_id` + assembled history), not a dependency on OpenCode server sessions. The agentic loop (model → tool → model, ≤N rounds) runs inside a single backend call.
-> - Voice learning stays sneaky: abstract tells only, invisible in UI; proof shows in output quality.
-> - No end-session action exists: summaries compact opportunistically (~15 turns / token threshold), new chats inherit universal memory, threads link to people retroactively.
-> - Builds ALONGSIDE Quick Mode as a new Chat surface. Quick Mode is frozen and untouched.
-> - Agentic = multiple tool calls + thinking per turn, progress shown as human status lines, never narrated machinery.
+> Architecture decision, 21 November 2026. Personal use first, with up to ten invited users. OpenCode Go is the selected inference provider. Account-specific model behavior still needs a smoke test.
 
----
+Use [Plan 015](../plans/015-rizzbot-chat-implementation.md) for implementation, [Plan 015A](../plans/015-chat-ui-ux-handoff.md) for the UI and UX handoff, and [Plan 015B](../plans/015-chat-system-instructions.md) for the system instructions and drafting request boundaries.
 
-## 1. Executive Vision: Why Unify the 5 Siloed Tabs?
+## The pivot
 
-Today, Rizzbot splits the user's dating life across 5 separate navigation tabs (`Quick Mode`, `Practice`, `Coach / Therapist`, `My Voice`, `History`). While each mode is useful in isolation, real human dating emergencies don't fit neatly into rigid tabs:
+Make Chat the place to ask about a conversation, draft a reply, and improve it without re-uploading screenshots or re-explaining the situation. A typical thread starts with screenshots, moves to “what did she mean on image two?”, then to “make Playful #2 shorter.” The same thread holds the messages, screenshots, and selectable reply cards when the user comes back. The user decides what to copy and send.
 
-1. **Real user journeys cross mode boundaries inside a single 3-minute session**:
-   - A user uploads 3 screenshots to get a quick reply (`Quick Mode`) → asks *"wait why did she bring up her ex on image 2?"* (coach) → says *"make option #2 on Playful a bit shorter and tease her about being late"* (refine) → picks lines across tones into the tray → sends.
-   - In a siloed tab architecture, the user has to copy-paste context between modes, re-upload screenshots, and re-select the person/stage every single time. (Roleplay-style simulation is explicitly out of scope — cut as creepy, not a missing feature.)
-2. **The Phase 2 Target Experience**:
-   - Transform Rizzbot into a **ChatGPT-style unified conversational workspace** centered around **People Threads** (e.g., *"Maya — Hinge"*, *"Priya — Snapchat"*, or *"General Wingman Thread"*).
-   - Inside any thread, the user has **one universal multimodal composer** (1–10 screenshots via R2 WebP, text, or voice recording) and a single intelligent wingman that dynamically routes each turn to the right specialized OpenCode Go workflow and renders **inline interactive UI cards** directly inside the chat stream.
+The main navigation is **Chat + Quick**, with legacy history still accessible. Quick keeps its current workflow. Chat takes over the main navigation slots for Practice and Therapist. It can listen, help the user work through emotions, give a candid read on a situation, and draft replies when asked. Its tone can be warm, direct, or practical as the situation calls for. The user stays in one conversation throughout. Chat has no roleplay or session-closing action.
 
----
+## What OpenCode actually owns
 
-## 2. Architecture Overview
+| Option | What it gives Rizzbot | Decision |
+| --- | --- | --- |
+| Call OpenCode Go directly | Hosted model inference, streaming, model-specific tools and modalities, and subscription allowance. A stable `x-opencode-session` helps prompt caching and routing. | Use the existing Pages Functions deployment. Give each thread an opaque stable header ID and send the context the model needs on each request. |
+| Run the OpenCode server or embed its SDK | A session runtime with persisted messages, agent execution, events, and compaction. The documented Cloudflare version runs inside a SQLite-backed Durable Object that we would deploy and own. | Revisit only if replaying context or coordinating turns becomes a measured problem. Rizzbot would still need Firebase ownership, its thread list, R2 media access, and reply-card rendering. |
+| Chain Responses API IDs | Provider-specific continuation where the exact model and endpoint support it. OpenCode’s Go docs do not establish durable continuation for this app across models, settings, or fallback. | Leave continuation IDs out of the storage contract. A provider change should work from the saved thread alone. |
 
-```mermaid
-flowchart TD
-    Composer["Unified Multimodal Composer\n(1-10 R2 Screenshots + Text + Voice)"]
-    Agent["Single Agent + Tool Loop\n(POST /api/opencode/thread)\nDeterministic fast-path, tools as needed"]
+Using that SDK on the current Pages project would mean deploying a separate Durable Object Worker and binding it to Pages. For this app, small tables in the database we already run are the simpler deployment. [OpenCode Go](https://opencode.ai/docs/console/go/) · [Inference API](https://opencode.ai/docs/console/api/inference/) · [OpenCode CLI and server](https://opencode.ai/docs/cli/) · [SDK with Cloudflare Durable Objects](https://opencode.ai/docs/build/sdk/cloudflare/) · [Runtime compaction](https://opencode.ai/docs/compaction/) · [Pages bindings](https://developers.cloudflare.com/pages/functions/bindings/#durable-objects)
 
-    subgraph Tools["Agent Tools (small surface)"]
-        QR["generate_replies\n(muse-spark-1.3-contributor : xhigh)\nSI v4.x 5-Tab Multi-Bubble Card"]
-        REF["refine_reply\n(muse-spark-1.3-contributor : high)\nTargeted Tweak of Selected Bubble"]
-        COACH["talk\n(deepseek-v4.1-flash : high)\nStreaming Read + Generative UI Tools"]
-    end
+Current Rizzbot code already sends explicit model input to Go. Quick and Therapist build timestamp-based header IDs. Chat will send `x-opencode-session: rizzbot-chat-<thread-id>` with Rizzbot’s own user agent. Thread IDs are random, and the header carries no Firebase UID or person name. The existing Therapist endpoint accepts client-supplied instructions and tools. Chat should reuse its streaming techniques while building its instructions, context, and output contract on the server. [Quick API](../functions/api/opencode/quick.ts) · [Therapist stream](../functions/api/opencode/stream.ts)
 
-    Memory["Compounding Memory Layer\n- Person Ledger (D1 people + thread_messages)\n- Per-Person Taste (picked tray + per-bubble votes)\n- Passive Voice Cadence (D1 style_profiles)\n- R2 Screenshot History (RIZZBOT_MEDIA)"]
+### Provider fit and model selection
 
-    Composer --> Agent
-    Memory <--> Agent
-    Agent --> QR
-    Agent --> REF
-    Agent --> COACH
-```
+Continue using OpenCode Go for the personal rollout, based on the owner’s experience using it in Rizzbot and other apps. The published guidance describes coding-agent traffic, and the hosted terms address third-party use. The owner’s experience establishes that the service has worked for these conversations. It leaves shared-key entitlement unverified. [Go usage guidance](https://opencode.ai/docs/console/go/#where-can-i-use-it) · [Hosted terms](https://opencode.ai/legal/terms-of-service)
 
----
+Use Muse Spark 1.3 Contributor for the owner’s regular Chat after the streaming smoke test. The owner opted in to using it for personal chats, screenshots, and ledger context. Keep this provider choice scoped to the owner’s verified UID. Use a separately validated non-training model for invited users and for incognito by default. The Contributor endpoint permits training on requests. Keep that data policy visible where the owner selects or enables the model. MiMo V2.6 Flash remains the WAV-to-text candidate. [Go model API](https://opencode.ai/docs/console/api/models/) · [Public Go catalog](https://opencode.ai/inference/go/v1/models) · [Go privacy](https://opencode.ai/docs/console/go/#privacy)
 
-## 3. Core Pillars of the Unified Conversational App
+The owner’s benchmark write-up reports full Quick decks averaging 9.4s at Muse `minimal`, 16.2s at `low`, 34.1s at `medium`, and 52.3s at `xhigh`. `xhigh` led both reported judge aggregates. `medium` was close and finished about 18s sooner, so keep it as the first comparison for ordinary drafting. Those runs used non-streaming JSON generation, so the write-up’s chat timing was an estimate. DeepSeek V4.1 Flash `high` is the first non-training drafting comparison from the write-up. Use a short-chat probe to choose the non-training chat model.
 
-### Pillar 1: Unified Multimodal Thread Composer
-- **Single Input Bar at the Bottom of Every Thread**:
-  - **Attach / Paste 1–10 Screenshots**: Uses `optimizeImageFile()` (`1280px` WebP `0.80`) and uploads to `RIZZBOT_MEDIA` (`r2:quick/${uid}/...`) via `POST /api/media` (Plan 011).
-  - **Voice Note Button**: Records and converts to 16kHz mono WAV (`useVoiceRecorder.ts`) and transcribes via `mimo-v2.6-flash` (`POST /api/voice/transcribe`, Plan 014).
-  - **Relationship Stage & Person Pill**: Persistent header pill at the top of the thread (`talking`, `dating`, `complicated`, etc.) so the user sets it once per person instead of on every prompt.
-  - **Optional Quick-Intent Override Chips**: Above the composer (`Auto`, `Give me replies`, `Decode subtext`) — defaults to `Auto` so deterministic heuristics pick the fast path (screenshots attached → replies; message references the previous card → refine; otherwise talk) unless the user taps a specific chip. No LLM classifier, no extra latency.
+A two-request synthetic probe against the configured Go account verified Muse `minimal` streaming. One ordinary chat prompt produced a first text event at 1.75s. A drafting prompt that explicitly requested the tool produced completed tool arguments at 1.79s and emitted text about 30ms before those arguments finished. Treat this as a protocol check. Implicit routing accuracy, latency distributions, and a complete escalated turn still need testing.
 
-### Pillar 2: Single Agent + Tool Loop (no router agent, no intent categories)
+Keep automatic Chat learning in the ledger path. The existing Quick learner can send requests to Muse and store verbatim message samples. [Current voice learner](../functions/api/voice/learn.ts)
 
-One agent handles every turn. Deterministic heuristics pick the fast path for free (screenshots attached → replies; message references the previous card → refine; otherwise talk), and the model calls tools mid-turn as needed — model → tool → model, up to N rounds inside a single `POST /api/opencode/thread` call. "One conversation = one session" is our abstraction (`thread_id` + assembled history), not a dependency on server-side sessions.
+## One conversation, variable reasoning effort
 
-1. **`generate_replies` (screenshots attached or user pastes a message asking what to reply)**:
-   - Runs `muse-spark-1.3-contributor` (`xhigh`) with the current Quick SI (v4.x line).
-   - Renders an **Inline 5-Tab Reply Card** (`<ToneRail />` + `<ReplyHeroCard />` + `<FriendSummaryCard />` + `<PickedTray />`) directly inside the assistant message bubble.
-   - Simultaneously fires `triggerPassiveVoiceLearning()` in the background to extract the user's right-side/Me bubbles.
-2. **`refine_reply` (user replies to an inline Reply Card, e.g., *"make Smooth #1 shorter"* or *"don't mention Friday yet"*)**:
-   - Passes the previous Reply Card JSON + the user's refinement instruction to `muse-spark-1.3-contributor` (`high`).
-   - Renders a compact **Refined Reply Card** with 3 updated variations matching the user's tweak without losing the earlier screenshot context.
-3. **`talk` (user asks a question about dynamics, flags, timing, or vents without asking for immediate copy-paste texts)**:
-   - Streams a conversational response via `deepseek-v4.1-flash` (`high`, `POST /api/opencode/stream`) with access to the inline generative UI tools (`Red_Green_Flag_Audit`, `Communication_Rewrite`, `No_Contact_Recovery_Plan`, `Prompt_Follow_Up_Choices`).
-4. **Memory tools (called silently mid-turn, never narrated)**:
-   - `recall_person` / `update_person` — read/write the person ledger (summary, what worked, language mix).
-   - `note_voice` — abstract cadence observations about how the *user* texts (never verbatim quotes); feeds the same `cadenceNotes` pipeline voice-learn uses.
-   - `save_memory` — global facts ("exam season") vs session-scoped context.
+1. The composer accepts text, pasted or uploaded screenshots, and voice-to-text. The transcript goes back into the composer for editing before Send. Regular threads keep sent text and screenshots. Incognito uses the same composer with a separate persistence boundary.
+2. In a regular thread, the Pages Function verifies Firebase authentication and ownership, saves the input, and assembles model context. The prompt includes recent turns, the user’s ledger, writing-style hints, and any relevant card or screenshot. Screenshots are context. If a user submits images alone and their goal is unclear, respond conversationally or ask what they want help with.
+3. Ordinary advice and support stream from the fast model. When the model recognizes a request for something to send, such as “she replied with this, what should I say?”, it calls `draft_replies`. That tool asks the server for one higher-effort generation with the current context and drafting goal. The completed, validated response renders through the existing Quick V2 components. If the user taps an explicit Draft or Refine action, go directly to the appropriate generation request. A targeted revision can use a lower effort and gets the exact card or bubble as context.
+4. The model can propose a small ledger update during the same turn using `update_ledger`. If a ledger-only tool call stops generation before the assistant has provided a visible answer, allow one continuation with ledger writes disabled for that continuation. A completed reply card already counts as the answer. Keep a total cap of two provider calls per turn, including any continuation. Most conversational turns need one.
 
-### Pillar 3: Compounding Personalization & Conversational `MyVoice` Onboarding
-- **Retire the Static 6-Question Multiple-Choice Quiz**:
-  - Replace the static quiz in `MyVoiceScreen.tsx` with:
-    1. **Zero-Click Passive Screenshot Learning** (`Plan 013`) as the primary engine.
-    2. **3-Turn Conversational Calibration Mini-Chat** for brand-new users with zero screenshots: Rizzbot sends 3 realistic texts (*"be honest did you forget about our plans tonight"*, *"i just saw the craziest thing remind me to tell you later"*, *"Wait are you always this trouble"*) and asks the user to type their natural 1-line reply to each.
-  - Because the user types their *own* words (instead of clicking developer-written multiple-choice buttons), Rizzbot immediately captures authentic casing, punctuation, length, and dry/warm register on day one.
-- **Per-Person Memory Ledger**:
-  - Every thread tied to a `person_id` maintains a rolling 4-sentence `relationship_summary` in D1 (`people.notes` / `threads.context_summary`): inside jokes, what topics already came up, whether she texts in Hinglish, and which reply tabs (`real`, `playful`, `bold`) the user previously copied or thumbs-upped for that specific person.
-- **Per-Person Taste (strongest signal in the system)**:
-  - The picked-lines tray + per-bubble thumbs already record tone + variation + bubble per pick. In threads, every pick/copy is the revealed preference that seeds that person's taste profile — stronger than any thumbs-up. New threads for the same person bias tabs, bubble length, and opener style toward what previously got picked or copied *for her specifically*.
+Reasoning effort is selected when each Go request starts. Muse Spark advertises `minimal` through `xhigh`, and its catalog entry reports `effort_updates: false`. For the owner, start ordinary turns at `minimal`, use `low` for a targeted rewrite, and use `xhigh` for a full reply deck. A drafting tool starts a second request in the same Chat turn and NDJSON stream. Show a short status while the draft runs. The next normal turn starts at `minimal` again. Start with the drafting tool and only add a generic `think_deeper` option if testing finds that complex advice suffers at `minimal`. If added, cap it at one escalation before substantive text streams and keep its output as prose. Model effort does not determine whether a card is shown. [OpenCode reasoning controls](https://opencode.ai/docs/models/#compatibility) · [Public Go catalog](https://opencode.ai/inference/go/v1/models)
 
-### Pillar 4: Human Feel + Continuity (locked rules)
+The stream uses `fetch` with NDJSON, matching the transport already used in the app. Start with `accepted`, then stream `delta` events and an optional short status such as “reading the screenshots.” A model can emit text before the tool call arrives, so coalesce initial text briefly and treat any visible drafting preamble as provisional until the card is ready. Emit `done` with the saved turn only after its text and any validated card commit to D1. An unsuccessful stream emits a short `error` where possible. Buffer tool arguments until the upstream call completes. If the card is invalid, keep any usable text or expose Retry. Reopening the thread reads the last persisted state. Cloudflare can cancel work on disconnect, so the first release resumes from the last saved turn. [Cloudflare request duration](https://developers.cloudflare.com/workers/platform/limits/#duration)
 
-- **First paint fast, tools quiet.** Stream text deltas the moment they exist (NDJSON `text` + `functionCalls` events, as `/api/opencode/stream` already emits). Tool activity surfaces as human status lines ("checking your history with her…", "reworking that line…") — never tool names, never narrated machinery ("I've updated your profile" is banned).
-- **One voice.** Lowercase-leaning, no bullet-point therapy speak unless asked for structure. No announcements of learning; proof shows in output quality over weeks.
-- **No end-session action exists.** Threads are eternal — the user leaves mid-conversation and picks up anytime. Person summaries compact opportunistically (~15 turns or token threshold, cheap model, background). New chats inherit universal memory (cadence + global facts); threads link to a person retroactively when one is named.
-- **Proactive suggestions, never proactive messages.** Session debriefs ("she warmed up after bubble 2, bold flopped — noted") and silence re-engagers are offered in-thread. The agent never acts outward.
-- **Quick Mode is frozen.** The unified Chat surface builds alongside it as a new tab, reusing composer pieces, `R2Image`, voice recorder, and the V2 reply cards verbatim. No shared-screen refactors as part of Phase 2.
+## Storage and retries
 
----
+Use the existing Firebase, Cloudflare Pages Functions, D1, and private R2. Use `GET` and `POST /api/chat/threads` for listing and creating threads, and `GET`, `PATCH`, and `DELETE /api/chat/threads/:id` for transcript reads, thread details, and deletion. Send or retry a turn with `POST /api/opencode/thread`, passing the thread ID, turn ID, text, attachment keys, and optional reference. The existing AI rate limiter covers the generation route without throttling reads. Scope every lookup to the verified UID, including attachment reads, and apply the same owner/invited UID allowlist to all Chat operations. Keep the provider key in Pages secrets and keep provider overage disabled for the personal rollout. [Firebase and rate-limit middleware](../functions/api/_middleware.ts)
 
-## 4. Phase 2 D1 Database Schema Additions (`d1_migrations/008_conversational_threads.sql`)
+Use three small D1 tables. The migration number should come from the checked-in migration sequence. [Current schema](../functions/api/schema.ts) · [Tracked migrations](../d1_migrations/)
 
-Phase 2 introduces two new D1 tables (`threads` and `thread_messages`) while keeping `sessions`, `people`, `style_profiles`, and `feedback_signals` intact:
+| Table | Minimum fields and indexes |
+| --- | --- |
+| `chat_threads` | Random `id`, owner `uid`, `title`, optional user-authored `context_note`, nullable `deleting_at`, `created_at`, `updated_at`. Index `(uid, updated_at)` for the thread picker. |
+| `chat_turns` | Client-generated random `id` as primary key, `thread_id` foreign key with cascade, `user_text`, ordered R2 attachment keys, optional reference to a prior turn/card/bubble, `assistant_text`, optional versioned `card_json`, `status`, `attempt`, `started_at`, and `created_at`. Index `(thread_id, created_at, id)` for stable transcript order, and use a partial unique index on `thread_id` while status is pending. |
+| `chat_ledgers` | Verified Firebase `uid` as primary key, bounded `entries_json`, integer `revision`, and `updated_at`. One row per user, shared across that user’s regular threads. |
 
-```sql
--- Migration 008: Unified Conversational Threads & Inline UI Cards
-CREATE TABLE IF NOT EXISTS threads (
-  id TEXT PRIMARY KEY,
-  uid TEXT NOT NULL,
-  person_id TEXT,
-  title TEXT NOT NULL,
-  stage TEXT DEFAULT 'talking',
-  context_summary TEXT DEFAULT '',
-  last_message_at TEXT NOT NULL,
-  created_at TEXT NOT NULL
-);
+- Before inference, insert a pending turn. A repeated completed ID returns the saved result. A repeated active ID reports that generation is in progress. Retry the latest failed turn with the same input and ID. If later turns already exist, send a new turn to keep the thread linear. Reusing an ID with different input is a conflict.
+- Start with a 90-second total generation deadline to give full decks room beyond the reported 52.3s average. Expire pending turns older than 105 seconds on the next read, send, or retry. Adjust both after measuring slow requests in the deployed app. Increment the attempt number on retry and condition completion on that attempt still owning the pending row. Save the final turn and bump the thread timestamp in a D1 batch. Display partial text only while the request is live. After a disconnect, re-read the turn and offer Retry if it failed or expired. [D1 batch transactions](https://developers.cloudflare.com/d1/worker-api/d1-database/#batch)
+- Reuse the optimizer and authenticated R2 rendering. Put Chat uploads under a Chat-owned prefix scoped to UID and thread, and associate uploads with the turn ID so retries can reuse them. Keep bytes in R2 and keys in D1. Validate that submitted keys belong to that user and thread. On deletion, block new sends and uploads, remove objects under the thread’s R2 prefix, and delete the D1 records. Surface a retryable error on partial failure. An in-flight generation can only update its existing turn while the thread is active. Keep existing Quick media independent. [Current media endpoint](../functions/api/media.ts)
 
-CREATE INDEX IF NOT EXISTS idx_threads_uid_last_msg
-  ON threads(uid, last_message_at DESC);
+## Context and personalization
 
-CREATE TABLE IF NOT EXISTS thread_messages (
-  id TEXT PRIMARY KEY,
-  thread_id TEXT NOT NULL,
-  uid TEXT NOT NULL,
-  role TEXT NOT NULL, -- 'user' | 'assistant'
-  intent TEXT,        -- 'reply' | 'refine' | 'talk' (which fast path served the turn)
-  text_content TEXT DEFAULT '',
-  images TEXT DEFAULT '[]',       -- JSON array of R2 keys ("r2:quick/uid/...")
-  card_payload TEXT DEFAULT NULL, -- JSON string of QuickAdviceResponse V2 or Tool Call widget payload
-  model_used TEXT,
-  created_at TEXT NOT NULL,
-  FOREIGN KEY (thread_id) REFERENCES threads(id) ON DELETE CASCADE
-);
+- **Resume the same thread.** Load the latest history on open and page back as needed. On a model call, send recent completed turns within an explicit budget, initially up to eight turns and roughly 8k text tokens before current input and image costs. Include the user’s thread note and the selected reply or screenshot when relevant. Older card history can enter context as a short text representation of its options. When a request needs an older detail outside the window, let the user reference that specific item. The full visible transcript stays in D1. Add a rolling summary with a checkpoint only if real usage shows recurring continuity gaps.
+- **Handle images in order.** Reuse the up-to-ten-image composer and existing WebP optimization. Send current images in order and reload the referenced batch or the latest prior batch for a clear image follow-up. Start with a combined cap of 8 MiB of compressed images and ten images per model call, including any older attachments. Verify those limits against Go and the deployed Pages Function before exposing them. Tell the user if an older image is unavailable. Regular threads keep their attachments until deleted.
+- **Carry writing style lightly.** Regular chats can use existing abstract style hints alongside the ledger and thread note. Keep raw writing samples, pasted transcripts, and verbatim third-party messages out of cross-chat context. Keep new automatic writes to the legacy style profile outside the initial path. [Existing abstract style formatter](../services/quickAdviceService.ts)
+- **Keep feedback simple.** Copying and picking lines should work inside Chat. Keep those actions useful immediately and defer modeling per-person preferences, scoring, and background training until there is meaningful usage.
 
-CREATE INDEX IF NOT EXISTS idx_thread_messages_thread
-  ON thread_messages(thread_id, created_at ASC);
-```
+### Universal ledger
 
----
+Each Firebase user has one private ledger. Load it server-side by verified UID for every regular and incognito turn, including the first turn of a new chat. It holds the durable things a future conversation should know, such as preferences, names and relationships, interests, and important emotional context. For example, “Maya is my ex, and I’m trying to keep contact brief” can help in future chats. A copied transcript or the model’s guess about someone’s motives stays out of the ledger. Treat screenshot content as evidence for the turn. Instructions embedded in an attachment cannot authorize a ledger change.
 
-## 5. Staged Migration Roadmap from Phase 1 (Plans 010–014) to Phase 2
+- **Read.** Use short entries with stable IDs and an optional label. Send the bounded ledger as context alongside the current conversation. Start with up to 40 entries of up to 250 characters each. New chats inherit the ledger alone for cross-chat continuity. There is no search across old transcripts or separate person database in the first release.
+- **Learn.** On regular turns, `update_ledger` can propose up to three additions or edits. Prefer confirmed, durable information from the current turn. Update an existing entry when the fact changes. Leave uncertain inferences and passing moods out. Validate IDs and size on the server. Apply the patch with the saved turn using a D1 batch and a ledger revision guard. If another chat or a manual edit changed the revision, skip the stale automatic patch and keep the reply. An explicit “remember this” request should only be reported as saved once the write succeeds. Ledger changes are independent of a thread’s lifetime.
+- **Manage.** In **Settings → Memory**, the user can see all entries, add their own, edit or delete any entry, and clear the ledger. Use `GET /api/chat/ledger` and a revision-checked `PATCH /api/chat/ledger`. Preserve manually edited notes during automatic updates. On a full ledger, keep existing notes and expose the limit in Settings. Deleting a chat deletes that transcript and its attachments. Its ledger entries remain until the user manages them in Settings.
 
-Because Plans `010`–`014` are modularly designed with Phase 2 in mind, **zero work from Plans 010–014 is thrown away**:
+### Incognito chat
 
-| Phase 1 Component (Plans 010–014) | How Phase 2 Reuses It Directly |
-| :--- | :--- |
-| `functions/api/opencode/quick.ts` & `QUICK_MODE_SI_V4.x` (Plan 010) | Powers the `generate_replies` tool and the `refine_reply` path inside unified threads |
-| `functions/api/media.ts`, `RIZZBOT_MEDIA` R2 bucket & `<R2Image />` (Plan 011) | Stores and renders all `thread_messages.images` (`r2:quick/${uid}/...`) with zero base64 bloat |
-| `<ToneRail />`, `<ReplyHeroCard />`, `<FriendSummaryCard />` & `<PickedTray />` (Plan 012 + later) | Rendered directly as the interactive `card_payload` component inside assistant turns |
-| `functions/api/voice/learn.ts` & `style_profiles.cadence_notes` (Plan 013) | Runs automatically on every screenshot uploaded to a thread composer; `note_voice` tool extends it to chat text |
-| `functions/api/opencode/stream.ts` & `functions/api/voice/transcribe.ts` (Plan 014) | Powers the `talk` streaming turns and the thread composer's voice input button |
+Start an incognito conversation from the new chat menu. Label it **Incognito** and tell the user that it can use saved memory and will save nothing from the conversation to Chat history or the ledger. It uses the same conversational behavior and reply cards.
+
+- Keep the transcript, cards, and optimized attachments in browser memory for the lifetime of that chat. Closing or reloading the page discards them. Exclude incognito from the thread list, D1 chat tables, R2, local storage, draft restoration, and content analytics.
+- Stream through `POST /api/opencode/thread` with an explicit incognito mode. Send bounded in-memory context and attachments with the request. Verify Firebase authentication and allowlist membership as usual. Fetch the user’s ledger for context. Supply no ledger tool, reject any incognito memory write on the server, and skip passive learning or style-profile updates. Use a fresh opaque Go session header per temporary chat. Voice-to-text passes through transcription and the resulting draft stays in memory.
+- The existing account-level rate limit can record request timestamps. Inference and transcription still send the relevant input to the provider, whose retention terms apply. Incognito describes app history and memory behavior.
+
+## Implementation and verification
+
+1. Run a small synthetic protocol and quality test with the configured Go key. Verify Muse Responses streaming and tool argument events at `minimal`. Measure time to first text, time to an escalation decision, and time to a usable card for direct and escalated requests. Check whether `medium` retains enough quality to replace `xhigh` for ordinary full decks. Include low-effort non-training chat candidates and DeepSeek `high` for drafting. Test image-only questions, implicit drafts, card-plus-ledger turns, ten images, WAV transcription, and quota errors. Only make cache or latency claims from observed results.
+2. Build an owner-only preview with persistent text threads, streaming, retry, the universal ledger, and Settings → Memory. Check reload and cross-device history, interruption around commit, repeated submissions, concurrent ledger edits, and user isolation. Confirm a fact learned in a regular chat is available in a new one and survives deleting the original chat. Confirm editing or deleting the entry updates future context.
+3. Add screenshot context, editable voice transcripts, reply cards, and incognito. Test screenshots with no drafting request, implicit requests to draft, and targeted refinement. Confirm incognito can recall a saved fact while leaving no thread, media, or new ledger entry behind. Ship Chat + Quick in main navigation and keep legacy history reachable after verifying both flows.
+
+The initial design uses the current Pages deployment, D1, R2, Firebase, and Go. A separate agent host, queue, vector database, and classifier can stay out of the deployment.

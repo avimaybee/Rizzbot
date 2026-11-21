@@ -68,7 +68,7 @@ export const useVoiceRecorder = (): UseVoiceRecorderReturn => {
         }
       };
 
-      mediaRecorder.start();
+      mediaRecorder.start(1000);
       setIsRecording(true);
       setRecordingTime(0);
 

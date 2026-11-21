@@ -2,7 +2,6 @@ import React, { Suspense, lazy } from "react";
 import { createBrowserRouter, Navigate, Outlet, useLocation } from "react-router";
 import { SplashScreen } from "./components/SplashScreen";
 import { AuthScreen } from "./components/AuthScreen";
-import { HomeScreen } from "./components/HomeScreen";
 import { NotFoundScreen } from "./components/NotFoundScreen";
 import { TabBar } from "./components/TabBar";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -10,15 +9,6 @@ import { useAppContext } from "./app-context";
 
 const QuickModeScreen = lazy(() =>
   import("./components/QuickModeScreen").then((m) => ({ default: m.QuickModeScreen }))
-);
-const PracticeScreen = lazy(() =>
-  import("./components/PracticeScreen").then((m) => ({ default: m.PracticeScreen }))
-);
-const TherapistScreen = lazy(() =>
-  import("./components/TherapistScreen").then((m) => ({ default: m.TherapistScreen }))
-);
-const TherapistClosingScreen = lazy(() =>
-  import("./components/TherapistClosingScreen").then((m) => ({ default: m.TherapistClosingScreen }))
 );
 const HistoryScreen = lazy(() =>
   import("./components/HistoryScreen").then((m) => ({ default: m.HistoryScreen }))
@@ -34,9 +24,6 @@ const MemoryScreen = lazy(() =>
 );
 const MyVoiceScreen = lazy(() =>
   import("./components/MyVoiceScreen").then((m) => ({ default: m.MyVoiceScreen }))
-);
-const TacticalReportScreen = lazy(() =>
-  import("./components/TacticalReportScreen").then((m) => ({ default: m.TacticalReportScreen }))
 );
 const OnboardingScreen = lazy(() =>
   import("./components/OnboardingScreen").then((m) => ({ default: m.OnboardingScreen }))
@@ -91,50 +78,14 @@ function TabBarLayout() {
   );
 }
 
-function ProtectedHome() {
-  return (
-    <RequireAuth>
-      <HomeScreen />
-    </RequireAuth>
-  );
+function RedirectToChat() {
+  return <Navigate to="/chat" replace />;
 }
 
 function ProtectedQuick() {
   return (
     <RequireAuth>
       <LazyScreen><QuickModeScreen /></LazyScreen>
-    </RequireAuth>
-  );
-}
-
-function ProtectedPractice() {
-  return (
-    <RequireAuth>
-      <LazyScreen><PracticeScreen /></LazyScreen>
-    </RequireAuth>
-  );
-}
-
-function ProtectedTacticalReport() {
-  return (
-    <RequireAuth>
-      <LazyScreen><TacticalReportScreen /></LazyScreen>
-    </RequireAuth>
-  );
-}
-
-function ProtectedTherapistNew() {
-  return (
-    <RequireAuth>
-      <LazyScreen><TherapistScreen /></LazyScreen>
-    </RequireAuth>
-  );
-}
-
-function ProtectedTherapistClosing() {
-  return (
-    <RequireAuth>
-      <LazyScreen><TherapistClosingScreen /></LazyScreen>
     </RequireAuth>
   );
 }
@@ -204,17 +155,17 @@ export const router = createBrowserRouter([
     // Layout route: renders TabBar once, persists across all child pages
     Component: TabBarLayout,
     children: [
-      { path: "/home", Component: ProtectedHome },
+      { path: "/home", Component: RedirectToChat },
       { path: "/chat", Component: ProtectedChat },
       { path: "/chat/incognito", Component: ProtectedChatIncognito },
       { path: "/chat/:threadId", Component: ProtectedChatThread },
       { path: "/settings", Component: ProtectedSettings },
       { path: "/settings/memory", Component: ProtectedMemory },
       { path: "/quick", Component: ProtectedQuick },
-      { path: "/practice", Component: ProtectedPractice },
-      { path: "/tactical-report", Component: ProtectedTacticalReport },
-      { path: "/therapist", Component: ProtectedTherapistNew },
-      { path: "/therapist-close", Component: ProtectedTherapistClosing },
+      { path: "/practice", Component: RedirectToChat },
+      { path: "/tactical-report", Component: RedirectToChat },
+      { path: "/therapist", Component: RedirectToChat },
+      { path: "/therapist-close", Component: RedirectToChat },
       { path: "/history", Component: ProtectedHistoryNew },
       { path: "/voice", Component: ProtectedVoiceNew },
     ],

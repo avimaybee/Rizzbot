@@ -26,12 +26,28 @@ import {
   triggerWellbeingCheckIn,
 } from "../services/feedbackService";
 import { UserStyleProfile, WellbeingState } from "../types";
+import { AppSettingsWire, getAppSettings, updateAppSettings } from "../services/chatApi";
+
+const DEFAULT_APP_SETTINGS: AppSettingsWire = {
+  vibe: "unfiltered",
+  autoLearnVoice: true,
+  autoSaveMemory: true,
+  hapticsEnabled: true,
+  memoryCount: 0,
+  memoryCap: 40,
+  threadCount: 0,
+};
 
 interface AppContextValue {
   authUser: AuthUser | null;
   authLoading: boolean;
   userId: number | null;
   userProfile: UserStyleProfile | null;
+  appSettings: AppSettingsWire;
+  refreshAppSettings: () => Promise<void>;
+  saveAppSettings: (
+    patch: Partial<Pick<AppSettingsWire, "vibe" | "autoLearnVoice" | "autoSaveMemory" | "hapticsEnabled">>
+  ) => Promise<void>;
   saveUserProfile: (profile: UserStyleProfile) => Promise<void>;
   applyLearnedProfile: (profile: UserStyleProfile) => void;
   signOut: () => Promise<void>;
@@ -87,7 +103,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [authLoading, setAuthLoading] = useState(true);
   const [userId, setUserId] = useState<number | null>(null);
   const [userProfile, setUserProfile] = useState<UserStyleProfile | null>(null);
+  const [appSettings, setAppSettings] = useState<AppSettingsWire>(() => {
+    try {
+      const h = localStorage.getItem("rizzbot_haptics");
+      return h === "off" ? { ...DEFAULT_APP_SETTINGS, hapticsEnabled: false } : DEFAULT_APP_SETTINGS;
+    } catch {
+      return DEFAULT_APP_SETTINGS;
+    }
+  });
   const [wellbeingCheckIn, setWellbeingCheckIn] = useState<WellbeingState | null>(null);
+
+  const syncHapticsCache = (enabled: boolean) => {
+    try { localStorage.setItem("rizzbot_haptics", enabled ? "on" : "off"); } catch { /* ignore */ }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthChange((user) => {
@@ -96,6 +124,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!user) {
         setUserId(null);
         setUserProfile(null);
+        setAppSettings(DEFAULT_APP_SETTINGS);
         setWellbeingCheckIn(null);
       }
     });
@@ -120,6 +149,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // Retry any sessions that failed to save offline
         void flushPendingSessions().catch(() => {});
 
+        void getAppSettings()
+          .then((s) => {
+            if (!alive) return;
+            setAppSettings(s);
+            syncHapticsCache(s.hapticsEnabled);
+          })
+          .catch(() => {});
+
         const profile = await getStyleProfile(user.id);
         if (!alive) return;
         if (profile) {
@@ -134,7 +171,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             }
           }
         }
-        logScreenView("home");
+        logScreenView("chat");
       } catch {
         // DB sync failed (offline/error) — fall back to the cached local profile
         const local = localStorage.getItem(`userStyleProfile_${authUser.uid}`);
@@ -234,6 +271,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setWellbeingCheckIn(null);
   }, [authUser]);
 
+  const refreshAppSettings = useCallback(async () => {
+    if (!authUser) return;
+    try {
+      const next = await getAppSettings();
+      setAppSettings(next);
+      syncHapticsCache(next.hapticsEnabled);
+    } catch { /* ignore */ }
+  }, [authUser]);
+
+  const saveAppSettings = useCallback(
+    async (patch: Partial<Pick<AppSettingsWire, "vibe" | "autoLearnVoice" | "autoSaveMemory" | "hapticsEnabled">>) => {
+      setAppSettings((prev) => {
+        const merged = { ...prev, ...patch };
+        if (typeof patch.hapticsEnabled === "boolean") syncHapticsCache(patch.hapticsEnabled);
+        return merged;
+      });
+      if (!authUser) return;
+      try {
+        const saved = await updateAppSettings(patch);
+        setAppSettings(saved);
+        syncHapticsCache(saved.hapticsEnabled);
+      } catch { /* retain optimistic state cleanly */ }
+    },
+    [authUser]
+  );
+
   const dismissWellbeingForDay = useCallback(() => {
     if (!authUser) return;
     dismissWellbeingCheckIn(authUser.uid, 24);
@@ -246,6 +309,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       authLoading,
       userId,
       userProfile,
+      appSettings,
+      refreshAppSettings,
+      saveAppSettings,
       saveUserProfile,
       applyLearnedProfile,
       signOut,
@@ -259,6 +325,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       authLoading,
       userId,
       userProfile,
+      appSettings,
+      refreshAppSettings,
+      saveAppSettings,
       saveUserProfile,
       applyLearnedProfile,
       signOut,

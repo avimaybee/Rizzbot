@@ -523,7 +523,7 @@ export function QuickModeScreen() {
       <GrainOverlay />
       <div className="relative z-10 max-w-[430px] mx-auto">
         <div className="flex items-center justify-between px-5 pt-4 pb-2 relative">
-          <button onClick={() => navigate("/home")} className="cursor-pointer flex items-center justify-center fade-press relative z-10" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#FDFAF5", border: "1px solid #E8E0D4" }}>
+          <button onClick={() => navigate("/chat")} className="cursor-pointer flex items-center justify-center fade-press relative z-10" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#FDFAF5", border: "1px solid #E8E0D4" }}>
             <ChevronLeft size={22} strokeWidth={1.8} color="#1A1208" />
           </button>
           <p className="absolute left-1/2 -translate-x-1/2" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 600, color: "#1A1208", paddingBottom: 2 }}>

@@ -4,6 +4,7 @@ import { base64ToBytes, cleanJsonObject } from "../../lib/json";
 import { CHAT_SI_V1 } from "../../lib/chatPrompts";
 import {
   DRAFT_REPLIES_TOOL,
+  RECORD_FEEDBACK_TOOL,
   THINK_DEEPER_TOOL,
   UPDATE_LEDGER_TOOL,
   buildConversationalMessages,
@@ -15,9 +16,11 @@ import {
   validateRevisionCard,
   validateThinkDeeperArgs,
   type LedgerEntryWire,
+  type ReplyQuoteWire,
   type ThinkTier,
 } from "../../lib/chatEngine";
 import { validateQuickV2Payload } from "./quick";
+import { loadUserSettings } from "../chat/settings";
 import {
   checkChatAllowlist,
   ensureChatSchema,
@@ -25,6 +28,7 @@ import {
   notFound,
   parseAttachments,
   resolveChatDb,
+  trimTitle,
   utcNowIso,
 } from "../../lib/chatStore";
 
@@ -468,6 +472,18 @@ export async function onRequest(context: any) {
   const turnId = typeof body?.turnId === "string" ? body.turnId.trim() : "";
   const text = typeof body?.text === "string" ? body.text : "";
   const attachmentKeys = Array.isArray(body?.attachmentKeys) ? (body.attachmentKeys as unknown[]).filter((k) => typeof k === "string").map((k) => String(k)).slice(0, MAX_IMAGES) as string[] : [];
+  const rawQuote = body?.replyQuote;
+  const replyQuote: ReplyQuoteWire | undefined =
+    rawQuote && typeof rawQuote === "object" && typeof rawQuote.text === "string" && rawQuote.text.trim()
+      ? {
+          author: typeof rawQuote.author === "string" ? rawQuote.author.trim().slice(0, 40) : "Message",
+          text: rawQuote.text.trim().slice(0, 500),
+          turnId: typeof rawQuote.turnId === "string" ? rawQuote.turnId.slice(0, 128) : undefined,
+          tone: typeof rawQuote.tone === "string" ? rawQuote.tone.slice(0, 32) : undefined,
+          optionIndex: typeof rawQuote.optionIndex === "number" ? rawQuote.optionIndex : undefined,
+          bubbleIndex: typeof rawQuote.bubbleIndex === "number" ? rawQuote.bubbleIndex : undefined,
+        }
+      : undefined;
   const ref: ThreadRef | undefined = body?.ref && typeof body.ref === "object" ? {
     sourceTurnId: typeof body.ref.sourceTurnId === "string" ? body.ref.sourceTurnId : undefined,
     tone: typeof body.ref.tone === "string" ? body.ref.tone : undefined,
@@ -480,19 +496,18 @@ export async function onRequest(context: any) {
   if (text.length > MAX_TEXT) return errJson("invalid_input", "Couldn’t send your message. Try again.", 400, { ...corsBase, "Content-Type": "application/json" });
   if (action === "refine" && !ref?.sourceTurnId) return errJson("invalid_input", "That reply is no longer available.", 400, { ...corsBase, "Content-Type": "application/json" });
 
-  // Validate attachment ownership (must belong to this uid; chat keys must reference this thread or be legacy quick keys for migration? Strict: chat keys must be this thread)
+  // Validate attachment ownership (must belong to this uid; chat keys must reference this thread or quick keys)
   for (const k of attachmentKeys) {
     const clean = k.startsWith("r2:") ? k.slice(3) : k;
     if (clean.includes("..")) return errJson("invalid_input", "Couldn’t send your message. Try again.", 400, { ...corsBase, "Content-Type": "application/json" });
     if (clean.startsWith("chat/")) {
       if (!clean.startsWith(`chat/${uid}/${threadId}/`)) return errJson("invalid_input", "Couldn’t send your message. Try again.", 400, { ...corsBase, "Content-Type": "application/json" });
     } else if (!(clean.startsWith(`quick/${uid}/`) || clean.startsWith("r2:"))) {
-      // Allow quick keys for pasted history? Keep strict: must be owned
       if (!clean.startsWith(`quick/${uid}/`)) return errJson("invalid_input", "Couldn’t send your message. Try again.", 400, { ...corsBase, "Content-Type": "application/json" });
     }
   }
 
-  const thread = (await db.prepare(`SELECT id, title, context_note, deleting_at, created_at, updated_at FROM chat_threads WHERE id=? AND uid=?`).bind(threadId, uid).first().catch(() => null)) as any;
+  const thread = (await db.prepare(`SELECT id, title, title_manual, context_note, deleting_at, created_at, updated_at FROM chat_threads WHERE id=? AND uid=?`).bind(threadId, uid).first().catch(() => null)) as any;
   if (!thread) {
     const nf = notFound();
     return new Response(await nf.text(), { status: 404, headers: { ...corsBase, "Content-Type": "application/json" } });
@@ -503,21 +518,22 @@ export async function onRequest(context: any) {
 
   // Duplicate / conflict handling
   const existingTurn = (await db.prepare(`SELECT * FROM chat_turns WHERE id=? AND thread_id=?`).bind(turnId, threadId).first().catch(() => null)) as any;
-  const inputFingerprint = stableKey({ text, attachmentKeys, ref, action });
+  const inputFingerprint = stableKey({ text, attachmentKeys, ref, action, replyQuote });
   if (existingTurn) {
     if (existingTurn.uid !== uid) return errJson("not_found", "This chat isn’t available.", 404, { ...corsBase, "Content-Type": "application/json" });
     const savedRef = existingTurn.ref_source_turn_id ? {
       sourceTurnId: existingTurn.ref_source_turn_id, tone: existingTurn.ref_tone || undefined,
       optionIndex: existingTurn.ref_option_index ?? undefined, bubbleIndex: existingTurn.ref_bubble_index ?? undefined,
     } : undefined;
+    let savedQuote: any = undefined;
+    if (existingTurn.reply_quote) { try { savedQuote = JSON.parse(existingTurn.reply_quote); } catch { savedQuote = undefined; } }
     const savedFingerprint = stableKey({
       text: existingTurn.user_text, attachmentKeys: parseAttachments(existingTurn.attachments),
-      ref: savedRef, action: existingTurn.request_action ?? undefined,
+      ref: savedRef, action: existingTurn.request_action ?? undefined, replyQuote: savedQuote,
     });
     if (savedFingerprint !== inputFingerprint) return errJson("conflict", "Couldn’t send your message. Try again.", 409, { ...corsBase, "Content-Type": "application/json" });
     if (existingTurn.status === "complete") return replayCompletedTurn(existingTurn, cors);
     if (existingTurn.status === "pending") return errJson("active", "Still working on your last message…", 409, { ...corsBase, "Content-Type": "application/json" });
-    // Reserve retry via conditional attempt bump
   }
 
   // Enforce one pending per thread
@@ -543,8 +559,8 @@ export async function onRequest(context: any) {
       const changed = (r as any)?.changes ?? (r as any)?.meta?.changes ?? 1;
       if (!changed) return errJson("conflict", "Couldn’t send your message. Try again.", 409, { ...corsBase, "Content-Type": "application/json" });
     } else {
-      await db.prepare(`INSERT INTO chat_turns (id, thread_id, uid, user_text, attachments, ref_source_turn_id, ref_tone, ref_option_index, ref_bubble_index, request_action, assistant_text, card_json, status, attempt, started_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', NULL, 'pending', ?, ?, ?)`)
-        .bind(turnId, threadId, uid, text, JSON.stringify(attachmentKeys), ref?.sourceTurnId || null, ref?.tone || null, ref?.optionIndex ?? null, ref?.bubbleIndex ?? null, action ?? null, attemptBase, now, now).run();
+      await db.prepare(`INSERT INTO chat_turns (id, thread_id, uid, user_text, attachments, ref_source_turn_id, ref_tone, ref_option_index, ref_bubble_index, request_action, reply_quote, assistant_text, card_json, status, attempt, started_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', NULL, 'pending', ?, ?, ?)`)
+        .bind(turnId, threadId, uid, text, JSON.stringify(attachmentKeys), ref?.sourceTurnId || null, ref?.tone || null, ref?.optionIndex ?? null, ref?.bubbleIndex ?? null, action ?? null, replyQuote ? JSON.stringify(replyQuote) : null, attemptBase, now, now).run();
     }
   } catch (e: any) {
     const msg = String(e?.message || "");
@@ -552,51 +568,107 @@ export async function onRequest(context: any) {
     return errJson("unavailable", "Couldn’t send your message. Try again.", 503, { ...corsBase, "Content-Type": "application/json" });
   }
 
-  // Build context: latest completed turns (up to 8, ~8k tokens)
-  const histRows = ((await db.prepare(`SELECT user_text, assistant_text, card_json FROM chat_turns WHERE thread_id=? AND uid=? AND status='complete' ORDER BY created_at DESC, id DESC LIMIT 12`).bind(threadId, uid).all().catch(() => ({ results: [] }))).results || []) as any[];
+  // Build context: latest completed turns (up to 8 turns / ~8k text tokens) with per-turn attachments & quotes
+  const histRows = ((await db.prepare(`SELECT id, user_text, attachments, reply_quote, assistant_text, card_json FROM chat_turns WHERE thread_id=? AND uid=? AND status='complete' ORDER BY created_at DESC, id DESC LIMIT 12`).bind(threadId, uid).all().catch(() => ({ results: [] }))).results || []) as any[];
   const historyChrono = histRows.reverse();
-  const historyForCtx: Array<{ role: "user" | "assistant"; text: string; cardSummary?: string }> = [];
+  const historyForCtx: Array<{ role: "user" | "assistant"; text: string; cardSummary?: string; replyQuote?: ReplyQuoteWire; imageKeys?: string[] }> = [];
+  let latestHistoryCard: any = null;
+  let latestHistoryCardTurnId: string | null = null;
   let budget = 8000;
   for (const r of historyChrono.slice(-8)) {
     const uText = String(r.user_text || "").slice(0, 1500);
     const aText = String(r.assistant_text || "").slice(0, 1500);
     let cardSummary = "";
     if (r.card_json) {
-      try { cardSummary = summarizeCardForContext(JSON.parse(r.card_json)); } catch { cardSummary = ""; }
+      try {
+        const parsedCard = JSON.parse(r.card_json);
+        latestHistoryCard = parsedCard;
+        latestHistoryCardTurnId = r.id;
+        cardSummary = summarizeCardForContext(parsedCard);
+      } catch { cardSummary = ""; }
     }
+    let parsedQuote: ReplyQuoteWire | undefined = undefined;
+    if (r.reply_quote) { try { parsedQuote = JSON.parse(r.reply_quote); } catch { parsedQuote = undefined; } }
+    const turnAtt = parseAttachments(r.attachments);
     const cost = estimateTokens(uText) + estimateTokens(aText) + estimateTokens(cardSummary);
     if (budget - cost < 0) break;
     budget -= cost;
-    if (uText) historyForCtx.push({ role: "user", text: uText });
-    if (aText || cardSummary) historyForCtx.push({ role: "assistant", text: aText || "(reply card)", cardSummary: cardSummary || undefined });
+    if (uText || turnAtt.length > 0) {
+      historyForCtx.push({
+        role: "user",
+        text: uText || "(screenshots attached)",
+        replyQuote: parsedQuote,
+        imageKeys: turnAtt,
+      });
+    }
+    if (aText || cardSummary) {
+      historyForCtx.push({ role: "assistant", text: aText || "(reply card)", cardSummary: cardSummary || undefined });
+    }
   }
 
-  const { entries: ledgerEntries, revision: ledgerRevision } = await loadLedger(db, uid);
-  const styleHints = await loadStyleHints(db, uid).catch(() => "");
+  const [{ entries: ledgerEntries, revision: ledgerRevision }, styleHints, userSettings] = await Promise.all([
+    loadLedger(db, uid),
+    loadStyleHints(db, uid).catch(() => ""),
+    loadUserSettings(db, uid),
+  ]);
   const threadNote = typeof thread.context_note === "string" ? thread.context_note : "";
 
-  // Referenced batch / newest prior batch for image follow-ups
-  let refImageKeys: string[] = [];
-  if (ref?.sourceTurnId) {
-    const srcTurn = (await db.prepare(`SELECT attachments FROM chat_turns WHERE id=? AND thread_id=? AND uid=?`).bind(ref.sourceTurnId, threadId, uid).first().catch(() => null)) as any;
-    if (srcTurn) refImageKeys = parseAttachments(srcTurn.attachments);
-  } else if (/image\s*\d|that (screenshot|photo|pic)|previous (image|screenshot)/i.test(text) && historyChrono.length) {
-    for (let i = historyChrono.length - 1; i >= 0; i--) {
-      // find newest prior batch: need attachments column; re-query last turn with attachments
-      break;
-    }
-    const lastWith = (await db.prepare(`SELECT attachments FROM chat_turns WHERE thread_id=? AND uid=? AND status='complete' AND attachments != '[]' ORDER BY created_at DESC, id DESC LIMIT 1`).bind(threadId, uid).first().catch(() => null)) as any;
-    if (lastWith) refImageKeys = parseAttachments(lastWith.attachments);
-  }
-
-  // Current images + referenced (cap 10 / 8MiB, current first)
+  // Multimodal conversation memory: allocate up to 10 most recent R2 keys across current turn -> recent history turns
   const MAX_PER_CALL = 10;
-  const combinedKeys: string[] = [...attachmentKeys];
-  for (const k of refImageKeys) {
-    if (combinedKeys.length >= MAX_PER_CALL) break;
-    if (!combinedKeys.includes(k)) combinedKeys.push(k);
+  const allocatedKeys: string[] = [];
+  const pushKey = (k: string) => {
+    if (allocatedKeys.length < MAX_PER_CALL && !allocatedKeys.includes(k)) allocatedKeys.push(k);
+  };
+  for (const k of attachmentKeys) pushKey(k);
+  for (let i = historyForCtx.length - 1; i >= 0 && allocatedKeys.length < MAX_PER_CALL; i--) {
+    const keys = historyForCtx[i].imageKeys || [];
+    for (const k of keys) pushKey(k);
   }
-  const { parts: imageParts, unavailable } = await r2KeysToImageParts(env, combinedKeys, uid).catch(() => ({ parts: [] as any[], totalBytes: 0, unavailable: combinedKeys.length }));
+  const hydratedPartsByKey = new Map<string, { mimeType: string; data: string }>();
+  let totalImageBytes = 0;
+  let unavailable = 0;
+  if (allocatedKeys.length > 0) {
+    const bucket = (env as any).RIZZBOT_MEDIA;
+    if (!bucket) {
+      unavailable = allocatedKeys.length;
+    } else {
+      for (const raw of allocatedKeys) {
+        const clean = raw.startsWith("r2:") ? raw.slice(3) : raw;
+        if (clean.includes("..") || !clean.startsWith(`chat/${uid}/`)) { unavailable++; continue; }
+        try {
+          const obj = await bucket.get(clean);
+          if (!obj) { unavailable++; continue; }
+          const buf = await obj.arrayBuffer();
+          if (totalImageBytes + buf.byteLength > MAX_IMAGE_BYTES) break;
+          totalImageBytes += buf.byteLength;
+          const bytes = new Uint8Array(buf);
+          let bin = "";
+          const CH = 0x8000;
+          for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode(...bytes.subarray(i, i + CH));
+          let mime = "image/webp";
+          try { if ((obj as any).httpMetadata?.contentType) mime = (obj as any).httpMetadata.contentType; } catch { /* ignore */ }
+          if (clean.endsWith(".png")) mime = "image/png";
+          else if (clean.endsWith(".jpg") || clean.endsWith(".jpeg")) mime = "image/jpeg";
+          hydratedPartsByKey.set(raw, { mimeType: mime, data: btoa(bin) });
+        } catch { unavailable++; }
+      }
+    }
+  }
+  // Chronological list of hydrated parts for single-turn Deck drafting
+  const imageParts: Array<{ mimeType: string; data: string }> = [];
+  for (const h of historyForCtx) {
+    if (h.role === "user" && h.imageKeys?.length) {
+      for (const k of h.imageKeys) {
+        const part = hydratedPartsByKey.get(k);
+        if (part) imageParts.push(part);
+      }
+    }
+  }
+  for (const k of attachmentKeys) {
+    const part = hydratedPartsByKey.get(k);
+    if (part && (!historyForCtx.some((h) => h.imageKeys?.includes(k)))) imageParts.push(part);
+  }
+  const currentTurnParts = attachmentKeys.map((k) => hydratedPartsByKey.get(k)).filter((x): x is { mimeType: string; data: string } => Boolean(x));
 
   const models = pickModels("regular");
   const sessionBase = `rizzbot-chat-${threadId}`;
@@ -608,8 +680,9 @@ export async function onRequest(context: any) {
 
   (async () => {
     const turnAbort = new AbortController();
+    const onReqAbort = () => turnAbort.abort();
+    request.signal?.addEventListener?.("abort", onReqAbort);
     const deadline = setTimeout(() => turnAbort.abort(), GENERATION_DEADLINE_MS);
-    // Heartbeat so mobile/proxy/Cloudflare idle timeouts never kill long decks.
     const ping = setInterval(() => { void send({ type: "ping", ts: Date.now() }); }, 10_000);
     let assistantText = "";
     let finalCard: any = null;
@@ -617,7 +690,7 @@ export async function onRequest(context: any) {
     let callsMade = 0;
     try {
       await send({ type: "accepted", turnId, attempt: attemptBase });
-      if (unavailable > 0 && combinedKeys.length > 0) {
+      if (unavailable > 0 && allocatedKeys.length > 0) {
         await send({ type: "status", code: "reading" });
       }
 
@@ -646,20 +719,25 @@ export async function onRequest(context: any) {
         return;
       }
 
-      // Ordinary path: conversational call with capped tools
+      // Ordinary path: conversational call with capped tools & turn-anchored multimodal history
       const messages = buildConversationalMessages({
         ledger: ledgerEntries,
         threadNote,
         styleHints,
+        vibe: userSettings.vibe,
         history: historyForCtx,
         currentText: text.trim() ? text : "(screenshots attached — respond to what is visible or ask what they want help with)",
+        currentQuote: replyQuote,
       });
-      const openAiMessages = withImages(messages, imageParts);
+      const openAiMessages = withTurnImages(messages, historyForCtx, hydratedPartsByKey, currentTurnParts);
       const chatCandidates: ModelCandidate[] = [
         { model: models.chat.id, effort: models.chat.effort },
         { model: DEEPSEEK_ID, effort: "high" },
         { model: HY4_ID, effort: "high" },
       ];
+      const activeTools: any[] = [DRAFT_REPLIES_TOOL, THINK_DEEPER_TOOL, RECORD_FEEDBACK_TOOL];
+      if (userSettings.autoSaveMemory) activeTools.push(UPDATE_LEDGER_TOOL);
+
       const t0 = Date.now();
       callsMade = 1;
       const conv = await callConversationalStream({
@@ -668,11 +746,9 @@ export async function onRequest(context: any) {
         candidates: chatCandidates,
         system: CHAT_SI_V1,
         messages: openAiMessages,
-        tools: [DRAFT_REPLIES_TOOL, UPDATE_LEDGER_TOOL, THINK_DEEPER_TOOL],
+        tools: activeTools,
         signal: turnAbort.signal,
         onText: async (t) => {
-          // Stream immediately: short replies must paint live, and any tool
-          // call resolves in the same turn. Shown text is part of the answer.
           assistantText += t;
           await send({ type: "delta", text: t });
         },
@@ -681,7 +757,12 @@ export async function onRequest(context: any) {
 
       const draftCall = conv.toolCalls.find((c) => c.name === "draft_replies");
       const thinkCall = conv.toolCalls.find((c) => c.name === "think_deeper");
-      const ledgerCall = conv.toolCalls.find((c) => c.name === "update_ledger");
+      const ledgerCall = userSettings.autoSaveMemory ? conv.toolCalls.find((c) => c.name === "update_ledger") : undefined;
+      const feedbackCalls = conv.toolCalls.filter((c) => c.name === "record_feedback");
+
+      if (feedbackCalls.length) {
+        await persistChatFeedback(db, uid, feedbackCalls.map((c) => c.args));
+      }
 
       if (ledgerCall) {
         try {
@@ -692,20 +773,30 @@ export async function onRequest(context: any) {
       if (draftCall) {
         const scope = (draftCall.args as any)?.scope === "revision" ? "revision" : "full";
         const goal = typeof (draftCall.args as any)?.draft_goal === "string" ? (draftCall.args as any).draft_goal : text.slice(0, 200);
+        const effectiveRef = ref || (scope === "revision" && latestHistoryCardTurnId ? { sourceTurnId: latestHistoryCardTurnId } : undefined);
+        const effectiveRefCard = refCard || (scope === "revision" ? latestHistoryCard : null);
+
+        if (scope === "revision" && !effectiveRefCard) {
+          // Graceful fallback: no prior card exists, escalate conversationally at xhigh
+          callsMade = 2;
+          await send({ type: "status", code: "thinking" });
+          await runThinkContinuation("xhigh");
+          await commitTurn();
+          return;
+        }
+
         const rawDepth = (draftCall.args as any)?.depth;
         const revDepth = typeof rawDepth === "string" && VALID_REV_DEPTHS.has(rawDepth) ? rawDepth : undefined;
-        // Full reply decks ALWAYS use models.draftFull.effort (xhigh). Revisions scale dynamically when Call 1 supplies depth.
         const draftEffort = scope === "revision" ? revDepth : undefined;
         await send({ type: "status", code: scope === "full" ? "drafting" : "refining" });
         const draftRes = await runDraft({
           env, apiKey, sessionBase, models, kind: scope,
-          currentText: text, attachmentKeys, ref, refCard, imageParts, styleHints, threadNote, signal: turnAbort.signal, draftGoal: goal,
+          currentText: text, attachmentKeys, ref: effectiveRef, refCard: effectiveRefCard, imageParts, styleHints, threadNote, signal: turnAbort.signal, draftGoal: goal,
           effort: draftEffort,
           excerpts: historyForCtx.filter((h) => h.role === "user").map((h) => h.text).slice(-3),
         });
         callsMade = 2;
         if (!draftRes.ok) {
-          // Keep usable text if the model already produced some, else error
           if (!turnAbort.signal.aborted && draftRes.code !== "allowance" && assistantText.trim()) { await commitTurn(); return; }
           await finishFailed(draftRes.code || "upstream", draftRes.message || "Couldn’t finish that reply.");
           return;
@@ -727,6 +818,16 @@ export async function onRequest(context: any) {
         }
         callsMade = 2;
         await send({ type: "status", code: "thinking" });
+        await runThinkContinuation(tier);
+        if (!assistantText.trim() && !finalCard) {
+          await finishFailed("upstream", "Couldn’t finish that reply.");
+          return;
+        }
+        await commitTurn();
+        return;
+      }
+
+      async function runThinkContinuation(tier: ThinkTier) {
         const t1 = Date.now();
         try {
           let firstDeeperDelta = true;
@@ -739,7 +840,13 @@ export async function onRequest(context: any) {
               { model: HY4_ID, effort: "high" },
             ],
             system: CHAT_SI_V1,
-            messages: [...openAiMessages, { role: "assistant", content: assistantText || "(thinking it through — now answer directly)" }],
+            messages: assistantText.trim()
+              ? [
+                  ...openAiMessages,
+                  { role: "assistant", content: assistantText },
+                  { role: "user", content: "[INTERNAL CONTINUATION — never mention this cue. Pick up directly after the bubble you just sent with your full answer, split into 1–3 natural short bubbles separated by blank lines. Do NOT re-greet, re-validate, or repeat what you already said.]" },
+                ]
+              : [...openAiMessages, { role: "assistant", content: "(thinking it through — now answer directly)" }],
             signal: turnAbort.signal,
             onText: async (t) => {
               if (firstDeeperDelta && assistantText.trim() && !/\s$/.test(assistantText) && !/^\s/.test(t)) {
@@ -752,38 +859,28 @@ export async function onRequest(context: any) {
             },
           });
           telemetry(context, db, { endpoint: "opencode/thread", model: cont.model, latencyMs: Date.now() - t1, ok: true, uid });
-        } catch (e: any) {
-          if (!assistantText.trim()) { await finishFailed("upstream", "Couldn’t finish that reply."); return; }
+        } catch {
+          if (!assistantText.trim()) throw new Error("upstream");
         }
-        if (!assistantText.trim() && !finalCard) {
-          await finishFailed("upstream", "Couldn’t finish that reply.");
-          return;
-        }
-        await commitTurn();
-        return;
       }
 
-      // Ledger-only tool call with no visible answer: one continuation with ledger disabled
-      if (ledgerCall && !assistantText.trim() && conv.toolCalls.length === 1) {
-        if (callsMade < 2) {
-          callsMade = 2;
-          let extra = "";
-          const t1 = Date.now();
-          try {
-            const cont = await callConversationalStream({
-              apiKey,
-              sessionTag: `${sessionBase}-cont`,
-              candidates: chatCandidates,
-              system: CHAT_SI_V1,
-              messages: [...openAiMessages, { role: "assistant", content: "(noted — now answer the user directly in one short turn)" }],
-              signal: turnAbort.signal,
-              onText: async (t) => { extra += t; assistantText += t; await send({ type: "delta", text: t }); },
-            });
-            telemetry(context, db, { endpoint: "opencode/thread", model: cont.model, latencyMs: Date.now() - t1, ok: true, uid });
-            void extra;
-          } catch (e: any) {
-            if (!assistantText.trim()) { await finishFailed("upstream", "Couldn’t finish that reply."); return; }
-          }
+      // Tool call without visible prose (e.g. update_ledger or record_feedback only): one continuation with tools disabled
+      if (!assistantText.trim() && !finalCard && callsMade < 2) {
+        callsMade = 2;
+        const t1 = Date.now();
+        try {
+          const cont = await callConversationalStream({
+            apiKey,
+            sessionTag: `${sessionBase}-cont`,
+            candidates: chatCandidates,
+            system: CHAT_SI_V1,
+            messages: [...openAiMessages, { role: "assistant", content: "(noted — now reply directly to the user in your normal voice, acknowledging naturally if you saved something or noted their feedback)" }],
+            signal: turnAbort.signal,
+            onText: async (t) => { assistantText += t; await send({ type: "delta", text: t }); },
+          });
+          telemetry(context, db, { endpoint: "opencode/thread", model: cont.model, latencyMs: Date.now() - t1, ok: true, uid });
+        } catch {
+          if (!assistantText.trim()) { await finishFailed("upstream", "Couldn’t finish that reply."); return; }
         }
       }
 
@@ -832,23 +929,36 @@ export async function onRequest(context: any) {
           await send({ type: "error", code: "conflict", message: "Couldn’t send your message. Try again." });
           return;
         }
-        await send({ type: "done", turn: {
-          id: turnId, threadId, userText: text, attachments: attachmentKeys,
-          ref: ref && ref.sourceTurnId ? ref : undefined,
-          assistantText: persistedText, card: finalCard || undefined, status: "complete", attempt: attemptBase,
-        } });
+        const updatedTitle = !turnAbort.signal.aborted
+          ? await maybeAutoTitleThread({ apiKey, db, uid, threadId, thread, historyChrono, text, assistantText: persistedText, signal: turnAbort.signal })
+          : undefined;
+        await send({
+          type: "done",
+          ...(updatedTitle ? { updatedTitle } : {}),
+          turn: {
+            id: turnId, threadId, userText: text, attachments: attachmentKeys,
+            ref: ref && ref.sourceTurnId ? ref : undefined,
+            replyQuote: replyQuote || undefined,
+            assistantText: persistedText, card: finalCard || undefined, status: "complete", attempt: attemptBase,
+          },
+        });
       }
     } catch (e: any) {
       const msg = String(e?.message || "upstream");
-      telemetry(context, db, { endpoint: "opencode/thread", model: models.chat.id, latencyMs: 0, ok: false, error: msg.slice(0, 300), uid });
-      if (/HTTP (402|429)\b/.test(msg) || msg.toLowerCase().includes("allowance") || msg.toLowerCase().includes("quota")) {
+      if (turnAbort.signal.aborted) {
+        try { await db.prepare(`UPDATE chat_turns SET status='failed' WHERE id=? AND attempt=? AND status='pending'`).bind(turnId, attemptBase).run(); } catch { /* ignore */ }
+        await send({ type: "error", code: "aborted", message: "Stopped." });
+      } else if (/HTTP (402|429)\b/.test(msg) || msg.toLowerCase().includes("allowance") || msg.toLowerCase().includes("quota")) {
+        telemetry(context, db, { endpoint: "opencode/thread", model: models.chat.id, latencyMs: 0, ok: false, error: msg.slice(0, 300), uid });
         try { await db.prepare(`UPDATE chat_turns SET status='failed' WHERE id=? AND attempt=?`).bind(turnId, attemptBase).run(); } catch { /* ignore */ }
         await send({ type: "error", code: "allowance", message: "Chat is at its usage limit. Try again later." });
       } else {
+        telemetry(context, db, { endpoint: "opencode/thread", model: models.chat.id, latencyMs: 0, ok: false, error: msg.slice(0, 300), uid });
         try { await db.prepare(`UPDATE chat_turns SET status='failed' WHERE id=? AND attempt=?`).bind(turnId, attemptBase).run(); } catch { /* ignore */ }
         await send({ type: "error", code: "upstream", message: "Couldn’t finish that reply." });
       }
     } finally {
+      request.signal?.removeEventListener?.("abort", onReqAbort);
       clearTimeout(deadline);
       clearInterval(ping);
       try { await writer.close(); } catch { /* ignore */ }
@@ -905,7 +1015,17 @@ export async function onRequest(context: any) {
         // Line-only scope: reconstruct untouched lines exact from the source option
         if (typeof args.ref.bubbleIndex === "number" && src.bubbleText) {
           const srcBubbles = src.optionText.split("\n").filter(Boolean);
-          void srcBubbles;
+          const idx = args.ref.bubbleIndex;
+          if (srcBubbles.length > 1 && idx >= 0 && idx < srcBubbles.length) {
+            card.variations = card.variations.map((v: any) => {
+              if (v.bubbles.length !== 1) return v;
+              const patched = srcBubbles.map((line, i) => ({
+                text: i === idx ? v.bubbles[0].text : line,
+                replyTo: i === idx ? v.bubbles[0].replyTo : null,
+              }));
+              return { bubbles: patched };
+            });
+          }
         }
         return { ok: true, card, modelUsed };
       }
@@ -943,16 +1063,109 @@ export async function onRequest(context: any) {
     }
   }
 
-  function withImages(messages: Array<{ role: string; content: string }>, parts: Array<{ mimeType: string; data: string }>) {
-    if (!parts.length) return messages.map((m) => ({ role: m.role, content: m.content }));
-    const out = messages.map((m) => ({ role: m.role, content: m.content as any }));
-    const lastUserIdx = out.map((m) => m.role).lastIndexOf("user");
+  /** Attach hydrated R2 images onto the exact historical & current user turns so the model sees multi-turn images natively. */
+  function withTurnImages(
+    msgs: Array<{ role: string; content: string }>,
+    hist: Array<{ role: "user" | "assistant"; text: string; imageKeys?: string[] }>,
+    partsMap: Map<string, { mimeType: string; data: string }>,
+    curParts: Array<{ mimeType: string; data: string }>
+  ) {
+    const slicedHist = hist.slice(-12);
+    const offset = Math.max(0, msgs.length - slicedHist.length - 1);
     const toDataUrl = (mime: string, d: string) => (d.startsWith("data:") ? d : `data:${mime || "image/webp"};base64,${d}`);
-    const content: any[] = parts.slice(0, MAX_IMAGES).map((p) => ({ type: "image_url", image_url: { url: toDataUrl(p.mimeType, p.data) } }));
-    const text = out[lastUserIdx]?.content || "";
-    content.push({ type: "text", text });
-    if (lastUserIdx >= 0) out[lastUserIdx] = { role: "user", content };
-    return out;
+    const toPart = (p: { mimeType: string; data: string }) => ({ type: "image_url", image_url: { url: toDataUrl(p.mimeType, p.data) } });
+    return msgs.map((m, idx) => {
+      let parts: Array<{ mimeType: string; data: string }> = [];
+      if (idx === msgs.length - 1) {
+        parts = curParts;
+      } else if (idx >= offset && idx < offset + slicedHist.length) {
+        const h = slicedHist[idx - offset];
+        if (h.role === "user" && h.imageKeys?.length) {
+          parts = h.imageKeys.map((k) => partsMap.get(k)).filter((x): x is { mimeType: string; data: string } => Boolean(x));
+        }
+      }
+      if (!parts.length) return { role: m.role, content: m.content };
+      const content: any[] = parts.slice(0, MAX_IMAGES).map(toPart);
+      content.push({ type: "text", text: m.content });
+      return { role: m.role, content };
+    });
+  }
+
+  /** Persist conversational feedback from `record_feedback` tool calls into D1 `feedback`. */
+  async function persistChatFeedback(d1: any, userUid: string, items: any[]): Promise<void> {
+    if (!items.length) return;
+    try {
+      await d1.prepare(`INSERT OR IGNORE INTO users (anon_id) VALUES (?)`).bind(userUid).run();
+      const row = (await d1.prepare(`SELECT id FROM users WHERE anon_id = ?`).bind(userUid).first()) as any;
+      const dbUserId = row?.id;
+      if (!dbUserId) return;
+      for (const item of items.slice(0, 3)) {
+        const rating = item?.sentiment === "positive" ? 1 : item?.sentiment === "negative" ? -1 : 0;
+        if (!rating) continue;
+        const tone = typeof item?.tone === "string" && item.tone.trim() ? item.tone.trim().slice(0, 32) : "general";
+        const reason = typeof item?.reason === "string" ? item.reason.trim().slice(0, 240) : "";
+        await d1
+          .prepare(`INSERT INTO feedback (user_id, source, suggestion_type, rating, metadata) VALUES (?, 'chat_conversation', ?, ?, ?)`)
+          .bind(dbUserId, tone, rating, reason ? JSON.stringify({ reason }) : null)
+          .run();
+      }
+    } catch { /* non-blocking telemetry */ }
+  }
+
+  /** Refresh thread title on Turn 1 and every 4 turns thereafter unless manually renamed. */
+  async function maybeAutoTitleThread(opts: {
+    apiKey: string; db: any; uid: string; threadId: string;
+    thread: { title?: string; title_manual?: number };
+    historyChrono: any[]; text: string; assistantText: string; signal: AbortSignal;
+  }): Promise<string | undefined> {
+    if (opts.thread?.title_manual) return undefined;
+    const turnCount = opts.historyChrono.length + 1;
+    const isDefaultTitle = !opts.thread?.title || opts.thread.title === "New chat";
+    if (!(turnCount === 1 || isDefaultTitle || turnCount % 4 === 0)) return undefined;
+    const titleAbort = new AbortController();
+    const timer = setTimeout(() => titleAbort.abort(), 2800);
+    const onOuterAbort = () => titleAbort.abort();
+    opts.signal.addEventListener?.("abort", onOuterAbort);
+    try {
+      const recent = opts.historyChrono
+        .slice(-3)
+        .map((r: any) => `User: ${String(r.user_text || "").slice(0, 140)}\nKai: ${String(r.assistant_text || "").slice(0, 140)}`)
+        .join("\n");
+      const snippet = [recent, `User: ${opts.text.slice(0, 220)}`, `Kai: ${opts.assistantText.slice(0, 220)}`].filter(Boolean).join("\n");
+      let raw = "";
+      await callConversationalStream({
+        apiKey: opts.apiKey,
+        sessionTag: `rizzbot-title-${opts.threadId}`,
+        candidates: [
+          { model: SPARK_ID, effort: "minimal" },
+          { model: DEEPSEEK_ID, effort: "none" },
+          { model: HY4_ID, effort: "high" },
+        ],
+        system: "Write a crisp 2 to 5 word title for this dating/texting advice thread. Return ONLY plain title text — no quotes, no trailing period, no markdown.",
+        messages: [{ role: "user", content: snippet.slice(0, 1000) }],
+        signal: titleAbort.signal,
+        onText: async (t) => { raw += t; },
+      });
+      let cleaned = raw
+        .split("\n")[0]
+        .replace(/^["'“”‘’*#\-:\s]+|["'“”‘’.!?\s]+$/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      const words = cleaned.split(" ").filter(Boolean);
+      if (words.length > 6) cleaned = words.slice(0, 5).join(" ");
+      cleaned = cleaned.slice(0, 56).trim();
+      if (!cleaned || cleaned.toLowerCase() === "new chat" || cleaned === opts.thread?.title) return undefined;
+      await opts.db
+        .prepare(`UPDATE chat_threads SET title=?, updated_at=? WHERE id=? AND uid=? AND COALESCE(title_manual,0)=0`)
+        .bind(cleaned, utcNowIso(), opts.threadId, opts.uid)
+        .run();
+      return cleaned;
+    } catch {
+      return undefined;
+    } finally {
+      clearTimeout(timer);
+      opts.signal.removeEventListener?.("abort", onOuterAbort);
+    }
   }
 
   function replayCompletedTurn(row: any, corsHdrs: Record<string, string>) {
@@ -964,8 +1177,18 @@ export async function onRequest(context: any) {
         await wr.write(enc.encode(JSON.stringify({ type: "accepted", turnId: row.id, attempt: row.attempt }) + "\n"));
         let card: any = undefined;
         if (row.card_json) { try { card = JSON.parse(row.card_json); } catch { card = undefined; } }
+        let savedQuote: ReplyQuoteWire | undefined = undefined;
+        if (row.reply_quote) { try { savedQuote = JSON.parse(row.reply_quote); } catch { savedQuote = undefined; } }
+        const savedRef = row.ref_source_turn_id ? {
+          sourceTurnId: row.ref_source_turn_id,
+          tone: row.ref_tone || undefined,
+          optionIndex: row.ref_option_index ?? undefined,
+          bubbleIndex: row.ref_bubble_index ?? undefined,
+        } : undefined;
         await wr.write(enc.encode(JSON.stringify({ type: "done", turn: {
           id: row.id, threadId: row.thread_id, userText: row.user_text, attachments: parseAttachments(row.attachments),
+          ...(savedRef ? { ref: savedRef } : {}),
+          ...(savedQuote ? { replyQuote: savedQuote } : {}),
           assistantText: row.assistant_text || "", card, status: "complete", attempt: row.attempt,
         } }) + "\n"));
       } finally { try { await wr.close(); } catch { /* ignore */ } }
@@ -983,21 +1206,49 @@ export async function onRequest(context: any) {
       return errJson("invalid_input", "Couldn’t send your message. Try again.", 400, { ...jsonCors, "Content-Type": "application/json" });
     }
     if (text.length > MAX_TEXT) return errJson("invalid_input", "Couldn’t send your message. Try again.", 400, { ...jsonCors, "Content-Type": "application/json" });
-    const prior = Array.isArray(b?.priorTurns) ? (b.priorTurns as any[]).filter((t) => t && (t.role === "user" || t.role === "assistant") && typeof t.text === "string").slice(-10).map((t) => ({ role: t.role as "user" | "assistant", text: String(t.text).slice(0, 1500) })) : [];
+    const rawIncQuote = b?.replyQuote;
+    const incReplyQuote: ReplyQuoteWire | undefined =
+      rawIncQuote && typeof rawIncQuote === "object" && typeof rawIncQuote.text === "string" && rawIncQuote.text.trim()
+        ? {
+            author: typeof rawIncQuote.author === "string" ? rawIncQuote.author.trim().slice(0, 40) : "Message",
+            text: rawIncQuote.text.trim().slice(0, 500),
+            turnId: typeof rawIncQuote.turnId === "string" ? rawIncQuote.turnId.slice(0, 128) : undefined,
+            tone: typeof rawIncQuote.tone === "string" ? rawIncQuote.tone.slice(0, 32) : undefined,
+            optionIndex: typeof rawIncQuote.optionIndex === "number" ? rawIncQuote.optionIndex : undefined,
+            bubbleIndex: typeof rawIncQuote.bubbleIndex === "number" ? rawIncQuote.bubbleIndex : undefined,
+          }
+        : undefined;
+
+    const prior = Array.isArray(b?.priorTurns)
+      ? (b.priorTurns as any[])
+          .filter((t) => t && (t.role === "user" || t.role === "assistant") && typeof t.text === "string")
+          .slice(-10)
+          .map((t) => ({
+            role: t.role as "user" | "assistant",
+            text: String(t.text).slice(0, 1500),
+            ...(t.replyQuote && typeof t.replyQuote === "object" && typeof t.replyQuote.text === "string"
+              ? { replyQuote: { author: String(t.replyQuote.author || "Message").slice(0, 40), text: String(t.replyQuote.text).slice(0, 400) } }
+              : {}),
+          }))
+      : [];
     const { parts } = inlineImagesToParts(b?.images);
     // Referenced card (untrusted context only)
     let refCardText = "";
     if (b?.ref && typeof b.ref === "object" && b.ref.card && typeof b.ref.card === "object") {
-      refCardText = summarizeCardForContext(b.ref.card).slice(0, 800);
+      refCardText = summarizeCardForContext(b.ref.card).slice(0, 1800);
     }
-    const { entries } = await loadLedger(db, incUid);
-    const styleHints = await loadStyleHints(db, incUid).catch(() => "");
+    const [{ entries }, styleHints, incSettings] = await Promise.all([
+      loadLedger(db, incUid),
+      loadStyleHints(db, incUid).catch(() => ""),
+      loadUserSettings(db, incUid),
+    ]);
     const models = pickModels("incognito");
     const incSessionTag = typeof b?.sessionId === "string" && b.sessionId ? `rizzbot-chat-${b.sessionId}` : `rizzbot-chat-inc-${Date.now()}`;
     const messages = buildConversationalMessages({
-      ledger: entries, threadNote: "", styleHints,
-      history: [...prior.map((p) => ({ role: p.role as "user" | "assistant", text: p.text })), ...(refCardText ? [{ role: "assistant" as const, text: refCardText }] : [])],
+      ledger: entries, threadNote: "", styleHints, vibe: incSettings.vibe,
+      history: [...prior, ...(refCardText ? [{ role: "assistant" as const, text: refCardText }] : [])],
       currentText: text.trim() ? text : "(screenshots attached — respond to what is visible or ask what they want help with)",
+      currentQuote: incReplyQuote,
     });
     const openAiMessages = (() => {
       if (!parts.length) return messages.map((m) => ({ role: m.role, content: m.content }));
@@ -1010,6 +1261,63 @@ export async function onRequest(context: any) {
       return out;
     })();
 
+    const runIncRevision = async (revRef: any, sig: AbortSignal, goal?: string) => {
+      const card = revRef?.card;
+      const refObj: ThreadRef = {
+        sourceTurnId: typeof revRef?.sourceTurnId === "string" ? revRef.sourceTurnId : undefined,
+        tone: typeof revRef?.tone === "string" ? revRef.tone : undefined,
+        optionIndex: typeof revRef?.optionIndex === "number" ? revRef.optionIndex : 0,
+        bubbleIndex: typeof revRef?.bubbleIndex === "number" ? revRef.bubbleIndex : undefined,
+      };
+      const src = resolveSourceCardText(card, refObj);
+      const sourceOptionText = src?.optionText || summarizeCardForContext(card).slice(0, 1200);
+      if (!sourceOptionText) throw new Error("missing_source");
+      const { getSystemFor, buildRevisionUserData } = await import("../../lib/chatEngine");
+      const userData = buildRevisionUserData({
+        currentRequest: text.trim() || goal || "Revise this reply",
+        draftGoal: goal,
+        sourceOptionText,
+        sourceTone: refObj.tone,
+        sourceBubbleText: src?.bubbleText,
+        styleHints,
+      });
+      const { json: raw } = await callDraftJson({
+        apiKey: key,
+        sessionTag: `${incSessionTag}-draft`,
+        candidates: [{ model: models.draftRev.id, effort: models.draftRev.effort }, { model: HY4_ID, effort: "high" }],
+        system: getSystemFor("revision"),
+        userData,
+        imageParts: parts,
+        signal: sig,
+      });
+      validateRevisionCard(raw);
+      const revCard: any = {
+        kind: "revision",
+        sourceTurnId: refObj.sourceTurnId,
+        sourceTone: refObj.tone,
+        sourceOptionIndex: refObj.optionIndex ?? 0,
+        sourceBubbleIndex: refObj.bubbleIndex,
+        variations: (raw as any).variations.map((v: any) => ({
+          bubbles: (v.bubbles as any[]).map((bb: any) => ({
+            text: String(bb.text).trim(),
+            replyTo: typeof bb.replyTo === "string" && bb.replyTo.trim() ? bb.replyTo.trim() : null,
+          })),
+        })),
+      };
+      if (typeof refObj.bubbleIndex === "number" && src?.bubbleText) {
+        const srcBubbles = src.optionText.split("\n").filter(Boolean);
+        const bi = refObj.bubbleIndex;
+        if (srcBubbles.length > 1 && bi >= 0 && bi < srcBubbles.length) {
+          revCard.variations = revCard.variations.map((v: any) =>
+            v.bubbles.length !== 1
+              ? v
+              : { bubbles: srcBubbles.map((line, i) => ({ text: i === bi ? v.bubbles[0].text : line, replyTo: i === bi ? v.bubbles[0].replyTo : null })) }
+          );
+        }
+      }
+      return revCard;
+    };
+
     const actionInc = b?.action === "draft" || b?.action === "refine" ? b.action : undefined;
     const { readable, writable } = new TransformStream();
     const writer = writable.getWriter();
@@ -1017,34 +1325,33 @@ export async function onRequest(context: any) {
     const send = async (o: any) => { try { await writer.write(encoder.encode(JSON.stringify(o) + "\n")); } catch { /* gone */ } };
     (async () => {
       const turnAbort = new AbortController();
+      const onReqAbort = () => turnAbort.abort();
+      request.signal?.addEventListener?.("abort", onReqAbort);
       const killer = setTimeout(() => turnAbort.abort(), GENERATION_DEADLINE_MS);
       const ping = setInterval(() => { void send({ type: "ping", ts: Date.now() }); }, 10_000);
       try {
         await send({ type: "accepted", turnId: `inc-${Date.now()}`, incognito: true });
         if (actionInc === "draft" || actionInc === "refine") {
           await send({ type: "status", code: actionInc === "draft" ? "drafting" : "refining" });
-          // Incognito drafts: same isolation, in-memory evidence only
-          const { getSystemFor, buildDraftUserData, buildRevisionUserData } = await import("../../lib/chatEngine");
+          const { getSystemFor, buildDraftUserData } = await import("../../lib/chatEngine");
           if (actionInc === "refine") {
-            const card = b?.ref?.card;
-            const srcIdx = typeof b?.ref?.optionIndex === "number" ? b.ref.optionIndex : 0;
-            const variations = card?.variations || Object.values(card?.suggestions || {})[0];
-            void srcIdx; void variations;
-            const userData = buildRevisionUserData({
-              currentRequest: text.trim() || "Revise this reply",
-              sourceOptionText: JSON.stringify(card || {}).slice(0, 2000),
-              sourceTone: typeof b?.ref?.tone === "string" ? b.ref.tone : undefined,
-              styleHints,
-            });
-            const { json: raw } = await callDraftJson({ apiKey: key, sessionTag: `${incSessionTag}-draft`, candidates: [{ model: models.draftRev.id, effort: models.draftRev.effort }], system: getSystemFor("revision"), userData, imageParts: parts, signal: turnAbort.signal });
-            validateRevisionCard(raw);
-            await send({ type: "done", turn: { id: `inc-${Date.now()}`, incognito: true, userText: text, assistantText: "", card: { kind: "revision", ...(raw as object) }, status: "complete" } });
+            let revCard: any;
+            try {
+              revCard = await runIncRevision(b?.ref, turnAbort.signal);
+            } catch (err: any) {
+              if (err?.message === "missing_source") {
+                await send({ type: "error", code: "invalid_input", message: "That reply is no longer available." });
+                return;
+              }
+              throw err;
+            }
+            await send({ type: "done", turn: { id: `inc-${Date.now()}`, incognito: true, userText: text, replyQuote: incReplyQuote, assistantText: "", card: revCard, status: "complete" } });
             return;
           }
           const userData = buildDraftUserData({ currentRequest: text.trim() || "What should I text back?", exchangeExcerpts: [text.trim()].filter(Boolean), styleHints, screenshotCount: parts.length });
           const { json: raw } = await callDraftJson({ apiKey: key, sessionTag: `${incSessionTag}-draft`, candidates: [{ model: models.draftFull.id, effort: models.draftFull.effort }, { model: HY4_ID, effort: "high" }], system: getSystemFor("deck"), userData, imageParts: parts, signal: turnAbort.signal });
           validateQuickV2Payload(raw as Record<string, unknown>);
-          await send({ type: "done", turn: { id: `inc-${Date.now()}`, incognito: true, userText: text, assistantText: "", card: { kind: "deck", ...(raw as object) }, status: "complete" } });
+          await send({ type: "done", turn: { id: `inc-${Date.now()}`, incognito: true, userText: text, replyQuote: incReplyQuote, assistantText: "", card: { kind: "deck", ...(raw as object) }, status: "complete" } });
           return;
         }
         let full = "";
@@ -1059,24 +1366,38 @@ export async function onRequest(context: any) {
         telemetry(context, db, { endpoint: "opencode/thread", model: conv.model, latencyMs: Date.now() - t0, ok: true, uid: incUid });
         const draftCall = conv.toolCalls.find((c) => c.name === "draft_replies");
         if (draftCall) {
-          await send({ type: "status", code: "drafting" });
+          const scope = (draftCall.args as any)?.scope === "revision" ? "revision" : "full";
+          const goal = typeof (draftCall.args as any)?.draft_goal === "string" ? (draftCall.args as any).draft_goal : undefined;
+          await send({ type: "status", code: scope === "revision" ? "refining" : "drafting" });
+          if (scope === "revision" && b?.ref?.card) {
+            const revCard = await runIncRevision(b.ref, turnAbort.signal, goal);
+            await send({ type: "done", turn: { id: `inc-${Date.now()}`, incognito: true, userText: text, replyQuote: incReplyQuote, assistantText: full, card: revCard, status: "complete" } });
+            return;
+          }
           const { getSystemFor, buildDraftUserData } = await import("../../lib/chatEngine");
-          const userData = buildDraftUserData({ currentRequest: text.trim() || "What should I text back?", draftGoal: typeof (draftCall.args as any)?.draft_goal === "string" ? (draftCall.args as any).draft_goal : undefined, exchangeExcerpts: [text.trim()].filter(Boolean), styleHints, screenshotCount: parts.length });
+          const userData = buildDraftUserData({ currentRequest: text.trim() || "What should I text back?", draftGoal: goal, exchangeExcerpts: [text.trim()].filter(Boolean), styleHints, screenshotCount: parts.length });
           const { json: raw } = await callDraftJson({ apiKey: key, sessionTag: `${incSessionTag}-draft`, candidates: [{ model: models.draftFull.id, effort: models.draftFull.effort }, { model: HY4_ID, effort: "high" }], system: getSystemFor("deck"), userData, imageParts: parts, signal: turnAbort.signal });
           validateQuickV2Payload(raw as Record<string, unknown>);
-          await send({ type: "done", turn: { id: `inc-${Date.now()}`, incognito: true, userText: text, assistantText: full, card: { kind: "deck", ...(raw as object) }, status: "complete" } });
+          await send({ type: "done", turn: { id: `inc-${Date.now()}`, incognito: true, userText: text, replyQuote: incReplyQuote, assistantText: full, card: { kind: "deck", ...(raw as object) }, status: "complete" } });
           return;
         }
         // Reject any incognito memory write attempt server-side (tool not advertised, but double-guard)
-        await send({ type: "done", turn: { id: `inc-${Date.now()}`, incognito: true, userText: text, assistantText: full, status: "complete" } });
+        await send({ type: "done", turn: { id: `inc-${Date.now()}`, incognito: true, userText: text, replyQuote: incReplyQuote, assistantText: full, status: "complete" } });
       } catch (e: any) {
         const msg = String(e?.message || "");
-        if (/HTTP (402|429)\b/.test(msg) || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("allowance")) {
+        if (turnAbort.signal.aborted) {
+          await send({ type: "error", code: "aborted", message: "Stopped." });
+        } else if (/HTTP (402|429)\b/.test(msg) || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("allowance")) {
           await send({ type: "error", code: "allowance", message: "Chat is at its usage limit. Try again later." });
         } else {
           await send({ type: "error", code: "upstream", message: "Couldn’t finish that reply." });
         }
-      } finally { clearTimeout(killer); clearInterval(ping); try { await writer.close(); } catch { /* ignore */ } }
+      } finally {
+        request.signal?.removeEventListener?.("abort", onReqAbort);
+        clearTimeout(killer);
+        clearInterval(ping);
+        try { await writer.close(); } catch { /* ignore */ }
+      }
     })();
     return new Response(readable, { status: 200, headers: ndCors });
   }

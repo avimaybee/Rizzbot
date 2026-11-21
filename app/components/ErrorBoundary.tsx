@@ -33,8 +33,8 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       // ignore
     }
     this.setState({ error: null });
-    window.location.hash = "#/home";
-    if (window.location.pathname !== "/home") window.location.pathname = "/home";
+    window.location.hash = "#/chat";
+    if (window.location.pathname !== "/chat") window.location.pathname = "/chat";
     else window.location.reload();
   };
 
@@ -65,7 +65,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
               lineHeight: 1.6,
             }}
           >
-            Your saved history is safe. Head home and start fresh.
+            Your saved history is safe. Head back to chat and start fresh.
           </p>
           <button
             onClick={this.handleReset}
@@ -83,7 +83,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
               padding: "0 28px",
             }}
           >
-            Back to home
+            Back to Chat
           </button>
         </div>
       </div>

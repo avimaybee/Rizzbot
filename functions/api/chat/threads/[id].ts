@@ -79,13 +79,79 @@ export async function onRequest(context: any) {
     try { body = await request.json(); } catch {
       return new Response(JSON.stringify({ error: "invalid_input" }), { status: 400, headers: cors });
     }
-    const title = trimTitle(body?.title);
-    if (!title) return new Response(JSON.stringify({ error: "invalid_input" }), { status: 400, headers: cors });
     if (thread.deleting_at) return new Response(JSON.stringify({ error: "not_found" }), { status: 404, headers: cors });
+
+    const hasTitle = typeof body?.title === "string";
+    const hasNote = typeof body?.context_note === "string";
+    if (!hasTitle && !hasNote) {
+      return new Response(JSON.stringify({ error: "invalid_input" }), { status: 400, headers: cors });
+    }
+
     const now = utcNowIso();
-    await db.prepare(`UPDATE chat_threads SET title=?, updated_at=? WHERE id=? AND uid=?`).bind(title, now, threadId, uid).run();
+    if (hasTitle) {
+      const title = trimTitle(body.title);
+      if (!title) return new Response(JSON.stringify({ error: "invalid_input" }), { status: 400, headers: cors });
+      if (hasNote) {
+        const note = body.context_note.trim().slice(0, 1000);
+        await db.prepare(`UPDATE chat_threads SET title=?, title_manual=1, context_note=?, updated_at=? WHERE id=? AND uid=?`).bind(title, note, now, threadId, uid).run();
+      } else {
+        await db.prepare(`UPDATE chat_threads SET title=?, title_manual=1, updated_at=? WHERE id=? AND uid=?`).bind(title, now, threadId, uid).run();
+      }
+    } else if (hasNote) {
+      const note = body.context_note.trim().slice(0, 1000);
+      await db.prepare(`UPDATE chat_threads SET context_note=?, updated_at=? WHERE id=? AND uid=?`).bind(note, now, threadId, uid).run();
+    }
+
     const updated = await db.prepare(`SELECT id, title, context_note, deleting_at, created_at, updated_at FROM chat_threads WHERE id=? AND uid=?`).bind(threadId, uid).first();
     return new Response(JSON.stringify({ thread: updated }), { status: 200, headers: cors });
+  }
+
+  if (request.method === "POST") {
+    let body: any;
+    try { body = await request.json(); } catch {
+      return new Response(JSON.stringify({ error: "invalid_input" }), { status: 400, headers: cors });
+    }
+    if (thread.deleting_at) return new Response(JSON.stringify({ error: "not_found" }), { status: 404, headers: cors });
+
+    const action = body?.action;
+    const turnId = typeof body?.turnId === "string" ? body.turnId.trim() : "";
+
+    if (action === "abort_pending" && turnId) {
+      await db.prepare(`UPDATE chat_turns SET status='failed' WHERE id=? AND thread_id=? AND uid=? AND status='pending'`).bind(turnId, threadId, uid).run().catch(() => {});
+      return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
+    }
+
+    if (action === "rewind_to" && turnId) {
+      const keepAnchorMedia = Boolean(body?.keepAnchorMedia);
+      const anchor = (await db.prepare(`SELECT id, created_at FROM chat_turns WHERE id=? AND thread_id=? AND uid=?`).bind(turnId, threadId, uid).first().catch(() => null)) as any;
+      if (!anchor) return notFound();
+      const doomed = ((await db.prepare(
+        `SELECT id, attachments FROM chat_turns WHERE thread_id=? AND uid=? AND ((created_at > ?) OR (created_at = ? AND id >= ?))`
+      ).bind(threadId, uid, anchor.created_at, anchor.created_at, anchor.id).all().catch(() => ({ results: [] }))).results || []) as any[];
+
+      const bucket = (env as any).RIZZBOT_MEDIA;
+      if (bucket && doomed.length) {
+        const keys: string[] = [];
+        for (const r of doomed) {
+          if (keepAnchorMedia && r.id === turnId) continue;
+          for (const k of parseAttachments(r.attachments)) {
+            const clean = k.startsWith("r2:") ? k.slice(3) : k;
+            if (clean.startsWith(`chat/${uid}/${threadId}/`)) keys.push(clean);
+          }
+        }
+        if (keys.length) {
+          await Promise.all(keys.map((k) => bucket.delete(k).catch(() => {})));
+        }
+      }
+
+      await db.batch([
+        db.prepare(`DELETE FROM chat_turns WHERE thread_id=? AND uid=? AND ((created_at > ?) OR (created_at = ? AND id >= ?))`).bind(threadId, uid, anchor.created_at, anchor.created_at, anchor.id),
+        db.prepare(`UPDATE chat_threads SET updated_at=? WHERE id=? AND uid=?`).bind(utcNowIso(), threadId, uid),
+      ]);
+      return new Response(JSON.stringify({ ok: true, deletedTurnIds: doomed.map((d) => d.id) }), { status: 200, headers: cors });
+    }
+
+    return new Response(JSON.stringify({ error: "invalid_input" }), { status: 400, headers: cors });
   }
 
   if (request.method === "DELETE") {
@@ -127,12 +193,17 @@ export async function onRequest(context: any) {
 }
 
 function serializeTurn(row: any) {
+  let replyQuote: any = undefined;
+  if (row.reply_quote) {
+    try { replyQuote = JSON.parse(row.reply_quote); } catch { replyQuote = undefined; }
+  }
   return {
     id: row.id,
     threadId: row.thread_id,
     userText: row.user_text || "",
     attachments: parseAttachments(row.attachments),
     action: row.request_action || undefined,
+    replyQuote,
     ref: row.ref_source_turn_id ? {
       sourceTurnId: row.ref_source_turn_id,
       tone: row.ref_tone || undefined,
@@ -153,4 +224,5 @@ function safeParseCard(raw: string) {
 
 export const onRequestGet = onRequest;
 export const onRequestPatch = onRequest;
+export const onRequestPost = onRequest;
 export const onRequestDelete = onRequest;

@@ -104,6 +104,8 @@ describe("chat system boundaries (015B)", () => {
     // Ledger appears as data, never as system
     expect(serialized).toContain("Maya is my ex");
     expect(serialized).toContain("[CONTEXT]");
+    // User's own texting styleHints must NOT leak into Rizzbot's chat voice (drafting only)
+    expect(serialized).not.toContain("Caps style: lowercase");
     // Tools carry only capped definitions
     expect((DRAFT_REPLIES_TOOL as any).function.name).toBe("draft_replies");
     expect((UPDATE_LEDGER_TOOL as any).function.name).toBe("update_ledger");

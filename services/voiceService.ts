@@ -1,5 +1,4 @@
 import { getAuthHeaders } from "./authHeaders";
-import { convertAudioBlobToWavBase64 } from "../app/hooks/useVoiceRecorder";
 
 export interface TranscriptionResponse {
   transcript: string;
@@ -13,12 +12,14 @@ export interface TranscriptionResponse {
   contextSummary?: string;
 }
 
-async function tryWavEncode(blob: Blob): Promise<{ base64: string; mimeType: string } | null> {
-  try {
-    return await convertAudioBlobToWavBase64(blob);
-  } catch {
-    return null;
-  }
+function extForMime(mime: string): string {
+  const m = (mime || "").toLowerCase();
+  if (m.includes("mp4") || m.includes("m4a")) return "m4a";
+  if (m.includes("ogg")) return "ogg";
+  if (m.includes("mpeg") || m.includes("mp3")) return "mp3";
+  if (m.includes("wav")) return "wav";
+  if (m.includes("flac")) return "flac";
+  return "webm";
 }
 
 export const transcribeAudio = async (
@@ -26,34 +27,37 @@ export const transcribeAudio = async (
   mode: 'therapist' | 'practice' | 'myvoice'
 ): Promise<TranscriptionResponse> => {
   const formData = new FormData();
-  const wav = await tryWavEncode(audioBlob);
-  if (wav) {
-    formData.append('audioBase64', wav.base64);
-    formData.append('mimeType', wav.mimeType);
-    // Keep a File entry too for backends that expect it (harmless)
-    formData.append('audio', audioBlob, 'recording.webm');
-  } else {
-    formData.append('audio', audioBlob, 'recording.webm');
-  }
+  const ext = extForMime(audioBlob.type);
+  formData.append('audio', audioBlob, `recording.${ext}`);
   formData.append('mode', mode);
 
   const authHeaders = await getAuthHeaders();
-  const response = await fetch('/api/voice/transcribe', {
-    method: 'POST',
-    headers: Object.keys(authHeaders).length > 0 ? authHeaders : undefined,
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json() as any;
-    throw new Error(errorData.error || errorData.message || 'Transcription failed');
-  }
-
-  const text = await response.text();
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), 45_000);
   try {
-    return JSON.parse(text) as TranscriptionResponse;
-  } catch {
-    // Whisper-style plain transcript fallback
-    return { transcript: text } as TranscriptionResponse;
+    const response = await fetch('/api/voice/transcribe', {
+      method: 'POST',
+      headers: Object.keys(authHeaders).length > 0 ? authHeaders : undefined,
+      body: formData,
+      signal: controller.signal,
+    });
+
+    const text = await response.text();
+    if (!response.ok) {
+      let msg = 'Transcription failed';
+      try {
+        const errorData = JSON.parse(text) as any;
+        msg = errorData?.error || errorData?.message || msg;
+      } catch { /* keep default */ }
+      throw new Error(msg);
+    }
+
+    try {
+      return JSON.parse(text) as TranscriptionResponse;
+    } catch {
+      return { transcript: text, cleanedTranscript: text } as TranscriptionResponse;
+    }
+  } finally {
+    window.clearTimeout(timer);
   }
 };

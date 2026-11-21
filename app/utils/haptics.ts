@@ -46,24 +46,37 @@ const pulse = (pattern: number[]) => {
   });
 };
 
+function hapticsAllowed(): boolean {
+  try {
+    return typeof localStorage === "undefined" || localStorage.getItem("rizzbot_haptics") !== "off";
+  } catch {
+    return true;
+  }
+}
+
 export const haptics = {
   light: () => {
+    if (!hapticsAllowed()) return;
     if (navigator.vibrate) navigator.vibrate(10);
     else blip(0.04, 250, 0.03);
   },
   medium: () => {
+    if (!hapticsAllowed()) return;
     if (navigator.vibrate) navigator.vibrate(20);
     else blip(0.07, 200, 0.04);
   },
   heavy: () => {
+    if (!hapticsAllowed()) return;
     if (navigator.vibrate) navigator.vibrate(40);
     else blip(0.12, 160, 0.05);
   },
   success: () => {
+    if (!hapticsAllowed()) return;
     if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
     else pulse([10, 30, 10]);
   },
   error: () => {
+    if (!hapticsAllowed()) return;
     if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
     else pulse([50, 50, 50]);
   },

@@ -43,6 +43,7 @@ Actionable, self-contained plans for fixing the architectural issues identified 
 | [012](./012-quick-mode-ux-overhaul.md) | Quick Mode Input & Results UX Overhaul (Multi-Bubble `ReplyHeroCard`, `FriendSummaryCard`, Dynamic Goal Label, Calm Loading & History Parity) | P0 | 4–5 hr | 010, 011 | DONE (ReadStrip deleted, Real/Smooth/Playful/Bold/Your Style, bottom-[60px] bar + ThumbsDown) |
 | [013](./013-passive-voice-learning-and-quiz-fix.md) | Passive Voice Learning from Quick Mode Screenshots (`/api/voice/learn`), D1 Migration `007` & `MyVoiceScreen` Quiz Fix | P1 | 3–4 hr | 010, 012 | DONE (quiz signaturePatterns/rawSamples emptied, learned_samples/cadence_notes persisted) |
 | [014](./014-eradicate-gemini-appwide.md) | Eradicate Gemini App-Wide (100% OpenCode Go Migration for Therapist SSE + 11 Tools, Practice, Style Extraction & WAV Voice Transcription; remove `@google/genai`) | P0 | 5–6 hr | 010, 011, 012, 013 | DONE (aiService + opencode/generate|stream, mimo transcribe, zero grep, no genai chunk) |
+| [016](./016-muse-everywhere-remove-owner-gate.md) | Muse Everywhere, Remove `CHAT_OWNER_UID` Gate, DeepSeek Strictly for Incognito & Fallbacks (`thread.ts`, `chatStore.ts`, `stream.ts`) | P0 | 1–1.5 hr | 015 (`bdde2ab`) | DONE |
 
 ### Recommended execution order for `010`–`014`
 
@@ -55,3 +56,9 @@ Actionable, self-contained plans for fixing the architectural issues identified 
 ```
 
 Execute `010` → `011` → `012` → `013` → `014` sequentially so every commit passes `npm run typecheck`, `npm test`, and `npm run build` with zero broken intermediate states.
+
+## Rizzbot Chat pivot
+
+- [015 · Chat implementation](./015-rizzbot-chat-implementation.md) defines the API, data, build order, and release checks.
+- [015A · Chat UI and UX handoff](./015-chat-ui-ux-handoff.md) defines the screens, responsive layout, interactions, copy, and accessibility checks.
+- [015B · Chat system instructions](./015-chat-system-instructions.md) defines the exact prompts and what data each model call receives.

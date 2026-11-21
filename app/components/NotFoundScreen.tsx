@@ -48,7 +48,7 @@ export function NotFoundScreen() {
                     This page doesn't exist. Let's get you back on track.
                 </p>
                 <button
-                    onClick={() => navigate("/home")}
+                    onClick={() => navigate("/chat")}
                     className="hover-scale fade-press cursor-pointer"
                     style={{
                         margin: "32px auto 0",
@@ -65,7 +65,7 @@ export function NotFoundScreen() {
                         boxShadow: "0 4px 14px rgba(200,82,42,0.25)",
                     }}
                 >
-                    Go Home →
+                    Back to Chat →
                 </button>
             </div>
         </div>

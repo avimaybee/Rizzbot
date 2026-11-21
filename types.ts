@@ -275,8 +275,8 @@ export interface SimAnalysisResultV2 extends SimAnalysisResult {
 export interface FeedbackEntry {
   id: string; // UUID
   timestamp: number; // Unix timestamp
-  source: 'quick' | 'practice'; // Which module
-  suggestionType: 'smooth' | 'bold' | 'witty' | 'roast' | 'authentic' | 'safe' | 'spicy' | 'you' | 'yourStyle';
+  source: 'quick' | 'practice' | 'chat'; // Which module
+  suggestionType: 'real' | 'playful' | 'smooth' | 'bold' | 'witty' | 'roast' | 'authentic' | 'safe' | 'spicy' | 'you' | 'yourStyle';
   rating: 'helpful' | 'mid' | 'off'; // User's feedback
   context?: string; // Optional: relationship context
   // Metadata for learning

@@ -247,12 +247,14 @@ const ensureSchemaInternal = async (db: D1Database): Promise<void> => {
       id TEXT PRIMARY KEY,
       uid TEXT NOT NULL,
       title TEXT NOT NULL,
+      title_manual INTEGER DEFAULT 0,
       context_note TEXT DEFAULT '',
       deleting_at TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )`
   );
+  await runSchemaStatement(db, `ALTER TABLE chat_threads ADD COLUMN title_manual INTEGER DEFAULT 0`);
   await runSchemaStatement(db, `CREATE INDEX IF NOT EXISTS idx_chat_threads_uid_updated ON chat_threads(uid, updated_at DESC)`);
   await runSchemaStatement(
     db,
@@ -266,6 +268,7 @@ const ensureSchemaInternal = async (db: D1Database): Promise<void> => {
       ref_tone TEXT,
       ref_option_index INTEGER,
       ref_bubble_index INTEGER,
+      reply_quote TEXT,
       assistant_text TEXT NOT NULL DEFAULT '',
       card_json TEXT,
       status TEXT NOT NULL DEFAULT 'pending',
@@ -275,6 +278,7 @@ const ensureSchemaInternal = async (db: D1Database): Promise<void> => {
     )`
   );
   await runSchemaStatement(db, `ALTER TABLE chat_turns ADD COLUMN request_action TEXT`);
+  await runSchemaStatement(db, `ALTER TABLE chat_turns ADD COLUMN reply_quote TEXT`);
   await runSchemaStatement(db, `CREATE INDEX IF NOT EXISTS idx_chat_turns_thread_created ON chat_turns(thread_id, created_at, id)`);
   await runSchemaStatement(db, `CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_turns_thread_pending ON chat_turns(thread_id) WHERE status = 'pending'`);
   await runSchemaStatement(
@@ -283,6 +287,17 @@ const ensureSchemaInternal = async (db: D1Database): Promise<void> => {
       uid TEXT PRIMARY KEY,
       entries_json TEXT NOT NULL DEFAULT '[]',
       revision INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL
+    )`
+  );
+  await runSchemaStatement(
+    db,
+    `CREATE TABLE IF NOT EXISTS user_settings (
+      uid TEXT PRIMARY KEY,
+      vibe TEXT NOT NULL DEFAULT 'unfiltered',
+      auto_learn_voice INTEGER NOT NULL DEFAULT 1,
+      auto_save_memory INTEGER NOT NULL DEFAULT 1,
+      haptics_enabled INTEGER NOT NULL DEFAULT 1,
       updated_at TEXT NOT NULL
     )`
   );
