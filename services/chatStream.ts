@@ -81,7 +81,7 @@ export async function sendChatTurn(input: SendTurnInput, cb: StreamCallbacks): P
     let evt: any;
     try { evt = JSON.parse(line); } catch { return; }
     if (evt.type === "accepted") cb.onAccepted?.(evt.turnId || "");
-    else if (evt.type === "status") cb.onStatus?.(evt.code || "thinking", evt.message || statusCopy(evt.code));
+    else if (evt.type === "status") cb.onStatus?.(evt.code || "thinking", typeof evt.message === "string" ? evt.message : "");
     else if (evt.type === "delta" && typeof evt.text === "string") cb.onDelta?.(evt.text);
     else if (evt.type === "done") cb.onDone?.(evt.turn);
     else if (evt.type === "error") cb.onError?.(evt.code || "upstream", evt.message || "Couldn’t finish that reply.");
@@ -109,13 +109,6 @@ function dataCode(code: string): string {
 function messageFor(code: string): string {
   if (code === "active") return "Still working on your last message…";
   return "Couldn’t send your message. Try again.";
-}
-
-export function statusCopy(code: string): string {
-  if (code === "drafting") return "ok wait, putting some lines together…";
-  if (code === "refining") return "ok, reworking that line…";
-  if (code === "reading") return "looking through these now…";
-  return "one sec…";
 }
 
 export async function reconcileTurn(threadId: string, turnId: string): Promise<any | null> {

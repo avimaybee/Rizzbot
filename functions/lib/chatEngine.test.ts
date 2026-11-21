@@ -8,7 +8,6 @@ import {
   validateRevisionCard,
   validateThinkDeeperArgs,
   summarizeCardForContext,
-  waitLine,
   DRAFT_REPLIES_TOOL,
   THINK_DEEPER_TOOL,
   UPDATE_LEDGER_TOOL,
@@ -28,10 +27,10 @@ test("Chat allowlist is open by default and strict only when explicitly configur
   expect(checkChatAllowlist({ CHAT_ALLOWLIST: "guestUid, secondUid" }, "GuestUid")).toBe(false);
 });
 
-test("pickModels routes regular users to Muse and incognito to DeepSeek", () => {
+test("pickModels routes regular users to Muse (xhigh full decks) and incognito to DeepSeek", () => {
   const regular = pickModels("regular");
   expect(regular.chat).toEqual({ id: "muse-spark-1.3-contributor", effort: "minimal" });
-  expect(regular.draftFull).toEqual({ id: "muse-spark-1.3-contributor", effort: "high" });
+  expect(regular.draftFull).toEqual({ id: "muse-spark-1.3-contributor", effort: "xhigh" });
   expect(regular.draftRev).toEqual({ id: "muse-spark-1.3-contributor", effort: "medium" });
   const incognito = pickModels("incognito");
   expect(incognito.chat).toEqual({ id: "deepseek-v4.1-flash", effort: "none" });
@@ -47,9 +46,9 @@ describe("think_deeper escalation", () => {
     expect(params.required).toEqual(["tier"]);
   });
 
-  test("draft_replies accepts an optional high|xhigh depth", () => {
+  test("draft_replies accepts dynamic revision depth minimal|medium|high|xhigh", () => {
     const params = (DRAFT_REPLIES_TOOL as any).function.parameters;
-    expect(params.properties.depth.enum).toEqual(["high", "xhigh"]);
+    expect(params.properties.depth.enum).toEqual(["minimal", "medium", "high", "xhigh"]);
     expect(params.required).toEqual(["draft_goal"]);
   });
 
@@ -62,16 +61,10 @@ describe("think_deeper escalation", () => {
     expect(() => validateThinkDeeperArgs(null)).toThrow();
   });
 
-  test("waiting lines read human, rotate deterministically, never mention routing", () => {
-    for (const kind of ["thinking", "reading", "drafting", "refining", "deeper_medium", "deeper_high", "deeper_xhigh", "uploading", "checking"] as const) {
-      const a = waitLine(kind, 1);
-      const b = waitLine(kind, 1);
-      expect(a).toBe(b);
-      expect(a.length).toBeGreaterThan(0);
-      expect(a.toLowerCase()).not.toContain("drafting replies");
-      expect(a.toLowerCase()).not.toContain("reworking");
-    }
-    expect(waitLine("drafting", 0)).not.toBe(waitLine("drafting", 1));
+  test("chat SI and tools instruct the model to send live in-context updates instead of canned waiting lines", () => {
+    expect(CHAT_SI_V1).toContain("situation-specific");
+    expect((THINK_DEEPER_TOOL as any).function.description).toContain("in your own voice");
+    expect((DRAFT_REPLIES_TOOL as any).function.description).toContain("in your own voice");
   });
 
   test("draft payload carries the thread note as data", () => {

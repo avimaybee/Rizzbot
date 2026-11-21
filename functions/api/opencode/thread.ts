@@ -14,10 +14,8 @@ import {
   validateLedgerPatchArgs,
   validateRevisionCard,
   validateThinkDeeperArgs,
-  waitLine,
   type LedgerEntryWire,
   type ThinkTier,
-  type WaitKind,
 } from "../../lib/chatEngine";
 import { validateQuickV2Payload } from "./quick";
 import {
@@ -55,9 +53,11 @@ export function pickModels(mode: Mode): {
     };
   }
   // Regular Chat (ALL users): Muse Spark 1.3 across all rungs; DeepSeek & Hy4 are fallback-only.
+  // Full reply decks ALWAYS run at xhigh; chat starts at minimal and dynamically escalates via think_deeper;
+  // revisions default to medium and scale dynamically (minimal|medium|high|xhigh) when routed from chat.
   return {
     chat: { id: SPARK_ID, effort: "minimal" },
-    draftFull: { id: SPARK_ID, effort: "high" },
+    draftFull: { id: SPARK_ID, effort: "xhigh" },
     draftRev: { id: SPARK_ID, effort: "medium" },
   };
 }
@@ -77,11 +77,7 @@ function errJson(code: string, message: string, status: number, cors: Record<str
   return new Response(JSON.stringify({ error: code, message }), { status, headers: cors });
 }
 
-/** Explicit-Draft fast path escalates to xhigh on high-stakes signals. */
-function isHighStakesDraft(text: string, imageCount: number): boolean {
-  if (imageCount >= 4) return true;
-  return /complicated|\bex\b|think harder|think deeper/i.test(text);
-}
+const VALID_REV_DEPTHS = new Set(["minimal", "medium", "high", "xhigh"]);
 
 async function loadLedger(db: any, uid: string): Promise<{ entries: LedgerEntryWire[]; revision: number }> {
   try {
@@ -622,7 +618,7 @@ export async function onRequest(context: any) {
     try {
       await send({ type: "accepted", turnId, attempt: attemptBase });
       if (unavailable > 0 && combinedKeys.length > 0) {
-        await send({ type: "status", code: "reading", message: waitLine("reading", attemptBase) });
+        await send({ type: "status", code: "reading" });
       }
 
       const finishFailed = async (code: string, message: string, status = 200) => {
@@ -633,12 +629,10 @@ export async function onRequest(context: any) {
 
       // Explicit draft/refine actions bypass the conversational call
       if (action === "draft" || action === "refine") {
-        const highStakes = action === "draft" && isHighStakesDraft(text, imageParts.length);
-        await send({ type: "status", code: action === "draft" ? "drafting" : "refining", message: waitLine(action === "draft" ? "drafting" : "refining", attemptBase) });
+        await send({ type: "status", code: action === "draft" ? "drafting" : "refining" });
         const draftRes = await runDraft({
           env, apiKey, sessionBase, models, kind: action === "draft" ? "full" : "revision",
           currentText: text, attachmentKeys, ref, refCard, imageParts, styleHints, threadNote, signal: turnAbort.signal,
-          effort: action === "draft" && highStakes ? "xhigh" : undefined,
           excerpts: historyForCtx.filter((h) => h.role === "user").map((h) => h.text).slice(-3),
         });
         callsMade = 1;
@@ -698,18 +692,15 @@ export async function onRequest(context: any) {
       if (draftCall) {
         const scope = (draftCall.args as any)?.scope === "revision" ? "revision" : "full";
         const goal = typeof (draftCall.args as any)?.draft_goal === "string" ? (draftCall.args as any).draft_goal : text.slice(0, 200);
-        const requestedDepth = (draftCall.args as any)?.depth === "xhigh" ? "xhigh" as const : "high" as const;
-        let thinkTier: ThinkTier | null = null;
-        if (thinkCall) {
-          try { thinkTier = validateThinkDeeperArgs(thinkCall.args); } catch { thinkTier = null; }
-          if (thinkTier) telemetry(context, db, { endpoint: "opencode/thread-think", model: conv.model, latencyMs: 0, ok: true, uid });
-        }
-        const deckEffort = scope === "revision" ? undefined : (requestedDepth === "xhigh" || thinkTier === "xhigh" ? "xhigh" : "high");
-        await send({ type: "status", code: scope === "full" ? "drafting" : "refining", message: waitLine(scope === "full" ? "drafting" : "refining", attemptBase) });
+        const rawDepth = (draftCall.args as any)?.depth;
+        const revDepth = typeof rawDepth === "string" && VALID_REV_DEPTHS.has(rawDepth) ? rawDepth : undefined;
+        // Full reply decks ALWAYS use models.draftFull.effort (xhigh). Revisions scale dynamically when Call 1 supplies depth.
+        const draftEffort = scope === "revision" ? revDepth : undefined;
+        await send({ type: "status", code: scope === "full" ? "drafting" : "refining" });
         const draftRes = await runDraft({
           env, apiKey, sessionBase, models, kind: scope,
           currentText: text, attachmentKeys, ref, refCard, imageParts, styleHints, threadNote, signal: turnAbort.signal, draftGoal: goal,
-          effort: deckEffort,
+          effort: draftEffort,
           excerpts: historyForCtx.filter((h) => h.role === "user").map((h) => h.text).slice(-3),
         });
         callsMade = 2;
@@ -735,7 +726,7 @@ export async function onRequest(context: any) {
           return;
         }
         callsMade = 2;
-        await send({ type: "status", code: "thinking", message: waitLine(("deeper_" + tier) as WaitKind, attemptBase) });
+        await send({ type: "status", code: "thinking" });
         const t1 = Date.now();
         try {
           let firstDeeperDelta = true;
@@ -887,8 +878,9 @@ export async function onRequest(context: any) {
           sourceBubbleText: src.bubbleText,
           styleHints: args.styleHints,
         });
+        const revEffort = args.effort ?? args.models.draftRev.effort;
         const candidates: ModelCandidate[] = [
-          { model: SPARK_ID, effort: args.models.draftRev.effort },
+          { model: SPARK_ID, effort: revEffort },
           { model: DEEPSEEK_ID, effort: "high" },
           { model: HY4_ID, effort: "high" },
         ];
@@ -1027,11 +1019,10 @@ export async function onRequest(context: any) {
       const turnAbort = new AbortController();
       const killer = setTimeout(() => turnAbort.abort(), GENERATION_DEADLINE_MS);
       const ping = setInterval(() => { void send({ type: "ping", ts: Date.now() }); }, 10_000);
-      const incSalt = Date.now();
       try {
         await send({ type: "accepted", turnId: `inc-${Date.now()}`, incognito: true });
         if (actionInc === "draft" || actionInc === "refine") {
-          await send({ type: "status", code: actionInc === "draft" ? "drafting" : "refining", message: waitLine(actionInc === "draft" ? "drafting" : "refining", incSalt) });
+          await send({ type: "status", code: actionInc === "draft" ? "drafting" : "refining" });
           // Incognito drafts: same isolation, in-memory evidence only
           const { getSystemFor, buildDraftUserData, buildRevisionUserData } = await import("../../lib/chatEngine");
           if (actionInc === "refine") {
@@ -1068,7 +1059,7 @@ export async function onRequest(context: any) {
         telemetry(context, db, { endpoint: "opencode/thread", model: conv.model, latencyMs: Date.now() - t0, ok: true, uid: incUid });
         const draftCall = conv.toolCalls.find((c) => c.name === "draft_replies");
         if (draftCall) {
-          await send({ type: "status", code: "drafting", message: waitLine("drafting", incSalt) });
+          await send({ type: "status", code: "drafting" });
           const { getSystemFor, buildDraftUserData } = await import("../../lib/chatEngine");
           const userData = buildDraftUserData({ currentRequest: text.trim() || "What should I text back?", draftGoal: typeof (draftCall.args as any)?.draft_goal === "string" ? (draftCall.args as any).draft_goal : undefined, exchangeExcerpts: [text.trim()].filter(Boolean), styleHints, screenshotCount: parts.length });
           const { json: raw } = await callDraftJson({ apiKey: key, sessionTag: `${incSessionTag}-draft`, candidates: [{ model: models.draftFull.id, effort: models.draftFull.effort }, { model: HY4_ID, effort: "high" }], system: getSystemFor("deck"), userData, imageParts: parts, signal: turnAbort.signal });

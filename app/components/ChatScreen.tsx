@@ -27,8 +27,29 @@ interface ChatScreenProps {
 
 type UiTurn = ChatTurnWire & { localKey: string; failedCode?: string };
 
-/** Reconnect state: the send may have landed, so this asks the user to hold on. */
-const CHECKING_TEXT = "hold on, making sure that sent…";
+function TypingDots({ label }: { label?: string }) {
+  return (
+    <span
+      aria-label={label || "Typing"}
+      style={{ display: "inline-flex", alignItems: "center", gap: 5, height: 22, padding: "2px 0" }}
+    >
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            backgroundColor: "rgba(26,18,8,0.38)",
+            animation: "rizzbot-dot 1.2s ease-in-out infinite",
+            animationDelay: `${i * 0.18}s`,
+          }}
+        />
+      ))}
+      <style>{`@keyframes rizzbot-dot { 0%, 80%, 100% { opacity: 0.25; transform: translateY(0); } 40% { opacity: 0.9; transform: translateY(-2px); } }`}</style>
+    </span>
+  );
+}
 
 export function ChatScreen({ incognito }: ChatScreenProps) {
   const { threadId: routeThreadId } = useParams();
@@ -55,7 +76,7 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
 
   const [sending, setSending] = useState(false);
   const [pendingText, setPendingText] = useState("");
-  const [pendingStatus, setPendingStatus] = useState("one sec…");
+  const [pendingStatusCode, setPendingStatusCode] = useState("");
   const [pendingTurnId, setPendingTurnId] = useState<string | null>(null);
   const [announce, setAnnounce] = useState("");
   const [showJump, setShowJump] = useState(false);
@@ -204,7 +225,7 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
     const myRoute = `${isIncognito ? "inc" : routeThreadId || "new"}:${myUid}`;
     setSending(true);
     setPendingText("");
-    setPendingStatus("one sec…");
+    setPendingStatusCode("thinking");
     setAnnounce("Sending message");
 
     try {
@@ -235,7 +256,7 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
           },
           {
             onAccepted: () => { setPendingTurnId(turnKey); },
-            onStatus: (_c, m) => { if (routeUidRef.current !== myRoute) return; setPendingStatus(m); },
+            onStatus: (c) => { if (routeUidRef.current !== myRoute) return; setPendingStatusCode(c); },
             onDelta: (t) => { if (routeUidRef.current !== myRoute) return; setPendingText((p) => p + t); },
             onDone: (turn) => {
               if (routeUidRef.current !== myRoute) return;
@@ -283,7 +304,7 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
       let keys: string[] = [];
       if (attachments.length) {
         setPreparing(true);
-        setPendingStatus("uploading those now…");
+        setPendingStatusCode("uploading");
         try {
           keys = await uploadChatImages(threadId, turnId, attachments.map((a) => ({ id: a.id, data: a.data, mimeType: a.mimeType })));
         } catch (e: any) {
@@ -313,7 +334,7 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
             if (!routeThreadId) navigate(`/chat/${threadId}`, { replace: true });
             candidateIds.current = null;
           },
-          onStatus: (_c, m) => { if (activeThreadIdRef.current && activeThreadIdRef.current !== threadId) return; setPendingStatus(m); },
+          onStatus: (c) => { if (activeThreadIdRef.current && activeThreadIdRef.current !== threadId) return; setPendingStatusCode(c); },
           onDelta: (t) => { if (activeThreadIdRef.current && activeThreadIdRef.current !== threadId) return; setPendingText((p) => p + t); },
           onDone: (turn) => {
             if (activeThreadIdRef.current && activeThreadIdRef.current !== threadId) return;
@@ -335,7 +356,7 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
             setAnnounce(message);
             if (code === "active") {
               // Keep pending view, show checking state
-              setPendingStatus("Checking your message…");
+              setPendingStatusCode("checking");
               return;
             }
             setTurns((p) => p.map((x) => (x.localKey === turnId ? { ...x, status: "failed", failedCode: code } : x)));
@@ -358,13 +379,13 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
       if (!tid) return;
       setSending(true);
       setPendingText("");
-      setPendingStatus("one sec…");
+      setPendingStatusCode("thinking");
       setTurns((p) => p.map((x) => (x.localKey === turn.localKey ? { ...x, status: "pending" } : x)));
       setPendingTurnId(turn.id);
       await sendChatTurn(
         { mode: "regular", threadId: tid, turnId: turn.id, text: turn.userText, attachmentKeys: turn.attachments.filter((a) => a.startsWith("r2:")), ref: turn.ref, action: turn.action },
         {
-          onStatus: (_c, m) => { if (activeThreadIdRef.current && activeThreadIdRef.current !== tid) return; setPendingStatus(m); },
+          onStatus: (c) => { if (activeThreadIdRef.current && activeThreadIdRef.current !== tid) return; setPendingStatusCode(c); },
           onDelta: (t) => { if (activeThreadIdRef.current && activeThreadIdRef.current !== tid) return; setPendingText((p) => p + t); },
           onDone: (done) => {
             if (activeThreadIdRef.current && activeThreadIdRef.current !== tid) return;
@@ -388,14 +409,14 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
 
   const reconcilePending = async () => {
     if (!pendingTurnId || isIncognito || !activeThreadId) return;
-    setPendingStatus(CHECKING_TEXT);
+    setPendingStatusCode("checking");
     const saved = await reconcileTurn(activeThreadId, pendingTurnId);
     if (saved) {
       if (saved.status === "complete") {
         setTurns((p) => p.map((x) => (x.localKey === pendingTurnId ? { ...x, assistantText: saved.assistantText || "", card: saved.card, status: "complete" } : x)));
         setPendingText(""); setSending(false); setPendingTurnId(null); setAnnounce("Reply ready");
       } else if (saved.status === "pending") {
-        setPendingStatus(CHECKING_TEXT);
+        setPendingStatusCode("checking");
       } else {
         setTurns((p) => p.map((x) => (x.localKey === pendingTurnId ? { ...x, status: "failed", failedCode: "upstream" } : x)));
         setPendingText(""); setSending(false); setPendingTurnId(null);
@@ -560,10 +581,16 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
                   <article aria-label="Assistant is responding" style={{ marginBottom: 24 }}>
                     {pendingText ? (
                       <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, lineHeight: 1.5, color: "#1A1208", whiteSpace: "pre-wrap", overflowWrap: "anywhere", margin: 0, maxWidth: "65ch" }}>{pendingText}</p>
-                    ) : (
-                      <p aria-live="off" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, lineHeight: 1.5, color: "#1A1208", whiteSpace: "pre-wrap", margin: 0, maxWidth: "65ch" }}>{pendingStatus}</p>
+                    ) : null}
+                    {sending && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: pendingText ? 8 : 0 }}>
+                        <TypingDots label={pendingStatusCode || "typing"} />
+                        {pendingStatusCode === "uploading" && (
+                          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.5)" }}>Uploading</span>
+                        )}
+                      </div>
                     )}
-                    {pendingStatus === CHECKING_TEXT && (
+                    {pendingStatusCode === "checking" && (
                       <button type="button" onClick={() => void reconcilePending()} className="cursor-pointer mt-2" style={{ height: 44, padding: "0 16px", borderRadius: 12, border: "1px solid #E8E0D4", background: "#FDFAF5", fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: "#1A1208" }}>
                         Check again
                       </button>

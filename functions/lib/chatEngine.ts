@@ -8,13 +8,13 @@ export const DRAFT_REPLIES_TOOL = {
   type: "function",
   function: {
     name: "draft_replies",
-    description: "Generate sendable reply options for the current conversation. Call when the user asks what to send or wants a rewrite of a specific option. Pass depth xhigh when the turn is high-stakes (delicate stage, private goal, 4+ screenshots, emotionally loaded).",
+    description: "Generate sendable reply options for the current conversation. Call when the user asks what to send or wants a rewrite of a specific option. Before calling this tool, stream one brief, natural, context-specific line in your own voice reacting to the user's situation (never canned filler, never mentioning tools). Full decks always run at maximum depth automatically. For scope='revision', set depth dynamically based on how simple or delicate the rewrite is.",
     parameters: {
       type: "object",
       properties: {
         draft_goal: { type: "string", description: "Short goal grounded in the user's request, e.g. 'short warm reply to her Friday question'" },
         scope: { type: "string", enum: ["full", "revision"], description: "full for a new deck, revision for a targeted change" },
-        depth: { type: "string", enum: ["high", "xhigh"], description: "Drafting effort. Defaults to high. Use xhigh for high-stakes turns." },
+        depth: { type: "string", enum: ["minimal", "medium", "high", "xhigh"], description: "For revision only: match effort to the complexity of the rewrite (minimal for mechanical tweaks, medium for normal tone shifts, high/xhigh for delicate or complex rewrites). Ignored for full decks, which always run at xhigh." },
       },
       required: ["draft_goal"],
     },
@@ -25,11 +25,11 @@ export const THINK_DEEPER_TOOL = {
   type: "function",
   function: {
     name: "think_deeper",
-    description: "Escalate this turn to deeper reasoning within the same reply. Call when the turn needs real thought: screenshot subtext analysis, 'is she losing interest' reads, messy situationship/ex strategy, or multi-topic untangling. Do not call for simple chat, quick tweaks, or when you already called draft_replies. The reason is internal and never shown to the user.",
+    description: "Escalate this turn to deeper reasoning within the same reply whenever the overall situation, conversation depth, ambiguity, or emotional stakes warrant more thought than a quick off-the-cuff answer. Before calling this tool, stream one brief, natural, context-specific line in your own voice reacting to the user's situation so they aren't waiting in silence (never canned filler, never mentioning tools or reasoning tiers). Judge dynamically from the moment — do not rely on a fixed checklist of topics. Do not call for straightforward chat, simple acknowledgments, or when you already called draft_replies. The reason is internal and never shown to the user.",
     parameters: {
       type: "object",
       properties: {
-        tier: { type: "string", enum: ["medium", "high", "xhigh"], description: "Reasoning tier for the continuation. medium for layered reads, high for delicate strategy, xhigh for high-stakes judgment calls." },
+        tier: { type: "string", enum: ["medium", "high", "xhigh"], description: "Choose dynamically by situational complexity: medium when the situation is somewhat nuanced or layered; high when it is genuinely complex, confusing, or emotionally delicate; xhigh when it is deeply tangled, contradictory, or a high-stakes judgment call." },
         reason: { type: "string", description: "Short internal note on why deeper thought is needed (logging only, never shown)." },
       },
       required: ["tier"],
@@ -46,31 +46,6 @@ export function validateThinkDeeperArgs(args: any): ThinkTier {
     throw new Error("think_deeper requires tier medium|high|xhigh");
   }
   return tier;
-}
-
-/**
- * Human waiting lines shown while the agent works, written to read like the
- * agent's own texts — never routing labels, never progress pills. The server
- * always sends an explicit message; the client fallbacks mirror the defaults.
- */
-export const WAIT_LINES = {
-  thinking: ["one sec…", "lemme look…", "hmm, one sec…"],
-  reading: ["looking through these now…", "going through the screenshots, one sec…"],
-  drafting: ["ok wait, putting some lines together…", "give me a moment, writing options…"],
-  refining: ["ok, reworking that line…", "lemme fix that one…"],
-  deeper_medium: ["this needs a sec, thinking it through…"],
-  deeper_high: ["give me a moment, this one's layered…"],
-  deeper_xhigh: ["ok this needs real thought, bear with me…"],
-  uploading: ["uploading those now…"],
-  checking: ["hold on, making sure that sent…"],
-} as const;
-
-export type WaitKind = keyof typeof WAIT_LINES;
-
-/** Deterministic rotation so repeated turns don't read identically. */
-export function waitLine(kind: WaitKind, salt: number): string {
-  const lines = WAIT_LINES[kind];
-  return lines[Math.abs(salt) % lines.length];
 }
 
 export const UPDATE_LEDGER_TOOL = {
