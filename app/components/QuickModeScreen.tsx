@@ -102,7 +102,7 @@ export function QuickModeScreen() {
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [result, setResult] = useState<QuickAdviceResponse | null>(null);
   const [streamedText, setStreamedText] = useState("");
-  const [feedbackGiven, setFeedbackGiven] = useState<"helpful" | "off" | null>(null);
+  const [feedbackVotes, setFeedbackVotes] = useState<Record<string, "helpful" | "off">>({});
   const [cursor, setCursor] = useState<Record<Tone, number>>({
     Real: 0,
     Smooth: 0,
@@ -239,7 +239,7 @@ export function QuickModeScreen() {
 
     setIsLoading(true);
     setShowResults(false);
-    setFeedbackGiven(null);
+    setFeedbackVotes({});
     setWaitDismissed(false);
     setCursor({ Real: 0, Smooth: 0, Playful: 0, Bold: 0, "Your Style": 0 });
     setStreamedText("");
@@ -394,7 +394,7 @@ export function QuickModeScreen() {
       // ignore
     }
     setCursor({ Real: 0, Smooth: 0, Playful: 0, Bold: 0, "Your Style": 0 });
-    setFeedbackGiven(null);
+    setFeedbackVotes({});
     setStreamedText("");
     haptics.light();
   };
@@ -403,7 +403,7 @@ export function QuickModeScreen() {
     // Return to the input view with message/draft/context/screenshots preserved
     setShowResults(false);
     setResult(null);
-    setFeedbackGiven(null);
+    setFeedbackVotes({});
     setStreamedText("");
     haptics.light();
   };
@@ -435,9 +435,12 @@ export function QuickModeScreen() {
     copyTimerRef.current = window.setTimeout(() => setCopiedKey(null), 1500);
   };
 
-  const handleFeedback = (rating: "helpful" | "off") => {
-    if (!authUser?.uid || !result || feedbackGiven) return;
-    setFeedbackGiven(rating);
+  const handleFeedback = (rating: "helpful" | "off", bubbleIdx?: number) => {
+    if (!authUser?.uid || !result) return;
+    // One vote per bubble — pick and choose across tones and variations.
+    const key = `fb-${activeTone}-${cursor[activeTone]}-${bubbleIdx ?? "all"}`;
+    if (feedbackVotes[key]) return;
+    setFeedbackVotes((prev) => ({ ...prev, [key]: rating }));
     const suggestionType = feedbackTypeMap[activeTone] as any;
     saveFeedback(authUser.uid, {
       source: "quick",
@@ -456,6 +459,8 @@ export function QuickModeScreen() {
         rating: rating === "helpful" ? 1 : -1,
         metadata: {
           tone: activeTone,
+          variation: cursor[activeTone],
+          bubble: bubbleIdx ?? null,
           recommendedAction: result.recommendedAction,
         },
       }).catch((err) => {
@@ -840,8 +845,8 @@ export function QuickModeScreen() {
               prefersReducedMotion={prefersReducedMotion}
               streamedText={streamedText}
               onCopy={(text, key) => void handleCopy(text, key)}
-              onFeedback={(rating) => handleFeedback(rating)}
-              feedbackGiven={feedbackGiven}
+              onFeedback={(rating, bubbleIdx) => handleFeedback(rating, bubbleIdx)}
+              feedbackVotes={feedbackVotes}
               onSelectVariation={(i) => { haptics.light(); setCursor((prev) => ({ ...prev, [activeTone]: i })); }}
               onDragEnd={({ offset, velocity }) => {
                 if (selectedOptions.length <= 1) return;
@@ -945,6 +950,8 @@ export function QuickModeScreen() {
     </motion.div>
   );
 }
+
+
 
 
 

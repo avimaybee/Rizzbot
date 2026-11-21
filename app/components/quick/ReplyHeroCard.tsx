@@ -24,10 +24,10 @@ interface ReplyHeroCardProps {
   onCopyAll?: (text: string) => void;
   onCopySingleBubble?: (bubbleText: string, bubbleIndex: number) => void;
   copiedAll?: boolean;
-  /** Rate the visible reply variation. Rendered with a clear label so the
-      target is unambiguous (replaces the old bottom-bar thumbs). */
-  onFeedback?: (rating: "helpful" | "off") => void;
-  feedbackGiven?: "helpful" | "off" | null;
+  /** Rate a single bubble. Rendered as tiny quiet thumbs on each bubble,
+      since picks are made bubble-by-bubble across tones. */
+  onFeedback?: (rating: "helpful" | "off", bubbleIndex: number) => void;
+  feedbackVotes?: Record<string, "helpful" | "off">;
 }
 
 export function ReplyHeroCard({
@@ -47,7 +47,7 @@ export function ReplyHeroCard({
   onCopySingleBubble,
   copiedAll,
   onFeedback,
-  feedbackGiven = null,
+  feedbackVotes,
 }: ReplyHeroCardProps) {
   const effectiveOption = selectedOption ?? (options && typeof selectedIndex === 'number' ? options[selectedIndex] : null);
   const effectiveCount = options ? options.length : optionCount;
@@ -170,6 +170,8 @@ export function ReplyHeroCard({
                 {bubbles.map((bubble, idx) => {
                   const replyKey = `bubble-${activeTone}-${cursor}-${idx}`;
                   const isCopied = copiedKey === replyKey;
+                  const voteKey = `fb-${activeTone}-${cursor}-${idx}`;
+                  const vote = feedbackVotes?.[voteKey];
                   return (
                     <div key={idx}>
                       {bubble.replyTo && (
@@ -198,6 +200,46 @@ export function ReplyHeroCard({
                           </div>
                         </button>
                       </div>
+                      {onFeedback && (
+                        <div className="mt-1 flex items-center justify-end gap-0.5" aria-label={`Rate bubble ${idx + 1}`}>
+                          <button
+                            type="button"
+                            onClick={() => onFeedback("helpful", idx)}
+                            aria-label={`Bubble ${idx + 1} was helpful`}
+                            title="Helpful"
+                            className="cursor-pointer flex items-center justify-center"
+                            style={{
+                              width: 30,
+                              height: 30,
+                              borderRadius: 8,
+                              border: "none",
+                              background: "none",
+                              color: vote === "helpful" ? "#58745A" : "rgba(26,18,8,0.28)",
+                              opacity: vote === "helpful" ? 1 : 0.55,
+                            }}
+                          >
+                            <ThumbsUp size={13} strokeWidth={2} fill={vote === "helpful" ? "#58745A" : "none"} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onFeedback("off", idx)}
+                            aria-label={`Bubble ${idx + 1} was off`}
+                            title="Off"
+                            className="cursor-pointer flex items-center justify-center"
+                            style={{
+                              width: 30,
+                              height: 30,
+                              borderRadius: 8,
+                              border: "none",
+                              background: "none",
+                              color: vote === "off" ? "#A8401C" : "rgba(26,18,8,0.28)",
+                              opacity: vote === "off" ? 1 : 0.55,
+                            }}
+                          >
+                            <ThumbsDown size={13} strokeWidth={2} fill={vote === "off" ? "#A8401C" : "none"} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -234,50 +276,6 @@ export function ReplyHeroCard({
                   </button>
                 )}
 
-                {onFeedback && (
-                  <div
-                    className="mt-3 pt-3 flex items-center justify-between gap-2"
-                    style={{ borderTop: "1px solid #252223" }}
-                  >
-                    <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(242,239,233,0.55)" }}>
-                      Was this reply useful?
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => onFeedback("helpful")}
-                        aria-label="This reply was helpful"
-                        className="cursor-pointer flex items-center justify-center transition-colors"
-                        style={{
-                          width: 38,
-                          height: 38,
-                          borderRadius: 10,
-                          border: "none",
-                          backgroundColor: feedbackGiven === "helpful" ? "rgba(107,158,120,0.25)" : "#221F20",
-                          color: feedbackGiven === "helpful" ? "#8FCE9D" : "#A69F95",
-                        }}
-                      >
-                        <ThumbsUp size={15} strokeWidth={2} fill={feedbackGiven === "helpful" ? "#8FCE9D" : "none"} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onFeedback("off")}
-                        aria-label="This reply was off"
-                        className="cursor-pointer flex items-center justify-center transition-colors"
-                        style={{
-                          width: 38,
-                          height: 38,
-                          borderRadius: 10,
-                          border: "none",
-                          backgroundColor: feedbackGiven === "off" ? "rgba(212,114,84,0.25)" : "#221F20",
-                          color: feedbackGiven === "off" ? "#E3886B" : "#A69F95",
-                        }}
-                      >
-                        <ThumbsDown size={15} strokeWidth={2} fill={feedbackGiven === "off" ? "#E3886B" : "none"} />
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {(effectiveOption as any).subtext && (effectiveOption as any).subtext !== 'Fallback suggestion.' && (
