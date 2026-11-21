@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from "react";
-import { createBrowserRouter, Navigate, Outlet } from "react-router";
+import { createBrowserRouter, Navigate, Outlet, useLocation } from "react-router";
 import { SplashScreen } from "./components/SplashScreen";
 import { AuthScreen } from "./components/AuthScreen";
 import { HomeScreen } from "./components/HomeScreen";
@@ -22,6 +22,15 @@ const TherapistClosingScreen = lazy(() =>
 );
 const HistoryScreen = lazy(() =>
   import("./components/HistoryScreen").then((m) => ({ default: m.HistoryScreen }))
+);
+const ChatScreen = lazy(() =>
+  import("./components/ChatScreen").then((m) => ({ default: m.ChatScreen }))
+);
+const SettingsScreen = lazy(() =>
+  import("./components/SettingsScreen").then((m) => ({ default: m.SettingsScreen }))
+);
+const MemoryScreen = lazy(() =>
+  import("./components/MemoryScreen").then((m) => ({ default: m.MemoryScreen }))
 );
 const MyVoiceScreen = lazy(() =>
   import("./components/MyVoiceScreen").then((m) => ({ default: m.MyVoiceScreen }))
@@ -65,8 +74,10 @@ function LazyScreen({ children }: { children: React.ReactNode }) {
 }
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { authUser } = useAppContext();
-  if (!authUser) return <Navigate to="/auth" replace />;
+  const { authUser, authLoading } = useAppContext();
+  const location = useLocation();
+  if (authLoading) return <ScreenFallback />;
+  if (!authUser) return <Navigate to="/auth" replace state={{ from: location.pathname }} />;
   return children;
 }
 
@@ -144,6 +155,46 @@ function ProtectedVoiceNew() {
   );
 }
 
+function ProtectedChat() {
+  return (
+    <RequireAuth>
+      <LazyScreen><ChatScreen /></LazyScreen>
+    </RequireAuth>
+  );
+}
+
+function ProtectedChatIncognito() {
+  return (
+    <RequireAuth>
+      <LazyScreen><ChatScreen incognito /></LazyScreen>
+    </RequireAuth>
+  );
+}
+
+function ProtectedChatThread() {
+  return (
+    <RequireAuth>
+      <LazyScreen><ChatScreen /></LazyScreen>
+    </RequireAuth>
+  );
+}
+
+function ProtectedSettings() {
+  return (
+    <RequireAuth>
+      <LazyScreen><SettingsScreen /></LazyScreen>
+    </RequireAuth>
+  );
+}
+
+function ProtectedMemory() {
+  return (
+    <RequireAuth>
+      <LazyScreen><MemoryScreen /></LazyScreen>
+    </RequireAuth>
+  );
+}
+
 export const router = createBrowserRouter([
   { path: "/", Component: SplashScreen },
   { path: "/onboarding", Component: () => (<LazyScreen><OnboardingScreen /></LazyScreen>) },
@@ -154,6 +205,11 @@ export const router = createBrowserRouter([
     Component: TabBarLayout,
     children: [
       { path: "/home", Component: ProtectedHome },
+      { path: "/chat", Component: ProtectedChat },
+      { path: "/chat/incognito", Component: ProtectedChatIncognito },
+      { path: "/chat/:threadId", Component: ProtectedChatThread },
+      { path: "/settings", Component: ProtectedSettings },
+      { path: "/settings/memory", Component: ProtectedMemory },
       { path: "/quick", Component: ProtectedQuick },
       { path: "/practice", Component: ProtectedPractice },
       { path: "/tactical-report", Component: ProtectedTacticalReport },

@@ -27,5 +27,5 @@
     "noEmit": true
   },
   "include": ["**/*.ts", "**/*.tsx", "vite-env.d.ts"],
-  "exclude": ["node_modules", "dist", "NEW-UI-REFERNCE", "services/feedbackService.test.ts", "services/quickAdvice.test.ts", "services/quickAdviceService.test.ts", "app/utils/imageOptimize.test.ts", "app/utils/loadingLines.test.ts", "functions/lib/json.test.ts"]
+  "exclude": ["node_modules", "dist", "NEW-UI-REFERNCE", "services/feedbackService.test.ts", "services/quickAdvice.test.ts", "services/quickAdviceService.test.ts", "services/chatStream.test.ts", "app/utils/imageOptimize.test.ts", "app/utils/loadingLines.test.ts", "functions/lib/json.test.ts", "functions/lib/chatEngine.test.ts"]
 }

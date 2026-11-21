@@ -241,6 +241,50 @@ const ensureSchemaInternal = async (db: D1Database): Promise<void> => {
   await runSchemaStatement(db, `CREATE INDEX IF NOT EXISTS idx_therapist_sessions_updated_at ON therapist_sessions(updated_at DESC)`);
   await runSchemaStatement(db, `CREATE INDEX IF NOT EXISTS idx_therapist_memories_user_type ON therapist_memories(user_id, type)`);
   await runSchemaStatement(db, `CREATE UNIQUE INDEX IF NOT EXISTS idx_streaks_user_id ON streaks(user_id)`);
+  await runSchemaStatement(
+    db,
+    `CREATE TABLE IF NOT EXISTS chat_threads (
+      id TEXT PRIMARY KEY,
+      uid TEXT NOT NULL,
+      title TEXT NOT NULL,
+      context_note TEXT DEFAULT '',
+      deleting_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`
+  );
+  await runSchemaStatement(db, `CREATE INDEX IF NOT EXISTS idx_chat_threads_uid_updated ON chat_threads(uid, updated_at DESC)`);
+  await runSchemaStatement(
+    db,
+    `CREATE TABLE IF NOT EXISTS chat_turns (
+      id TEXT PRIMARY KEY,
+      thread_id TEXT NOT NULL REFERENCES chat_threads(id) ON DELETE CASCADE,
+      uid TEXT NOT NULL,
+      user_text TEXT NOT NULL DEFAULT '',
+      attachments TEXT NOT NULL DEFAULT '[]',
+      ref_source_turn_id TEXT,
+      ref_tone TEXT,
+      ref_option_index INTEGER,
+      ref_bubble_index INTEGER,
+      assistant_text TEXT NOT NULL DEFAULT '',
+      card_json TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      attempt INTEGER NOT NULL DEFAULT 1,
+      started_at TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )`
+  );
+  await runSchemaStatement(db, `CREATE INDEX IF NOT EXISTS idx_chat_turns_thread_created ON chat_turns(thread_id, created_at, id)`);
+  await runSchemaStatement(db, `CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_turns_thread_pending ON chat_turns(thread_id) WHERE status = 'pending'`);
+  await runSchemaStatement(
+    db,
+    `CREATE TABLE IF NOT EXISTS chat_ledgers (
+      uid TEXT PRIMARY KEY,
+      entries_json TEXT NOT NULL DEFAULT '[]',
+      revision INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL
+    )`
+  );
 };
 
 export async function ensureAppSchema(db: D1Database): Promise<void> {

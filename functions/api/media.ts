@@ -38,8 +38,10 @@ export async function onRequest(context: any) {
 
   const isOwnedKey = (cleanKey: string, userId: string): boolean => {
     if (!userId || cleanKey.includes('..')) return false;
-    return cleanKey.startsWith(`quick/${userId}/`);
+    return cleanKey.startsWith(`quick/${userId}/`) || cleanKey.startsWith(`chat/${userId}/`);
   };
+
+  const isChatKey = (cleanKey: string): boolean => cleanKey.startsWith("chat/");
 
   const base64ToUint8Array = (base64: string): Uint8Array => base64ToBytes(base64);
 
@@ -107,6 +109,25 @@ export async function onRequest(context: any) {
       });
     }
 
+    // Chat media lives under an active-thread check so deleted threads stop serving bytes.
+    if (isChatKey(cleanKey)) {
+      const db = (env as any).RIZZBOT_DATA;
+      if (db) {
+        try {
+          const parts = cleanKey.split('/');
+          // chat/<uid>/<threadId>/...
+          const threadId = parts[2];
+          if (!threadId) throw new Error("bad key");
+          const row = await db.prepare(`SELECT id FROM chat_threads WHERE id=? AND uid=? AND deleting_at IS NULL`).bind(threadId, uid).first();
+          if (!row) {
+            return new Response(JSON.stringify({ error: 'Media object not found' }), { status: 404, headers: corsHeaders });
+          }
+        } catch {
+          return new Response(JSON.stringify({ error: 'Media object not found' }), { status: 404, headers: corsHeaders });
+        }
+      }
+    }
+
     const obj = await bucket.get(cleanKey);
     if (!obj) {
       return new Response(JSON.stringify({ error: 'Media object not found' }), {
@@ -123,7 +144,7 @@ export async function onRequest(context: any) {
     if (!headers.has('Content-Type')) {
       headers.set('Content-Type', 'image/webp');
     }
-    headers.set('Cache-Control', 'private, max-age=31536000, immutable');
+    headers.set('Cache-Control', isChatKey(cleanKey) ? 'private, no-store' : 'private, max-age=31536000, immutable');
     headers.set('Access-Control-Allow-Origin', '*');
 
     return new Response(obj.body, { status: 200, headers });

@@ -38,7 +38,7 @@ export function calculateScaledDimensions(
 }
 
 export function isR2MediaKey(value: string): boolean {
-  return typeof value === 'string' && (value.startsWith('r2:quick/') || value.startsWith('quick/'));
+  return typeof value === 'string' && (value.startsWith('r2:quick/') || value.startsWith('quick/') || value.startsWith('r2:chat/') || value.startsWith('chat/'));
 }
 
 export function clampScreenshotList<T>(existing: T[], incoming: T[], max = MAX_QUICK_SCREENSHOTS): T[] {

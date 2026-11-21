@@ -51,8 +51,10 @@ export function AuthScreen() {
 
   useEffect(() => {
     if (authUser) {
-      const startVoiceQuiz = (location.state as any)?.startVoiceQuiz;
-      navigate(startVoiceQuiz ? "/voice" : "/home", { replace: true });
+      const state = location.state as any;
+      const from = typeof state?.from === "string" && state.from.startsWith("/") && !state.from.startsWith("/auth") ? state.from : null;
+      const startVoiceQuiz = state?.startVoiceQuiz;
+      navigate(startVoiceQuiz ? "/voice" : from || "/chat", { replace: true });
     }
   }, [authUser, navigate, location.state]);
 
