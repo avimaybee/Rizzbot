@@ -22,7 +22,6 @@ import {
 import { validateQuickV2Payload } from "./quick";
 import {
   checkChatAllowlist,
-  isChatOwner,
   ensureChatSchema,
   expireStalePending,
   notFound,
@@ -38,6 +37,31 @@ const GENERATION_DEADLINE_MS = 90_000;
 
 type Mode = "regular" | "incognito";
 
+const SPARK_ID = "muse-spark-1.3-contributor";
+const DEEPSEEK_ID = "deepseek-v4.1-flash";
+const HY4_ID = "hy4-flash-free";
+
+export function pickModels(mode: Mode): {
+  chat: { id: string; effort: string };
+  draftFull: { id: string; effort: string };
+  draftRev: { id: string; effort: string };
+} {
+  if (mode === "incognito") {
+    return {
+      // Incognito ZDR privacy path: non-thinking chat (probe-verified 1.4s TTFT) + high-effort drafts.
+      chat: { id: DEEPSEEK_ID, effort: "none" },
+      draftFull: { id: DEEPSEEK_ID, effort: "high" },
+      draftRev: { id: DEEPSEEK_ID, effort: "high" },
+    };
+  }
+  // Regular Chat (ALL users): Muse Spark 1.3 across all rungs; DeepSeek & Hy4 are fallback-only.
+  return {
+    chat: { id: SPARK_ID, effort: "minimal" },
+    draftFull: { id: SPARK_ID, effort: "high" },
+    draftRev: { id: SPARK_ID, effort: "medium" },
+  };
+}
+
 interface ThreadRef {
   sourceTurnId?: string;
   tone?: string;
@@ -51,22 +75,6 @@ function stableKey(v: unknown): string {
 
 function errJson(code: string, message: string, status: number, cors: Record<string, string>) {
   return new Response(JSON.stringify({ error: code, message }), { status, headers: cors });
-}
-
-function pickModels(env: any, uid: string, mode: Mode): { chat: { id: string; effort: string }; draftFull: { id: string; effort: string }; draftRev: { id: string; effort: string } } {
-  if (mode === "incognito" || !isChatOwner(env, uid)) {
-    return {
-      // Non-training path: non-thinking chat (probe-verified 1.4s TTFT) + high-effort drafts.
-      chat: { id: "deepseek-v4.1-flash", effort: "none" },
-      draftFull: { id: "deepseek-v4.1-flash", effort: "high" },
-      draftRev: { id: "deepseek-v4.1-flash", effort: "high" },
-    };
-  }
-  return {
-    chat: { id: "muse-spark-1.3-contributor", effort: "minimal" },
-    draftFull: { id: "muse-spark-1.3-contributor", effort: "high" },
-    draftRev: { id: "muse-spark-1.3-contributor", effort: "medium" },
-  };
 }
 
 /** Explicit-Draft fast path escalates to xhigh on high-stakes signals. */
@@ -322,10 +330,6 @@ async function callDraftJsonOnce(args: {
     return cleanJsonObject(raw);
   }
 }
-
-const SPARK_ID = "muse-spark-1.3-contributor";
-const DEEPSEEK_ID = "deepseek-v4.1-flash";
-const HY4_ID = "hy4-flash-free";
 
 interface ModelCandidate { model: string; effort: string }
 
@@ -598,7 +602,7 @@ export async function onRequest(context: any) {
   }
   const { parts: imageParts, unavailable } = await r2KeysToImageParts(env, combinedKeys, uid).catch(() => ({ parts: [] as any[], totalBytes: 0, unavailable: combinedKeys.length }));
 
-  const models = pickModels(env, uid, "regular");
+  const models = pickModels("regular");
   const sessionBase = `rizzbot-chat-${threadId}`;
 
   const { readable, writable } = new TransformStream();
@@ -657,10 +661,11 @@ export async function onRequest(context: any) {
         currentText: text.trim() ? text : "(screenshots attached — respond to what is visible or ask what they want help with)",
       });
       const openAiMessages = withImages(messages, imageParts);
-      const allowThink = isChatOwner(env, uid);
-      const chatCandidates: ModelCandidate[] = allowThink
-        ? [{ model: models.chat.id, effort: models.chat.effort }, { model: DEEPSEEK_ID, effort: "high" }]
-        : [{ model: models.chat.id, effort: models.chat.effort }, { model: models.chat.id, effort: "high" }];
+      const chatCandidates: ModelCandidate[] = [
+        { model: models.chat.id, effort: models.chat.effort },
+        { model: DEEPSEEK_ID, effort: "high" },
+        { model: HY4_ID, effort: "high" },
+      ];
       const t0 = Date.now();
       callsMade = 1;
       const conv = await callConversationalStream({
@@ -669,7 +674,7 @@ export async function onRequest(context: any) {
         candidates: chatCandidates,
         system: CHAT_SI_V1,
         messages: openAiMessages,
-        tools: allowThink ? [DRAFT_REPLIES_TOOL, UPDATE_LEDGER_TOOL, THINK_DEEPER_TOOL] : [DRAFT_REPLIES_TOOL, UPDATE_LEDGER_TOOL],
+        tools: [DRAFT_REPLIES_TOOL, UPDATE_LEDGER_TOOL, THINK_DEEPER_TOOL],
         signal: turnAbort.signal,
         onText: async (t) => {
           // Stream immediately: short replies must paint live, and any tool
@@ -695,7 +700,7 @@ export async function onRequest(context: any) {
         const goal = typeof (draftCall.args as any)?.draft_goal === "string" ? (draftCall.args as any).draft_goal : text.slice(0, 200);
         const requestedDepth = (draftCall.args as any)?.depth === "xhigh" ? "xhigh" as const : "high" as const;
         let thinkTier: ThinkTier | null = null;
-        if (thinkCall && allowThink) {
+        if (thinkCall) {
           try { thinkTier = validateThinkDeeperArgs(thinkCall.args); } catch { thinkTier = null; }
           if (thinkTier) telemetry(context, db, { endpoint: "opencode/thread-think", model: conv.model, latencyMs: 0, ok: true, uid });
         }
@@ -721,7 +726,7 @@ export async function onRequest(context: any) {
 
       // Think-deeper escalation: one prose continuation at the requested tier,
       // no tools, inside the existing 2-call cap.
-      if (thinkCall && allowThink) {
+      if (thinkCall) {
         let tier: ThinkTier;
         try {
           tier = validateThinkDeeperArgs(thinkCall.args);
@@ -733,14 +738,27 @@ export async function onRequest(context: any) {
         await send({ type: "status", code: "thinking", message: waitLine(("deeper_" + tier) as WaitKind, attemptBase) });
         const t1 = Date.now();
         try {
+          let firstDeeperDelta = true;
           const cont = await callConversationalStream({
             apiKey,
             sessionTag: `${sessionBase}-deeper`,
-            candidates: [{ model: SPARK_ID, effort: tier }, { model: DEEPSEEK_ID, effort: "high" }],
+            candidates: [
+              { model: SPARK_ID, effort: tier },
+              { model: DEEPSEEK_ID, effort: "high" },
+              { model: HY4_ID, effort: "high" },
+            ],
             system: CHAT_SI_V1,
             messages: [...openAiMessages, { role: "assistant", content: assistantText || "(thinking it through — now answer directly)" }],
             signal: turnAbort.signal,
-            onText: async (t) => { assistantText += t; await send({ type: "delta", text: t }); },
+            onText: async (t) => {
+              if (firstDeeperDelta && assistantText.trim() && !/\s$/.test(assistantText) && !/^\s/.test(t)) {
+                assistantText += "\n\n";
+                await send({ type: "delta", text: "\n\n" });
+              }
+              firstDeeperDelta = false;
+              assistantText += t;
+              await send({ type: "delta", text: t });
+            },
           });
           telemetry(context, db, { endpoint: "opencode/thread", model: cont.model, latencyMs: Date.now() - t1, ok: true, uid });
         } catch (e: any) {
@@ -856,7 +874,6 @@ export async function onRequest(context: any) {
     effort?: string; excerpts?: string[];
   }): Promise<{ ok: boolean; card?: any; preamble?: string; code?: string; message?: string; modelUsed?: string }> {
     try {
-      const useSpark = args.models.draftFull.id === SPARK_ID;
       if (args.kind === "revision") {
         if (!args.ref?.sourceTurnId || !args.refCard) return { ok: false, code: "invalid_input", message: "That reply is no longer available." };
         const src = resolveSourceCardText(args.refCard, args.ref);
@@ -870,9 +887,11 @@ export async function onRequest(context: any) {
           sourceBubbleText: src.bubbleText,
           styleHints: args.styleHints,
         });
-        const candidates: ModelCandidate[] = useSpark
-          ? [{ model: SPARK_ID, effort: args.models.draftRev.effort }, { model: DEEPSEEK_ID, effort: "high" }]
-          : [{ model: args.models.draftRev.id, effort: args.models.draftRev.effort }];
+        const candidates: ModelCandidate[] = [
+          { model: SPARK_ID, effort: args.models.draftRev.effort },
+          { model: DEEPSEEK_ID, effort: "high" },
+          { model: HY4_ID, effort: "high" },
+        ];
         const { json: raw, modelUsed } = await callDraftJson({
           apiKey: args.apiKey, sessionTag: `${args.sessionBase}-draft`, candidates,
           system: getSystemFor("revision"), userData, imageParts: args.imageParts, signal: args.signal,
@@ -912,9 +931,11 @@ export async function onRequest(context: any) {
         screenshotCount: args.imageParts.length,
       });
       const deckEffort = args.effort ?? args.models.draftFull.effort;
-      const candidates: ModelCandidate[] = useSpark
-        ? [{ model: SPARK_ID, effort: deckEffort }, { model: DEEPSEEK_ID, effort: "high" }, { model: HY4_ID, effort: "high" }]
-        : [{ model: args.models.draftFull.id, effort: args.models.draftFull.effort }, { model: HY4_ID, effort: "high" }];
+      const candidates: ModelCandidate[] = [
+        { model: SPARK_ID, effort: deckEffort },
+        { model: DEEPSEEK_ID, effort: "high" },
+        { model: HY4_ID, effort: "high" },
+      ];
       const { json: raw, modelUsed } = await callDraftJson({
         apiKey: args.apiKey, sessionTag: `${args.sessionBase}-draft`, candidates,
         system: getSystemFor("deck"), userData, imageParts: args.imageParts, signal: args.signal,
@@ -979,7 +1000,7 @@ export async function onRequest(context: any) {
     }
     const { entries } = await loadLedger(db, incUid);
     const styleHints = await loadStyleHints(db, incUid).catch(() => "");
-    const models = pickModels(env, incUid, "incognito");
+    const models = pickModels("incognito");
     const incSessionTag = typeof b?.sessionId === "string" && b.sessionId ? `rizzbot-chat-${b.sessionId}` : `rizzbot-chat-inc-${Date.now()}`;
     const messages = buildConversationalMessages({
       ledger: entries, threadNote: "", styleHints,
@@ -1039,7 +1060,7 @@ export async function onRequest(context: any) {
         const t0 = Date.now();
         const conv = await callConversationalStream({
           apiKey: key, sessionTag: incSessionTag,
-          candidates: [{ model: models.chat.id, effort: models.chat.effort }, { model: models.chat.id, effort: "high" }],
+          candidates: [{ model: DEEPSEEK_ID, effort: "none" }, { model: HY4_ID, effort: "high" }],
           system: CHAT_SI_V1, messages: openAiMessages, tools: [DRAFT_REPLIES_TOOL],
           signal: turnAbort.signal,
           onText: async (t) => { full += t; await send({ type: "delta", text: t }); },

@@ -91,15 +91,34 @@ export async function onRequest(context: any) {
   };
 
   (async () => {
+    const ping = setInterval(() => { void send({ type: "ping", ts: Date.now() }); }, 10_000);
+    try {
     const chain = [
-      { id: "deepseek-v4.1-flash", timeoutMs: 90_000 },
-      { id: "hy4-flash-free", timeoutMs: 90_000 },
+      { id: "muse-spark-1.3-contributor", format: "responses" as const, effort: "medium", timeoutMs: 90_000 },
+      { id: "deepseek-v4.1-flash", format: "chat" as const, effort: "high", timeoutMs: 90_000 },
+      { id: "hy4-flash-free", format: "chat" as const, effort: "high", timeoutMs: 90_000 },
     ];
     let started = false;
     let lastError = "";
     const db = (env as any).RIZZBOT_DATA;
+
+    const toResponsesInput = (msgs: any[]) =>
+      msgs
+        .filter((m) => m && m.role !== "system")
+        .map(({ role, content }) => ({
+          role,
+          content: Array.isArray(content)
+            ? content.map((part: any) =>
+                part.type === "image_url"
+                  ? { type: "input_image", image_url: part.image_url?.url || part.image_url }
+                  : { type: "input_text", text: part.text })
+            : content,
+        }));
+
     for (const spec of chain) {
       const t0 = Date.now();
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), spec.timeoutMs);
       try {
         await send({ type: "metadata", model: spec.id });
         const headers = {
@@ -108,16 +127,31 @@ export async function onRequest(context: any) {
           "User-Agent": "Rizzbot/1.0",
           "x-opencode-session": `rizzbot-stream-${uid}-${Date.now()}`,
         };
-        const res = await fetch("https://opencode.ai/inference/go/openai/v1/chat/completions", {
+        const isResponses = spec.format === "responses";
+        const res = await fetch(`https://opencode.ai/inference/go/openai/v1/${isResponses ? "responses" : "chat/completions"}`, {
           method: "POST",
           headers,
-          body: JSON.stringify({
-            model: spec.id,
-            reasoning_effort: "high",
-            stream: true,
-            messages,
-            ...(openAITools.length > 0 ? { tools: openAITools, tool_choice: "auto" } : {}),
-          }),
+          signal: controller.signal,
+          body: JSON.stringify(
+            isResponses
+              ? {
+                  model: spec.id,
+                  instructions: systemInstruction || "",
+                  reasoning: { effort: spec.effort },
+                  stream: true,
+                  input: toResponsesInput(messages),
+                  ...(openAITools.length > 0
+                    ? { tools: openAITools.map(({ type, function: fn }: any) => ({ type, ...fn, strict: false })) }
+                    : {}),
+                }
+              : {
+                  model: spec.id,
+                  reasoning_effort: spec.effort,
+                  stream: true,
+                  messages,
+                  ...(openAITools.length > 0 ? { tools: openAITools, tool_choice: "auto" } : {}),
+                }
+          ),
         });
         if (!res.ok || !res.body) throw new Error(`${spec.id} HTTP ${res.status}`);
         started = true;
@@ -125,7 +159,7 @@ export async function onRequest(context: any) {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buf = "";
-        // Accumulate tool calls by index
+        // Accumulate tool calls by index (chat-completions format)
         const toolAcc = new Map<number, { name: string; argsText: string }>();
 
         const flushToolCalls = async () => {
@@ -154,6 +188,28 @@ export async function onRequest(context: any) {
             if (payload === "[DONE]") continue;
             let evt: any;
             try { evt = JSON.parse(payload); } catch { continue; }
+            if (evt.error || evt.type === "error" || evt.type === "response.failed" || evt.type === "response.incomplete") {
+              throw new Error(`${spec.id} upstream generation failed`);
+            }
+            if (isResponses) {
+              if (evt.type === "response.output_text.delta" && typeof evt.delta === "string" && evt.delta) {
+                await send({ type: "text", content: evt.delta });
+              }
+              if (evt.type === "response.completed") {
+                const calls: Array<{ name: string; args: any }> = [];
+                for (const item of evt.response?.output ?? []) {
+                  if (item.type === "function_call" && item.name) {
+                    try {
+                      calls.push({ name: item.name, args: item.arguments ? JSON.parse(item.arguments) : {} });
+                    } catch {
+                      calls.push({ name: item.name, args: {} });
+                    }
+                  }
+                }
+                if (calls.length > 0) await send({ type: "functionCalls", calls });
+              }
+              continue;
+            }
             const delta = evt.choices?.[0]?.delta || {};
             if (typeof delta.content === "string" && delta.content) {
               await send({ type: "text", content: delta.content });
@@ -172,8 +228,8 @@ export async function onRequest(context: any) {
             }
           }
         }
-        // flush remaining buffer line
-        if (buf.trim().startsWith("data:")) {
+        // flush remaining buffer line (chat-completions format)
+        if (!isResponses && buf.trim().startsWith("data:")) {
           try {
             const payload = buf.trim().slice(5).trim();
             if (payload && payload !== "[DONE]") {
@@ -185,9 +241,11 @@ export async function onRequest(context: any) {
         }
         await flushToolCalls();
         telemetry(context, db, { endpoint: "opencode/stream", model: spec.id, latencyMs: Date.now() - t0, ok: true, uid });
+        clearTimeout(timer);
         await writer.close().catch(() => {});
         return;
       } catch (e: any) {
+        clearTimeout(timer);
         lastError = e?.message || String(e);
         console.warn(`[opencode/stream] ${spec.id} failed:`, lastError);
         telemetry(context, db, { endpoint: "opencode/stream", model: spec.id, latencyMs: Date.now() - t0, ok: false, error: lastError.slice(0, 300), uid });
@@ -201,6 +259,9 @@ export async function onRequest(context: any) {
     }
     await send({ type: "error", message: "All OpenCode Go stream models failed", details: lastError });
     await writer.close().catch(() => {});
+    } finally {
+      clearInterval(ping);
+    }
   })();
 
   return new Response(readable, { status: 200, headers: cors });

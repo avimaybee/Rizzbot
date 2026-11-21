@@ -15,16 +15,28 @@ import {
 } from "./chatEngine";
 import { CHAT_SI_V1, REPLY_DECK_SI_V1, REPLY_REVISION_SI_V1 } from "./chatPrompts";
 import { validateQuickV2Payload } from "../api/opencode/quick";
-import { checkChatAllowlist, isChatOwner } from "./chatStore";
+import { checkChatAllowlist } from "./chatStore";
+import { pickModels } from "../api/opencode/thread";
 
-test("Chat requires an explicit UID and only the configured owner can use owner models", () => {
-  const env = { CHAT_OWNER_UID: "OwnerUid", CHAT_ALLOWLIST: " guestUid, secondUid " };
-  expect(checkChatAllowlist({}, "OwnerUid")).toBe(false);
-  expect(checkChatAllowlist(env, "OwnerUid")).toBe(true);
-  expect(checkChatAllowlist(env, "guestUid")).toBe(true);
-  expect(checkChatAllowlist(env, "guestuid")).toBe(false);
-  expect(isChatOwner(env, "guestUid")).toBe(false);
-  expect(isChatOwner(env, "OwnerUid")).toBe(true);
+test("Chat allowlist is open by default and strict only when explicitly configured", () => {
+  expect(checkChatAllowlist({}, "anySignedInUid")).toBe(true);
+  expect(checkChatAllowlist({ CHAT_ALLOWLIST: "" }, "anySignedInUid")).toBe(true);
+  expect(checkChatAllowlist({ CHAT_ALLOWLIST: "   " }, "anySignedInUid")).toBe(true);
+  expect(checkChatAllowlist({}, "")).toBe(false);
+  expect(checkChatAllowlist({ CHAT_ALLOWLIST: "guestUid, secondUid" }, "guestUid")).toBe(true);
+  expect(checkChatAllowlist({ CHAT_ALLOWLIST: "guestUid, secondUid" }, "otherUid")).toBe(false);
+  expect(checkChatAllowlist({ CHAT_ALLOWLIST: "guestUid, secondUid" }, "GuestUid")).toBe(false);
+});
+
+test("pickModels routes regular users to Muse and incognito to DeepSeek", () => {
+  const regular = pickModels("regular");
+  expect(regular.chat).toEqual({ id: "muse-spark-1.3-contributor", effort: "minimal" });
+  expect(regular.draftFull).toEqual({ id: "muse-spark-1.3-contributor", effort: "high" });
+  expect(regular.draftRev).toEqual({ id: "muse-spark-1.3-contributor", effort: "medium" });
+  const incognito = pickModels("incognito");
+  expect(incognito.chat).toEqual({ id: "deepseek-v4.1-flash", effort: "none" });
+  expect(incognito.draftFull).toEqual({ id: "deepseek-v4.1-flash", effort: "high" });
+  expect(incognito.draftRev).toEqual({ id: "deepseek-v4.1-flash", effort: "high" });
 });
 
 describe("think_deeper escalation", () => {

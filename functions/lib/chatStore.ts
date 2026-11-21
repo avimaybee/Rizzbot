@@ -19,14 +19,16 @@ export async function ensureChatSchema(db: any): Promise<void> {
   await ensureAppSchema(db);
 }
 
-export function isChatOwner(env: { CHAT_OWNER_UID?: string }, uid: string): boolean {
-  return Boolean(uid) && env.CHAT_OWNER_UID?.trim() === uid;
-}
-
-export function checkChatAllowlist(env: { CHAT_OWNER_UID?: string; CHAT_ALLOWLIST?: string }, uid: string): boolean {
+/**
+ * Optional beta allowlist gate.
+ * - If CHAT_ALLOWLIST is unset/blank: all authenticated Firebase users are allowed.
+ * - If CHAT_ALLOWLIST is set (comma-separated UIDs): only listed UIDs are allowed.
+ */
+export function checkChatAllowlist(env: { CHAT_ALLOWLIST?: string }, uid: string): boolean {
   if (!uid) return false;
-  if (isChatOwner(env, uid)) return true;
-  return (env.CHAT_ALLOWLIST ?? "").split(",").some((entry) => entry.trim() === uid);
+  const raw = (env.CHAT_ALLOWLIST ?? "").trim();
+  if (!raw) return true;
+  return raw.split(",").some((entry) => entry.trim() === uid);
 }
 
 export function isUuidLike(v: unknown): boolean {
