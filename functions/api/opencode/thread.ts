@@ -4,6 +4,7 @@ import { base64ToBytes, cleanJsonObject } from "../../lib/json";
 import { CHAT_SI_V1 } from "../../lib/chatPrompts";
 import {
   DRAFT_REPLIES_TOOL,
+  THINK_DEEPER_TOOL,
   UPDATE_LEDGER_TOOL,
   buildConversationalMessages,
   buildDraftUserData,
@@ -12,7 +13,11 @@ import {
   summarizeCardForContext,
   validateLedgerPatchArgs,
   validateRevisionCard,
+  validateThinkDeeperArgs,
+  waitLine,
   type LedgerEntryWire,
+  type ThinkTier,
+  type WaitKind,
 } from "../../lib/chatEngine";
 import { validateQuickV2Payload } from "./quick";
 import {
@@ -51,16 +56,23 @@ function errJson(code: string, message: string, status: number, cors: Record<str
 function pickModels(env: any, uid: string, mode: Mode): { chat: { id: string; effort: string }; draftFull: { id: string; effort: string }; draftRev: { id: string; effort: string } } {
   if (mode === "incognito" || !isChatOwner(env, uid)) {
     return {
-      chat: { id: "deepseek-v4.1-flash", effort: "high" },
+      // Non-training path: non-thinking chat (probe-verified 1.4s TTFT) + high-effort drafts.
+      chat: { id: "deepseek-v4.1-flash", effort: "none" },
       draftFull: { id: "deepseek-v4.1-flash", effort: "high" },
       draftRev: { id: "deepseek-v4.1-flash", effort: "high" },
     };
   }
   return {
     chat: { id: "muse-spark-1.3-contributor", effort: "minimal" },
-    draftFull: { id: "muse-spark-1.3-contributor", effort: "xhigh" },
-    draftRev: { id: "muse-spark-1.3-contributor", effort: "low" },
+    draftFull: { id: "muse-spark-1.3-contributor", effort: "high" },
+    draftRev: { id: "muse-spark-1.3-contributor", effort: "medium" },
   };
+}
+
+/** Explicit-Draft fast path escalates to xhigh on high-stakes signals. */
+function isHighStakesDraft(text: string, imageCount: number): boolean {
+  if (imageCount >= 4) return true;
+  return /complicated|\bex\b|think harder|think deeper/i.test(text);
 }
 
 async function loadLedger(db: any, uid: string): Promise<{ entries: LedgerEntryWire[]; revision: number }> {
@@ -151,7 +163,7 @@ function inlineImagesToParts(inline: unknown): { parts: Array<{ mimeType: string
   return { parts, totalBytes: total };
 }
 
-async function callConversationalStream(args: {
+async function callConversationalStreamOnce(args: {
   apiKey: string;
   sessionTag: string;
   model: string;
@@ -245,7 +257,7 @@ async function callConversationalStream(args: {
   return { toolCalls: calls, model: args.model };
 }
 
-async function callDraftJson(args: {
+async function callDraftJsonOnce(args: {
   apiKey: string;
   sessionTag: string;
   model: string;
@@ -309,6 +321,73 @@ async function callDraftJson(args: {
     if (!raw.trim()) throw new Error("empty draft");
     return cleanJsonObject(raw);
   }
+}
+
+const SPARK_ID = "muse-spark-1.3-contributor";
+const DEEPSEEK_ID = "deepseek-v4.1-flash";
+const HY4_ID = "hy4-flash-free";
+
+interface ModelCandidate { model: string; effort: string }
+
+/**
+ * Conversational streaming with model fallback. Falls over to the next
+ * candidate only if nothing streamed yet — never mid-stream, so the user
+ * never sees duplicated or spliced text.
+ */
+async function callConversationalStream(args: {
+  apiKey: string;
+  sessionTag: string;
+  candidates: ModelCandidate[];
+  system: string;
+  messages: Array<{ role: string; content: any }>;
+  tools?: any[];
+  signal: AbortSignal;
+  onText: (t: string) => Promise<void>;
+}): Promise<{ toolCalls: Array<{ name: string; args: any }>; model: string }> {
+  let lastError: any = null;
+  for (const cand of args.candidates) {
+    if (args.signal.aborted) throw lastError || new Error("aborted");
+    let streamedAny = false;
+    try {
+      return await callConversationalStreamOnce({
+        ...args,
+        model: cand.model,
+        effort: cand.effort,
+        onText: async (t) => { streamedAny = true; await args.onText(t); },
+      });
+    } catch (e: any) {
+      lastError = e;
+      if (streamedAny) throw e;
+    }
+  }
+  throw lastError || new Error("upstream stream failed");
+}
+
+/** Structured draft generation with model fallback across separate allowances. */
+async function callDraftJson(args: {
+  apiKey: string;
+  sessionTag: string;
+  candidates: ModelCandidate[];
+  system: string;
+  userData: string;
+  imageParts: Array<{ mimeType: string; data: string }>;
+  signal: AbortSignal;
+}): Promise<{ json: any; modelUsed: string }> {
+  let lastError: any = null;
+  for (const cand of args.candidates) {
+    if (args.signal.aborted) throw lastError || new Error("aborted");
+    try {
+      const json = await callDraftJsonOnce({
+        ...args,
+        model: cand.model,
+        effort: cand.effort,
+      });
+      return { json, modelUsed: cand.model };
+    } catch (e: any) {
+      lastError = e;
+    }
+  }
+  throw lastError || new Error("draft failed");
 }
 
 function resolveSourceCardText(card: any, ref: ThreadRef): { optionText: string; bubbleText?: string } | null {
@@ -530,6 +609,8 @@ export async function onRequest(context: any) {
   (async () => {
     const turnAbort = new AbortController();
     const deadline = setTimeout(() => turnAbort.abort(), GENERATION_DEADLINE_MS);
+    // Heartbeat so mobile/proxy/Cloudflare idle timeouts never kill long decks.
+    const ping = setInterval(() => { void send({ type: "ping", ts: Date.now() }); }, 10_000);
     let assistantText = "";
     let finalCard: any = null;
     let ledgerPatch: Array<{ id?: string; text: string; label?: string }> | null = null;
@@ -537,7 +618,7 @@ export async function onRequest(context: any) {
     try {
       await send({ type: "accepted", turnId, attempt: attemptBase });
       if (unavailable > 0 && combinedKeys.length > 0) {
-        await send({ type: "status", code: "reading", message: "Reading your screenshots…" });
+        await send({ type: "status", code: "reading", message: waitLine("reading", attemptBase) });
       }
 
       const finishFailed = async (code: string, message: string, status = 200) => {
@@ -548,10 +629,13 @@ export async function onRequest(context: any) {
 
       // Explicit draft/refine actions bypass the conversational call
       if (action === "draft" || action === "refine") {
-        await send({ type: "status", code: action === "draft" ? "drafting" : "refining", message: action === "draft" ? "Drafting replies…" : "Reworking that line…" });
+        const highStakes = action === "draft" && isHighStakesDraft(text, imageParts.length);
+        await send({ type: "status", code: action === "draft" ? "drafting" : "refining", message: waitLine(action === "draft" ? "drafting" : "refining", attemptBase) });
         const draftRes = await runDraft({
           env, apiKey, sessionBase, models, kind: action === "draft" ? "full" : "revision",
           currentText: text, attachmentKeys, ref, refCard, imageParts, styleHints, threadNote, signal: turnAbort.signal,
+          effort: action === "draft" && highStakes ? "xhigh" : undefined,
+          excerpts: historyForCtx.filter((h) => h.role === "user").map((h) => h.text).slice(-3),
         });
         callsMade = 1;
         if (!draftRes.ok) {
@@ -573,42 +657,31 @@ export async function onRequest(context: any) {
         currentText: text.trim() ? text : "(screenshots attached — respond to what is visible or ask what they want help with)",
       });
       const openAiMessages = withImages(messages, imageParts);
-      let preamble = "";
-      let prelimSent = false;
+      const allowThink = isChatOwner(env, uid);
+      const chatCandidates: ModelCandidate[] = allowThink
+        ? [{ model: models.chat.id, effort: models.chat.effort }, { model: DEEPSEEK_ID, effort: "high" }]
+        : [{ model: models.chat.id, effort: models.chat.effort }, { model: models.chat.id, effort: "high" }];
       const t0 = Date.now();
       callsMade = 1;
       const conv = await callConversationalStream({
         apiKey,
         sessionTag: sessionBase,
-        model: models.chat.id,
-        effort: models.chat.effort,
+        candidates: chatCandidates,
         system: CHAT_SI_V1,
         messages: openAiMessages,
-        tools: [DRAFT_REPLIES_TOOL, UPDATE_LEDGER_TOOL],
+        tools: allowThink ? [DRAFT_REPLIES_TOOL, UPDATE_LEDGER_TOOL, THINK_DEEPER_TOOL] : [DRAFT_REPLIES_TOOL, UPDATE_LEDGER_TOOL],
         signal: turnAbort.signal,
         onText: async (t) => {
-          // Coalesce first chunk briefly: hold ~120ms to see if a tool call follows
-          if (!prelimSent) {
-            preamble += t;
-            if (preamble.length < 400) return; // hold briefly
-            prelimSent = true;
-            assistantText += preamble;
-            await send({ type: "delta", text: preamble });
-          } else {
-            assistantText += t;
-            await send({ type: "delta", text: t });
-          }
+          // Stream immediately: short replies must paint live, and any tool
+          // call resolves in the same turn. Shown text is part of the answer.
+          assistantText += t;
+          await send({ type: "delta", text: t });
         },
       });
-      telemetry(context, db, { endpoint: "opencode/thread", model: models.chat.id, latencyMs: Date.now() - t0, ok: true, uid });
-      if (preamble && !prelimSent) {
-        // Short preamble that arrived before tool args: show it as part of the same turn
-        assistantText += preamble;
-        await send({ type: "delta", text: preamble });
-        prelimSent = true;
-      }
+      telemetry(context, db, { endpoint: "opencode/thread", model: conv.model, latencyMs: Date.now() - t0, ok: true, uid });
 
       const draftCall = conv.toolCalls.find((c) => c.name === "draft_replies");
+      const thinkCall = conv.toolCalls.find((c) => c.name === "think_deeper");
       const ledgerCall = conv.toolCalls.find((c) => c.name === "update_ledger");
 
       if (ledgerCall) {
@@ -620,10 +693,19 @@ export async function onRequest(context: any) {
       if (draftCall) {
         const scope = (draftCall.args as any)?.scope === "revision" ? "revision" : "full";
         const goal = typeof (draftCall.args as any)?.draft_goal === "string" ? (draftCall.args as any).draft_goal : text.slice(0, 200);
-        await send({ type: "status", code: scope === "full" ? "drafting" : "refining", message: scope === "full" ? "Drafting replies…" : "Reworking that line…" });
+        const requestedDepth = (draftCall.args as any)?.depth === "xhigh" ? "xhigh" as const : "high" as const;
+        let thinkTier: ThinkTier | null = null;
+        if (thinkCall && allowThink) {
+          try { thinkTier = validateThinkDeeperArgs(thinkCall.args); } catch { thinkTier = null; }
+          if (thinkTier) telemetry(context, db, { endpoint: "opencode/thread-think", model: conv.model, latencyMs: 0, ok: true, uid });
+        }
+        const deckEffort = scope === "revision" ? undefined : (requestedDepth === "xhigh" || thinkTier === "xhigh" ? "xhigh" : "high");
+        await send({ type: "status", code: scope === "full" ? "drafting" : "refining", message: waitLine(scope === "full" ? "drafting" : "refining", attemptBase) });
         const draftRes = await runDraft({
           env, apiKey, sessionBase, models, kind: scope,
           currentText: text, attachmentKeys, ref, refCard, imageParts, styleHints, threadNote, signal: turnAbort.signal, draftGoal: goal,
+          effort: deckEffort,
+          excerpts: historyForCtx.filter((h) => h.role === "user").map((h) => h.text).slice(-3),
         });
         callsMade = 2;
         if (!draftRes.ok) {
@@ -637,6 +719,41 @@ export async function onRequest(context: any) {
         return;
       }
 
+      // Think-deeper escalation: one prose continuation at the requested tier,
+      // no tools, inside the existing 2-call cap.
+      if (thinkCall && allowThink) {
+        let tier: ThinkTier;
+        try {
+          tier = validateThinkDeeperArgs(thinkCall.args);
+        } catch {
+          await finishFailed("upstream", "Couldn’t finish that reply.");
+          return;
+        }
+        callsMade = 2;
+        await send({ type: "status", code: "thinking", message: waitLine(("deeper_" + tier) as WaitKind, attemptBase) });
+        const t1 = Date.now();
+        try {
+          const cont = await callConversationalStream({
+            apiKey,
+            sessionTag: `${sessionBase}-deeper`,
+            candidates: [{ model: SPARK_ID, effort: tier }, { model: DEEPSEEK_ID, effort: "high" }],
+            system: CHAT_SI_V1,
+            messages: [...openAiMessages, { role: "assistant", content: assistantText || "(thinking it through — now answer directly)" }],
+            signal: turnAbort.signal,
+            onText: async (t) => { assistantText += t; await send({ type: "delta", text: t }); },
+          });
+          telemetry(context, db, { endpoint: "opencode/thread", model: cont.model, latencyMs: Date.now() - t1, ok: true, uid });
+        } catch (e: any) {
+          if (!assistantText.trim()) { await finishFailed("upstream", "Couldn’t finish that reply."); return; }
+        }
+        if (!assistantText.trim() && !finalCard) {
+          await finishFailed("upstream", "Couldn’t finish that reply.");
+          return;
+        }
+        await commitTurn();
+        return;
+      }
+
       // Ledger-only tool call with no visible answer: one continuation with ledger disabled
       if (ledgerCall && !assistantText.trim() && conv.toolCalls.length === 1) {
         if (callsMade < 2) {
@@ -644,17 +761,16 @@ export async function onRequest(context: any) {
           let extra = "";
           const t1 = Date.now();
           try {
-            await callConversationalStream({
+            const cont = await callConversationalStream({
               apiKey,
               sessionTag: `${sessionBase}-cont`,
-              model: models.chat.id,
-              effort: models.chat.effort,
+              candidates: chatCandidates,
               system: CHAT_SI_V1,
               messages: [...openAiMessages, { role: "assistant", content: "(noted — now answer the user directly in one short turn)" }],
               signal: turnAbort.signal,
               onText: async (t) => { extra += t; assistantText += t; await send({ type: "delta", text: t }); },
             });
-            telemetry(context, db, { endpoint: "opencode/thread", model: models.chat.id, latencyMs: Date.now() - t1, ok: true, uid });
+            telemetry(context, db, { endpoint: "opencode/thread", model: cont.model, latencyMs: Date.now() - t1, ok: true, uid });
             void extra;
           } catch (e: any) {
             if (!assistantText.trim()) { await finishFailed("upstream", "Couldn’t finish that reply."); return; }
@@ -725,6 +841,7 @@ export async function onRequest(context: any) {
       }
     } finally {
       clearTimeout(deadline);
+      clearInterval(ping);
       try { await writer.close(); } catch { /* ignore */ }
     }
   })();
@@ -736,8 +853,10 @@ export async function onRequest(context: any) {
     kind: "full" | "revision"; currentText: string; attachmentKeys: string[];
     ref?: ThreadRef; refCard?: any; imageParts: Array<{ mimeType: string; data: string }>;
     styleHints: string; threadNote: string; draftGoal?: string; signal: AbortSignal;
-  }): Promise<{ ok: boolean; card?: any; preamble?: string; code?: string; message?: string }> {
+    effort?: string; excerpts?: string[];
+  }): Promise<{ ok: boolean; card?: any; preamble?: string; code?: string; message?: string; modelUsed?: string }> {
     try {
+      const useSpark = args.models.draftFull.id === SPARK_ID;
       if (args.kind === "revision") {
         if (!args.ref?.sourceTurnId || !args.refCard) return { ok: false, code: "invalid_input", message: "That reply is no longer available." };
         const src = resolveSourceCardText(args.refCard, args.ref);
@@ -751,8 +870,11 @@ export async function onRequest(context: any) {
           sourceBubbleText: src.bubbleText,
           styleHints: args.styleHints,
         });
-        const raw = await callDraftJson({
-          apiKey: args.apiKey, sessionTag: `${args.sessionBase}-draft`, model: args.models.draftRev.id, effort: args.models.draftRev.effort,
+        const candidates: ModelCandidate[] = useSpark
+          ? [{ model: SPARK_ID, effort: args.models.draftRev.effort }, { model: DEEPSEEK_ID, effort: "high" }]
+          : [{ model: args.models.draftRev.id, effort: args.models.draftRev.effort }];
+        const { json: raw, modelUsed } = await callDraftJson({
+          apiKey: args.apiKey, sessionTag: `${args.sessionBase}-draft`, candidates,
           system: getSystemFor("revision"), userData, imageParts: args.imageParts, signal: args.signal,
         });
         validateRevisionCard(raw);
@@ -774,24 +896,31 @@ export async function onRequest(context: any) {
           const srcBubbles = src.optionText.split("\n").filter(Boolean);
           void srcBubbles;
         }
-        return { ok: true, card };
+        return { ok: true, card, modelUsed };
       }
       const { getSystemFor, buildDraftUserData } = await import("../../lib/chatEngine");
-      // Exchange excerpts: current text + recent user turns (bounded), never whole history
-      const excerpts = [args.currentText.trim()].filter(Boolean).slice(0, 1);
+      // Recent thread context travels with the request; the current message
+      // itself is the goal unless the tool gave a narrower one. No stored
+      // private goal exists in Chat v1, so the request doubles as the goal.
+      const excerpts = [...(args.excerpts || []), args.currentText.trim()].filter(Boolean).slice(-4, -1);
       const userData = buildDraftUserData({
         currentRequest: args.currentText.trim() || (args.draftGoal || "What should I text back?"),
         draftGoal: args.draftGoal,
+        threadNote: args.threadNote || undefined,
         exchangeExcerpts: excerpts,
         styleHints: args.styleHints,
         screenshotCount: args.imageParts.length,
       });
-      const raw = await callDraftJson({
-        apiKey: args.apiKey, sessionTag: `${args.sessionBase}-draft`, model: args.models.draftFull.id, effort: args.models.draftFull.effort,
+      const deckEffort = args.effort ?? args.models.draftFull.effort;
+      const candidates: ModelCandidate[] = useSpark
+        ? [{ model: SPARK_ID, effort: deckEffort }, { model: DEEPSEEK_ID, effort: "high" }, { model: HY4_ID, effort: "high" }]
+        : [{ model: args.models.draftFull.id, effort: args.models.draftFull.effort }, { model: HY4_ID, effort: "high" }];
+      const { json: raw, modelUsed } = await callDraftJson({
+        apiKey: args.apiKey, sessionTag: `${args.sessionBase}-draft`, candidates,
         system: getSystemFor("deck"), userData, imageParts: args.imageParts, signal: args.signal,
       });
       validateQuickV2Payload(raw as Record<string, unknown>);
-      return { ok: true, card: { kind: "deck" as const, ...(raw as object) } };
+      return { ok: true, card: { kind: "deck" as const, ...(raw as object) }, modelUsed };
     } catch (e: any) {
       const msg = String(e?.message || "draft failed");
       if (/HTTP (402|429)\b/.test(msg) || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("allowance")) {
@@ -875,11 +1004,13 @@ export async function onRequest(context: any) {
     const send = async (o: any) => { try { await writer.write(encoder.encode(JSON.stringify(o) + "\n")); } catch { /* gone */ } };
     (async () => {
       const turnAbort = new AbortController();
-    const killer = setTimeout(() => turnAbort.abort(), GENERATION_DEADLINE_MS);
+      const killer = setTimeout(() => turnAbort.abort(), GENERATION_DEADLINE_MS);
+      const ping = setInterval(() => { void send({ type: "ping", ts: Date.now() }); }, 10_000);
+      const incSalt = Date.now();
       try {
         await send({ type: "accepted", turnId: `inc-${Date.now()}`, incognito: true });
         if (actionInc === "draft" || actionInc === "refine") {
-          await send({ type: "status", code: actionInc === "draft" ? "drafting" : "refining", message: actionInc === "draft" ? "Drafting replies…" : "Reworking that line…" });
+          await send({ type: "status", code: actionInc === "draft" ? "drafting" : "refining", message: waitLine(actionInc === "draft" ? "drafting" : "refining", incSalt) });
           // Incognito drafts: same isolation, in-memory evidence only
           const { getSystemFor, buildDraftUserData, buildRevisionUserData } = await import("../../lib/chatEngine");
           if (actionInc === "refine") {
@@ -893,41 +1024,33 @@ export async function onRequest(context: any) {
               sourceTone: typeof b?.ref?.tone === "string" ? b.ref.tone : undefined,
               styleHints,
             });
-            const raw = await callDraftJson({ apiKey: key, sessionTag: `${incSessionTag}-draft`, model: models.draftRev.id, effort: models.draftRev.effort, system: getSystemFor("revision"), userData, imageParts: parts, signal: turnAbort.signal });
+            const { json: raw } = await callDraftJson({ apiKey: key, sessionTag: `${incSessionTag}-draft`, candidates: [{ model: models.draftRev.id, effort: models.draftRev.effort }], system: getSystemFor("revision"), userData, imageParts: parts, signal: turnAbort.signal });
             validateRevisionCard(raw);
             await send({ type: "done", turn: { id: `inc-${Date.now()}`, incognito: true, userText: text, assistantText: "", card: { kind: "revision", ...(raw as object) }, status: "complete" } });
             return;
           }
           const userData = buildDraftUserData({ currentRequest: text.trim() || "What should I text back?", exchangeExcerpts: [text.trim()].filter(Boolean), styleHints, screenshotCount: parts.length });
-          const raw = await callDraftJson({ apiKey: key, sessionTag: `${incSessionTag}-draft`, model: models.draftFull.id, effort: models.draftFull.effort, system: getSystemFor("deck"), userData, imageParts: parts, signal: turnAbort.signal });
+          const { json: raw } = await callDraftJson({ apiKey: key, sessionTag: `${incSessionTag}-draft`, candidates: [{ model: models.draftFull.id, effort: models.draftFull.effort }, { model: HY4_ID, effort: "high" }], system: getSystemFor("deck"), userData, imageParts: parts, signal: turnAbort.signal });
           validateQuickV2Payload(raw as Record<string, unknown>);
           await send({ type: "done", turn: { id: `inc-${Date.now()}`, incognito: true, userText: text, assistantText: "", card: { kind: "deck", ...(raw as object) }, status: "complete" } });
           return;
         }
         let full = "";
-        let preamble = "";
-        let prelimSent = false;
         const t0 = Date.now();
         const conv = await callConversationalStream({
-          apiKey: key, sessionTag: incSessionTag, model: models.chat.id, effort: models.chat.effort,
+          apiKey: key, sessionTag: incSessionTag,
+          candidates: [{ model: models.chat.id, effort: models.chat.effort }, { model: models.chat.id, effort: "high" }],
           system: CHAT_SI_V1, messages: openAiMessages, tools: [DRAFT_REPLIES_TOOL],
           signal: turnAbort.signal,
-          onText: async (t) => {
-            if (!prelimSent) {
-              preamble += t;
-              if (preamble.length < 400) return;
-              prelimSent = true; full += preamble; await send({ type: "delta", text: preamble });
-            } else { full += t; await send({ type: "delta", text: t }); }
-          },
+          onText: async (t) => { full += t; await send({ type: "delta", text: t }); },
         });
-        telemetry(context, db, { endpoint: "opencode/thread", model: models.chat.id, latencyMs: Date.now() - t0, ok: true, uid: incUid });
-        if (preamble && !prelimSent) { full += preamble; await send({ type: "delta", text: preamble }); }
+        telemetry(context, db, { endpoint: "opencode/thread", model: conv.model, latencyMs: Date.now() - t0, ok: true, uid: incUid });
         const draftCall = conv.toolCalls.find((c) => c.name === "draft_replies");
         if (draftCall) {
-          await send({ type: "status", code: "drafting", message: "Drafting replies…" });
+          await send({ type: "status", code: "drafting", message: waitLine("drafting", incSalt) });
           const { getSystemFor, buildDraftUserData } = await import("../../lib/chatEngine");
           const userData = buildDraftUserData({ currentRequest: text.trim() || "What should I text back?", draftGoal: typeof (draftCall.args as any)?.draft_goal === "string" ? (draftCall.args as any).draft_goal : undefined, exchangeExcerpts: [text.trim()].filter(Boolean), styleHints, screenshotCount: parts.length });
-          const raw = await callDraftJson({ apiKey: key, sessionTag: `${incSessionTag}-draft`, model: models.draftFull.id, effort: models.draftFull.effort, system: getSystemFor("deck"), userData, imageParts: parts, signal: turnAbort.signal });
+          const { json: raw } = await callDraftJson({ apiKey: key, sessionTag: `${incSessionTag}-draft`, candidates: [{ model: models.draftFull.id, effort: models.draftFull.effort }, { model: HY4_ID, effort: "high" }], system: getSystemFor("deck"), userData, imageParts: parts, signal: turnAbort.signal });
           validateQuickV2Payload(raw as Record<string, unknown>);
           await send({ type: "done", turn: { id: `inc-${Date.now()}`, incognito: true, userText: text, assistantText: full, card: { kind: "deck", ...(raw as object) }, status: "complete" } });
           return;
@@ -941,7 +1064,7 @@ export async function onRequest(context: any) {
         } else {
           await send({ type: "error", code: "upstream", message: "Couldn’t finish that reply." });
         }
-      } finally { clearTimeout(killer); try { await writer.close(); } catch { /* ignore */ } }
+      } finally { clearTimeout(killer); clearInterval(ping); try { await writer.close(); } catch { /* ignore */ } }
     })();
     return new Response(readable, { status: 200, headers: ndCors });
   }

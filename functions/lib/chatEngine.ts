@@ -8,17 +8,70 @@ export const DRAFT_REPLIES_TOOL = {
   type: "function",
   function: {
     name: "draft_replies",
-    description: "Generate sendable reply options for the current conversation. Call when the user asks what to send or wants a rewrite of a specific option.",
+    description: "Generate sendable reply options for the current conversation. Call when the user asks what to send or wants a rewrite of a specific option. Pass depth xhigh when the turn is high-stakes (delicate stage, private goal, 4+ screenshots, emotionally loaded).",
     parameters: {
       type: "object",
       properties: {
         draft_goal: { type: "string", description: "Short goal grounded in the user's request, e.g. 'short warm reply to her Friday question'" },
         scope: { type: "string", enum: ["full", "revision"], description: "full for a new deck, revision for a targeted change" },
+        depth: { type: "string", enum: ["high", "xhigh"], description: "Drafting effort. Defaults to high. Use xhigh for high-stakes turns." },
       },
       required: ["draft_goal"],
     },
   },
 } as const;
+
+export const THINK_DEEPER_TOOL = {
+  type: "function",
+  function: {
+    name: "think_deeper",
+    description: "Escalate this turn to deeper reasoning within the same reply. Call when the turn needs real thought: screenshot subtext analysis, 'is she losing interest' reads, messy situationship/ex strategy, or multi-topic untangling. Do not call for simple chat, quick tweaks, or when you already called draft_replies. The reason is internal and never shown to the user.",
+    parameters: {
+      type: "object",
+      properties: {
+        tier: { type: "string", enum: ["medium", "high", "xhigh"], description: "Reasoning tier for the continuation. medium for layered reads, high for delicate strategy, xhigh for high-stakes judgment calls." },
+        reason: { type: "string", description: "Short internal note on why deeper thought is needed (logging only, never shown)." },
+      },
+      required: ["tier"],
+    },
+  },
+} as const;
+
+export type ThinkTier = "medium" | "high" | "xhigh";
+
+/** Validate think_deeper args server-side. Returns the tier or throws. */
+export function validateThinkDeeperArgs(args: any): ThinkTier {
+  const tier = (args as any)?.tier;
+  if (tier !== "medium" && tier !== "high" && tier !== "xhigh") {
+    throw new Error("think_deeper requires tier medium|high|xhigh");
+  }
+  return tier;
+}
+
+/**
+ * Human waiting lines shown while the agent works, written to read like the
+ * agent's own texts — never routing labels, never progress pills. The server
+ * always sends an explicit message; the client fallbacks mirror the defaults.
+ */
+export const WAIT_LINES = {
+  thinking: ["one sec…", "lemme look…", "hmm, one sec…"],
+  reading: ["looking through these now…", "going through the screenshots, one sec…"],
+  drafting: ["ok wait, putting some lines together…", "give me a moment, writing options…"],
+  refining: ["ok, reworking that line…", "lemme fix that one…"],
+  deeper_medium: ["this needs a sec, thinking it through…"],
+  deeper_high: ["give me a moment, this one's layered…"],
+  deeper_xhigh: ["ok this needs real thought, bear with me…"],
+  uploading: ["uploading those now…"],
+  checking: ["hold on, making sure that sent…"],
+} as const;
+
+export type WaitKind = keyof typeof WAIT_LINES;
+
+/** Deterministic rotation so repeated turns don't read identically. */
+export function waitLine(kind: WaitKind, salt: number): string {
+  const lines = WAIT_LINES[kind];
+  return lines[Math.abs(salt) % lines.length];
+}
 
 export const UPDATE_LEDGER_TOOL = {
   type: "function",
@@ -119,6 +172,7 @@ export function buildDraftUserData(args: {
   draftGoal?: string;
   privateGoal?: string;
   relationshipStage?: string;
+  threadNote?: string;
   exchangeExcerpts: string[];
   styleHints?: string;
   screenshotCount: number;
@@ -132,6 +186,9 @@ export function buildDraftUserData(args: {
     sections.push(`PRIVATE DIRECTION (coaching only — never quote in sendable text):\n${args.privateGoal.trim().slice(0, 500)}`);
   }
   if (args.relationshipStage) sections.push(`RELATIONSHIP STAGE: ${args.relationshipStage}`);
+  if (args.threadNote && args.threadNote.trim()) {
+    sections.push(`THREAD NOTE (user-authored context, data):\n${args.threadNote.trim().slice(0, 500)}`);
+  }
   if (args.exchangeExcerpts.length) {
     sections.push(`EXCHANGE EXCERPTS (data):\n${args.exchangeExcerpts.join("\n").slice(0, 4000)}`);
   }

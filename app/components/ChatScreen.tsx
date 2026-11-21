@@ -27,12 +27,8 @@ interface ChatScreenProps {
 
 type UiTurn = ChatTurnWire & { localKey: string; failedCode?: string };
 
-const STATUS_COPY: Record<string, string> = {
-  thinking: "Thinking…",
-  drafting: "Drafting replies…",
-  refining: "Reworking that line…",
-  reading: "Reading your screenshots…",
-};
+/** Reconnect state: the send may have landed, so this asks the user to hold on. */
+const CHECKING_TEXT = "hold on, making sure that sent…";
 
 export function ChatScreen({ incognito }: ChatScreenProps) {
   const { threadId: routeThreadId } = useParams();
@@ -59,7 +55,7 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
 
   const [sending, setSending] = useState(false);
   const [pendingText, setPendingText] = useState("");
-  const [pendingStatus, setPendingStatus] = useState("Thinking…");
+  const [pendingStatus, setPendingStatus] = useState("one sec…");
   const [pendingTurnId, setPendingTurnId] = useState<string | null>(null);
   const [announce, setAnnounce] = useState("");
   const [showJump, setShowJump] = useState(false);
@@ -208,7 +204,7 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
     const myRoute = `${isIncognito ? "inc" : routeThreadId || "new"}:${myUid}`;
     setSending(true);
     setPendingText("");
-    setPendingStatus("Thinking…");
+    setPendingStatus("one sec…");
     setAnnounce("Sending message");
 
     try {
@@ -287,7 +283,7 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
       let keys: string[] = [];
       if (attachments.length) {
         setPreparing(true);
-        setPendingStatus("Adding images…");
+        setPendingStatus("uploading those now…");
         try {
           keys = await uploadChatImages(threadId, turnId, attachments.map((a) => ({ id: a.id, data: a.data, mimeType: a.mimeType })));
         } catch (e: any) {
@@ -362,7 +358,7 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
       if (!tid) return;
       setSending(true);
       setPendingText("");
-      setPendingStatus("Thinking…");
+      setPendingStatus("one sec…");
       setTurns((p) => p.map((x) => (x.localKey === turn.localKey ? { ...x, status: "pending" } : x)));
       setPendingTurnId(turn.id);
       await sendChatTurn(
@@ -392,14 +388,14 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
 
   const reconcilePending = async () => {
     if (!pendingTurnId || isIncognito || !activeThreadId) return;
-    setPendingStatus("Checking your message…");
+    setPendingStatus(CHECKING_TEXT);
     const saved = await reconcileTurn(activeThreadId, pendingTurnId);
     if (saved) {
       if (saved.status === "complete") {
         setTurns((p) => p.map((x) => (x.localKey === pendingTurnId ? { ...x, assistantText: saved.assistantText || "", card: saved.card, status: "complete" } : x)));
         setPendingText(""); setSending(false); setPendingTurnId(null); setAnnounce("Reply ready");
       } else if (saved.status === "pending") {
-        setPendingStatus("Checking your message…");
+        setPendingStatus(CHECKING_TEXT);
       } else {
         setTurns((p) => p.map((x) => (x.localKey === pendingTurnId ? { ...x, status: "failed", failedCode: "upstream" } : x)));
         setPendingText(""); setSending(false); setPendingTurnId(null);
@@ -562,13 +558,12 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
                 ))}
                 {(sending || pendingText) && (
                   <article aria-label="Assistant is responding" style={{ marginBottom: 24 }}>
-                    <p aria-live="off" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "rgba(26,18,8,0.5)", marginBottom: 6 }}>
-                      {pendingStatus === "Thinking…" && pendingText ? pendingText.slice(0, 120) : pendingStatus}
-                    </p>
-                    {pendingStatus !== "Thinking…" && pendingText ? (
-                      <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, lineHeight: 1.5, color: "#1A1208", whiteSpace: "pre-wrap" }}>{pendingText}</p>
-                    ) : pendingStatus === "Thinking…" && pendingText ? null : null}
-                    {pendingStatus === "Checking your message…" && (
+                    {pendingText ? (
+                      <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, lineHeight: 1.5, color: "#1A1208", whiteSpace: "pre-wrap", overflowWrap: "anywhere", margin: 0, maxWidth: "65ch" }}>{pendingText}</p>
+                    ) : (
+                      <p aria-live="off" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, lineHeight: 1.5, color: "#1A1208", whiteSpace: "pre-wrap", margin: 0, maxWidth: "65ch" }}>{pendingStatus}</p>
+                    )}
+                    {pendingStatus === CHECKING_TEXT && (
                       <button type="button" onClick={() => void reconcilePending()} className="cursor-pointer mt-2" style={{ height: 44, padding: "0 16px", borderRadius: 12, border: "1px solid #E8E0D4", background: "#FDFAF5", fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: "#1A1208" }}>
                         Check again
                       </button>

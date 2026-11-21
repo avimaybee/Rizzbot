@@ -111,11 +111,11 @@ function messageFor(code: string): string {
   return "Couldn’t send your message. Try again.";
 }
 
-function statusCopy(code: string): string {
-  if (code === "drafting") return "Drafting replies…";
-  if (code === "refining") return "Reworking that line…";
-  if (code === "reading") return "Reading your screenshots…";
-  return "Thinking…";
+export function statusCopy(code: string): string {
+  if (code === "drafting") return "ok wait, putting some lines together…";
+  if (code === "refining") return "ok, reworking that line…";
+  if (code === "reading") return "looking through these now…";
+  return "one sec…";
 }
 
 export async function reconcileTurn(threadId: string, turnId: string): Promise<any | null> {

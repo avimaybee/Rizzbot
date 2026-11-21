@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { parseNdjsonLines } from "./chatStream";
+import { parseNdjsonLines, statusCopy } from "./chatStream";
 import { chatErrorCopy } from "./chatApi";
 import { classifyExistingTurn, fingerprintTurnInput } from "../functions/lib/chatStore";
 
@@ -33,6 +33,16 @@ describe("chat NDJSON framing (015A adapter contract)", () => {
     expect(chatErrorCopy("not_found")).toBe("This chat isn’t available.");
     expect(chatErrorCopy("invalid_input")).toBe("Couldn’t send your message. Try again.");
     expect(chatErrorCopy("upstream")).toBe("Couldn’t finish that reply.");
+  });
+  test("status fallbacks read human, never robotic", () => {
+    const legacy = ["Drafting replies…", "Reworking that line.", "Thinking…", "Reading your screenshots…", "Thinking."];
+    for (const code of ["thinking", "drafting", "refining", "reading", "unknown-code"]) {
+      const copy = statusCopy(code);
+      expect(copy.length).toBeGreaterThan(0);
+      expect(legacy).not.toContain(copy);
+      expect(copy).toContain("…");
+    }
+    expect(statusCopy("drafting")).not.toBe(statusCopy("refining"));
   });
 });
 

@@ -6,8 +6,11 @@ import {
   getSystemFor,
   validateLedgerPatchArgs,
   validateRevisionCard,
+  validateThinkDeeperArgs,
   summarizeCardForContext,
+  waitLine,
   DRAFT_REPLIES_TOOL,
+  THINK_DEEPER_TOOL,
   UPDATE_LEDGER_TOOL,
 } from "./chatEngine";
 import { CHAT_SI_V1, REPLY_DECK_SI_V1, REPLY_REVISION_SI_V1 } from "./chatPrompts";
@@ -22,6 +25,59 @@ test("Chat requires an explicit UID and only the configured owner can use owner 
   expect(checkChatAllowlist(env, "guestuid")).toBe(false);
   expect(isChatOwner(env, "guestUid")).toBe(false);
   expect(isChatOwner(env, "OwnerUid")).toBe(true);
+});
+
+describe("think_deeper escalation", () => {
+  test("tool advertises medium|high|xhigh tiers", () => {
+    const params = (THINK_DEEPER_TOOL as any).function.parameters;
+    expect((THINK_DEEPER_TOOL as any).function.name).toBe("think_deeper");
+    expect(params.properties.tier.enum).toEqual(["medium", "high", "xhigh"]);
+    expect(params.required).toEqual(["tier"]);
+  });
+
+  test("draft_replies accepts an optional high|xhigh depth", () => {
+    const params = (DRAFT_REPLIES_TOOL as any).function.parameters;
+    expect(params.properties.depth.enum).toEqual(["high", "xhigh"]);
+    expect(params.required).toEqual(["draft_goal"]);
+  });
+
+  test("validator accepts medium/high/xhigh and rejects everything else", () => {
+    expect(validateThinkDeeperArgs({ tier: "medium" })).toBe("medium");
+    expect(validateThinkDeeperArgs({ tier: "high" })).toBe("high");
+    expect(validateThinkDeeperArgs({ tier: "xhigh" })).toBe("xhigh");
+    expect(() => validateThinkDeeperArgs({ tier: "low" })).toThrow();
+    expect(() => validateThinkDeeperArgs({})).toThrow();
+    expect(() => validateThinkDeeperArgs(null)).toThrow();
+  });
+
+  test("waiting lines read human, rotate deterministically, never mention routing", () => {
+    for (const kind of ["thinking", "reading", "drafting", "refining", "deeper_medium", "deeper_high", "deeper_xhigh", "uploading", "checking"] as const) {
+      const a = waitLine(kind, 1);
+      const b = waitLine(kind, 1);
+      expect(a).toBe(b);
+      expect(a.length).toBeGreaterThan(0);
+      expect(a.toLowerCase()).not.toContain("drafting replies");
+      expect(a.toLowerCase()).not.toContain("reworking");
+    }
+    expect(waitLine("drafting", 0)).not.toBe(waitLine("drafting", 1));
+  });
+
+  test("draft payload carries the thread note as data", () => {
+    const data = buildDraftUserData({
+      currentRequest: "what should i text back?",
+      threadNote: "talking stage, she likes late-night memes",
+      exchangeExcerpts: ["she: are you free friday?"],
+      screenshotCount: 1,
+    });
+    expect(data).toContain("THREAD NOTE");
+    expect(data).toContain("late-night memes");
+  });
+
+  test("chat SI describes think_deeper without leaking routing language to users", () => {
+    expect(CHAT_SI_V1).toContain("think_deeper");
+    expect(CHAT_SI_V1).toContain("Do not announce routing");
+    expect(CHAT_SI_V1).toContain("never narrate the");
+  });
 });
 
 describe("chat system boundaries (015B)", () => {
