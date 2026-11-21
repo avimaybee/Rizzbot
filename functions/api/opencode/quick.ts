@@ -337,39 +337,20 @@ export async function onRequest(context: any) {
       void writeEvent({ type: "ping", ts: Date.now() });
     }, 10_000);
 
-    // Hedged fallback: attempt N starts HEDGE_DELAY_MS * N after request start
-    // unless an earlier attempt already settled. First valid result wins;
-    // slow-but-healthy primaries still win the race. Cuts p95 latency on
-    // xhigh thinking stalls at the cost of occasional parallel spend.
-    const HEDGE_DELAY_MS = 25_000;
-    let settled = false;
-    let writeChain: Promise<void> = Promise.resolve();
-    const send = (event: Record<string, unknown>) => {
-      writeChain = writeChain.then(() => writeEvent(event)).catch(() => {});
-      return writeChain;
-    };
-    const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-
+    // Strict sequential fallback: spark xhigh runs alone with its full
+    // timeout. Deepseek/hy4 fire ONLY if spark errors or returns invalid
+    // output — never in parallel, never racing quality away from spark.
     try {
-      const errors: string[] = new Array(QUICK_MODEL_CHAIN.length).fill("");
+      const errors: string[] = [];
       const db = (env as any).RIZZBOT_DATA;
 
-      const runAttempt = async (index: number): Promise<void> => {
-        if (index > 0) {
-          const waitMs = Math.min(index * HEDGE_DELAY_MS, 60_000);
-          const start = Date.now();
-          while (Date.now() - start < waitMs) {
-            if (settled) return;
-            await sleep(1000);
-          }
-          if (settled) return;
-        }
-        const spec = QUICK_MODEL_CHAIN[index];
-        await send({
+      for (let i = 0; i < QUICK_MODEL_CHAIN.length; i++) {
+        const spec = QUICK_MODEL_CHAIN[i];
+        await writeEvent({
           type: "status",
           model: spec.id,
           effort: spec.effort,
-          attempt: index + 1,
+          attempt: i + 1,
         });
 
         const t0 = Date.now();
@@ -382,19 +363,18 @@ export async function onRequest(context: any) {
             ok: true,
             uid,
           });
-          if (settled) return;
-          settled = true;
-          await send({
+          await writeEvent({
             type: "result",
             model: spec.id,
             effort: spec.effort,
             siVersion: QUICK_SI_VERSION,
             data: result,
           });
+          return;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
-          console.warn(`[opencode/quick] Attempt ${index + 1} (${spec.id}) failed: ${msg}`);
-          errors[index] = `${spec.id}: ${msg}`;
+          console.warn(`[opencode/quick] Attempt ${i + 1} (${spec.id}) failed: ${msg}`);
+          errors.push(`${spec.id}: ${msg}`);
           telemetry(context, db, {
             endpoint: "opencode/quick",
             model: spec.id,
@@ -404,18 +384,13 @@ export async function onRequest(context: any) {
             uid,
           });
         }
-      };
-
-      await Promise.all(QUICK_MODEL_CHAIN.map((_, i) => runAttempt(i)));
-
-      if (!settled) {
-        settled = true;
-        await send({
-          type: "error",
-          message: "All OpenCode Go models failed to generate a valid response.",
-          details: errors.filter(Boolean),
-        });
       }
+
+      await writeEvent({
+        type: "error",
+        message: "All OpenCode Go models failed to generate a valid response.",
+        details: errors,
+      });
     } finally {
       clearInterval(heartbeat);
       try {
