@@ -19,11 +19,14 @@ export async function ensureChatSchema(db: any): Promise<void> {
   await ensureAppSchema(db);
 }
 
-export function checkChatAllowlist(env: any, uid: string, email?: string): boolean {
-  const raw = (env as any).CHAT_ALLOWLIST as string | undefined;
-  if (!raw || !raw.trim()) return true;
-  const set = new Set(raw.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean));
-  return set.has(uid.toLowerCase()) || (email ? set.has(email.toLowerCase()) : false);
+export function isChatOwner(env: { CHAT_OWNER_UID?: string }, uid: string): boolean {
+  return Boolean(uid) && env.CHAT_OWNER_UID?.trim() === uid;
+}
+
+export function checkChatAllowlist(env: { CHAT_OWNER_UID?: string; CHAT_ALLOWLIST?: string }, uid: string): boolean {
+  if (!uid) return false;
+  if (isChatOwner(env, uid)) return true;
+  return (env.CHAT_ALLOWLIST ?? "").split(",").some((entry) => entry.trim() === uid);
 }
 
 export function isUuidLike(v: unknown): boolean {

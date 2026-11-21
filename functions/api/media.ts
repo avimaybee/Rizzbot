@@ -1,5 +1,6 @@
 import { base64ToBytes } from "../lib/json";
 import { corsHeadersFor } from "../lib/cors";
+import { checkChatAllowlist, resolveChatDb } from "../lib/chatStore";
 
 export async function onRequest(context: any) {
   const { env, request, data } = context;
@@ -111,7 +112,10 @@ export async function onRequest(context: any) {
 
     // Chat media lives under an active-thread check so deleted threads stop serving bytes.
     if (isChatKey(cleanKey)) {
-      const db = (env as any).RIZZBOT_DATA;
+      const db = resolveChatDb(env);
+      if (!db || !checkChatAllowlist(env, uid)) {
+        return new Response(JSON.stringify({ error: 'Media object not found' }), { status: 404, headers: corsHeaders });
+      }
       if (db) {
         try {
           const parts = cleanKey.split('/');

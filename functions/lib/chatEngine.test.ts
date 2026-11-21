@@ -12,6 +12,17 @@ import {
 } from "./chatEngine";
 import { CHAT_SI_V1, REPLY_DECK_SI_V1, REPLY_REVISION_SI_V1 } from "./chatPrompts";
 import { validateQuickV2Payload } from "../api/opencode/quick";
+import { checkChatAllowlist, isChatOwner } from "./chatStore";
+
+test("Chat requires an explicit UID and only the configured owner can use owner models", () => {
+  const env = { CHAT_OWNER_UID: "OwnerUid", CHAT_ALLOWLIST: " guestUid, secondUid " };
+  expect(checkChatAllowlist({}, "OwnerUid")).toBe(false);
+  expect(checkChatAllowlist(env, "OwnerUid")).toBe(true);
+  expect(checkChatAllowlist(env, "guestUid")).toBe(true);
+  expect(checkChatAllowlist(env, "guestuid")).toBe(false);
+  expect(isChatOwner(env, "guestUid")).toBe(false);
+  expect(isChatOwner(env, "OwnerUid")).toBe(true);
+});
 
 describe("chat system boundaries (015B)", () => {
   test("conversational system is exactly CHAT_SI_V1", () => {

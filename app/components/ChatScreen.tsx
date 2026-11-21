@@ -300,16 +300,15 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
         setPreparing(false);
       }
 
-      const userTurn: UiTurn = { id: turnId, localKey: turnId, threadId, userText: text, attachments: keys.length ? keys : [], assistantText: "", status: "pending" };
+      const refPayload = refine ? { sourceTurnId: refine.sourceTurnId, tone: refine.tone, optionIndex: refine.optionIndex, bubbleIndex: refine.bubbleIndex } : undefined;
+      const actionPayload = draftAction || (refine ? "refine" : undefined);
+      const userTurn: UiTurn = { id: turnId, localKey: turnId, threadId, userText: text, attachments: keys, assistantText: "", status: "pending", ref: refPayload, action: actionPayload };
       setTurns((p) => [...p, userTurn]);
       setDraft("");
       setAttachments([]);
       setSkippedNote(null);
       setPendingTurnId(turnId);
       scrollToBottom(false);
-
-      const refPayload = refine ? { sourceTurnId: refine.sourceTurnId, tone: refine.tone, optionIndex: refine.optionIndex, bubbleIndex: refine.bubbleIndex } : undefined;
-      const actionPayload = draftAction || (refine ? "refine" : undefined);
 
       await sendChatTurn(
         { mode: "regular", threadId, turnId, text, attachmentKeys: keys, ref: refPayload, action: actionPayload },
@@ -357,9 +356,8 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
 
   const retryTurn = async (turn: UiTurn) => {
     // Latest failed turn retries with same ID; older failed restores as new draft
-    const failedTurns = turns.filter((t) => t.status === "failed");
-    const latestFailed = failedTurns[failedTurns.length - 1];
-    if (latestFailed && latestFailed.localKey === turn.localKey && !isIncognito) {
+    const latestFailed = turns.at(-1);
+    if (latestFailed?.status === "failed" && latestFailed.localKey === turn.localKey && !isIncognito) {
       const tid = activeThreadId;
       if (!tid) return;
       setSending(true);
@@ -368,7 +366,7 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
       setTurns((p) => p.map((x) => (x.localKey === turn.localKey ? { ...x, status: "pending" } : x)));
       setPendingTurnId(turn.id);
       await sendChatTurn(
-        { mode: "regular", threadId: tid, turnId: turn.id, text: turn.userText, attachmentKeys: turn.attachments.filter((a) => a.startsWith("r2:")), ref: turn.ref },
+        { mode: "regular", threadId: tid, turnId: turn.id, text: turn.userText, attachmentKeys: turn.attachments.filter((a) => a.startsWith("r2:")), ref: turn.ref, action: turn.action },
         {
           onStatus: (_c, m) => { if (activeThreadIdRef.current && activeThreadIdRef.current !== tid) return; setPendingStatus(m); },
           onDelta: (t) => { if (activeThreadIdRef.current && activeThreadIdRef.current !== tid) return; setPendingText((p) => p + t); },
@@ -422,13 +420,13 @@ export function ChatScreen({ incognito }: ChatScreenProps) {
   const headerDesc = isIncognito ? "Uses saved memory. This chat won’t be saved." : undefined;
 
   return (
-    <div className="chat-shell" style={{ height: "100dvh", display: "grid", gridTemplateRows: "auto minmax(0,1fr) auto auto", backgroundColor: "#F5EFE6", paddingTop: "env(safe-area-inset-top)", paddingBottom: 0, paddingLeft: "env(safe-area-inset-left)", paddingRight: "env(safe-area-inset-right)" }}>
+    <div className="chat-shell" style={{ height: "100dvh", display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gridTemplateRows: "minmax(0, 1fr)", backgroundColor: "#F5EFE6", paddingTop: "env(safe-area-inset-top)", paddingBottom: 0, paddingLeft: "env(safe-area-inset-left)", paddingRight: "env(safe-area-inset-right)" }}>
       <h1 className="sr-only">Chat</h1>
       <div aria-live="polite" className="sr-only">{announce}</div>
 
       <div style={{ display: "flex", minHeight: 0, flex: 1 }}>
         {isDesktop && !isIncognito && (
-          <aside aria-label="Saved chats" style={{ width: 256, borderRight: "1px solid #E8E0D4", backgroundColor: "#FDFAF5", display: "flex", flexDirection: "column", minHeight: 0 }}>
+          <aside aria-label="Saved chats" style={{ flex: "0 0 256px", minWidth: 0, borderRight: "1px solid #E8E0D4", backgroundColor: "#FDFAF5", display: "flex", flexDirection: "column", minHeight: 0 }}>
             <DesktopThreadList
               threads={threads} activeId={activeThreadId} hasMore={Boolean(threadsCursor)}
               onLoadMore={() => void loadThreads(threadsCursor)} loading={threadsLoading}

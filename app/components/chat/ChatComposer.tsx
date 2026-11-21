@@ -30,6 +30,12 @@ interface ChatComposerProps {
 }
 
 const MAX_CHARS = 12_000;
+const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024;
+
+function decodedBytes(base64: string): number {
+  const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+  return Math.floor(base64.length * 3 / 4) - padding;
+}
 
 export function ChatComposer(props: ChatComposerProps) {
   const { draft, onDraftChange, attachments, onAttachmentsChange, sending, preparing, onSend } = props;
@@ -39,17 +45,26 @@ export function ChatComposer(props: ChatComposerProps) {
   const [recording, setRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [transcribing, setTranscribing] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
+  const [textError, setTextError] = useState(false);
+  const optimizingRef = useRef(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
   const lightboxReturnRef = useRef<HTMLElement | null>(null);
 
-  const canSend = (draft.trim().length > 0 || attachments.length > 0) && !sending && !preparing && !transcribing;
+  const canSend = (draft.trim().length > 0 || attachments.length > 0) && !sending && !preparing && !optimizing && !recording && !transcribing;
   const showCount = draft.length >= 11_500;
+  const updateDraft = (value: string) => {
+    const withinLimit = value.length <= MAX_CHARS;
+    setTextError(!withinLimit);
+    if (withinLimit) onDraftChange(value);
+  };
 
   useEffect(() => () => {
     if (timerRef.current) window.clearInterval(timerRef.current);
+    mediaRecorderRef.current?.stream.getTracks().forEach((track) => track.stop());
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       try { mediaRecorderRef.current.stop(); } catch { /* ignore */ }
     }
@@ -64,20 +79,39 @@ export function ChatComposer(props: ChatComposerProps) {
   }, [draft, props.textareaRef]);
 
   const addFiles = async (files: File[]) => {
-    if (!files.length) return;
-    const remaining = MAX_QUICK_SCREENSHOTS - attachments.length;
-    if (remaining <= 0) { props.onSkippedNoteChange("Up to 10 images. Remove one to add another."); return; }
-    const slice = files.slice(0, remaining);
-    const skipped = files.length - slice.length;
-    props.onSkippedNoteChange(skipped > 0 ? `${skipped} image${skipped > 1 ? "s" : ""} skipped — up to 10 images.` : null);
-    for (let i = 0; i < slice.length; i++) {
-      try {
-        const opt = await optimizeImageFile(slice[i]);
-        onAttachmentsChange([...attachmentsRef.current, { id: opt.id, preview: opt.preview, data: opt.data, mimeType: opt.mimeType, width: opt.width, height: opt.height }]);
-      } catch {
-        const n = attachmentsRef.current.length + i + 1;
-        props.onSkippedNoteChange(`Couldn’t open image ${n}. Try a PNG, JPEG, or WebP.`);
+    if (!files.length || optimizingRef.current) return;
+    optimizingRef.current = true;
+    setOptimizing(true);
+    props.onSkippedNoteChange(null);
+    const notes: string[] = [];
+    let skippedCount = 0;
+    let skippedBytes = 0;
+    try {
+      for (const [index, file] of files.entries()) {
+        if (attachmentsRef.current.length >= MAX_QUICK_SCREENSHOTS) {
+          skippedCount = files.length - index;
+          break;
+        }
+        try {
+          const image = await optimizeImageFile(file);
+          const total = attachmentsRef.current.reduce((bytes, item) => bytes + decodedBytes(item.data), 0);
+          if (total + decodedBytes(image.data) > MAX_ATTACHMENT_BYTES) {
+            skippedBytes++;
+            continue;
+          }
+          const next = [...attachmentsRef.current, image];
+          attachmentsRef.current = next;
+          onAttachmentsChange(next);
+        } catch {
+          notes.push(`Couldn’t open image ${index + 1}. Try a PNG, JPEG, or WebP.`);
+        }
       }
+    } finally {
+      if (skippedCount) notes.push(`${skippedCount} skipped. You can attach up to 10 images.`);
+      if (skippedBytes) notes.push(`${skippedBytes} skipped. Images can total up to 8 MB.`);
+      props.onSkippedNoteChange(notes.length ? notes.join(" ") : null);
+      optimizingRef.current = false;
+      setOptimizing(false);
     }
   };
 
@@ -130,7 +164,7 @@ export function ChatComposer(props: ChatComposerProps) {
         const el = props.textareaRef.current;
         const cursor = el?.selectionStart ?? draft.length;
         const next = draft.slice(0, cursor) + (cursor > 0 && !draft.endsWith("\n") ? "\n" : "") + text + draft.slice(cursor);
-        onDraftChange(next.slice(0, MAX_CHARS));
+        updateDraft(next);
         requestAnimationFrame(() => { el?.focus(); });
       }
     } catch {
@@ -199,11 +233,7 @@ export function ChatComposer(props: ChatComposerProps) {
           id="chat-composer-input"
           ref={props.textareaRef}
           value={draft}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v.length <= MAX_CHARS) onDraftChange(v);
-            else onDraftChange(v.slice(0, MAX_CHARS));
-          }}
+          onChange={(e) => updateDraft(e.target.value)}
           onPaste={(e) => {
             const items = e.clipboardData?.items;
             if (!items) return;
@@ -217,12 +247,15 @@ export function ChatComposer(props: ChatComposerProps) {
             if (files.length) {
               e.preventDefault();
               const text = e.clipboardData.getData("text/plain");
-              if (text) onDraftChange((draft + (draft && !draft.endsWith("\n") ? "\n" : "") + text).slice(0, MAX_CHARS));
+              if (text) {
+                const { selectionStart, selectionEnd } = e.currentTarget;
+                updateDraft(draft.slice(0, selectionStart) + text + draft.slice(selectionEnd));
+              }
               void addFiles(files);
             }
           }}
           onKeyDown={(e) => {
-            if ((e as any).isComposing) return;
+            if (e.nativeEvent.isComposing) return;
             const isDesktop = window.matchMedia("(pointer: fine)").matches;
             if (e.key === "Enter" && !e.shiftKey && isDesktop) {
               e.preventDefault();
@@ -231,6 +264,7 @@ export function ChatComposer(props: ChatComposerProps) {
           }}
           placeholder="Message Rizzbot…"
           rows={1}
+          className="focus-visible:ring-2 focus-visible:ring-[#A8401C]"
           style={{ width: "100%", resize: "none", overflowY: "auto", background: "transparent", border: "none", outline: "none", fontFamily: "'DM Sans', sans-serif", fontSize: 16, color: "#1A1208", minHeight: 24, maxHeight: 144, lineHeight: 1.5 }}
         />
         {recording || transcribing ? (
@@ -288,6 +322,8 @@ export function ChatComposer(props: ChatComposerProps) {
             </button>
           </div>
         )}
+        {optimizing && <p role="status" className="text-sm text-[#665A4E]">Preparing images…</p>}
+        {textError && <p role="alert" className="text-sm text-[#A8401C]">Keep your message to 12,000 characters.</p>}
         {voiceError && <p role="alert" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#A8401C", marginTop: 4 }}>{voiceError}</p>}
       </div>
       {lightbox !== null && attachments[lightbox] && (

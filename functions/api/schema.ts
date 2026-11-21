@@ -274,6 +274,7 @@ const ensureSchemaInternal = async (db: D1Database): Promise<void> => {
       created_at TEXT NOT NULL
     )`
   );
+  await runSchemaStatement(db, `ALTER TABLE chat_turns ADD COLUMN request_action TEXT`);
   await runSchemaStatement(db, `CREATE INDEX IF NOT EXISTS idx_chat_turns_thread_created ON chat_turns(thread_id, created_at, id)`);
   await runSchemaStatement(db, `CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_turns_thread_pending ON chat_turns(thread_id) WHERE status = 'pending'`);
   await runSchemaStatement(

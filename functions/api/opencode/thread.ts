@@ -16,6 +16,8 @@ import {
 } from "../../lib/chatEngine";
 import { validateQuickV2Payload } from "./quick";
 import {
+  checkChatAllowlist,
+  isChatOwner,
   ensureChatSchema,
   expireStalePending,
   notFound,
@@ -46,14 +48,8 @@ function errJson(code: string, message: string, status: number, cors: Record<str
   return new Response(JSON.stringify({ error: code, message }), { status, headers: cors });
 }
 
-function isOwnerUid(env: any, uid: string): boolean {
-  const owner = (env as any).CHAT_OWNER_UID as string | undefined;
-  if (!owner) return true; // personal rollout default: authenticated user is owner
-  return uid === owner;
-}
-
 function pickModels(env: any, uid: string, mode: Mode): { chat: { id: string; effort: string }; draftFull: { id: string; effort: string }; draftRev: { id: string; effort: string } } {
-  if (mode === "incognito" || !isOwnerUid(env, uid)) {
+  if (mode === "incognito" || !isChatOwner(env, uid)) {
     return {
       chat: { id: "deepseek-v4.1-flash", effort: "high" },
       draftFull: { id: "deepseek-v4.1-flash", effort: "high" },
@@ -65,13 +61,6 @@ function pickModels(env: any, uid: string, mode: Mode): { chat: { id: string; ef
     draftFull: { id: "muse-spark-1.3-contributor", effort: "xhigh" },
     draftRev: { id: "muse-spark-1.3-contributor", effort: "low" },
   };
-}
-
-function checkAllowlist(env: any, uid: string, email?: string): boolean {
-  const raw = (env as any).CHAT_ALLOWLIST as string | undefined;
-  if (!raw || !raw.trim()) return true;
-  const set = new Set(raw.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean));
-  return set.has(uid.toLowerCase()) || (email ? set.has(email.toLowerCase()) : false);
 }
 
 async function loadLedger(db: any, uid: string): Promise<{ entries: LedgerEntryWire[]; revision: number }> {
@@ -162,7 +151,7 @@ function inlineImagesToParts(inline: unknown): { parts: Array<{ mimeType: string
   return { parts, totalBytes: total };
 }
 
-async function callChatCompletionsStreaming(args: {
+async function callConversationalStream(args: {
   apiKey: string;
   sessionTag: string;
   model: string;
@@ -179,23 +168,31 @@ async function callChatCompletionsStreaming(args: {
     "User-Agent": "Rizzbot/1.0",
     "x-opencode-session": args.sessionTag,
   };
-  const res = await fetch("https://opencode.ai/inference/go/openai/v1/chat/completions", {
-    method: "POST",
-    headers,
-    signal: args.signal,
-    body: JSON.stringify({
-      model: args.model,
-      reasoning_effort: args.effort,
-      stream: true,
-      messages: [{ role: "system", content: args.system }, ...args.messages],
-      ...(args.tools && args.tools.length ? { tools: args.tools, tool_choice: "auto" } : {}),
-    }),
+  const responses = args.model === "muse-spark-1.3-contributor";
+  const body = responses ? {
+    model: args.model, instructions: args.system, reasoning: { effort: args.effort }, stream: true,
+    input: args.messages.map(({ role, content }) => ({
+      role,
+      content: Array.isArray(content) ? content.map((part) => part.type === "image_url"
+        ? { type: "input_image", image_url: part.image_url.url }
+        : { type: "input_text", text: part.text }) : content,
+    })),
+    ...(args.tools?.length ? { tools: args.tools.map(({ type, function: spec }) => ({ type, ...spec, strict: false })) } : {}),
+  } : {
+    model: args.model, reasoning_effort: args.effort, stream: true,
+    messages: [{ role: "system", content: args.system }, ...args.messages],
+    ...(args.tools?.length ? { tools: args.tools, tool_choice: "auto" } : {}),
+  };
+  const path = responses ? "responses" : "chat/completions";
+  const res = await fetch(`https://opencode.ai/inference/go/openai/v1/${path}`, {
+    method: "POST", headers, signal: args.signal, body: JSON.stringify(body),
   });
   if (!res.ok || !res.body) throw new Error(`upstream ${args.model} HTTP ${res.status}`);
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buf = "";
   const acc = new Map<number, { name: string; argsText: string }>();
+  let completed = false;
   const flushText = async (t: string) => { if (t) await args.onText(t); };
   while (true) {
     const { done, value } = await reader.read();
@@ -207,9 +204,24 @@ async function callChatCompletionsStreaming(args: {
       const t = line.trim();
       if (!t || !t.startsWith("data:")) continue;
       const payload = t.slice(5).trim();
-      if (!payload || payload === "[DONE]") continue;
+      if (payload === "[DONE]") { completed = true; continue; }
+      if (!payload) continue;
       let evt: any;
       try { evt = JSON.parse(payload); } catch { continue; }
+      if (evt.error || evt.type === "error" || evt.type === "response.failed" || evt.type === "response.incomplete") {
+        throw new Error("upstream generation failed");
+      }
+      if (responses) {
+        if (evt.type === "response.output_text.delta" && typeof evt.delta === "string") await flushText(evt.delta);
+        if (evt.type === "response.completed") {
+          completed = true;
+          for (const [i, item] of (evt.response?.output ?? []).entries()) {
+            if (item.type === "function_call") acc.set(i, { name: item.name, argsText: item.arguments });
+          }
+        }
+        continue;
+      }
+      if (["stop", "tool_calls"].includes(evt.choices?.[0]?.finish_reason)) completed = true;
       const delta = evt.choices?.[0]?.delta || {};
       if (typeof delta.content === "string" && delta.content) await flushText(delta.content);
       if (Array.isArray(delta.tool_calls)) {
@@ -223,6 +235,7 @@ async function callChatCompletionsStreaming(args: {
       }
     }
   }
+  if (!completed) throw new Error("upstream stream interrupted");
   const calls: Array<{ name: string; args: any }> = [];
   for (const [, e] of [...acc.entries()].sort((a, b) => a[0] - b[0])) {
     if (!e.name) continue;
@@ -240,67 +253,62 @@ async function callDraftJson(args: {
   system: string;
   userData: string;
   imageParts: Array<{ mimeType: string; data: string }>;
-  timeoutMs: number;
+  signal: AbortSignal;
 }): Promise<any> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), args.timeoutMs);
-  try {
-    const toDataUrl = (m: string, d: string) => (d.startsWith("data:") ? d : `data:${m || "image/webp"};base64,${d}`);
-    // Prefer responses API for structured JSON (proven in quick.ts); fall back to chat completions.
-    const headers = {
-      Authorization: `Bearer ${args.apiKey}`,
-      "Content-Type": "application/json",
-      "User-Agent": "Rizzbot/1.0",
-      "x-opencode-session": args.sessionTag,
-    };
-    const contentParts: any[] = args.imageParts.map((img) => ({ type: "input_image", image_url: toDataUrl(img.mimeType, img.data) }));
-    contentParts.push({ type: "input_text", text: args.userData });
-    try {
-      const res = await fetch("https://opencode.ai/inference/go/openai/v1/responses", {
-        method: "POST",
-        headers,
-        signal: controller.signal,
-        body: JSON.stringify({
-          model: args.model,
-          instructions: args.system,
-          input: [{ role: "user", content: contentParts }],
-          reasoning: { effort: args.effort },
-          text: { format: { type: "json_object" } },
-        }),
-      });
-      if (!res.ok) throw new Error(`responses HTTP ${res.status}`);
-      const data = (await res.json()) as any;
-      let raw = typeof data.output_text === "string" ? data.output_text : "";
-      if (!raw && Array.isArray(data.output)) {
-        raw = data.output.flatMap((o: any) => (o.type === "message" ? (o.content || []).map((c: any) => c.text || "") : [])).join("");
-      }
-      if (!raw.trim()) throw new Error("empty draft");
-      return cleanJsonObject(raw);
-    } catch (e) {
-      // Chat completions fallback
-      const userContent: any[] = args.imageParts.map((img) => ({ type: "image_url", image_url: { url: toDataUrl(img.mimeType, img.data) } }));
-      userContent.push({ type: "text", text: args.userData });
-      const res = await fetch("https://opencode.ai/inference/go/openai/v1/chat/completions", {
-        method: "POST",
-        headers,
-        signal: controller.signal,
-        body: JSON.stringify({
-          model: args.model,
-          reasoning_effort: args.effort,
-          messages: [
-            { role: "system", content: args.system },
-            { role: "user", content: userContent },
-          ],
-          response_format: { type: "json_object" },
-        }),
-      });
-      if (!res.ok) throw new Error(`chat HTTP ${res.status}`);
-      const data = (await res.json()) as any;
-      const raw = data.choices?.[0]?.message?.content ?? "";
-      if (!raw.trim()) throw new Error("empty draft fallback");
-      return cleanJsonObject(raw);
+  const toDataUrl = (m: string, d: string) => (d.startsWith("data:") ? d : `data:${m || "image/webp"};base64,${d}`);
+  // Use the native endpoint for each configured model.
+  const headers = {
+    Authorization: `Bearer ${args.apiKey}`,
+    "Content-Type": "application/json",
+    "User-Agent": "Rizzbot/1.0",
+    "x-opencode-session": args.sessionTag,
+  };
+  const contentParts: any[] = args.imageParts.map((img) => ({ type: "input_image", image_url: toDataUrl(img.mimeType, img.data) }));
+  contentParts.push({ type: "input_text", text: args.userData });
+  if (args.model === "muse-spark-1.3-contributor") {
+    const res = await fetch("https://opencode.ai/inference/go/openai/v1/responses", {
+      method: "POST",
+      headers,
+      signal: args.signal,
+      body: JSON.stringify({
+        model: args.model,
+        instructions: args.system,
+        input: [{ role: "user", content: contentParts }],
+        reasoning: { effort: args.effort },
+        text: { format: { type: "json_object" } },
+      }),
+    });
+    if (!res.ok) throw new Error(`responses HTTP ${res.status}`);
+    const data = (await res.json()) as any;
+    let raw = typeof data.output_text === "string" ? data.output_text : "";
+    if (!raw && Array.isArray(data.output)) {
+      raw = data.output.flatMap((o: any) => (o.type === "message" ? (o.content || []).map((c: any) => c.text || "") : [])).join("");
     }
-  } finally { clearTimeout(timer); }
+    if (!raw.trim()) throw new Error("empty draft");
+    return cleanJsonObject(raw);
+  } else {
+    const userContent: any[] = args.imageParts.map((img) => ({ type: "image_url", image_url: { url: toDataUrl(img.mimeType, img.data) } }));
+    userContent.push({ type: "text", text: args.userData });
+    const res = await fetch("https://opencode.ai/inference/go/openai/v1/chat/completions", {
+      method: "POST",
+      headers,
+      signal: args.signal,
+      body: JSON.stringify({
+        model: args.model,
+        reasoning_effort: args.effort,
+        messages: [
+          { role: "system", content: args.system },
+          { role: "user", content: userContent },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!res.ok) throw new Error(`chat HTTP ${res.status}`);
+    const data = (await res.json()) as any;
+    const raw = data.choices?.[0]?.message?.content ?? "";
+    if (!raw.trim()) throw new Error("empty draft");
+    return cleanJsonObject(raw);
+  }
 }
 
 function resolveSourceCardText(card: any, ref: ThreadRef): { optionText: string; bubbleText?: string } | null {
@@ -344,9 +352,8 @@ export async function onRequest(context: any) {
   if (request.method !== "POST") return errJson("invalid_input", "Method not allowed", 405, { ...corsBase, "Content-Type": "application/json" });
 
   const uid = data?.user?.uid as string | undefined;
-  const email = data?.user?.email as string | undefined;
   if (!uid) return errJson("unauthorized", "Sign in to use Chat.", 401, { ...corsBase, "Content-Type": "application/json" });
-  if (!checkAllowlist(env, uid, email)) return errJson("unauthorized", "Chat isn’t available for this account yet.", 403, { ...corsBase, "Content-Type": "application/json" });
+  if (!checkChatAllowlist(env, uid)) return errJson("unauthorized", "Chat isn’t available for this account yet.", 403, { ...corsBase, "Content-Type": "application/json" });
 
   const apiKey = (env as any).OPENCODE_GO_API_KEY as string | undefined;
   const db = resolveChatDb(env);
@@ -417,23 +424,20 @@ export async function onRequest(context: any) {
 
   // Duplicate / conflict handling
   const existingTurn = (await db.prepare(`SELECT * FROM chat_turns WHERE id=? AND thread_id=?`).bind(turnId, threadId).first().catch(() => null)) as any;
-  const inputFingerprint = stableKey({ text, attachmentKeys, ref });
+  const inputFingerprint = stableKey({ text, attachmentKeys, ref, action });
   if (existingTurn) {
     if (existingTurn.uid !== uid) return errJson("not_found", "This chat isn’t available.", 404, { ...corsBase, "Content-Type": "application/json" });
-    if (existingTurn.status === "complete") {
-      // Exact completed retry: return saved result as a one-shot stream
-      return replayCompletedTurn(existingTurn, cors);
-    }
-    if (existingTurn.status === "pending") {
-      const sameInput = stableKey({ text: existingTurn.user_text, attachmentKeys: parseAttachments(existingTurn.attachments), ref: existingTurn.ref_source_turn_id ? { sourceTurnId: existingTurn.ref_source_turn_id, tone: existingTurn.ref_tone || undefined, optionIndex: existingTurn.ref_option_index ?? undefined, bubbleIndex: existingTurn.ref_bubble_index ?? undefined } : undefined }) === inputFingerprint;
-      if (!sameInput) return errJson("conflict", "Couldn’t send your message. Try again.", 409, { ...corsBase, "Content-Type": "application/json" });
-      return errJson("active", "Still working on your last message…", 409, { ...corsBase, "Content-Type": "application/json" });
-    }
-    // failed/expired: only latest failed may retry with same ID; older failed must send new draft
-    const latestFailed = (await db.prepare(`SELECT id, created_at FROM chat_turns WHERE thread_id=? AND uid=? AND status IN ('failed','expired') ORDER BY created_at DESC, id DESC LIMIT 1`).bind(threadId, uid).first().catch(() => null)) as any;
-    if (!latestFailed || latestFailed.id !== turnId) {
-      return errJson("conflict", "Couldn’t send your message. Try again.", 409, { ...corsBase, "Content-Type": "application/json" });
-    }
+    const savedRef = existingTurn.ref_source_turn_id ? {
+      sourceTurnId: existingTurn.ref_source_turn_id, tone: existingTurn.ref_tone || undefined,
+      optionIndex: existingTurn.ref_option_index ?? undefined, bubbleIndex: existingTurn.ref_bubble_index ?? undefined,
+    } : undefined;
+    const savedFingerprint = stableKey({
+      text: existingTurn.user_text, attachmentKeys: parseAttachments(existingTurn.attachments),
+      ref: savedRef, action: existingTurn.request_action ?? undefined,
+    });
+    if (savedFingerprint !== inputFingerprint) return errJson("conflict", "Couldn’t send your message. Try again.", 409, { ...corsBase, "Content-Type": "application/json" });
+    if (existingTurn.status === "complete") return replayCompletedTurn(existingTurn, cors);
+    if (existingTurn.status === "pending") return errJson("active", "Still working on your last message…", 409, { ...corsBase, "Content-Type": "application/json" });
     // Reserve retry via conditional attempt bump
   }
 
@@ -453,13 +457,15 @@ export async function onRequest(context: any) {
   const attemptBase = existingTurn ? (Number(existingTurn.attempt) || 1) + 1 : 1;
   try {
     if (existingTurn) {
-      const r: any = await db.prepare(`UPDATE chat_turns SET status='pending', attempt=?, started_at=? WHERE id=? AND thread_id=? AND uid=? AND status IN ('failed','expired')`).bind(attemptBase, now, turnId, threadId, uid).run();
+      const r: any = await db.prepare(`UPDATE chat_turns SET status='pending', attempt=?, started_at=? WHERE id=? AND thread_id=? AND uid=? AND status IN ('failed','expired') AND NOT EXISTS (
+        SELECT 1 FROM chat_turns later WHERE later.thread_id=chat_turns.thread_id
+          AND (later.created_at, later.id) > (chat_turns.created_at, chat_turns.id)
+      )`).bind(attemptBase, now, turnId, threadId, uid).run();
       const changed = (r as any)?.changes ?? (r as any)?.meta?.changes ?? 1;
       if (!changed) return errJson("conflict", "Couldn’t send your message. Try again.", 409, { ...corsBase, "Content-Type": "application/json" });
-      await db.prepare(`UPDATE chat_turns SET user_text=?, attachments=?, ref_source_turn_id=?, ref_tone=?, ref_option_index=?, ref_bubble_index=?, assistant_text='', card_json=NULL WHERE id=?`).bind(text, JSON.stringify(attachmentKeys), ref?.sourceTurnId || null, ref?.tone || null, ref?.optionIndex ?? null, ref?.bubbleIndex ?? null, turnId).run().catch(() => {});
     } else {
-      await db.prepare(`INSERT INTO chat_turns (id, thread_id, uid, user_text, attachments, ref_source_turn_id, ref_tone, ref_option_index, ref_bubble_index, assistant_text, card_json, status, attempt, started_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', NULL, 'pending', ?, ?, ?)`)
-        .bind(turnId, threadId, uid, text, JSON.stringify(attachmentKeys), ref?.sourceTurnId || null, ref?.tone || null, ref?.optionIndex ?? null, ref?.bubbleIndex ?? null, attemptBase, now, now).run();
+      await db.prepare(`INSERT INTO chat_turns (id, thread_id, uid, user_text, attachments, ref_source_turn_id, ref_tone, ref_option_index, ref_bubble_index, request_action, assistant_text, card_json, status, attempt, started_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', NULL, 'pending', ?, ?, ?)`)
+        .bind(turnId, threadId, uid, text, JSON.stringify(attachmentKeys), ref?.sourceTurnId || null, ref?.tone || null, ref?.optionIndex ?? null, ref?.bubbleIndex ?? null, action ?? null, attemptBase, now, now).run();
     }
   } catch (e: any) {
     const msg = String(e?.message || "");
@@ -522,7 +528,8 @@ export async function onRequest(context: any) {
   const send = async (obj: any) => { try { await writer.write(encoder.encode(JSON.stringify(obj) + "\n")); } catch { /* gone */ } };
 
   (async () => {
-    const deadline = setTimeout(() => { void send({ type: "error", code: "unavailable", message: "Couldn’t finish that reply." }); }, GENERATION_DEADLINE_MS);
+    const turnAbort = new AbortController();
+    const deadline = setTimeout(() => turnAbort.abort(), GENERATION_DEADLINE_MS);
     let assistantText = "";
     let finalCard: any = null;
     let ledgerPatch: Array<{ id?: string; text: string; label?: string }> | null = null;
@@ -544,7 +551,7 @@ export async function onRequest(context: any) {
         await send({ type: "status", code: action === "draft" ? "drafting" : "refining", message: action === "draft" ? "Drafting replies…" : "Reworking that line…" });
         const draftRes = await runDraft({
           env, apiKey, sessionBase, models, kind: action === "draft" ? "full" : "revision",
-          currentText: text, attachmentKeys, ref, refCard, imageParts, styleHints, threadNote,
+          currentText: text, attachmentKeys, ref, refCard, imageParts, styleHints, threadNote, signal: turnAbort.signal,
         });
         callsMade = 1;
         if (!draftRes.ok) {
@@ -568,10 +575,9 @@ export async function onRequest(context: any) {
       const openAiMessages = withImages(messages, imageParts);
       let preamble = "";
       let prelimSent = false;
-      const controller = new AbortController();
       const t0 = Date.now();
       callsMade = 1;
-      const conv = await callChatCompletionsStreaming({
+      const conv = await callConversationalStream({
         apiKey,
         sessionTag: sessionBase,
         model: models.chat.id,
@@ -579,7 +585,7 @@ export async function onRequest(context: any) {
         system: CHAT_SI_V1,
         messages: openAiMessages,
         tools: [DRAFT_REPLIES_TOOL, UPDATE_LEDGER_TOOL],
-        signal: controller.signal,
+        signal: turnAbort.signal,
         onText: async (t) => {
           // Coalesce first chunk briefly: hold ~120ms to see if a tool call follows
           if (!prelimSent) {
@@ -617,12 +623,12 @@ export async function onRequest(context: any) {
         await send({ type: "status", code: scope === "full" ? "drafting" : "refining", message: scope === "full" ? "Drafting replies…" : "Reworking that line…" });
         const draftRes = await runDraft({
           env, apiKey, sessionBase, models, kind: scope,
-          currentText: text, attachmentKeys, ref, refCard, imageParts, styleHints, threadNote, draftGoal: goal,
+          currentText: text, attachmentKeys, ref, refCard, imageParts, styleHints, threadNote, signal: turnAbort.signal, draftGoal: goal,
         });
         callsMade = 2;
         if (!draftRes.ok) {
           // Keep usable text if the model already produced some, else error
-          if (assistantText.trim()) { await commitTurn(); return; }
+          if (!turnAbort.signal.aborted && draftRes.code !== "allowance" && assistantText.trim()) { await commitTurn(); return; }
           await finishFailed(draftRes.code || "upstream", draftRes.message || "Couldn’t finish that reply.");
           return;
         }
@@ -636,17 +642,16 @@ export async function onRequest(context: any) {
         if (callsMade < 2) {
           callsMade = 2;
           let extra = "";
-          const c2 = new AbortController();
           const t1 = Date.now();
           try {
-            await callChatCompletionsStreaming({
+            await callConversationalStream({
               apiKey,
               sessionTag: `${sessionBase}-cont`,
               model: models.chat.id,
               effort: models.chat.effort,
               system: CHAT_SI_V1,
               messages: [...openAiMessages, { role: "assistant", content: "(noted — now answer the user directly in one short turn)" }],
-              signal: c2.signal,
+              signal: turnAbort.signal,
               onText: async (t) => { extra += t; assistantText += t; await send({ type: "delta", text: t }); },
             });
             telemetry(context, db, { endpoint: "opencode/thread", model: models.chat.id, latencyMs: Date.now() - t1, ok: true, uid });
@@ -665,53 +670,53 @@ export async function onRequest(context: any) {
 
       async function commitTurn() {
         const cardJson = finalCard ? JSON.stringify({ v: 1, ...finalCard }) : null;
-        const batch: any[] = [];
-        batch.push(db.prepare(`UPDATE chat_turns SET assistant_text=?, card_json=?, status='complete' WHERE id=? AND attempt=?`).bind(assistantText.slice(0, 8000), cardJson, turnId, attemptBase));
-        batch.push(db.prepare(`UPDATE chat_threads SET updated_at=? WHERE id=? AND uid=?`).bind(utcNowIso(), threadId, uid));
-        try {
-          await db.batch(batch);
-        } catch {
-          // Conditional finalization: only the owning attempt may complete
-          const cur = (await db.prepare(`SELECT status, attempt FROM chat_turns WHERE id=?`).bind(turnId).first().catch(() => null)) as any;
-          if (!cur || cur.attempt !== attemptBase) { await send({ type: "error", code: "conflict", message: "Couldn’t send your message. Try again." }); return; }
-          await finishFailed("unavailable", "Couldn’t finish that reply.");
-          return;
-        }
-        // Ledger patch guarded by revision
-        if (ledgerPatch && ledgerPatch.length) {
-          try {
-            const latest = await loadLedger(db, uid);
-            if (latest.revision !== ledgerRevision) {
-              // stale — skip patch, keep reply
-            } else {
-              const merged = [...latest.entries];
-              for (const u of ledgerPatch) {
-                if (u.id) {
-                  const i = merged.findIndex((e) => e.id === u.id);
-                  if (i >= 0) merged[i] = { ...merged[i], text: u.text, label: u.label ?? merged[i].label };
-                } else {
-                  if (merged.length >= 40) break;
-                  merged.push({ id: `m_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`, text: u.text, label: u.label, source: "agent" });
-                }
-              }
-              await db.prepare(`UPDATE chat_ledgers SET entries_json=?, revision=?, updated_at=? WHERE uid=? AND revision=?`)
-                .bind(JSON.stringify(merged.slice(0, 40)), ledgerRevision + 1, utcNowIso(), uid, ledgerRevision).run().catch(async () => {
-                  // row may not exist yet
-                  await db.prepare(`INSERT INTO chat_ledgers (uid, entries_json, revision, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(uid) DO NOTHING`).bind(uid, JSON.stringify(merged.slice(0, 40)), ledgerRevision + 1, utcNowIso()).run().catch(() => {});
-                });
+        const now = utcNowIso();
+        const persistedText = assistantText.slice(0, 8000);
+        const batch = [
+          db.prepare(`UPDATE chat_turns SET assistant_text=?, card_json=?, status='complete'
+            WHERE id=? AND thread_id=? AND uid=? AND attempt=? AND status='pending'
+              AND EXISTS (SELECT 1 FROM chat_threads WHERE id=? AND uid=? AND deleting_at IS NULL)`)
+            .bind(persistedText, cardJson, turnId, threadId, uid, attemptBase, threadId, uid),
+          db.prepare(`UPDATE chat_threads SET updated_at=? WHERE id=? AND uid=? AND deleting_at IS NULL
+            AND EXISTS (SELECT 1 FROM chat_turns WHERE id=? AND attempt=? AND status='complete')`)
+            .bind(now, threadId, uid, turnId, attemptBase),
+        ];
+        if (ledgerPatch?.length) {
+          const merged = [...ledgerEntries];
+          for (const patch of ledgerPatch) {
+            if (patch.id) {
+              const index = merged.findIndex((entry) => entry.id === patch.id);
+              if (index >= 0) merged[index] = { ...merged[index], text: patch.text, label: patch.label ?? merged[index].label };
+            } else if (merged.length < 40) {
+              merged.push({ id: crypto.randomUUID(), text: patch.text, label: patch.label, source: "agent" });
             }
-          } catch { /* ledger never blocks the reply */ }
+          }
+          batch.push(db.prepare(`INSERT INTO chat_ledgers (uid, entries_json, revision, updated_at)
+            SELECT ?, ?, ?, ? WHERE EXISTS (
+              SELECT 1 FROM chat_turns t JOIN chat_threads h ON h.id=t.thread_id
+              WHERE t.id=? AND t.uid=? AND t.attempt=? AND t.status='complete' AND h.deleting_at IS NULL
+            ) AND (? = 0 OR EXISTS (SELECT 1 FROM chat_ledgers WHERE uid=? AND revision=?))
+            ON CONFLICT(uid) DO UPDATE SET entries_json=excluded.entries_json,
+              revision=excluded.revision, updated_at=excluded.updated_at
+            WHERE chat_ledgers.revision=?`)
+            .bind(uid, JSON.stringify(merged), ledgerRevision + 1, now, turnId, uid, attemptBase,
+              ledgerRevision, uid, ledgerRevision, ledgerRevision));
+        }
+        const results = await db.batch(batch);
+        if (!results[0]?.meta?.changes) {
+          await send({ type: "error", code: "conflict", message: "Couldn’t send your message. Try again." });
+          return;
         }
         await send({ type: "done", turn: {
           id: turnId, threadId, userText: text, attachments: attachmentKeys,
           ref: ref && ref.sourceTurnId ? ref : undefined,
-          assistantText, card: finalCard || undefined, status: "complete", attempt: attemptBase,
+          assistantText: persistedText, card: finalCard || undefined, status: "complete", attempt: attemptBase,
         } });
       }
     } catch (e: any) {
       const msg = String(e?.message || "upstream");
       telemetry(context, db, { endpoint: "opencode/thread", model: models.chat.id, latencyMs: 0, ok: false, error: msg.slice(0, 300), uid });
-      if (msg.includes("429") || msg.toLowerCase().includes("allowance") || msg.toLowerCase().includes("quota")) {
+      if (/HTTP (402|429)\b/.test(msg) || msg.toLowerCase().includes("allowance") || msg.toLowerCase().includes("quota")) {
         try { await db.prepare(`UPDATE chat_turns SET status='failed' WHERE id=? AND attempt=?`).bind(turnId, attemptBase).run(); } catch { /* ignore */ }
         await send({ type: "error", code: "allowance", message: "Chat is at its usage limit. Try again later." });
       } else {
@@ -730,7 +735,7 @@ export async function onRequest(context: any) {
     env: any; apiKey: string; sessionBase: string; models: ReturnType<typeof pickModels>;
     kind: "full" | "revision"; currentText: string; attachmentKeys: string[];
     ref?: ThreadRef; refCard?: any; imageParts: Array<{ mimeType: string; data: string }>;
-    styleHints: string; threadNote: string; draftGoal?: string;
+    styleHints: string; threadNote: string; draftGoal?: string; signal: AbortSignal;
   }): Promise<{ ok: boolean; card?: any; preamble?: string; code?: string; message?: string }> {
     try {
       if (args.kind === "revision") {
@@ -748,7 +753,7 @@ export async function onRequest(context: any) {
         });
         const raw = await callDraftJson({
           apiKey: args.apiKey, sessionTag: `${args.sessionBase}-draft`, model: args.models.draftRev.id, effort: args.models.draftRev.effort,
-          system: getSystemFor("revision"), userData, imageParts: args.imageParts, timeoutMs: 60_000,
+          system: getSystemFor("revision"), userData, imageParts: args.imageParts, signal: args.signal,
         });
         validateRevisionCard(raw);
         const card = {
@@ -783,13 +788,13 @@ export async function onRequest(context: any) {
       });
       const raw = await callDraftJson({
         apiKey: args.apiKey, sessionTag: `${args.sessionBase}-draft`, model: args.models.draftFull.id, effort: args.models.draftFull.effort,
-        system: getSystemFor("deck"), userData, imageParts: args.imageParts, timeoutMs: 85_000,
+        system: getSystemFor("deck"), userData, imageParts: args.imageParts, signal: args.signal,
       });
       validateQuickV2Payload(raw as Record<string, unknown>);
       return { ok: true, card: { kind: "deck" as const, ...(raw as object) } };
     } catch (e: any) {
       const msg = String(e?.message || "draft failed");
-      if (msg.includes("429") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("allowance")) {
+      if (/HTTP (402|429)\b/.test(msg) || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("allowance")) {
         return { ok: false, code: "allowance", message: "Chat is at its usage limit. Try again later." };
       }
       return { ok: false, code: "upstream", message: "Couldn’t finish that reply." };
@@ -869,7 +874,8 @@ export async function onRequest(context: any) {
     const encoder = new TextEncoder();
     const send = async (o: any) => { try { await writer.write(encoder.encode(JSON.stringify(o) + "\n")); } catch { /* gone */ } };
     (async () => {
-      const killer = setTimeout(() => { void send({ type: "error", code: "unavailable", message: "Couldn’t finish that reply." }); }, GENERATION_DEADLINE_MS);
+      const turnAbort = new AbortController();
+    const killer = setTimeout(() => turnAbort.abort(), GENERATION_DEADLINE_MS);
       try {
         await send({ type: "accepted", turnId: `inc-${Date.now()}`, incognito: true });
         if (actionInc === "draft" || actionInc === "refine") {
@@ -887,13 +893,13 @@ export async function onRequest(context: any) {
               sourceTone: typeof b?.ref?.tone === "string" ? b.ref.tone : undefined,
               styleHints,
             });
-            const raw = await callDraftJson({ apiKey: key, sessionTag: `${incSessionTag}-draft`, model: models.draftRev.id, effort: models.draftRev.effort, system: getSystemFor("revision"), userData, imageParts: parts, timeoutMs: 60_000 });
+            const raw = await callDraftJson({ apiKey: key, sessionTag: `${incSessionTag}-draft`, model: models.draftRev.id, effort: models.draftRev.effort, system: getSystemFor("revision"), userData, imageParts: parts, signal: turnAbort.signal });
             validateRevisionCard(raw);
             await send({ type: "done", turn: { id: `inc-${Date.now()}`, incognito: true, userText: text, assistantText: "", card: { kind: "revision", ...(raw as object) }, status: "complete" } });
             return;
           }
           const userData = buildDraftUserData({ currentRequest: text.trim() || "What should I text back?", exchangeExcerpts: [text.trim()].filter(Boolean), styleHints, screenshotCount: parts.length });
-          const raw = await callDraftJson({ apiKey: key, sessionTag: `${incSessionTag}-draft`, model: models.draftFull.id, effort: models.draftFull.effort, system: getSystemFor("deck"), userData, imageParts: parts, timeoutMs: 85_000 });
+          const raw = await callDraftJson({ apiKey: key, sessionTag: `${incSessionTag}-draft`, model: models.draftFull.id, effort: models.draftFull.effort, system: getSystemFor("deck"), userData, imageParts: parts, signal: turnAbort.signal });
           validateQuickV2Payload(raw as Record<string, unknown>);
           await send({ type: "done", turn: { id: `inc-${Date.now()}`, incognito: true, userText: text, assistantText: "", card: { kind: "deck", ...(raw as object) }, status: "complete" } });
           return;
@@ -901,12 +907,11 @@ export async function onRequest(context: any) {
         let full = "";
         let preamble = "";
         let prelimSent = false;
-        const ctrl = new AbortController();
         const t0 = Date.now();
-        const conv = await callChatCompletionsStreaming({
+        const conv = await callConversationalStream({
           apiKey: key, sessionTag: incSessionTag, model: models.chat.id, effort: models.chat.effort,
           system: CHAT_SI_V1, messages: openAiMessages, tools: [DRAFT_REPLIES_TOOL],
-          signal: ctrl.signal,
+          signal: turnAbort.signal,
           onText: async (t) => {
             if (!prelimSent) {
               preamble += t;
@@ -922,7 +927,7 @@ export async function onRequest(context: any) {
           await send({ type: "status", code: "drafting", message: "Drafting replies…" });
           const { getSystemFor, buildDraftUserData } = await import("../../lib/chatEngine");
           const userData = buildDraftUserData({ currentRequest: text.trim() || "What should I text back?", draftGoal: typeof (draftCall.args as any)?.draft_goal === "string" ? (draftCall.args as any).draft_goal : undefined, exchangeExcerpts: [text.trim()].filter(Boolean), styleHints, screenshotCount: parts.length });
-          const raw = await callDraftJson({ apiKey: key, sessionTag: `${incSessionTag}-draft`, model: models.draftFull.id, effort: models.draftFull.effort, system: getSystemFor("deck"), userData, imageParts: parts, timeoutMs: 85_000 });
+          const raw = await callDraftJson({ apiKey: key, sessionTag: `${incSessionTag}-draft`, model: models.draftFull.id, effort: models.draftFull.effort, system: getSystemFor("deck"), userData, imageParts: parts, signal: turnAbort.signal });
           validateQuickV2Payload(raw as Record<string, unknown>);
           await send({ type: "done", turn: { id: `inc-${Date.now()}`, incognito: true, userText: text, assistantText: full, card: { kind: "deck", ...(raw as object) }, status: "complete" } });
           return;
@@ -931,7 +936,7 @@ export async function onRequest(context: any) {
         await send({ type: "done", turn: { id: `inc-${Date.now()}`, incognito: true, userText: text, assistantText: full, status: "complete" } });
       } catch (e: any) {
         const msg = String(e?.message || "");
-        if (msg.includes("429") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("allowance")) {
+        if (/HTTP (402|429)\b/.test(msg) || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("allowance")) {
           await send({ type: "error", code: "allowance", message: "Chat is at its usage limit. Try again later." });
         } else {
           await send({ type: "error", code: "upstream", message: "Couldn’t finish that reply." });

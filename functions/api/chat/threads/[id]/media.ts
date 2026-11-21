@@ -23,7 +23,7 @@ export async function onRequest(context: any) {
 
   const uid = data?.user?.uid as string | undefined;
   if (!uid) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: cors });
-  if (!checkChatAllowlist(env, uid, data?.user?.email)) {
+  if (!checkChatAllowlist(env, uid)) {
     return new Response(JSON.stringify({ error: "unauthorized" }), { status: 403, headers: cors });
   }
   const db = resolveChatDb(env);

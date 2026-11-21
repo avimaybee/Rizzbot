@@ -16,6 +16,7 @@ export interface ChatRef {
 }
 
 export interface ChatTurnWire {
+  action?: "draft" | "refine";
   id: string;
   threadId?: string;
   userText: string;
