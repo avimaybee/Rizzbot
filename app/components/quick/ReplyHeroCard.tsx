@@ -1,6 +1,6 @@
 import type React from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, Copy, CornerDownRight } from "lucide-react";
+import { Check, Copy, CornerDownRight, ThumbsDown, ThumbsUp } from "lucide-react";
 import type { SuggestionOption } from "../../../types";
 
 interface ReplyHeroCardProps {
@@ -24,6 +24,10 @@ interface ReplyHeroCardProps {
   onCopyAll?: (text: string) => void;
   onCopySingleBubble?: (bubbleText: string, bubbleIndex: number) => void;
   copiedAll?: boolean;
+  /** Rate the visible reply variation. Rendered with a clear label so the
+      target is unambiguous (replaces the old bottom-bar thumbs). */
+  onFeedback?: (rating: "helpful" | "off") => void;
+  feedbackGiven?: "helpful" | "off" | null;
 }
 
 export function ReplyHeroCard({
@@ -42,6 +46,8 @@ export function ReplyHeroCard({
   onCopyAll,
   onCopySingleBubble,
   copiedAll,
+  onFeedback,
+  feedbackGiven = null,
 }: ReplyHeroCardProps) {
   const effectiveOption = selectedOption ?? (options && typeof selectedIndex === 'number' ? options[selectedIndex] : null);
   const effectiveCount = options ? options.length : optionCount;
@@ -226,6 +232,51 @@ export function ReplyHeroCard({
                   >
                     {isAllCopied ? "Copied all bubbles" : "Copy all bubbles"}
                   </button>
+                )}
+
+                {onFeedback && (
+                  <div
+                    className="mt-3 pt-3 flex items-center justify-between gap-2"
+                    style={{ borderTop: "1px solid #252223" }}
+                  >
+                    <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "rgba(242,239,233,0.55)" }}>
+                      Was this reply useful?
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => onFeedback("helpful")}
+                        aria-label="This reply was helpful"
+                        className="cursor-pointer flex items-center justify-center transition-colors"
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 10,
+                          border: "none",
+                          backgroundColor: feedbackGiven === "helpful" ? "rgba(107,158,120,0.25)" : "#221F20",
+                          color: feedbackGiven === "helpful" ? "#8FCE9D" : "#A69F95",
+                        }}
+                      >
+                        <ThumbsUp size={15} strokeWidth={2} fill={feedbackGiven === "helpful" ? "#8FCE9D" : "none"} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onFeedback("off")}
+                        aria-label="This reply was off"
+                        className="cursor-pointer flex items-center justify-center transition-colors"
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 10,
+                          border: "none",
+                          backgroundColor: feedbackGiven === "off" ? "rgba(212,114,84,0.25)" : "#221F20",
+                          color: feedbackGiven === "off" ? "#E3886B" : "#A69F95",
+                        }}
+                      >
+                        <ThumbsDown size={15} strokeWidth={2} fill={feedbackGiven === "off" ? "#E3886B" : "none"} />
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
 

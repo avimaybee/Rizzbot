@@ -4,16 +4,10 @@ import { useNavigate } from "react-router";
 import { motion, useReducedMotion } from "motion/react";
 import {
   Camera,
-  Check,
-  CheckCircle,
   ChevronLeft,
   Clock,
   Pencil,
-  RotateCcw,
-  Share2,
   Tag,
-  ThumbsDown,
-  ThumbsUp,
   X,
 } from "lucide-react";
 import { TabBar } from "./TabBar";
@@ -27,7 +21,7 @@ import { streamQuickAdvice } from "../../services/aiService";
 import { createSession, flushPendingSessions, queuePendingSession, recordActivity, submitFeedback } from "../../services/dbService";
 import { logSession, saveFeedback } from "../../services/feedbackService";
 import { QuickAdviceRequest, QuickAdviceResponse } from "../../types";
-import { isQuickAdviceDegraded, buildCopyPayload } from "../../services/quickAdvice";
+import { isQuickAdviceDegraded } from "../../services/quickAdvice";
 import { useScrollFade } from "../utils/useScrollFade";
 import { shuffledLoadingLines, loadingLineForElapsed } from "../utils/loadingLines";
 import { MAX_QUICK_SCREENSHOTS, optimizeImageFile, clampScreenshotList } from "../utils/imageOptimize";
@@ -125,6 +119,32 @@ export function QuickModeScreen() {
   const [showDraftInput, setShowDraftInput] = useState(false);
   const [loadingLines, setLoadingLines] = useState<string[]>(() => shuffledLoadingLines());
   const [modelStatus, setModelStatus] = useState<{ model: string; effort: string; attempt: number } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<null | "edit" | "redo">(null);
+
+  // Restore the last analysis after a refresh so results aren't lost.
+  // Screenshots themselves aren't restored (too big for sessionStorage) —
+  // input text/stage/tone already persist via useSessionState.
+  useEffect(() => {
+    const uid = authUser?.uid;
+    if (!uid || result || isLoading || showResults) return;
+    try {
+      const raw = sessionStorage.getItem(`quick_last_result_${uid}`);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { v?: number; savedAt?: number; result?: QuickAdviceResponse };
+      if (typeof parsed.savedAt === "number" && Date.now() - parsed.savedAt > 48 * 3600 * 1000) {
+        sessionStorage.removeItem(`quick_last_result_${uid}`);
+        return;
+      }
+      const saved = parsed?.result;
+      if (saved && typeof saved === "object" && (saved as any).suggestions && typeof (saved as any).suggestions === "object") {
+        setResult(saved as QuickAdviceResponse);
+        setShowResults(true);
+      }
+    } catch {
+      // Corrupt cache — start fresh
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser?.uid]);
 
   // Scroll to the top of results when a new analysis lands
   useEffect(() => {
@@ -256,6 +276,17 @@ export function QuickModeScreen() {
       if (!mountedRef.current) return;
       setResult(response);
       setShowResults(true);
+      // Persist the analysis so a refresh lands back on results, not a blank form.
+      try {
+        if (authUser?.uid) {
+          sessionStorage.setItem(
+            `quick_last_result_${authUser.uid}`,
+            JSON.stringify({ v: 2, savedAt: Date.now(), result: response })
+          );
+        }
+      } catch {
+        // Quota exceeded — results still work in memory for this visit
+      }
       runWellbeingCheck(); if (!(activeTone in toneMap)) setActiveTone("Real"); try { sessionStorage.removeItem("quick_screenshots"); if (authUser?.uid) sessionStorage.removeItem(`quick_screenshots_${authUser.uid}`); } catch {}
       haptics.success();
 
@@ -357,6 +388,11 @@ export function QuickModeScreen() {
     setTheirMessage("");
     setYourDraft("");
     setScreenshots([]);
+    try {
+      if (authUser?.uid) sessionStorage.removeItem(`quick_last_result_${authUser.uid}`);
+    } catch {
+      // ignore
+    }
     setCursor({ Real: 0, Smooth: 0, Playful: 0, Bold: 0, "Your Style": 0 });
     setFeedbackGiven(null);
     setStreamedText("");
@@ -372,26 +408,11 @@ export function QuickModeScreen() {
     haptics.light();
   };
 
-  const handleShare = async () => {
-    if (!result) return;
-    const summary = [
-      `Vibe: ${result.vibeCheck?.theirEnergy || "neutral"} · Interest ${result.vibeCheck?.interestLevel ?? 50}/100`,
-      result.proTip ? `Tip: ${result.proTip}` : "",
-      result.recommendedAction ? `Next move: ${result.recommendedAction}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
-    const text = `Rizzbot analysis\n\n${summary}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ text });
-      } else {
-        await navigator.clipboard.writeText(text);
-        toast("Analysis copied", "success");
-      }
-    } catch {
-      // user cancelled share — no-op
-    }
+  const handleConfirmAction = () => {
+    if (confirmAction === "redo") handleRedo();
+    else if (confirmAction === "edit") handleEdit();
+    setConfirmAction(null);
+    haptics.light();
   };
 
   const situationFade = useScrollFade();
@@ -445,11 +466,6 @@ export function QuickModeScreen() {
     toast(rating === "helpful" ? "Saved as helpful" : "Got it, we will calibrate", "success");
   };
 
-  const handleCopyAll = async () => {
-    if (!selectedOption) return;
-    await handleCopy(buildCopyPayload(selectedOption), `copyall-${activeTone}-${cursor[activeTone]}`);
-  };
-
   // Auto-resize restored textareas so sessionStorage-restored drafts aren't clipped
   const theirMessageRef = useRef<HTMLTextAreaElement | null>(null);
   const yourDraftRef = useRef<HTMLTextAreaElement | null>(null);
@@ -488,7 +504,7 @@ export function QuickModeScreen() {
             {showResults && (
               <>
                 <button
-                  onClick={handleEdit}
+                  onClick={() => setConfirmAction("edit")}
                   className="cursor-pointer flex items-center gap-1"
                   style={{
                     fontFamily: "'DM Sans', sans-serif",
@@ -503,7 +519,7 @@ export function QuickModeScreen() {
                   Edit
                 </button>
                 <button
-                  onClick={handleRedo}
+                  onClick={() => setConfirmAction("redo")}
                   className="cursor-pointer"
                   style={{
                     fontFamily: "'DM Sans', sans-serif",
@@ -762,7 +778,7 @@ export function QuickModeScreen() {
             </div>
           </div>
         ) : (
-          <div className="px-5 pb-[150px]" ref={resultsTopRef}>
+          <div className="px-5 pb-24" ref={resultsTopRef}>
             {result?.suggestions?.wait && !waitDismissed && (
               <motion.div
                 initial={{ opacity: 0, y: 6 }}
@@ -824,6 +840,8 @@ export function QuickModeScreen() {
               prefersReducedMotion={prefersReducedMotion}
               streamedText={streamedText}
               onCopy={(text, key) => void handleCopy(text, key)}
+              onFeedback={(rating) => handleFeedback(rating)}
+              feedbackGiven={feedbackGiven}
               onSelectVariation={(i) => { haptics.light(); setCursor((prev) => ({ ...prev, [activeTone]: i })); }}
               onDragEnd={({ offset, velocity }) => {
                 if (selectedOptions.length <= 1) return;
@@ -843,63 +861,81 @@ export function QuickModeScreen() {
               />
             </div>
 
-            <div className="fixed bottom-[60px] md:bottom-0 left-0 right-0 z-30" style={{ backgroundColor: "rgba(245,239,230,0.92)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderTop: "1px solid #E8E0D4" }}>
-              <div className="max-w-[430px] mx-auto flex items-center gap-2 px-5 py-2.5">
+          </div>
+        )}
+
+        {confirmAction && (
+          <div
+            className="fixed inset-0 z-[80] flex items-center justify-center px-5"
+            style={{ backgroundColor: "rgba(26,18,8,0.45)" }}
+            onClick={() => setConfirmAction(null)}
+          >
+            <div
+              className="w-full max-w-[390px]"
+              style={{
+                backgroundColor: "#FDFAF5",
+                borderRadius: 24,
+                padding: 24,
+                boxShadow: "0 20px 60px rgba(26,18,8,0.2)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontSize: 28,
+                  fontStyle: "italic",
+                  color: "#1A1208",
+                  lineHeight: 1.15,
+                }}
+              >
+                {confirmAction === "redo" ? "Start over?" : "Back to input?"}
+              </p>
+              <p
+                style={{
+                  marginTop: 10,
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 14,
+                  color: "rgba(26,18,8,0.6)",
+                  lineHeight: 1.6,
+                }}
+              >
+                {confirmAction === "redo"
+                  ? "This clears your message, draft and screenshots. Anything saved in History stays put."
+                  : "Your replies stay saved here — you can jump right back."}
+              </p>
+              <div className="mt-5 flex flex-col gap-2">
                 <button
-                  onClick={() => handleFeedback("helpful")}
-                  aria-label="Helpful reply"
-                  className="cursor-pointer"
-                  style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", color: feedbackGiven === "helpful" ? "#7A9E7E" : "rgba(26,18,8,0.45)" }}
-                >
-                  <ThumbsUp size={19} strokeWidth={2} fill={feedbackGiven === "helpful" ? "#7A9E7E" : "none"} />
-                </button>
-                <button
-                  onClick={() => handleFeedback("off")}
-                  aria-label="Not helpful"
-                  className="cursor-pointer"
-                  style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", color: feedbackGiven === "off" ? "#C8522A" : "rgba(26,18,8,0.45)" }}
-                >
-                  <ThumbsDown size={19} strokeWidth={2} fill={feedbackGiven === "off" ? "#C8522A" : "none"} />
-                </button>
-                <button
-                  onClick={() => void handleCopyAll()}
-                  disabled={!selectedOption}
-                  className="flex-1 cursor-pointer transition-all active:scale-[0.98]"
+                  onClick={handleConfirmAction}
                   style={{
-                    height: 52,
+                    height: 48,
                     borderRadius: 999,
-                    backgroundColor: !selectedOption ? "#E8E0D4" : copiedKey === `copyall-${activeTone}-${cursor[activeTone]}` ? "#7A9E7E" : "#C8522A",
-                    color: !selectedOption ? "rgba(26,18,8,0.35)" : "#FFFFFF",
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: 15,
-                    fontWeight: 600,
                     border: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 8,
-                    transition: "all 0.2s ease",
+                    backgroundColor: "#C8522A",
+                    color: "#FFFFFF",
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: "pointer",
                   }}
                 >
-                  {copiedKey === `copyall-${activeTone}-${cursor[activeTone]}` ? (
-                    <>
-                      <Check size={18} strokeWidth={2.5} /> Copied
-                    </>
-                  ) : !selectedOption ? (
-                    "Nothing to copy"
-                  ) : selectedOption.replies.length + (selectedOption.conversationHook ? 1 : 0) > 1 ? (
-                    "Copy all"
-                  ) : (
-                    "Copy reply"
-                  )}
+                  {confirmAction === "redo" ? "Start over" : "Back to input"}
                 </button>
                 <button
-                  onClick={() => void handleShare()}
-                  aria-label="Share analysis"
-                  className="cursor-pointer"
-                  style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", color: "rgba(26,18,8,0.45)" }}
+                  onClick={() => setConfirmAction(null)}
+                  style={{
+                    height: 48,
+                    borderRadius: 999,
+                    border: "1px solid #E8E0D4",
+                    backgroundColor: "transparent",
+                    color: "rgba(26,18,8,0.65)",
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                  }}
                 >
-                  <Share2 size={18} strokeWidth={1.8} />
+                  Keep my replies
                 </button>
               </div>
             </div>
